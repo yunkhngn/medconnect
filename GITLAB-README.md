@@ -1,6 +1,8 @@
 # Quy tắc Commit Gitlab
 
-Mỗi người sẽ được phân code các branch **`fe`** (frontend) và **`be`** (backend)
+Mỗi người sẽ được phân code các branch **`fe`** (frontend) và **`be`** (backend) cho từng team. Mỗi thành viên sẽ code trên branch cá nhân và tạo Merge Request (MR) vào branch team khi hoàn thành task.
+
+Lưu ý: mỗi ngày nên commit ít nhất 1 lần để đảm bảo tiến độ dự án.
 
 ## Cấu trúc commit
 ```
