@@ -9,7 +9,7 @@ export default function App({ Component, pageProps }) {
   const router = useRouter();
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider attribute="class" defaultTheme="light">
+      <NextThemesProvider attribute="class" defaultTheme="dark">
         <Component {...pageProps} />
       </NextThemesProvider>
     </HeroUIProvider>
