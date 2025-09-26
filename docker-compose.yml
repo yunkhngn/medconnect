@@ -11,7 +11,7 @@ services:
       - sqlserver-data:/var/opt/mssql
 
   be:
-    build: ./be
+    build: ./medconnect-be
     environment:
       SPRING_DATASOURCE_URL: jdbc:sqlserver://db:1433;databaseName=MedConnect
       SPRING_DATASOURCE_USERNAME: sa
@@ -22,11 +22,11 @@ services:
       - db
 
   fe:
-    build: ./fe
+    build: ./medconnect-fe
     ports:
       - "3000:3000"
     depends_on:
-      - be
+      - medconnect-be
 
 volumes:
   sqlserver-data:
