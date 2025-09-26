@@ -1,4 +1,5 @@
 import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button} from "@heroui/react";
+import navigate from "@/config/navigate";
 
 export const AcmeLogo = () => {
   return (
@@ -16,37 +17,28 @@ export const AcmeLogo = () => {
 
 const Nav = () => {
   return (
-     <Navbar>
+     <Navbar shouldHideOnScroll>
       <NavbarBrand>
         <AcmeLogo />
-        <p className="font-bold text-inherit">ACME</p>
+        <p className="font-bold text-inherit">MedConnect</p>
       </NavbarBrand>
       <NavbarContent className="hidden sm:flex gap-4" justify="center">
-        <NavbarItem>
-          <Link color="foreground" href="#">
-            Features
-          </Link>
-        </NavbarItem>
-        <NavbarItem isActive>
-          <Link aria-current="page" href="#">
-            Customers
-          </Link>
-        </NavbarItem>
-        <NavbarItem>
-          <Link color="foreground" href="#">
-            Integrations
-          </Link>
-        </NavbarItem>
+        {navigate.route.map((item, index) => (
+          <NavbarItem key={index}>
+            <Link href={item.link}>{item.text}</Link>
+          </NavbarItem>
+        ))}
       </NavbarContent>
       <NavbarContent justify="end">
-        <NavbarItem className="hidden lg:flex">
-          <Link href="#">Login</Link>
-        </NavbarItem>
-        <NavbarItem>
-          <Button as={Link} color="primary" href="#" variant="flat">
-            Sign Up
-          </Button>
-        </NavbarItem>
+       {navigate.button.map((item, index) => (
+          <NavbarItem key={index}>
+            <Link href={item.link}>
+              <Button color={item.color} variant={item.variant}>
+                {item.text}
+              </Button>
+            </Link>
+          </NavbarItem>
+        ))}
       </NavbarContent>
     </Navbar>
   )
