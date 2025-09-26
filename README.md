@@ -1,93 +1,300 @@
-# G1-SE1961-NJ-SWP391-FAL25
+# MedConnect
 
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Next.js](https://img.shields.io/badge/Next.js-15.3.1-black.svg)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docker.com/)
 
+MedConnect is a comprehensive healthcare management system designed to streamline medical services and improve patient care. The system provides a modern web-based platform connecting patients, healthcare providers, and medical administrators through an intuitive interface.
 
-## Getting started
+## About MedConnect
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+MedConnect serves as a digital bridge in the healthcare ecosystem, offering:
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- **Patient Management**: Comprehensive patient registration, profile management, and medical history tracking
+- **Appointment Scheduling**: Efficient booking system for medical consultations and procedures
+- **Medical Records**: Secure digital storage and retrieval of patient medical information
+- **Healthcare Provider Portal**: Tools for medical professionals to manage their practice and patients
+- **Telemedical Consultations**: Virtual appointment capabilities for remote healthcare services
+- **Administrative Dashboard**: Management interface for healthcare facilities and administrators
 
-## Add your files
+## Technology Stack
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+### Backend
+- **Java 21** - Modern LTS version with enhanced performance
+- **Spring Boot 3.5.6** - Enterprise-grade framework for building robust applications
+- **Maven** - Dependency management and build automation
+- **SQL Server 2022** - Enterprise database for secure data storage
+- **Lombok** - Reducing boilerplate code for cleaner development
+
+### Frontend
+- **Next.js 15.3.1** - React framework with server-side rendering
+- **React 18.3.1** - Modern UI library for interactive interfaces
+- **TypeScript 5.6.3** - Type-safe JavaScript for better development experience
+- **Tailwind CSS 4.1.11** - Utility-first CSS framework for responsive design
+- **HeroUI** - Modern React component library
+- **Framer Motion** - Animation library for smooth user interactions
+
+### Infrastructure
+- **Docker & Docker Compose** - Containerization for consistent deployment
+- **Microsoft SQL Server** - Robust database solution for healthcare data
+
+## Quick Start
+
+### Prerequisites
+
+Before running MedConnect, ensure you have the following installed:
+
+- [Docker](https://www.docker.com/get-started) (version 20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (version 2.0+)
+- Git for version control
+
+### Installation & Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://gitlab.com/manhnc2/g1-se1961-nj-swp391-fal25.git
+   cd g1-se1961-nj-swp391-fal25
+   ```
+
+2. **Start the application using Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
+
+   This command will:
+   - Start SQL Server 2022 database container
+   - Build and run the Spring Boot backend (port 8080)
+   - Build and run the Next.js frontend (port 3000)
+
+3. **Access the application**
+   - **Frontend**: http://localhost:3000
+   - **Backend API**: http://localhost:8080
+   - **Database**: localhost:1433 (username: `sa`, password: `Abcd1234!`)
+
+4. **Stop the application**
+   ```bash
+   docker-compose down
+   ```
+
+### Development Setup
+
+For local development without Docker:
+
+#### Backend Development
+```bash
+cd medconnect-be
+./mvnw spring-boot:run
+```
+
+#### Frontend Development
+```bash
+cd medconnect-fe
+npm install
+npm run dev
+```
+
+## Project Structure
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/manhnc2/g1-se1961-nj-swp391-fal25.git
-git branch -M main
-git push -uf origin main
+g1-se1961-nj-swp391-fal25/
+├── docker-compose.yml          # Docker orchestration configuration
+├── README.md                   # Project documentation
+├── GITLAB-README.md           # GitLab specific documentation
+│
+├── medconnect-be/             # Backend Spring Boot Application
+│   ├── Dockerfile             # Backend container configuration
+│   ├── pom.xml               # Maven dependencies and build configuration
+│   ├── mvnw, mvnw.cmd        # Maven wrapper scripts
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   │   └── se1961/g1/medconnect/
+│       │   │       ├── MedConnectApplication.java  # Main application class
+│       │   │       └── controller/                 # REST API controllers
+│       │   └── resources/
+│       │       └── application.properties          # Application configuration
+│       └── test/                                   # Unit and integration tests
+│
+└── medconnect-fe/             # Frontend Next.js Application
+    ├── Dockerfile             # Frontend container configuration
+    ├── package.json           # Node.js dependencies and scripts
+    ├── next.config.js         # Next.js configuration
+    ├── tailwind.config.js     # Tailwind CSS configuration
+    ├── pages/                 # Next.js pages and routing
+    ├── components/            # Reusable React components
+    │   ├── layouts/           # Layout components
+    │   ├── nav/              # Navigation components
+    │   └── ui/               # UI components
+    ├── config/               # Application configuration
+    ├── features/             # Feature-specific components
+    ├── hooks/                # Custom React hooks
+    ├── lib/                  # Utility libraries
+    ├── public/               # Static assets
+    └── styles/               # Global styles and CSS
 ```
 
-## Integrate with your tools
+## API Documentation
 
-- [ ] [Set up project integrations](https://gitlab.com/manhnc2/g1-se1961-nj-swp391-fal25/-/settings/integrations)
+The backend provides RESTful APIs for:
 
-## Collaborate with your team
+- **Authentication & Authorization**: User login, registration, and session management
+- **Patient Management**: CRUD operations for patient data
+- **Appointment System**: Scheduling and management of medical appointments
+- **Medical Records**: Secure handling of patient medical information
+- **User Management**: Admin functions for managing system users
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Base URL: `http://localhost:8080/api`
 
-## Test and Deploy
+## Testing
 
-Use the built-in continuous integration in GitLab.
+### Backend Testing
+```bash
+cd medconnect-be
+./mvnw test
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Frontend Testing
+```bash
+cd medconnect-fe
+npm run test
+```
 
-***
+## Deployment
 
-# Editing this README
+### Production Deployment
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+1. **Build production images**
+   ```bash
+   docker-compose -f docker-compose.prod.yml build
+   ```
 
-## Suggestions for a good README
+2. **Deploy to production**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Environment Variables
 
-## Name
-Choose a self-explaining name for your project.
+For production deployment, configure the following environment variables:
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+#### Backend Environment Variables
+- `SPRING_DATASOURCE_URL`: Database connection URL
+- `SPRING_DATASOURCE_USERNAME`: Database username
+- `SPRING_DATASOURCE_PASSWORD`: Database password
+- `SPRING_PROFILES_ACTIVE`: Active Spring profile (dev/prod)
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+#### Frontend Environment Variables
+- `NEXT_PUBLIC_API_URL`: Backend API base URL
+- `NEXTAUTH_SECRET`: NextAuth secret for session encryption
+- `NEXTAUTH_URL`: Application base URL
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+We welcome contributions to MedConnect! Please follow these steps:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+3. **Make your changes** following our coding standards:
+   - **Backend**: Follow Java naming conventions and Spring Boot best practices
+   - **Frontend**: Use TypeScript, follow React best practices, and maintain consistent styling
+
+4. **Test your changes**
+   ```bash
+   # Backend tests
+   cd medconnect-be && ./mvnw test
+   
+   # Frontend tests
+   cd medconnect-fe && npm run test
+   ```
+
+5. **Commit your changes**
+   ```bash
+   git commit -m "feat: add your feature description"
+   ```
+
+6. **Push to your fork**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+7. **Create a merge request**
+
+### Code Style Guidelines
+
+- **Java**: Follow Google Java Style Guide
+- **TypeScript/React**: Use ESLint and Prettier configurations
+- **Git Commits**: Use conventional commits format
+- **Documentation**: Update README and code comments for new features
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Issues**
+   ```bash
+   # Check if SQL Server container is running
+   docker ps
+   
+   # View database logs
+   docker-compose logs db
+   ```
+
+2. **Port Already in Use**
+   ```bash
+   # Check which process is using the port
+   lsof -i :3000  # Frontend
+   lsof -i :8080  # Backend
+   lsof -i :1433  # Database
+   ```
+
+3. **Frontend Build Issues**
+   ```bash
+   cd medconnect-fe
+   rm -rf .next node_modules
+   npm install
+   npm run build
+   ```
+
+## Support
+
+For support and questions:
+
+- **Issues**: Create an issue in the GitLab repository
+- **Documentation**: Check the project wiki
+- **Team Contact**: Contact the development team through GitLab
+
+## Team
+
+**SE1961 Group 1 - SWP391 FAL25**
+
+### Team Members
+- **khoand** - Team Leader
+- **nhatth** - Developer
+- **hungnq** - Developer
+- **huncht** - Developer
+- **nguyenpnt** - Developer
+
+### Lecturer
+- **manhnc** - Course Instructor
+
+### Course Information
+- Course: Software Engineering Project (SWP391)
+- Semester: Fall 2025
+- Institution: FPT University
+
+## Project Status
+
+**In Development** - This project is actively being developed as part of the SWP391 course curriculum.
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This project is developed for educational purposes as part of the SWP391 course at FPT University.
+
+---
+
+**MedConnect** - Connecting Healthcare, Empowering Care 
