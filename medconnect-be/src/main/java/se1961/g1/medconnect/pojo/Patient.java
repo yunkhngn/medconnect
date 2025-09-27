@@ -5,6 +5,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Entity
 @Table(name = "Patient")
@@ -32,4 +35,7 @@ public class Patient {
 
     @Column(columnDefinition = "NVARCHAR(MAX)", nullable = false)
     private String EMR;
+
+    @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Appointment> appointments =  new ArrayList<>();
 }

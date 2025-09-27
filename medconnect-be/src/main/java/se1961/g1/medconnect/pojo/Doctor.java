@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import se1961.g1.medconnect.enums.Speciality;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "Doctor")
 public class Doctor {
@@ -32,4 +35,10 @@ public class Doctor {
 
     @Column(nullable = false)
     private String phone;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Appointment> appointments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Schedule>  schedules = new ArrayList<>();
 }
