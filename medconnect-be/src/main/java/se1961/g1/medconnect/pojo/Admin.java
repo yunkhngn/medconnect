@@ -10,6 +10,7 @@ import lombok.Setter;
 @Setter
 public class Admin {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne
