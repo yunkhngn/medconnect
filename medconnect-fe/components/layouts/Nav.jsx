@@ -62,11 +62,9 @@ const Nav = () => {
       <NavbarContent justify="end">
        {navigate.button.map((item, index) => (
           <NavbarItem key={index}>
-            <Link href={item.link}>
               <Button color={item.color} variant={item.variant}>
-                {item.text}
+                <Link href={item.link}>{item.text}</Link>
               </Button>
-            </Link>
           </NavbarItem>
         ))}
       </NavbarContent>
