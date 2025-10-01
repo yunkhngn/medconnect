@@ -1,13 +1,13 @@
 const navigate = {
   route: [
-    { text: "Home", link: "/" },
-    { text: "About", link: "/about" },
+    { text: "Chuyên khoa", link: "/" },
+    { text: "Tìm bác sĩ", link: "/about" },
     { text: "Services", link: "/services" },
-    { text: "Contact", link: "/contact" },
+    { text: "Blog", link: "/blog" },
   ],
   button: [
-    { text: "Login", link: "/login", color: "primary", variant: "" },
-    { text: "Sign Up", link: "/signup", color: "primary", variant: "flat" },
+    { text: "Đăng nhập", link: "/login", color: "primary", variant: "" },
+    { text: "Đăng ký", link: "/signup", color: "primary", variant: "flat" },
   ],
 };
 

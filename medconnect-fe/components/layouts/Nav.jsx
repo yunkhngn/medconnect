@@ -1,5 +1,6 @@
 import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button, Input} from "@heroui/react";
 import navigate from "@/config/navigate";
+import { useRouter } from "next/router";
 
 export const AcmeLogo = () => {
   return (
@@ -46,6 +47,11 @@ export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...prop
 
 
 const Nav = () => {
+  const router = useRouter();
+
+  const handleNavigation = (link) => {
+    router.push(link);
+  };
   return (
      <Navbar shouldHideOnScroll>
       <NavbarBrand>
@@ -62,9 +68,13 @@ const Nav = () => {
       <NavbarContent justify="end">
        {navigate.button.map((item, index) => (
           <NavbarItem key={index}>
-              <Button color={item.color} variant={item.variant}>
-                <Link href={item.link}>{item.text}</Link>
-              </Button>
+                <Button 
+                  color={item.color} 
+                  variant={item.variant}
+                  onPress={() => handleNavigation(item.link)}
+                >
+                {item.text}
+                </Button>
           </NavbarItem>
         ))}
       </NavbarContent>
