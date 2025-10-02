@@ -1,10 +1,11 @@
 package se1961.g1.medconnect.pojo;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Feedback")
@@ -18,12 +19,11 @@ public class Feedback {
     private String comment;
     private int rating;
 
-    @ManyToOne
-    @JoinColumn(name = "patient_id")
-    private Patient patient;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
     @ManyToOne
-    @JoinColumn(name = "doctor_id")
-    private Doctor doctor;
+    @JoinColumn(name = "patient")
+    private Patient patient;
 }
 

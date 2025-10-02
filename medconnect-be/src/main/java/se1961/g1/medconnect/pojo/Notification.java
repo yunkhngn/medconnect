@@ -19,19 +19,15 @@ public class Notification {
     private Long notificationId;
 
     private String createdAt;
+
+    @Email
     private String sendAt;
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    private NotificationStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "doctor_id")
-    private Doctor doctor;
-
-    @ManyToOne
-    @JoinColumn(name = "admin_id")
-    private Admin admin;
-
-    @ManyToOne
-    @JoinColumn(name = "patient_id")
-    private Patient patient;
+    @JoinColumn(name = "user_id")
+    private User user;
 }
 

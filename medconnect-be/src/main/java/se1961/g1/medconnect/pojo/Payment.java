@@ -18,12 +18,16 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paymentId;
 
-    private String createdAt;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
     private Double amount;
+
+    @ManyToOne
+    private Admin admin;
 
     @ManyToOne
     @JoinColumn(name = "patient_id")

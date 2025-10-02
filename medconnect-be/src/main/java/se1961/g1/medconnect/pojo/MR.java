@@ -4,13 +4,12 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import se1961.g1.medconnect.enums.PaymentStatus;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Prescription")
+@Table(name = "MedicalRecord")
 @Getter
 @Setter
 public class MR {
@@ -18,6 +17,7 @@ public class MR {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long recordId;
 
+    @Column(columnDefinition = "Text")
     private String detail;
 
     @ManyToOne
@@ -27,5 +27,11 @@ public class MR {
     @OneToOne
     @JoinColumn(name = "patient_id")
     private Patient patient;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }
 

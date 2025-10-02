@@ -8,7 +8,7 @@ import se1961.g1.medconnect.enums.ScheduleStatus;
 
 @Entity
 @Table(name = "Schedule", uniqueConstraints = {@UniqueConstraint(
-        columnNames = {"doctorId", "date", "slot"})})
+        columnNames = {"user_id", "date", "slot"})})
 @Getter
 @Setter
 public class Schedule {
@@ -22,15 +22,7 @@ public class Schedule {
     private String slot;
 
     @ManyToOne
-    @JoinColumn(name = "doctor_id")
-    private Doctor doctor;
-
-    @ManyToOne
-    @JoinColumn(name = "admin_id")
-    private Admin admin;
-
-    @ManyToOne
-    @JoinColumn(name = "patient_id")
-    private Patient patient;
+    @JoinColumn(name = "user_id")
+    private User user;
 }
 
