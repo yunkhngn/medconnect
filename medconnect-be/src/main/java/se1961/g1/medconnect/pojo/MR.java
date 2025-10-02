@@ -15,15 +15,17 @@ import java.time.LocalDateTime;
 @Setter
 public class MR {
     @Id
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "appointmentId", nullable = false)
-    private Appointment appointment;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long recordId;
 
-    @Column(columnDefinition = "NVARCHAR(MAX)", nullable = false)
-    private String content;
+    private String detail;
 
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @ManyToOne
+    @JoinColumn(name = "doctor_id")
+    private Doctor doctor;
+
+    @ManyToOne
+    @JoinColumn(name = "patient_id")
+    private Patient patient;
 }
+

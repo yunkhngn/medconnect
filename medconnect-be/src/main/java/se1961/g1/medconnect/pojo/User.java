@@ -16,22 +16,12 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
-    @Column(nullable = false)
-    @Size(min = 1, max = 100)
     private String name;
-
-    @Column(nullable = false, unique = true)
-    @Email
     private String email;
-
-    @Column(nullable = false, length = 255)
-    @Size(min = 8)
     private String password;
+    private String role;
 
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private Role role;
-
+    // Relations
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Admin admin;
 
@@ -40,4 +30,7 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Patient patient;
+
+    // getters and setters
 }
+

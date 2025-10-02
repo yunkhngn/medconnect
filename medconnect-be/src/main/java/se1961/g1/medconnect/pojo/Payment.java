@@ -15,18 +15,19 @@ import java.time.LocalDateTime;
 @Setter
 public class Payment {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long paymentId;
+
+    private String createdAt;
+    private String status;
+    private Double amount;
+
+    @ManyToOne
+    @JoinColumn(name = "patient_id")
+    private Patient patient;
+
     @OneToOne
-    @MapsId
-    @JoinColumn(name = "appointmentId", nullable = false)
+    @JoinColumn(name = "appointment_id")
     private Appointment appointment;
-
-    @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
-
-    @Column(nullable = false, precision = 10, scale = 0)
-    private BigDecimal amount;
-
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 }
+

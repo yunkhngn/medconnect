@@ -8,20 +8,26 @@ import se1961.g1.medconnect.enums.AppointmentStatus;
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int appointmentId;
+    private Long appointmentId;
 
-    @Enumerated(EnumType.STRING)
-    private AppointmentStatus appointmentStatus;
+    private String status;
 
     @ManyToOne
-    @JoinColumn(name = "patientId", nullable = false)
+    @JoinColumn(name = "doctor_id")
+    private Doctor doctor;
+
+    @ManyToOne
+    @JoinColumn(name = "patient_id")
     private Patient patient;
 
     @ManyToOne
-    @JoinColumn(name = "doctorId", nullable = false)
-    private Doctor doctor;
-
-    @OneToOne
-    @JoinColumn(name = "scheduleId", nullable = false)
+    @JoinColumn(name = "schedule_id")
     private Schedule schedule;
+
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
+    private VideoCallSession videoCallSession;
+
+    @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL)
+    private Payment payment;
 }
+

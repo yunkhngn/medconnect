@@ -11,10 +11,13 @@ import lombok.Setter;
 public class Admin {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long adminId;
+
+    private String serviceConfig;
+    private String policy;
 
     @OneToOne
-    @MapsId
-    @JoinColumn(name = "userId")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 }
+

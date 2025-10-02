@@ -11,37 +11,17 @@ import java.util.List;
 @Table(name = "Doctor")
 public class Doctor {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long doctorId;
 
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "userId")
-    private User user;
-
-    @Column(nullable = false)
-    @Size(min = 2, max = 50)
     private String firstName;
-
-    @Column(nullable = false)
-    @Size(min = 2, max = 50)
     private String lastName;
-
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private Speciality specialty;
-
-    @Column(nullable = false)
+    private String specialization;
     private String licenseId;
-
-    @Column(nullable = false)
     private String phone;
 
-    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Appointment> appointments = new ArrayList<>();
-
-    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Schedule>  schedules = new ArrayList<>();
-
-    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Feedback> feedbacks = new ArrayList<>();
+    @OneToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 }
+

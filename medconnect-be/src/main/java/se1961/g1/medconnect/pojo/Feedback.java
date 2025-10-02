@@ -15,19 +15,15 @@ public class Feedback {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long feedbackId;
 
-    @Column(nullable = true, length = 255)
-    private String feedback;
-
-    @Column(nullable = false)
-    @Min(1)
-    @Max(5)
+    private String comment;
     private int rating;
 
     @ManyToOne
-    @JoinColumn(name = "patientId", nullable = false)
+    @JoinColumn(name = "patient_id")
     private Patient patient;
 
     @ManyToOne
-    @JoinColumn(name = "doctorId", nullable = false)
+    @JoinColumn(name = "doctor_id")
     private Doctor doctor;
 }
+
