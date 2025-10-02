@@ -2,7 +2,6 @@ package se1961.g1.medconnect.pojo;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import se1961.g1.medconnect.enums.Role;

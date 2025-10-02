@@ -18,7 +18,8 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long notificationId;
 
-    private String createdAt;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
     @Email
     private String sendAt;
