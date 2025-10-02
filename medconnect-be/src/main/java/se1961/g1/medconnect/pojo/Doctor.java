@@ -16,12 +16,25 @@ public class Doctor {
 
     private String firstName;
     private String lastName;
-    private String specialization;
+
+    @Enumerated(EnumType.STRING)
+    private Speciality specialization;
+
     private String licenseId;
     private String phone;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    private List<Appointment> appointment;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    private List<Feedback> feedback;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    private List<Notification> notification;
+
 }
 

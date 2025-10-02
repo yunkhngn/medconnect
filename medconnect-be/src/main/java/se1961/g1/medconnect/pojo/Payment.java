@@ -19,7 +19,10 @@ public class Payment {
     private Long paymentId;
 
     private String createdAt;
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus status;
+
     private Double amount;
 
     @ManyToOne

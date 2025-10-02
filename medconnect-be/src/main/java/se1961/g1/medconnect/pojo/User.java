@@ -17,11 +17,14 @@ public class User {
     private Long userId;
 
     private String name;
+
+    @Email
     private String email;
     private String password;
-    private String role;
 
-    // Relations
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Admin admin;
 
@@ -30,7 +33,5 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Patient patient;
-
-    // getters and setters
 }
 

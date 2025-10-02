@@ -24,7 +24,7 @@ public class MR {
     @JoinColumn(name = "doctor_id")
     private Doctor doctor;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "patient_id")
     private Patient patient;
 }
