@@ -1,45 +1,126 @@
 import React from 'react';
-import {Link, Divider} from '@heroui/react';
+import { Divider } from '@heroui/react';
+import Link from 'next/link';
 
 const Footer = () => {
   const year = new Date().getFullYear();
+
+  // Navigation links configuration
+  const navigationLinks = [
+    { href: "/", label: "Trang chủ" },
+    { href: "/doctors", label: "Tìm bác sĩ" },
+    { href: "/appointments", label: "Đặt lịch hẹn" },
+    { href: "/about", label: "Về MedConnect" },
+    { href: "/contact", label: "Liên hệ" }
+  ];
+
+  const systemLinks = [
+    { href: "/vision", label: "Tầm nhìn sứ mệnh" },
+    { href: "/healthcare-system", label: "Hệ thống cơ sở y tế" },
+    { href: "/find-doctor", label: "Tìm bác sĩ" },
+    { href: "/careers", label: "Làm việc tại MedConnect" }
+  ];
+
+  const serviceLinks = [
+    { href: "/specialties", label: "Chuyên khoa" },
+    { href: "/services", label: "Gói dịch vụ" },
+    { href: "/insurance", label: "Bảo hiểm" },
+    { href: "/appointments", label: "Đặt lịch hẹn" }
+  ];
+
+  const supportLinks = [
+    { href: "/faq", label: "FAQ" },
+    { href: "/policy/privacy", label: "Chính sách bảo mật" },
+    { href: "/policy/terms", label: "Điều khoản sử dụng" }
+  ];
+
   return (
-    <footer role="contentinfo">
+    <footer role="contentinfo" className="bg-gray-50 dark:bg-gray-900">
       <Divider />
-      <div className="footer-content" style={{padding: '2rem 1rem', maxWidth: 1200, margin: '0 auto'}}>
-        <div className="footer-grid" style={{display: 'grid', gap: '1.25rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))'}}>
-          {/* Brand */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          
+          {/* Hệ thống MedConnect */}
           <section>
-            <h3 style={{margin: 0, fontSize: '1.25rem', fontWeight: 700}}>MedConnect</h3>
-            <p style={{marginTop: '.5rem', color: 'var(--nextui-colors-foreground-600, #666)'}}>
-              Kết nối bệnh nhân và bác sĩ qua đặt lịch và tư vấn trực tuyến.
-            </p>
-          </section>
-
-
-          <section>
-            <h4 style={{margin: 0, fontSize: '1rem', fontWeight: 600}}>Điều hướng</h4>
-            <nav style={{marginTop: '.5rem', display: 'flex', flexDirection: 'column', gap: '.375rem'}}>
-              <Link href="/" color="foreground" underline="hover">Trang chủ</Link>
-              <Link href="/doctors" color="foreground" underline="hover">Bác sĩ</Link>
-              <Link href="/appointments" color="foreground" underline="hover">Lịch hẹn</Link>
-              <Link href="/about" color="foreground" underline="hover">Về MedConnect</Link>
-              <Link href="/contact" color="foreground" underline="hover">Liên hệ</Link>
+            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Hệ thống MedConnect
+            </h4>
+            <nav className="flex flex-col space-y-2">
+              {systemLinks.map((link, index) => (
+                <Link 
+                  key={index} 
+                  href={link.href}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </nav>
           </section>
+
+          {/* Dịch vụ */}
           <section>
-            <h4 style={{margin: 0, fontSize: '1rem', fontWeight: 600}}>Hỗ trợ</h4>
-            <ul style={{listStyle: 'none', padding: 0, marginTop: '.5rem'}}>
-              <li><Link href="/faq" color="foreground" underline="hover">FAQ</Link></li>
-              <li><Link href="/policy/privacy" color="foreground" underline="hover">Chính sách bảo mật</Link></li>
-              <li><Link href="/policy/terms" color="foreground" underline="hover">Điều khoản sử dụng</Link></li>
-            </ul>
+            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Dịch vụ
+            </h4>
+            <nav className="flex flex-col space-y-2">
+              {serviceLinks.map((link, index) => (
+                <Link 
+                  key={index} 
+                  href={link.href}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </section>
+
+          {/* Điều hướng */}
+          <section>
+            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Điều hướng
+            </h4>
+            <nav className="flex flex-col space-y-2">
+              {navigationLinks.map((link, index) => (
+                <Link 
+                  key={index} 
+                  href={link.href}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </section>
+
+          {/* Hỗ trợ */}
+          <section>
+            <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+              Hỗ trợ
+            </h4>
+            <nav className="flex flex-col space-y-2">
+              {supportLinks.map((link, index) => (
+                <Link 
+                  key={index} 
+                  href={link.href}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </section>
+
         </div>
       </div>
+      
       <Divider />
-      <div style={{padding: '1rem', textAlign: 'center', fontSize: '.9rem', color: 'var(--nextui-colors-foreground-600, #666)'}}>
-        © {year} MedConnect. All rights reserved.
+      
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+          © {year} MedConnect. All rights reserved.
+        </div>
       </div>
     </footer>
   );
