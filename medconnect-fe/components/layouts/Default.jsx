@@ -7,7 +7,7 @@ const Default = ({children}) => {
     <main className="flex min-h-screen flex-col justify-between bg-gray-100">
         <Meta />
         <Nav />
-        <div className="container mx-auto mb-100 mt-100 px-5 align-middle">
+        <div className="container mx-auto mb-5 px-5 align-middle">
         {children}
         </div>
         <Footer />
