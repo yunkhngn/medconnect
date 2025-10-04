@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import SocialLoginButtons from "@/components/ui/SocialLogin";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
@@ -134,11 +135,10 @@ export default function MedConnectLogin() {
 
           {message.text && (
             <div
-              className={`p-3 rounded-lg mb-5 text-sm ${
-                message.type === "error"
-                  ? "bg-red-50 text-red-600 border border-red-200"
-                  : "bg-green-50 text-green-600 border border-green-200"
-              }`}
+              className={`p-3 rounded-lg mb-5 text-sm ${message.type === "error"
+                ? "bg-red-50 text-red-600 border border-red-200"
+                : "bg-green-50 text-green-600 border border-green-200"
+                }`}
             >
               {message.text}
             </div>
@@ -200,9 +200,7 @@ export default function MedConnectLogin() {
               </span>
             </div>
 
-            <div className="flex justify-center">
-              <SocialLogin onSuccess={(user) => sendFirebaseTokenToBackend(user)} />
-            </div>
+            <div className="flex justify-center"> <SocialLoginButtons onSuccess={(user) => sendFirebaseTokenToBackend(user)} onError={(msg) => showMessage(msg, "error")} /> </div>
 
             <div className="text-center mt-6 text-sm text-gray-600">
               Chưa có tài khoản?{" "}
