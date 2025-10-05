@@ -1,6 +1,6 @@
 package se1961.g1.medconnect.enums;
 
-public enum Service {
+public enum Services {
     FIREBASE,
     VIETQR,
     STT,
