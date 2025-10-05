@@ -27,7 +27,7 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure
-} from "@nextui-org/react";
+} from "@heroui/react";
 
 export default function DoctorDashboard() {
   const [user, setUser] = useState(null);
