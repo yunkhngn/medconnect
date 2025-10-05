@@ -4,13 +4,13 @@ import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDVhKvRppmWjfg8RLylH6YE6G7Q1a0CPOM",
-  authDomain: "medconnect-2eaff.firebaseapp.com",
-  projectId: "medconnect-2eaff",
-  storageBucket: "medconnect-2eaff.firebasestorage.app",
-  messagingSenderId: "183795808131",
-  appId: "1:183795808131:web:f367eea401528b3bf168b6",
-  measurementId: "G-LF9M9EJ4J8",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase

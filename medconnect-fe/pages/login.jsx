@@ -19,7 +19,7 @@ export default function MedConnectLogin() {
   const sendFirebaseTokenToBackend = async (user) => {
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch("http://localhost:8080/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,11 +37,11 @@ export default function MedConnectLogin() {
         // Điều hướng theo role
         setTimeout(() => {
           if (data.role === "ADMIN") {
-            window.location.href = "/dashboard/admin";
+            window.location.href = "/admin/dashboard";
           } else if (data.role === "DOCTOR") {
-            window.location.href = "/dashboard/doctor";
+            window.location.href = "/doctor/dashboard";
           } else {
-            window.location.href = "/dashboard/patient";
+            window.location.href = "/patient/dashboard";
           }
         }, 1000);
       } else if (response.status === 401) {
