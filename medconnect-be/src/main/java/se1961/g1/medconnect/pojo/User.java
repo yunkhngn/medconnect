@@ -19,12 +19,18 @@ public class User {
     private Long userId;
 
     @Email
+    @Column(unique = true, nullable = false)
     private String email;
+
+    @Column(unique = true, nullable = false)
+    private String firebaseUid;
 
     @Enumerated(EnumType.STRING)
     private Role role;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Notification> notifications;
+
+    public User() {}
 }
 
