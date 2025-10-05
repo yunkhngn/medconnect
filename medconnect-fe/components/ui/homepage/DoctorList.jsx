@@ -35,52 +35,41 @@ const DoctorList = () => {
     const doctors = [
         {
             id: 1,
-            name: "Dr. Sarah Johnson",
-            specialty: "Cardiologist",
-            description: "Specialized in heart diseases and cardiovascular surgery with 15+ years experience. Board-certified and internationally recognized.",
+            name: "Bác sĩ John Doe",
+            specialty: "Tim mạch",
+            description: "Chuyên khoa về bệnh tim mạch và phẫu thuật tim mạch với hơn 15 năm kinh nghiệm. Được chứng nhận và công nhận quốc tế.",
             image: "/assets/homepage/mockup.jpg",
-            priceRange: "$150 - $300",
+            priceRange: "500.000 - 1.500.000 VND",
             rating: 4.9,
-            experience: "15 years",
-            location: "New York Medical Center"
+            experience: "15 năm",
+            location: "Đống Đa, Hà Nội, Việt Nam",
         },
         {
             id: 2,
-            name: "Dr. Michael Chen",
-            specialty: "Neurologist",
-            description: "Expert in brain and nervous system disorders, published researcher with cutting-edge treatment approaches.",
+            name: "Bác sĩ Jane Smith",
+            specialty: "Nội khoa",
+            description: "Chuyên gia trong việc chẩn đoán và điều trị các bệnh nội khoa phổ biến. Hơn 10 năm kinh nghiệm làm việc tại các bệnh viện lớn.",
             image: "/assets/homepage/mockup.jpg",
-            priceRange: "$200 - $400",
-            rating: 4.8,
-            experience: "12 years",
-            location: "Stanford Medical"
+            priceRange: "300.000 - 1.000.000 VND",
+            rating: 4.7,
+            experience: "10 năm",
+            location: "Hồ Chí Minh, Việt Nam",
         },
         {
             id: 3,
-            name: "Dr. Emily Rodriguez",
-            specialty: "Pediatrician",
-            description: "Compassionate care for children from newborns to adolescents. Specializes in developmental pediatrics and family care.",
+            name: "Bác sĩ Emily Johnson",
+            specialty: "Nhi khoa",
+            description: "Chuyên khoa nhi với hơn 8 năm kinh nghiệm chăm sóc sức khỏe cho trẻ em từ sơ sinh đến tuổi vị thành niên.",
             image: "/assets/homepage/mockup.jpg",
-            priceRange: "$100 - $250",
-            rating: 4.9,
-            experience: "10 years",
-            location: "Children's Hospital"
+            priceRange: "400.000 - 1.200.000 VND",
+            rating: 4.8,
+            experience: "8 năm",
+            location: "Cần Thơ, Việt Nam",
         },
-        {
-            id: 4,
-            name: "Dr. James Wilson",
-            specialty: "Orthopedic Surgeon",
-            description: "Specializes in bone, joint, and muscle injuries and conditions. Expert in sports medicine and joint replacement.",
-            image: "/assets/homepage/mockup.jpg",
-            priceRange: "$250 - $500",
-            rating: 4.7,
-            experience: "18 years",
-            location: "Sports Medicine Center"
-        }
     ]
 
     return (
-        <div className="w-full max-w-7xl mx-auto p-6">
+        <div className="w-full mx-auto p-6">
             <div className="mb-8">
                 <h2 className="text-3xl font-bold mb-2 text-gray-800">Find Your Doctor</h2>
                 <p className="text-gray-600 mb-6">Connect with experienced healthcare professionals</p>
@@ -119,7 +108,7 @@ const DoctorList = () => {
                             <CardBody className="p-0">
                                 <div className="flex flex-col md:flex-row">
                                     {/* Doctor Image */}
-                                    <div className="md:w-64 h-48 md:h-auto relative overflow-hidden">
+                                    <div className="md:w-80 h-48 md:h-auto relative overflow-hidden">
                                         <Image
                                             src={doctor.image}
                                             alt={doctor.name}
@@ -151,7 +140,7 @@ const DoctorList = () => {
 
                                                 <div className="flex items-center gap-1">
                                                     <Chip
-                                                        color="warning"
+                                                        color={doctor.rating >= 4 ? "success" : "warning"}
                                                         variant="flat"
                                                         size="sm"
                                                         startContent="⭐"
@@ -179,7 +168,7 @@ const DoctorList = () => {
                         <Card className="lg:w-80 hover:shadow-xl transition-shadow duration-300 border-0">
                             <CardBody className="p-6 flex flex-col justify-center">
                                 <div className="text-center mb-6">
-                                    <span className="text-sm text-gray-500 block mb-1">Consultation Fee</span>
+                                    <span className="text-sm text-gray-500 block mb-1">Chi phí khám</span>
                                     <div className="text-2xl font-bold text-green-600">
                                         {doctor.priceRange}
                                     </div>
@@ -193,7 +182,7 @@ const DoctorList = () => {
                                         onPress={() => console.log(`Book ${doctor.name}`)}
                                         className="w-full"
                                     >
-                                        Book Appointment
+                                        Đặt lịch hẹn
                                     </Button>
                                     <Button
                                         color="default"
@@ -202,7 +191,7 @@ const DoctorList = () => {
                                         onPress={() => console.log(`View details for ${doctor.name}`)}
                                         className="w-full"
                                     >
-                                        View Profile
+                                        Xem chi tiết
                                     </Button>
                                 </div>
                             </CardBody>

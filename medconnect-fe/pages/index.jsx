@@ -10,7 +10,7 @@ export default function HomePage() {
           alt="Sample 16:9"
           width={1920}
           height={1080}
-          className="w-full h-auto"
+          style={{ borderRadius: "12px", marginTop: "2em" }}
         />
         <Test/>
         <DoctorList />
