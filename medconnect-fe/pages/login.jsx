@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import SocialLogin from "@/components/ui/SocialLogin";
-import {
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { Input, Button } from "@heroui/react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../lib/firebase";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
@@ -80,15 +78,14 @@ export default function MedConnectLogin() {
     }
   };
 
-  return (
+   return (
     <div
       className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative"
       style={{ backgroundImage: 'url(/hospital.jpg)' }}
     >
       <div className="absolute inset-0 bg-black/40"></div>
       <div
-        className="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex"
-        style={{ maxWidth: "1100px", minHeight: "600px" }}
+        className="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex max-w-[1100px] min-h-[600px]"
       >
         {/* Left panel */}
         <div className="flex-1 relative overflow-hidden">
@@ -124,21 +121,21 @@ export default function MedConnectLogin() {
           </div>
         </div>
 
-        {/* Right form */}
+
+        {/* Right form with HeroUI */}
         <div className="flex-1 p-12 flex flex-col justify-center">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-semibold text-gray-800 mb-1">Đăng nhập</h2>
-            <p className="text-gray-600 text-sm">
-              Chào mừng bạn trở lại với MedConnect
-            </p>
+            <p className="text-gray-600 text-sm">Chào mừng bạn trở lại với MedConnect</p>
           </div>
 
           {message.text && (
             <div
-              className={`p-3 rounded-lg mb-5 text-sm ${message.type === "error"
-                ? "bg-red-50 text-red-600 border border-red-200"
-                : "bg-green-50 text-green-600 border border-green-200"
-                }`}
+              className={`p-3 rounded-lg mb-5 text-sm ${
+                message.type === "error"
+                  ? "bg-red-50 text-red-600 border border-red-200"
+                  : "bg-green-50 text-green-600 border border-green-200"
+              }`}
             >
               {message.text}
             </div>
@@ -146,28 +143,26 @@ export default function MedConnectLogin() {
 
           <div className="space-y-5">
             <div>
-              <label className="block mb-2 text-gray-700 font-medium text-sm">
-                Email
-              </label>
-              <input
+              <Input
+                label="Email"
+                placeholder="example@email.com"
                 type="email"
+                size="md"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@email.com"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-all"
+                fullWidth
               />
             </div>
 
             <div>
-              <label className="block mb-2 text-gray-700 font-medium text-sm">
-                Mật khẩu
-              </label>
-              <input
+              <Input
+                label="Mật khẩu"
+                placeholder="••••••••"
                 type="password"
+                size="md"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 transition-all"
+                fullWidth
               />
             </div>
 
@@ -180,16 +175,16 @@ export default function MedConnectLogin() {
               </a>
             </div>
 
-            <button
+            <Button
               onClick={handleEmailLogin}
               disabled={isLoading}
-              className="w-full py-3 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-60"
-              style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              }}
+              fullWidth
+              size="md"
+              className="w-full py-3 text-white text-base font-semibold rounded-xl transition-all disabled:opacity-60 hover:shadow-lg"
+              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
             >
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-            </button>
+            </Button>
 
             <div className="relative text-center my-6">
               <div className="absolute inset-0 flex items-center">
@@ -200,7 +195,12 @@ export default function MedConnectLogin() {
               </span>
             </div>
 
-            <div className="flex justify-center"> <SocialLoginButtons onSuccess={(user) => sendFirebaseTokenToBackend(user)} onError={(msg) => showMessage(msg, "error")} /> </div>
+            <div className="flex justify-center">
+              <SocialLoginButtons
+                onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                onError={(msg) => showMessage(msg, "error")}
+              />
+            </div>
 
             <div className="text-center mt-6 text-sm text-gray-600">
               Chưa có tài khoản?{" "}

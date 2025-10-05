@@ -1,19 +1,8 @@
 import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button, Input} from "@heroui/react";
 import navigate from "@/config/navigate";
 import { useRouter } from "next/router";
+import Image from "next/image";
 
-export const AcmeLogo = () => {
-  return (
-    <svg fill="none" height="36" viewBox="0 0 32 32" width="36">
-      <path
-        clipRule="evenodd"
-        d="M17.6482 10.1305L15.8785 7.02583L7.02979 22.5499H10.5278L17.6482 10.1305ZM19.8798 14.0457L18.11 17.1983L19.394 19.4511H16.8453L15.1056 22.5499H24.7272L19.8798 14.0457Z"
-        fill="currentColor"
-        fillRule="evenodd"
-      />
-    </svg>
-  );
-};
 
 export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
   return (
@@ -45,7 +34,6 @@ export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...prop
   );
 };
 
-
 const Nav = () => {
   const router = useRouter();
 
@@ -53,10 +41,18 @@ const Nav = () => {
     router.push(link);
   };
   return (
-     <Navbar shouldHideOnScroll>
+     <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
       <NavbarBrand>
-        <AcmeLogo />
-        <p className="font-bold text-inherit">MedConnect</p>
+        <Link href="/">
+          <Image
+            src="assets/logo.svg"
+            alt="MedConnect Logo"
+            width={40}
+            height={40}
+            className="mr-2"
+          />
+          <p className="font-bold text-inherit">MedConnect</p>
+        </Link>
       </NavbarBrand>
       <NavbarContent className="hidden sm:flex gap-4" justify="center">
         {navigate.route.map((item, index) => (
@@ -77,6 +73,21 @@ const Nav = () => {
                 </Button>
           </NavbarItem>
         ))}
+        <NavbarItem className="hidden sm:flex w-48">
+          <Input
+                  classNames={{
+                    base: "max-w-full sm:max-w-[10rem] h-10",
+                    mainWrapper: "h-full",
+                    input: "text-small",
+                    inputWrapper:
+                      "h-full font-normal text-default-500 bg-default-400/20 dark:bg-default-500/20",
+                  }}
+                  placeholder="Type to search..."
+                  size="sm"
+                  startContent={<SearchIcon size={18} />}
+                  type="search"
+                />
+        </NavbarItem>
       </NavbarContent>
     </Navbar>
   )

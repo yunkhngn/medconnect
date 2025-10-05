@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Input, Button, Checkbox } from "@heroui/react";
 import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
 import { auth, googleProvider, facebookProvider } from "../lib/firebase";
 import SocialLogin from "@/components/ui/SocialLogin";
@@ -27,7 +28,7 @@ export default function MedConnectRegister() {
     });
   };
 
-  // Gửi duy nhất token Firebase về backend
+  // Gửi duy nhất token Firebase về backend để đăng ký
   const sendFirebaseTokenToBackend = async (user) => {
     try {
       const idToken = await user.getIdToken();
@@ -56,6 +57,7 @@ export default function MedConnectRegister() {
     }
   };
 
+  // Xử lý đăng ký bằng email và password
   const handleEmailRegister = async (e) => {
     e.preventDefault();
 
@@ -100,6 +102,7 @@ export default function MedConnectRegister() {
     }
   };
 
+  // Xử lý đăng ký qua Google
   const handleGoogleRegister = async () => {
     if (!termsAccepted || !privacyAccepted) {
       showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
@@ -114,6 +117,7 @@ export default function MedConnectRegister() {
     }
   };
 
+  // Xử lý đăng ký qua Facebook
   const handleFacebookRegister = async () => {
     if (!termsAccepted || !privacyAccepted) {
       showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
@@ -158,98 +162,86 @@ export default function MedConnectRegister() {
           )}
 
           <form onSubmit={handleEmailRegister} className="space-y-4">
-            <div>
-              <label className="block mb-1.5 text-gray-700 font-medium text-sm">Họ và tên</label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                required
-                placeholder="Nguyễn Văn A"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 transition-all"
-              />
-            </div>
+            <Input
+              label="Họ và tên"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              required
+              placeholder="Nguyễn Văn A"
+              size="md"
+              fullWidth
+            />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              placeholder="example@email.com"
+              size="md"
+              fullWidth
+            />
+            <Input
+              label="Mật khẩu"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              placeholder="••••••••"
+              size="md"
+              fullWidth
+            />
+            <Input
+              label="Xác nhận mật khẩu"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              required
+              placeholder="••••••••"
+              size="md"
+              fullWidth
+            />
 
-            <div>
-              <label className="block mb-1.5 text-gray-700 font-medium text-sm">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                placeholder="example@email.com"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 transition-all"
-              />
-            </div>
+            <Checkbox
+              isSelected={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              size="sm"
+              className="text-gray-600"
+            >
+              Tôi đồng ý với{" "}
+              <a href="#" className="text-indigo-600 font-medium hover:underline">
+                Điều khoản sử dụng
+              </a>
+            </Checkbox>
 
-            <div>
-              <label className="block mb-1.5 text-gray-700 font-medium text-sm">Mật khẩu</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 transition-all"
-              />
-            </div>
+            <Checkbox
+              isSelected={privacyAccepted}
+              onChange={(e) => setPrivacyAccepted(e.target.checked)}
+              size="sm"
+              className="text-gray-600"
+            >
+              Tôi đã đọc và chấp nhận{" "}
+              <a href="#" className="text-indigo-600 font-medium hover:underline">
+                Chính sách bảo mật
+              </a>
+            </Checkbox>
 
-            <div>
-              <label className="block mb-1.5 text-gray-700 font-medium text-sm">Xác nhận mật khẩu</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                required
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 transition-all"
-              />
-            </div>
-
-            <div className="space-y-2.5">
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
-                />
-                <span className="text-sm text-gray-600 leading-relaxed">
-                  Tôi đồng ý với{" "}
-                  <a href="#" className="text-indigo-600 font-medium hover:underline">
-                    Điều khoản sử dụng
-                  </a>
-                </span>
-              </label>
-
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={privacyAccepted}
-                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
-                  className="w-4 h-4 mt-1 cursor-pointer flex-shrink-0"
-                />
-                <span className="text-sm text-gray-600 leading-relaxed">
-                  Tôi đã đọc và chấp nhận{" "}
-                  <a href="#" className="text-indigo-600 font-medium hover:underline">
-                    Chính sách bảo mật
-                  </a>
-                </span>
-              </label>
-            </div>
-
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 text-white text-base font-semibold rounded-xl transition-all disabled:opacity-60 hover:shadow-lg"
-              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
+              isLoading={isLoading}
+              size="md"
+              fullWidth
+              color="primary"
+              radius="xl"
+              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",marginTop:"20px" }}
             >
               {isLoading ? "Đang đăng ký..." : "Đăng ký"}
-            </button>
+            </Button>
           </form>
 
           {/* SOCIAL LOGIN */}
@@ -262,8 +254,14 @@ export default function MedConnectRegister() {
             </span>
           </div>
 
-            <div className="flex justify-center"> <SocialLogin onSuccess={(user) => sendFirebaseTokenToBackend(user)} onError={(msg) => showMessage(msg, "error")} /> </div>
-
+          <div className="flex justify-center">
+            <SocialLogin
+              onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+              onError={(msg) => showMessage(msg, "error")}
+              handleGoogleRegister={handleGoogleRegister}
+              handleFacebookRegister={handleFacebookRegister}
+            />
+          </div>
 
           <div className="text-center mt-4 text-sm text-gray-600">
             Đã có tài khoản?{" "}
