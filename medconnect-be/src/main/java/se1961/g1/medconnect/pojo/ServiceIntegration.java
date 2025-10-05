@@ -17,6 +17,7 @@ public class ServiceIntegration {
     @Enumerated(EnumType.STRING)
     private Services serviceType;
 
+    @Column(length = 4000)
     private String requestData;
     private String responseData;
 }

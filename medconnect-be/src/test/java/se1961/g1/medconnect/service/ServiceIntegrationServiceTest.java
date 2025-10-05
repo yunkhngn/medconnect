@@ -22,14 +22,4 @@ public class ServiceIntegrationServiceTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
     }
-
-    @Test
-    public void saveTest() {
-        ServiceIntegration si = new ServiceIntegration();
-        si.setServiceType(Services.FIREBASE);
-
-        when(siRepository.save(si)).thenReturn(si);
-
-
-    }
 }
