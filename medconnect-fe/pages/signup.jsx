@@ -28,7 +28,6 @@ export default function MedConnectRegister() {
     });
   };
 
-  // Gửi duy nhất token Firebase về backend để đăng ký
   const sendFirebaseTokenToBackend = async (user) => {
     try {
       const idToken = await user.getIdToken();
@@ -41,7 +40,13 @@ export default function MedConnectRegister() {
         },
       });
 
-      if (!response.ok) throw new Error("Backend registration failed");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Backend register failed:", response.status, errorText);
+        await user.delete();
+
+        throw new Error("Backend registration failed");
+      }
 
       const data = await response.json();
       console.log("Backend response:", data);
@@ -52,12 +57,18 @@ export default function MedConnectRegister() {
       }, 1500);
     } catch (error) {
       console.error("Backend error:", error);
+      try {
+        const currentUser = auth.currentUser;
+        if (currentUser) await currentUser.delete();
+      } catch (deleteError) {
+        console.warn("Không thể xóa user Firebase:", deleteError);
+      }
+
       showMessage("Lỗi kết nối với máy chủ. Vui lòng thử lại.", "error");
       setIsLoading(false);
     }
   };
 
-  // Xử lý đăng ký bằng email và password
   const handleEmailRegister = async (e) => {
     e.preventDefault();
 
@@ -102,7 +113,6 @@ export default function MedConnectRegister() {
     }
   };
 
-  // Xử lý đăng ký qua Google
   const handleGoogleRegister = async () => {
     if (!termsAccepted || !privacyAccepted) {
       showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
@@ -117,7 +127,6 @@ export default function MedConnectRegister() {
     }
   };
 
-  // Xử lý đăng ký qua Facebook
   const handleFacebookRegister = async () => {
     if (!termsAccepted || !privacyAccepted) {
       showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
@@ -143,7 +152,6 @@ export default function MedConnectRegister() {
         className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex relative z-10"
         style={{ maxWidth: "950px", minHeight: "580px" }}
       >
-        {/* LEFT SIDE */}
         <div className="flex-1 p-12 flex flex-col justify-center">
           <div className="text-center mb-7">
             <h2 className="text-3xl font-semibold text-gray-800 mb-2">Đăng ký</h2>
@@ -238,13 +246,12 @@ export default function MedConnectRegister() {
               fullWidth
               color="primary"
               radius="xl"
-              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",marginTop:"20px" }}
+              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", marginTop: "20px" }}
             >
               {isLoading ? "Đang đăng ký..." : "Đăng ký"}
             </Button>
           </form>
 
-          {/* SOCIAL LOGIN */}
           <div className="relative text-center my-5">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
@@ -271,7 +278,6 @@ export default function MedConnectRegister() {
           </div>
         </div>
 
-        {/* RIGHT SIDE */}
         <div className="flex-1 relative overflow-hidden">
           <img
             src="doctor.jpg"
