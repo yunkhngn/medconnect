@@ -26,22 +26,6 @@ public class FirebaseServiceTest {
     }
 
     @Test
-    public void testVerifyIdToken() throws Exception {
-        try(MockedStatic<FirebaseAuth> mockedFirebaseAuth = mockStatic(FirebaseAuth.class)) {
-            FirebaseAuth mockAuth = mock(FirebaseAuth.class);
-            FirebaseToken mockToken = mock(FirebaseToken.class);
-
-            when(mockToken.getUid()).thenReturn("uid123");
-            when(mockAuth.verifyIdToken("valid-token")).thenReturn(mockToken);
-            mockedFirebaseAuth.when(FirebaseAuth::getInstance).thenReturn(mockAuth);
-
-            String uid = firebaseService.verifyIdToken("valid-token");
-
-            assertEquals("uid123", uid);
-        }
-    }
-
-    @Test
     public void testDecodedToken() throws Exception {
         try(MockedStatic<FirebaseAuth> mockedFirebaseAuth = mockStatic(FirebaseAuth.class)) {
             FirebaseAuth mockAuth = mock(FirebaseAuth.class);

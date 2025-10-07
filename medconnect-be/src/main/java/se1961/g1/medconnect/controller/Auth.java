@@ -20,22 +20,26 @@ public class Auth {
     @Autowired
     private FirebaseService firebaseService;
 
-    @PostMapping("/login")
-    public ResponseEntity<User> login(@RequestHeader("Authorization") String token) throws Exception {
-        if(token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
+        @PostMapping("/login")
+        public ResponseEntity<User> login(@RequestHeader("Authorization") String token) throws Exception {
+            if(token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
 
-        String uid = firebaseService.verifyIdToken(token);
+            FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
+            String uid = decodedToken.getUid();
 
-        Optional<User> userOpt = userService.getUser(uid);
+            Optional<User> userOpt = userService.getUser(uid);
 
-        if(userOpt.isEmpty()) {
+            if(userOpt.isPresent()) {
+                return ResponseEntity.ok(userOpt.get());
+            } else if(!"password".equals(firebaseService.getProvider(uid))) {
+                String email = decodedToken.getEmail();
+                User newUser = userService.registerUser(uid, email);
+                return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
+            }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        return ResponseEntity.ok(userOpt.get());
-    }
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestHeader("Authorization") String token) throws Exception {
