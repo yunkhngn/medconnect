@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@heroui/react";
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider, facebookProvider } from "@/lib/firebase";
+import { auth, googleProvider } from "@/lib/firebase";
 
 export default function SocialLoginButtons({ onSuccess, onError }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,11 +19,32 @@ export default function SocialLoginButtons({ onSuccess, onError }) {
   const handleLogin = async (provider, providerName) => {
     setIsLoading(true);
     setLoadingProvider(providerName);
+
     try {
       const result = await signInWithPopup(auth, provider);
-      if (onSuccess) onSuccess(result.user);
+
+      if (!result?.user) throw new Error(`${providerName} login aborted.`);
+      const user = result.user;
+      const token = await user.getIdToken();
+
+      if (onSuccess) onSuccess(user, token);
     } catch (err) {
-      console.error(`${providerName} login error:`, err);
+      console.warn(`${providerName} login error:`, err);
+
+      if (
+        err.code !== "auth/popup-closed-by-user" &&
+        err.code !== "auth/cancelled-popup-request"
+      ) {
+        if (auth.currentUser) {
+          try {
+            await auth.currentUser.delete();
+            console.log("Temporary Firebase user deleted.");
+          } catch (delErr) {
+            console.warn("Cannot delete temp user:", delErr.message);
+          }
+        }
+      }
+
       const msg = getFriendlyError(err, providerName);
       if (onError) onError(msg);
     } finally {
@@ -72,31 +93,6 @@ export default function SocialLoginButtons({ onSuccess, onError }) {
         className="text-red-600 border-2 border-red-600 hover:border-red-700"
       >
         Google
-      </Button>
-
-      <Button
-        color="default"
-        variant="outlined"
-        disabled={isLoading}
-        isLoading={isLoading && loadingProvider === "Facebook"}
-        size="md"
-        fullWidth
-        startContent={
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="#4267B2"
-            aria-hidden
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-          </svg>
-        }
-        onClick={() => handleLogin(facebookProvider, "Facebook")}
-        className="text-blue-600 border-2 border-blue-600 hover:border-blue-700"
-      >
-        Facebook
       </Button>
     </div>
   );
