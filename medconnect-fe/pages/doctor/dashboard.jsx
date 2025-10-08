@@ -40,18 +40,14 @@ export default function DoctorDashboard() {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   useEffect(() => {
-    setUser({
-    displayName: "Bác sĩ Nguyễn",
-    email: "bacsi.nguyen@test.com"
-  });
-    // const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-    //   if (currentUser) {
-    //     setUser(currentUser);
-    //   } else {
-    //     window.location.href = "/login";
-    //   }
-    // });
-    // return () => unsubscribe();
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        window.location.href = "/login";
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
