@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Card, CardBody } from '@heroui/react';
+import { Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
@@ -8,6 +8,12 @@ import menuItems from "@/config/Nav/doctorNav";
 const Nav = () => {
   const router = useRouter();
   const isActive = (href) => router.pathname === href;
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userRole');
+    router.push('/login');
+  };
 
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
@@ -47,11 +53,31 @@ const Nav = () => {
       {/* User Avatar */}
       <div className="p-4 border-t border-gray-100">
         <div className="flex items-center justify-center">
-          <Avatar
-            src="/assets/homepage/mockup-avatar.jpg"
-            alt="User Avatar"
-            className="w-10 h-10 ring-2 ring-cyan-100"
-          />
+          <Dropdown placement="top">
+            <DropdownTrigger>
+              <Avatar
+                src="/assets/homepage/mockup-avatar.jpg"
+                alt="User Avatar"
+                className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer"
+              />
+            </DropdownTrigger>
+            <DropdownMenu aria-label="User Actions">
+              <DropdownItem key="settings" textValue="Settings">
+                <Link href="/doctor/settings" className="w-full block">
+                  Cài đặt
+                </Link>
+              </DropdownItem>
+              <DropdownItem 
+                key="logout" 
+                className="bg-gray-100 text-red-600"
+                color="danger"
+                variant="flat"
+                onClick={handleLogout}
+              >
+                Đăng xuất
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
         </div>
       </div>
     </div>
