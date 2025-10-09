@@ -1,63 +1,71 @@
 import React, { useState } from "react";
+import Image from "next/image";
 import { Input, Button } from "@heroui/react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { useRouter } from "next/router";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const router = useRouter();
 
   const showMessage = (text, type = "info") => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "" }), 4000);
   };
 
-  // Gửi token Firebase về backend
-  const sendFirebaseTokenToBackend = async (user) => {
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+const sendFirebaseTokenToBackend = async (user) => {
+  try {
+    const idToken = await user.getIdToken();
+    const response = await fetch("http://localhost:8080/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userRole", data.role);
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userRole", data.role);
 
-        showMessage("Đăng nhập thành công!", "success");
+      showMessage("Đăng nhập thành công!", "success");
 
-        // Điều hướng theo role
-        setTimeout(() => {
-          if (data.role === "ADMIN") {
-            window.location.href = "/admin/dashboard";
-          } else if (data.role === "DOCTOR") {
-            window.location.href = "/doctor/dashboard";
-          } else {
-            window.location.href = "/patient/dashboard";
-          }
-        }, 1000);
-      } else if (response.status === 401) {
-        showMessage("Email hoặc mật khẩu không đúng!", "error");
-      } else {
-        showMessage("Đăng nhập thất bại từ backend.", "error");
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage("Lỗi kết nối máy chủ.", "error");
-    } finally {
-      setIsLoading(false);
+      setTimeout(() => {
+        switch (data.role?.toLowerCase()) {
+          case "admin":
+            router.push("/admin/dashboard");
+            break;
+          case "doctor":
+            router.push("/doctor/dashboard");
+            break;
+          case "patient":
+            router.push("/patient/dashboard");
+            break;
+          default:
+            router.push("/403");
+            break;
+        }
+      }, 800);
+    } else if (response.status === 401) {
+      showMessage("Email hoặc mật khẩu không đúng!", "error");
+    } else {
+      showMessage("Đăng nhập thất bại từ backend.", "error");
     }
-  };
+  } catch (error) {
+    console.error(error);
+    showMessage("Lỗi kết nối máy chủ.", "error");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-  // Đăng nhập email / password
+
   const handleEmailLogin = async () => {
     if (!email || !password) {
       showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
@@ -73,20 +81,19 @@ export default function MedConnectLogin() {
       );
       await sendFirebaseTokenToBackend(userCredential.user);
     } catch (error) {
+      console.error(error);
       showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
       setIsLoading(false);
     }
   };
 
-   return (
+  return (
     <div
       className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: 'url(/hospital.jpg)' }}
+      style={{ backgroundImage: "url(/hospital.jpg)" }}
     >
       <div className="absolute inset-0 bg-black/40"></div>
-      <div
-        className="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex max-w-[1100px] min-h-[600px]"
-      >
+      <div className="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex max-w-[1100px] min-h-[600px]">
         <div className="flex-1 relative overflow-hidden">
           <img
             src="/doctor.jpg"
@@ -101,7 +108,16 @@ export default function MedConnectLogin() {
             }}
           ></div>
           <div className="relative z-10 p-12 text-white flex flex-col justify-center h-full">
-            <h1 className="text-5xl font-bold mb-4">🏥 MedConnect</h1>
+            <div className="flex items-center mb-4">
+              <Image
+                src="/assets/logo.svg"
+                alt="MedConnect Logo"
+                width={40}
+                height={40}
+                className="mr-3"
+              />
+              <h1 className="text-5xl font-bold">MedConnect</h1>
+            </div>
             <p className="text-lg leading-relaxed opacity-95 mb-6">
               Nền tảng đặt lịch khám bệnh và tư vấn y tế trực tuyến hàng đầu Việt Nam
             </p>
@@ -122,8 +138,12 @@ export default function MedConnectLogin() {
 
         <div className="flex-1 p-12 flex flex-col justify-center">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-1">Đăng nhập</h2>
-            <p className="text-gray-600 text-sm">Chào mừng bạn trở lại với MedConnect</p>
+            <h2 className="text-3xl font-semibold text-gray-800 mb-1">
+              Đăng nhập
+            </h2>
+            <p className="text-gray-600 text-sm">
+              Chào mừng bạn trở lại với MedConnect
+            </p>
           </div>
 
           {message.text && (
@@ -139,29 +159,23 @@ export default function MedConnectLogin() {
           )}
 
           <div className="space-y-5">
-            <div>
-              <Input
-                label="Email"
-                placeholder="example@email.com"
-                type="email"
-                size="md"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                fullWidth
-              />
-            </div>
+            <Input
+              label="Email"
+              placeholder="example@email.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+            />
 
-            <div>
-              <Input
-                label="Mật khẩu"
-                placeholder="••••••••"
-                type="password"
-                size="md"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                fullWidth
-              />
-            </div>
+            <Input
+              label="Mật khẩu"
+              placeholder="••••••••"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+            />
 
             <div className="flex justify-end">
               <a
@@ -176,9 +190,10 @@ export default function MedConnectLogin() {
               onClick={handleEmailLogin}
               disabled={isLoading}
               fullWidth
-              size="md"
               className="w-full py-3 text-white text-base font-semibold rounded-xl transition-all disabled:opacity-60 hover:shadow-lg"
-              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              }}
             >
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>

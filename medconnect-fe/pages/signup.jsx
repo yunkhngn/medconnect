@@ -292,7 +292,16 @@ export default function MedConnectRegister() {
             }}
           ></div>
           <div className="relative z-10 p-12 text-white flex flex-col justify-center h-full">
-            <h1 className="text-4xl font-bold mb-4">🏥 MedConnect</h1>
+            <div className="flex items-center mb-4">
+              <Image
+                src="/assets/logo.svg"
+                alt="MedConnect Logo"
+                width={40}
+                height={40}
+                className="mr-3"
+              />
+              <h1 className="text-5xl font-bold">MedConnect</h1>
+            </div>
             <p className="text-base leading-relaxed opacity-95 mb-6">
               Nền tảng đặt lịch khám bệnh và tư vấn y tế trực tuyến hàng đầu Việt Nam
             </p>
