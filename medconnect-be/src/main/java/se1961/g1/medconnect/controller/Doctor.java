@@ -15,11 +15,10 @@ public class Doctor {
     @Autowired
     private DoctorService doctorService;
 
-    @GetMapping("/")
-    @GetMapping("/dashboard/appointments")
-    @GetMapping("/dashboard/schedule")
+    @GetMapping("/${doctorId}")
+    @GetMapping("/appointments/${doctorId}")
+    @GetMapping("/schedule/${doctorId}")
     public List<Appointment> getAllAppointments() {
-
     }
     @GetMapping("/dashboard/me")
 }
