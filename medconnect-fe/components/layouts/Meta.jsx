@@ -1,9 +1,9 @@
 import Head from 'next/head'
 
-const Meta = () => {
+const Meta = ({title}) => {
   return (
     <Head>
-      <title>MedConnect</title>
+      <title>{title ? title : "MedConnect"}</title>
       <meta name="description" content="Meta description" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <link rel="icon" href="favicon/favicon.ico" />
