@@ -15,7 +15,7 @@ export default function MedConnectLogin() {
     setTimeout(() => setMessage({ text: "", type: "" }), 4000);
   };
 
-  // Gửi token Firebase về backend để backend xác thực và trả về role
+  // Gửi token Firebase về backend
   const sendFirebaseTokenToBackend = async (user) => {
     try {
       const idToken = await user.getIdToken();
@@ -87,7 +87,6 @@ export default function MedConnectLogin() {
       <div
         className="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex max-w-[1100px] min-h-[600px]"
       >
-        {/* Left panel */}
         <div className="flex-1 relative overflow-hidden">
           <img
             src="/doctor.jpg"
@@ -121,8 +120,6 @@ export default function MedConnectLogin() {
           </div>
         </div>
 
-
-        {/* Right form with HeroUI */}
         <div className="flex-1 p-12 flex flex-col justify-center">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-semibold text-gray-800 mb-1">Đăng nhập</h2>

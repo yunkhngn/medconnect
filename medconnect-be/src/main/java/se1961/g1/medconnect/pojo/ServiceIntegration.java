@@ -19,6 +19,11 @@ public class ServiceIntegration {
 
     @Column(length = 4000)
     private String requestData;
+
     private String responseData;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 }
 
