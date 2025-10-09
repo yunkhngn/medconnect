@@ -1,8 +1,8 @@
-import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button, Input} from "@heroui/react";
-import navigate from "@/config/navigate";
+import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar} from "@heroui/react";
+import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
-
+import Link from "next/link";
 
 export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
   return (
@@ -43,7 +43,7 @@ const Nav = () => {
   return (
      <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
       <NavbarBrand>
-        <Link href="/">
+        <Link href="/" passHref className="flex items-center text-lg text-primary-600 dark:text-primary-400">
           <Image
             src="assets/logo.svg"
             alt="MedConnect Logo"
@@ -57,7 +57,9 @@ const Nav = () => {
       <NavbarContent className="hidden sm:flex gap-4" justify="center">
         {navigate.route.map((item, index) => (
           <NavbarItem key={index}>
-            <Link href={item.link}>{item.text}</Link>
+            <Link href={item.link} className="text-primary-600 font-semibold hover:text-primary-600 dark:hover:text-primary-400">
+              {item.text}
+            </Link>
           </NavbarItem>
         ))}
       </NavbarContent>
@@ -73,20 +75,8 @@ const Nav = () => {
                 </Button>
           </NavbarItem>
         ))}
-        <NavbarItem className="hidden sm:flex w-48">
-          <Input
-                  classNames={{
-                    base: "max-w-full sm:max-w-[10rem] h-10",
-                    mainWrapper: "h-full",
-                    input: "text-small",
-                    inputWrapper:
-                      "h-full font-normal text-default-500 bg-default-400/20 dark:bg-default-500/20",
-                  }}
-                  placeholder="Type to search..."
-                  size="sm"
-                  startContent={<SearchIcon size={18} />}
-                  type="search"
-                />
+        <NavbarItem>
+           <Avatar src="/assets/homepage/mockup-avatar.jpg" />
         </NavbarItem>
       </NavbarContent>
     </Navbar>

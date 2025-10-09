@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Input, Button } from "@heroui/react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { Default } from "@/components/layouts/";
+import { Card, CardBody, Input, Button, Form, Divider } from "@heroui/react";
+import Link from "next/link";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
@@ -78,139 +80,129 @@ export default function MedConnectLogin() {
     }
   };
 
-   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: 'url(/hospital.jpg)' }}
-    >
-      <div className="absolute inset-0 bg-black/40"></div>
-      <div
-        className="relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex max-w-[1100px] min-h-[600px]"
+  return (
+    <Default title="Đăng nhập - MedConnect" >
+      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative "
       >
-        <div className="flex-1 relative overflow-hidden">
-          <img
-            src="/doctor.jpg"
-            alt="Bác sĩ"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.7) 100%)",
-            }}
-          ></div>
-          <div className="relative z-10 p-12 text-white flex flex-col justify-center h-full">
-            <h1 className="text-5xl font-bold mb-4">🏥 MedConnect</h1>
-            <p className="text-lg leading-relaxed opacity-95 mb-6">
-              Nền tảng đặt lịch khám bệnh và tư vấn y tế trực tuyến hàng đầu Việt Nam
-            </p>
-            <ul className="space-y-3">
-              {[
-                "Tìm bác sĩ chuyên khoa nhanh chóng",
-                "Đặt lịch khám online tiện lợi",
-                "Tư vấn video trực tiếp với bác sĩ",
-                "Quản lý lịch sử khám bệnh",
-              ].map((item, i) => (
-                <li key={i} className="flex items-center text-sm">
-                  <span className="text-xl font-bold mr-3">✓</span> {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
+          <Card
+            isBlurred
+            shadow="sm"
+            className="w-full max-w-5xl border-none bg-background/60 dark:bg-default-100/50 rounded-2xl overflow-hidden"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {/* LEFT: Login form */}
+              <CardBody className="p-6 sm:p-10">
+                <div className="max-w-sm">
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Sign in</h1>
 
-        <div className="flex-1 p-12 flex flex-col justify-center">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-1">Đăng nhập</h2>
-            <p className="text-gray-600 text-sm">Chào mừng bạn trở lại với MedConnect</p>
-          </div>
+                  <Form
+                    className="flex flex-col gap-4"
+                    onSubmit={(e) => { e.preventDefault(); handleEmailLogin(); }}
+                  >
+                    <Input
+                      isRequired
+                      name="email"
+                      type="text"
+                      label="Email"
+                      labelPlacement="outside"
+                      placeholder="example@gmail.com"
+                      errorMessage="Please enter a valid email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
 
-          {message.text && (
-            <div
-              className={`p-3 rounded-lg mb-5 text-sm ${
-                message.type === "error"
-                  ? "bg-red-50 text-red-600 border border-red-200"
-                  : "bg-green-50 text-green-600 border border-green-200"
-              }`}
-            >
-              {message.text}
+                    <Input
+                      isRequired
+                      name="password"
+                      type="password"
+                      label="Password"
+                      labelPlacement="outside"
+                      placeholder="Enter your password"
+                      errorMessage="Password is required"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+
+                    <div className="flex items-center justify-between text-sm">
+                      <label className="inline-flex items-center gap-2 select-none cursor-pointer">
+                      </label>
+                      <Link href="#" underline="always" className="text-sm">
+                        Forgot password?
+                      </Link>
+                    </div>
+
+                    <Button
+                      color="primary"
+                      size="md"
+                      type="submit"
+                      className="mt-2"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                    </Button>
+
+                    <Divider className="my-2" />
+
+                    <div className="flex items-center justify-center gap-3">
+                      <Button color="warning" variant="flat" className="flex-1" startContent={<IconBrand name="google" />}>
+                        Google
+                      </Button>
+                    </div>
+                  </Form>
+                  <Link
+                        href="/signup"
+                        className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
+                      >
+                        No account yet? Sign up
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.5"
+                          stroke="currentColor"
+                          fill="none"
+                          className="size-5"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                        </svg>
+                      </Link>
+                </div>
+              </CardBody>
+
+              {/* RIGHT: Welcome panel */}
+              <CardBody className="hidden md:flex p-0">
+                <div
+                  className="w-full h-full bg-cover bg-center"
+                  style={{
+                    backgroundImage: "url('/assets/homepage/cover.jpg')",
+                  }}
+                />
+              </CardBody>
             </div>
-          )}
-
-          <div className="space-y-5">
-            <div>
-              <Input
-                label="Email"
-                placeholder="example@email.com"
-                type="email"
-                size="md"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                fullWidth
-              />
-            </div>
-
-            <div>
-              <Input
-                label="Mật khẩu"
-                placeholder="••••••••"
-                type="password"
-                size="md"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                fullWidth
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <a
-                href="#"
-                className="text-indigo-600 text-xs font-medium hover:underline"
-              >
-                Quên mật khẩu?
-              </a>
-            </div>
-
-            <Button
-              onClick={handleEmailLogin}
-              disabled={isLoading}
-              fullWidth
-              size="md"
-              className="w-full py-3 text-white text-base font-semibold rounded-xl transition-all disabled:opacity-60 hover:shadow-lg"
-              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}
-            >
-              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-            </Button>
-
-            <div className="relative text-center my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <span className="relative bg-white px-3 text-xs text-gray-500">
-                Hoặc đăng nhập với
-              </span>
-            </div>
-
-            <div className="flex justify-center">
-              <SocialLoginButtons
-                onSuccess={(user) => sendFirebaseTokenToBackend(user)}
-                onError={(msg) => showMessage(msg, "error")}
-              />
-            </div>
-
-            <div className="text-center mt-6 text-sm text-gray-600">
-              Chưa có tài khoản?{" "}
-              <a
-                href="/signup"
-                className="text-indigo-600 font-semibold hover:underline"
-              >
-                Đăng ký ngay
-              </a>
-            </div>
-          </div>
+          </Card>
         </div>
       </div>
-    </div>
+    </Default>
+  );
+}
+
+function IconBrand({ name }) {
+  const paths = {
+    google: (
+      <path d="M21 12.23c0-4.74-3.96-8.73-8.73-8.73A8.73 8.73 0 106 19.1 8.3 8.3 0 0112 14.52h-2.6v-2.7H12V9.3c0-2.6 1.58-4.02 3.89-4.02 1.11 0 2.28.2 2.28.2v2.5h-1.28c-1.26 0-1.65.78-1.65 1.58v1.26h2.8l-.45 2.7h-2.35A8.3 8.3 0 0121 12.23Z" />
+    ),
+  };
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="size-4"
+      aria-hidden
+      focusable="false"
+    >
+      {paths[name]}
+    </svg>
   );
 }
