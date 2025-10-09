@@ -151,7 +151,7 @@ export default function MedConnectLogin() {
                     </div>
                   </Form>
                   <Link
-                        href="#"
+                        href="/signup"
                         className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                       >
                         No account yet? Sign up
