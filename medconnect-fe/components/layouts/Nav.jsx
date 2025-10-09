@@ -1,5 +1,5 @@
 import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar} from "@heroui/react";
-import navigate from "@/config/navigate";
+import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
