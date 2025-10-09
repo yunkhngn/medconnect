@@ -18,9 +18,6 @@ public class Appointment {
     private AppointmentStatus status;
 
     @ManyToOne
-    private Admin admin;
-
-    @ManyToOne
     @JoinColumn(name = "doctor_id")
     private Doctor doctor;
 
