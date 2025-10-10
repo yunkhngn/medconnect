@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { auth } from "../lib/firebase";
-import Loading from "../components/ui/loading"
+
 export default function RedirectByRole() {
   const router = useRouter();
 
@@ -40,9 +40,5 @@ export default function RedirectByRole() {
     checkUser();
   }, [router]);
 
-  return (
-    <div>
-      <Loading/>
-    </div>
-  );
+  return <p>Đang chuyển hướng...</p>;
 }

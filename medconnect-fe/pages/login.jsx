@@ -18,52 +18,52 @@ export default function MedConnectLogin() {
     setTimeout(() => setMessage({ text: "", type: "" }), 4000);
   };
 
-  const sendFirebaseTokenToBackend = async (user) => {
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+const sendFirebaseTokenToBackend = async (user) => {
+  try {
+    const idToken = await user.getIdToken();
+    const response = await fetch("http://localhost:8080/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userRole", data.role);
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userRole", data.role);
 
-        showMessage("Đăng nhập thành công!", "success");
+      showMessage("Đăng nhập thành công!", "success");
 
-        setTimeout(() => {
-          switch (data.role?.toLowerCase()) {
-            case "admin":
-              router.push("/admin/dashboard");
-              break;
-            case "doctor":
-              router.push("/doctor/dashboard");
-              break;
-            case "patient":
-              router.push("/patient/dashboard");
-              break;
-            default:
-              router.push("/403");
-              break;
-          }
-        }, 800);
-      } else if (response.status === 401) {
-        showMessage("Email hoặc mật khẩu không đúng!", "error");
-      } else {
-        showMessage("Đăng nhập thất bại từ backend.", "error");
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage("Lỗi kết nối máy chủ.", "error");
-    } finally {
-      setIsLoading(false);
+      setTimeout(() => {
+        switch (data.role?.toLowerCase()) {
+          case "admin":
+            router.push("/admin/dashboard");
+            break;
+          case "doctor":
+            router.push("/doctor/dashboard");
+            break;
+          case "patient":
+            router.push("/patient/dashboard");
+            break;
+          default:
+            router.push("/403");
+            break;
+        }
+      }, 800);
+    } else if (response.status === 401) {
+      showMessage("Email hoặc mật khẩu không đúng!", "error");
+    } else {
+      showMessage("Đăng nhập thất bại từ backend.", "error");
     }
-  };
+  } catch (error) {
+    console.error(error);
+    showMessage("Lỗi kết nối máy chủ.", "error");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 
   const handleEmailLogin = async () => {
@@ -148,10 +148,11 @@ export default function MedConnectLogin() {
 
           {message.text && (
             <div
-              className={`p-3 rounded-lg mb-5 text-sm ${message.type === "error"
+              className={`p-3 rounded-lg mb-5 text-sm ${
+                message.type === "error"
                   ? "bg-red-50 text-red-600 border border-red-200"
                   : "bg-green-50 text-green-600 border border-green-200"
-                }`}
+              }`}
             >
               {message.text}
             </div>
@@ -173,11 +174,6 @@ export default function MedConnectLogin() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleEmailLogin();
-                }
-              }}
               fullWidth
             />
 
@@ -192,7 +188,6 @@ export default function MedConnectLogin() {
 
             <Button
               onClick={handleEmailLogin}
-              onKeyDown={e => e.key === 'Enter' ? handleEmailLogin : false}
               disabled={isLoading}
               fullWidth
               className="w-full py-3 text-white text-base font-semibold rounded-xl transition-all disabled:opacity-60 hover:shadow-lg"
