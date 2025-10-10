@@ -28,25 +28,25 @@ public class DoctorDashboard {
     private UserService userService;
 
 
-    @GetMapping("/me")
-    public ResponseEntity<Doctor> getMe(@RequestHeader("Authorization") String token)  throws Exception {
-        Optional<Doctor> doctor = doctorService.getDoctor(token);
-        if (doctor.isPresent()) {
-            return ResponseEntity.ok(doctor.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-//    @GetMapping("/me/appointments")
-//    public ResponseEntity<List<Appointment>> getAppointments(@RequestHeader("Authorization") String token) throws Exception {
+//    @GetMapping("/me")
+//    public ResponseEntity<Doctor> getMe(@RequestHeader("Authorization") String token)  throws Exception {
 //        Optional<Doctor> doctor = doctorService.getDoctor(token);
-//        List<Appointment> appointments =  new ArrayList<>();
 //        if (doctor.isPresent()) {
-//            appointments = appointmentService.findByDoctor(doctor.get());
+//            return ResponseEntity.ok(doctor.get());
+//        } else {
+//            return ResponseEntity.notFound().build();
 //        }
-//        return ResponseEntity.ok(appointments);
 //    }
+
+    @GetMapping("/me/appointments")
+    public ResponseEntity<List<Appointment>> getAppointments(@RequestHeader("Authorization") String token) throws Exception {
+        Optional<Doctor> doctor = doctorService.getDoctor(token);
+        List<Appointment> appointments =  new ArrayList<>();
+        if (doctor.isPresent()) {
+            appointments = doctorService.getAppointments();
+        }
+        return ResponseEntity.ok(appointments);
+    }
 //    @GetMapping("/me/schedule")
 
     @GetMapping("/me/profile")
