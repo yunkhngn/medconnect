@@ -6,10 +6,8 @@ import { Default } from "@/components/layouts/";
 import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/router";
 
 export default function MedConnectLogin() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -53,17 +51,16 @@ export default function MedConnectLogin() {
 
         showMessage("Đăng nhập thành công!", "success");
 
-        // Điều hướng theo role với router.push
+        // Điều hướng theo role
         setTimeout(() => {
           if (data.role === "ADMIN") {
-            router.push("/admin/dashboard");
+            window.location.href = "/admin/dashboard";
           } else if (data.role === "DOCTOR") {
-            router.push("/doctor/dashboard");
+            window.location.href = "/doctor/dashboard";
           } else {
-            router.push("/patient/dashboard");
+            window.location.href = "/patient/dashboard";
           }
         }, 1000);
-        
       } else if (response.status === 401) {
         showMessage("Email hoặc mật khẩu không đúng!", "error");
       } else {
@@ -162,10 +159,10 @@ export default function MedConnectLogin() {
                       >
                         <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
                       </Checkbox>
-                      <Link href="/quen-mat-khau" className="text-sm text-primary hover:underline ml-5">
+                    </div>
+                    <Link href="#" className="text-sm text-primary hover:underline">
                         Quên mật khẩu?
                       </Link>
-                    </div>
                     <Button
                       color="primary"
                       size="md"
@@ -178,7 +175,7 @@ export default function MedConnectLogin() {
 
                     <Divider className="my-2" />
 
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center gap-3">
                       <SocialLoginButtons
                         onSuccess={(user) => sendFirebaseTokenToBackend(user)}
                         onError={(msg) => showMessage(msg, "error")}
@@ -186,7 +183,7 @@ export default function MedConnectLogin() {
                     </div>
                   </Form>
                   <Link
-                    href="/dang-ky"
+                    href="/signup"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                   >
                     Chưa có tài khoản? Đăng ký ngay
@@ -219,5 +216,26 @@ export default function MedConnectLogin() {
         </div>
       </div>
     </Default>
+  );
+}
+
+function IconBrand({ name }) {
+  const paths = {
+    google: (
+      <path d="M21 12.23c0-4.74-3.96-8.73-8.73-8.73A8.73 8.73 0 106 19.1 8.3 8.3 0 0121 12.23Z" />
+    ),
+  };
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="size-4"
+      aria-hidden
+      focusable="false"
+    >
+      {paths[name]}
+    </svg>
   );
 }

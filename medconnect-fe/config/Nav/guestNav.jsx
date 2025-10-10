@@ -7,7 +7,7 @@ const navigate = {
   ],
   button: [
     { text: "Đăng nhập", link: "/dang-nhap", color: "primary", variant: "" },
-    { text: "Đăng ký", link: "/dang-ky", color: "primary", variant: "flat" },
+    { text: "Đăng ký", link: "/dang-ki", color: "primary", variant: "flat" },
   ],
 };
 

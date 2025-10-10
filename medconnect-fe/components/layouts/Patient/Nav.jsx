@@ -18,7 +18,7 @@ const Nav = () => {
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
       {/* Logo */}
-      <Link href="/">
+      <Link href="/doctor/dashboard">
         <div className="p-4 flex items-center justify-center border-b border-gray-100">
           <div className="w-13 h-13 bg-gray-100 rounded-xl flex items-center justify-center">
             <Image src="/assets/logo.svg" alt="Logo" width={40} height={40} />
@@ -63,7 +63,7 @@ const Nav = () => {
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">
               <DropdownItem key="settings" textValue="Settings">
-                <Link href="/nguoi-dung/cai-dat" className="w-full block">
+                <Link href="/doctor/settings" className="w-full block">
                   Cài đặt
                 </Link>
               </DropdownItem>

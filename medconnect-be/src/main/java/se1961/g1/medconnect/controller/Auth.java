@@ -12,7 +12,7 @@ import se1961.g1.medconnect.service.UserService;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("api/auth")
 public class Auth {
     @Autowired
     private UserService userService;
