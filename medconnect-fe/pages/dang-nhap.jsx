@@ -56,11 +56,11 @@ export default function MedConnectLogin() {
         // Điều hướng theo role với router.push
         setTimeout(() => {
           if (data.role === "ADMIN") {
-            router.push("/admin/dashboard");
+            router.push("/admin/trang-chu");
           } else if (data.role === "DOCTOR") {
-            router.push("/doctor/dashboard");
+            router.push("/bac-si/trang-chu");
           } else {
-            router.push("/patient/dashboard");
+            router.push("/nguoi-dung/trang-chu");
           }
         }, 1000);
         
