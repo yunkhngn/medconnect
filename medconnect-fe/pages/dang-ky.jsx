@@ -242,7 +242,7 @@ export default function MedConnectRegister() {
 
                     <Divider className="my-2" />
 
-                    <div className="flex items-center justify-center gap-3">
+                    <div className="flex items-center justify-center">
                       <SocialLogin
                         onSuccess={(user) => sendFirebaseTokenToBackend(user)}
                         onError={(msg) => showMessage(msg, "error")}
