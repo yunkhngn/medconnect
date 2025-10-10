@@ -37,7 +37,7 @@ export default function MedConnectRegister() {
     try {
       const idToken = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8080/auth/register", {
+      const response = await fetch("http://localhost:8080/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
