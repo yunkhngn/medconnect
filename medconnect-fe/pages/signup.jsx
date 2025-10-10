@@ -1,8 +1,11 @@
 import React, { useState } from "react";
-import { Input, Button, Checkbox } from "@heroui/react";
-import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
-import { auth, googleProvider, facebookProvider } from "../lib/firebase";
+import { Card, CardBody, Input, Button, Checkbox, Divider } from "@heroui/react";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "../lib/firebase";
 import SocialLogin from "@/components/ui/SocialLogin";
+import { Default } from "@/components/layouts/";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function MedConnectRegister() {
   const [formData, setFormData] = useState({
@@ -44,7 +47,6 @@ export default function MedConnectRegister() {
         const errorText = await response.text();
         console.error("Backend register failed:", response.status, errorText);
         await user.delete();
-
         throw new Error("Backend registration failed");
       }
 
@@ -113,205 +115,161 @@ export default function MedConnectRegister() {
     }
   };
 
-  const handleGoogleRegister = async () => {
-    if (!termsAccepted || !privacyAccepted) {
-      showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
-      return;
-    }
-
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await sendFirebaseTokenToBackend(result.user);
-    } catch {
-      showMessage("Đăng ký Google thất bại. Vui lòng thử lại.", "error");
-    }
-  };
-
-  const handleFacebookRegister = async () => {
-    if (!termsAccepted || !privacyAccepted) {
-      showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
-      return;
-    }
-
-    try {
-      const result = await signInWithPopup(auth, facebookProvider);
-      await sendFirebaseTokenToBackend(result.user);
-    } catch {
-      showMessage("Đăng ký Facebook thất bại. Vui lòng thử lại.", "error");
-    }
-  };
-
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-8 bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: 'url(hospital.jpg)' }}
-    >
-      <div className="absolute inset-0 bg-black/30"></div>
+    <Default title="Đăng ký - MedConnect">
+      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative">
+        <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
+          <Card
+            isBlurred
+            shadow="sm"
+            className="w-full max-w-5xl border-none bg-background/60 dark:bg-default-100/50 rounded-2xl overflow-hidden"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {/* LEFT: Register form */}
+              <CardBody className="p-6 sm:p-10">
+                <div className="max-w-sm">
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Đăng ký</h1>
 
-      <div
-        className="bg-white rounded-3xl shadow-2xl overflow-hidden w-full flex relative z-10"
-        style={{ maxWidth: "950px", minHeight: "580px" }}
-      >
-        <div className="flex-1 p-12 flex flex-col justify-center">
-          <div className="text-center mb-7">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-2">Đăng ký</h2>
-            <p className="text-gray-600 text-sm">Tạo tài khoản mới trên MedConnect</p>
-          </div>
+                  {message.text && (
+                    <div
+                      className={`p-3 rounded-lg mb-4 text-sm ${
+                        message.type === "error"
+                          ? "bg-red-50 text-red-600 border border-red-200"
+                          : "bg-green-50 text-green-600 border border-green-200"
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  )}
 
-          {message.text && (
-            <div
-              className={`p-3 rounded-lg mb-4 text-sm ${message.type === "error"
-                ? "bg-red-50 text-red-600 border border-red-200"
-                : "bg-green-50 text-green-600 border border-green-200"
-                }`}
-            >
-              {message.text}
+                  <form onSubmit={handleEmailRegister} className="flex flex-col gap-4">
+                    <Input
+                      isRequired
+                      name="fullName"
+                      type="text"
+                      label="Họ và tên"
+                      labelPlacement="outside"
+                      placeholder="Nguyễn Văn A"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                    />
+
+                    <Input
+                      isRequired
+                      name="email"
+                      type="email"
+                      label="Email"
+                      labelPlacement="outside"
+                      placeholder="example@gmail.com"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                    />
+
+                    <Input
+                      isRequired
+                      name="password"
+                      type="password"
+                      label="Mật khẩu"
+                      labelPlacement="outside"
+                      placeholder="Nhập mật khẩu của bạn"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                    />
+
+                    <Input
+                      isRequired
+                      name="confirmPassword"
+                      type="password"
+                      label="Xác nhận mật khẩu"
+                      labelPlacement="outside"
+                      placeholder="Xác nhận mật khẩu của bạn"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                    />
+
+                    <div className="space-y-2">
+                      <div>
+                      <Checkbox
+                        isSelected={termsAccepted}
+                        onValueChange={setTermsAccepted}
+                      >
+                      </Checkbox>
+                      <span className="text-sm text-gray-600">
+                          Tôi đồng ý với{" "}
+                          <Link href="/chinh-sach/dieu-khoan-su-dung" className="text-primary font-medium hover:underline">
+                            Điều khoản sử dụng
+                          </Link>
+                        </span>
+                    </div>
+                    <div>
+                      <Checkbox
+                        isSelected={privacyAccepted}
+                        onValueChange={setPrivacyAccepted}
+                      >
+                      </Checkbox>
+                      <span className="text-sm text-gray-600">
+                          Tôi đã đọc và chấp nhận{" "}
+                          <Link href="/chinh-sach/chinh-sach-bao-mat" className="text-primary font-medium hover:underline">
+                            Chính sách bảo mật
+                          </Link>
+                        </span>
+                        </div>
+                    </div>
+
+                    <Button
+                      color="primary"
+                      size="md"
+                      type="submit"
+                      className="mt-2"
+                      disabled={isLoading}
+                      isLoading={isLoading}
+                    >
+                      {isLoading ? "Đang đăng ký..." : "Đăng ký"}
+                    </Button>
+
+                    <Divider className="my-2" />
+
+                    <div className="flex items-center justify-center gap-3">
+                      <SocialLogin
+                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                        onError={(msg) => showMessage(msg, "error")}
+                      />
+                    </div>
+                  </form>
+
+                  <Link
+                    href="/login"
+                    className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
+                  >
+                    Đã có tài khoản? Đăng nhập ngay
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      fill="none"
+                      className="size-5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                    </svg>
+                  </Link>
+                </div>
+              </CardBody>
+
+              {/* RIGHT: Welcome panel */}
+              <CardBody className="hidden md:flex p-0">
+                <Image
+                  src="/assets/homepage/cover.jpg"
+                  alt="Welcome Image"
+                  width={600}
+                  height={800}
+                  className="w-full h-full object-cover"
+                />
+              </CardBody>
             </div>
-          )}
-
-          <form onSubmit={handleEmailRegister} className="space-y-4">
-            <Input
-              label="Họ và tên"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              required
-              placeholder="Nguyễn Văn A"
-              size="md"
-              fullWidth
-            />
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              placeholder="example@email.com"
-              size="md"
-              fullWidth
-            />
-            <Input
-              label="Mật khẩu"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              placeholder="••••••••"
-              size="md"
-              fullWidth
-            />
-            <Input
-              label="Xác nhận mật khẩu"
-              name="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              required
-              placeholder="••••••••"
-              size="md"
-              fullWidth
-            />
-
-            <Checkbox
-              isSelected={termsAccepted}
-              onChange={(e) => setTermsAccepted(e.target.checked)}
-              size="sm"
-              className="text-gray-600"
-            >
-              Tôi đồng ý với{" "}
-              <a href="#" className="text-indigo-600 font-medium hover:underline">
-                Điều khoản sử dụng
-              </a>
-            </Checkbox>
-
-            <Checkbox
-              isSelected={privacyAccepted}
-              onChange={(e) => setPrivacyAccepted(e.target.checked)}
-              size="sm"
-              className="text-gray-600"
-            >
-              Tôi đã đọc và chấp nhận{" "}
-              <a href="#" className="text-indigo-600 font-medium hover:underline">
-                Chính sách bảo mật
-              </a>
-            </Checkbox>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              isLoading={isLoading}
-              size="md"
-              fullWidth
-              color="primary"
-              radius="xl"
-              style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", marginTop: "20px" }}
-            >
-              {isLoading ? "Đang đăng ký..." : "Đăng ký"}
-            </Button>
-          </form>
-
-          <div className="relative text-center my-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
-            </div>
-            <span className="relative bg-white px-4 text-sm text-gray-500">
-              Hoặc đăng ký với
-            </span>
-          </div>
-
-          <div className="flex justify-center">
-            <SocialLogin
-              onSuccess={(user) => sendFirebaseTokenToBackend(user)}
-              onError={(msg) => showMessage(msg, "error")}
-              handleGoogleRegister={handleGoogleRegister}
-              handleFacebookRegister={handleFacebookRegister}
-            />
-          </div>
-
-          <div className="text-center mt-4 text-sm text-gray-600">
-            Đã có tài khoản?{" "}
-            <a href="/login" className="text-indigo-600 font-semibold hover:underline">
-              Đăng nhập ngay
-            </a>
-          </div>
-        </div>
-
-        <div className="flex-1 relative overflow-hidden">
-          <img
-            src="doctor.jpg"
-            alt="Bác sĩ"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.7) 100%)",
-            }}
-          ></div>
-          <div className="relative z-10 p-12 text-white flex flex-col justify-center h-full">
-            <h1 className="text-4xl font-bold mb-4">🏥 MedConnect</h1>
-            <p className="text-base leading-relaxed opacity-95 mb-6">
-              Nền tảng đặt lịch khám bệnh và tư vấn y tế trực tuyến hàng đầu Việt Nam
-            </p>
-            <ul className="space-y-2.5">
-              {[
-                "Tìm bác sĩ chuyên khoa nhanh chóng",
-                "Đặt lịch khám online tiện lợi",
-                "Tư vấn video trực tiếp với bác sĩ",
-                "Quản lý lịch sử khám bệnh",
-              ].map((item, i) => (
-                <li key={i} className="flex items-center text-sm">
-                  <span className="text-xl font-bold mr-3">✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+          </Card>
         </div>
       </div>
-    </div>
+    </Default>
   );
 }

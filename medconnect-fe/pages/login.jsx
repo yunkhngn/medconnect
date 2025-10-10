@@ -5,6 +5,7 @@ import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
 import { Card, CardBody, Input, Button, Form, Divider } from "@heroui/react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
@@ -145,37 +146,39 @@ export default function MedConnectLogin() {
                     <Divider className="my-2" />
 
                     <div className="flex items-center justify-center gap-3">
-                      <Button color="warning" variant="flat" className="flex-1" startContent={<IconBrand name="google" />}>
-                        Google
-                      </Button>
+                      <SocialLoginButtons
+                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                        onError={(msg) => showMessage(msg, "error")}
+                      />
                     </div>
                   </Form>
                   <Link
-                        href="/signup"
-                        className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
-                      >
-                        No account yet? Sign up
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="currentColor"
-                          fill="none"
-                          className="size-5"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-                        </svg>
-                      </Link>
+                    href="/signup"
+                    className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
+                  >
+                    No account yet? Sign up
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      fill="none"
+                      className="size-5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                    </svg>
+                  </Link>
                 </div>
               </CardBody>
 
               {/* RIGHT: Welcome panel */}
               <CardBody className="hidden md:flex p-0">
-                <div
-                  className="w-full h-full bg-cover bg-center"
-                  style={{
-                    backgroundImage: "url('/assets/homepage/cover.jpg')",
-                  }}
+                <Image
+                  src="/assets/homepage/cover.jpg"
+                  alt="Welcome Image"
+                  width={600}
+                  height={800}
+                  className="w-full h-full object-cover"
                 />
               </CardBody>
             </div>
@@ -189,7 +192,7 @@ export default function MedConnectLogin() {
 function IconBrand({ name }) {
   const paths = {
     google: (
-      <path d="M21 12.23c0-4.74-3.96-8.73-8.73-8.73A8.73 8.73 0 106 19.1 8.3 8.3 0 0112 14.52h-2.6v-2.7H12V9.3c0-2.6 1.58-4.02 3.89-4.02 1.11 0 2.28.2 2.28.2v2.5h-1.28c-1.26 0-1.65.78-1.65 1.58v1.26h2.8l-.45 2.7h-2.35A8.3 8.3 0 0121 12.23Z" />
+      <path d="M21 12.23c0-4.74-3.96-8.73-8.73-8.73A8.73 8.73 0 106 19.1 8.3 8.3 0 0121 12.23Z" />
     ),
   };
 
