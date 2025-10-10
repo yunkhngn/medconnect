@@ -45,7 +45,7 @@ const Nav = () => {
       <NavbarBrand>
         <Link href="/" passHref className="flex items-center text-lg text-primary-600 dark:text-primary-400">
           <Image
-            src="assets/logo.svg"
+            src="/assets/logo.svg"
             alt="MedConnect Logo"
             width={40}
             height={40}
