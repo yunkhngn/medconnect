@@ -1,8 +1,11 @@
 import React from 'react'
+import {DoctorFrame } from '@/components/layouts/'
 
 const Setting = () => {
   return (
-    <div>Setting</div>
+    <DoctorFrame title="Cài đặt">
+      Cài đặt
+    </DoctorFrame>
   )
 }
 

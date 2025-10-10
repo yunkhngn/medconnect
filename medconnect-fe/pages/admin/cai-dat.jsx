@@ -1,8 +1,11 @@
 import React from 'react'
+import {AdminFrame} from '@/components/layouts/'
 
 const Setting = () => {
   return (
-    <div>Setting</div>
+    <AdminFrame title="Admin">
+      Cài đặt
+    </AdminFrame>
   )
 }
 
