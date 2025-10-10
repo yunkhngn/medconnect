@@ -1,16 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
-import { Card, CardBody, Input, Button, Form, Divider } from "@heroui/react";
+import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    const savedPassword = localStorage.getItem("rememberedPassword");
+    const wasRemembered = localStorage.getItem("rememberMe") === "true";
+
+    if (wasRemembered && savedEmail) {
+      setEmail(savedEmail);
+      setPassword(savedPassword || "");
+      setRememberMe(true);
+    }
+  }, []);
 
   const showMessage = (text, type = "info") => {
     setMessage({ text, type });
@@ -73,6 +88,18 @@ export default function MedConnectLogin() {
         email,
         password
       );
+
+      // Save credentials if Remember Me is checked
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+        localStorage.setItem("rememberedPassword", password);
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("rememberedEmail");
+        localStorage.removeItem("rememberedPassword");
+        localStorage.removeItem("rememberMe");
+      }
+
       await sendFirebaseTokenToBackend(userCredential.user);
     } catch (error) {
       showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
@@ -94,7 +121,7 @@ export default function MedConnectLogin() {
               {/* LEFT: Login form */}
               <CardBody className="p-6 sm:p-10">
                 <div className="max-w-sm">
-                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Sign in</h1>
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Đăng nhập</h1>
 
                   <Form
                     className="flex flex-col gap-4"
@@ -116,22 +143,26 @@ export default function MedConnectLogin() {
                       isRequired
                       name="password"
                       type="password"
-                      label="Password"
+                      label="Mật khẩu"
                       labelPlacement="outside"
-                      placeholder="Enter your password"
-                      errorMessage="Password is required"
+                      placeholder="Nhập mật khẩu của bạn"
+                      errorMessage="Mật khẩu là bắt buộc"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
 
                     <div className="flex items-center justify-between text-sm">
-                      <label className="inline-flex items-center gap-2 select-none cursor-pointer">
-                      </label>
-                      <Link href="#" underline="always" className="text-sm">
-                        Forgot password?
-                      </Link>
+                      <Checkbox
+                        size="sm"
+                        isSelected={rememberMe}
+                        onValueChange={setRememberMe}
+                      >
+                        <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
+                      </Checkbox>
                     </div>
-
+                    <Link href="#" className="text-sm text-primary hover:underline">
+                        Quên mật khẩu?
+                      </Link>
                     <Button
                       color="primary"
                       size="md"
@@ -145,37 +176,39 @@ export default function MedConnectLogin() {
                     <Divider className="my-2" />
 
                     <div className="flex items-center justify-center gap-3">
-                      <Button color="warning" variant="flat" className="flex-1" startContent={<IconBrand name="google" />}>
-                        Google
-                      </Button>
+                      <SocialLoginButtons
+                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                        onError={(msg) => showMessage(msg, "error")}
+                      />
                     </div>
                   </Form>
                   <Link
-                        href="/signup"
-                        className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
-                      >
-                        No account yet? Sign up
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          strokeWidth="1.5"
-                          stroke="currentColor"
-                          fill="none"
-                          className="size-5"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-                        </svg>
-                      </Link>
+                    href="/signup"
+                    className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
+                  >
+                    Chưa có tài khoản? Đăng ký ngay
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      fill="none"
+                      className="size-5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                    </svg>
+                  </Link>
                 </div>
               </CardBody>
 
               {/* RIGHT: Welcome panel */}
               <CardBody className="hidden md:flex p-0">
-                <div
-                  className="w-full h-full bg-cover bg-center"
-                  style={{
-                    backgroundImage: "url('/assets/homepage/cover.jpg')",
-                  }}
+                <Image
+                  src="/assets/homepage/cover.jpg"
+                  alt="Welcome Image"
+                  width={600}
+                  height={800}
+                  className="w-full h-full object-cover"
                 />
               </CardBody>
             </div>
@@ -189,7 +222,7 @@ export default function MedConnectLogin() {
 function IconBrand({ name }) {
   const paths = {
     google: (
-      <path d="M21 12.23c0-4.74-3.96-8.73-8.73-8.73A8.73 8.73 0 106 19.1 8.3 8.3 0 0112 14.52h-2.6v-2.7H12V9.3c0-2.6 1.58-4.02 3.89-4.02 1.11 0 2.28.2 2.28.2v2.5h-1.28c-1.26 0-1.65.78-1.65 1.58v1.26h2.8l-.45 2.7h-2.35A8.3 8.3 0 0121 12.23Z" />
+      <path d="M21 12.23c0-4.74-3.96-8.73-8.73-8.73A8.73 8.73 0 106 19.1 8.3 8.3 0 0121 12.23Z" />
     ),
   };
 

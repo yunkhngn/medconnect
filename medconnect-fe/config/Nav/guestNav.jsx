@@ -1,13 +1,12 @@
 const navigate = {
   route: [
-    { text: "Chuyên khoa", link: "/" },
-    { text: "Tìm bác sĩ", link: "/about" },
-    { text: "Services", link: "/services" },
-    { text: "Blog", link: "/blog" },
+    { text: "Tìm bác sĩ", link: "/tim-bac-si" },
+    { text: "Điều khoản sử dụng", link: "/chinh-sach/dieu-khoan-su-dung" },
+    { text: "Chính sách bảo mật", link: "/chinh-sach/chinh-sach-bao-mat" },
   ],
   button: [
-    { text: "Đăng nhập", link: "/login", color: "primary", variant: "" },
-    { text: "Đăng ký", link: "/signup", color: "primary", variant: "flat" },
+    { text: "Đăng nhập", link: "/dang-nhap", color: "primary", variant: "" },
+    { text: "Đăng ký", link: "/dang-ki", color: "primary", variant: "flat" },
   ],
 };
 
