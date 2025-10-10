@@ -32,6 +32,6 @@ public class DoctorService {
     }
 
     public List<Appointment> getAppointments() throws Exception {
-
+        return getAppointments();
     }
 }

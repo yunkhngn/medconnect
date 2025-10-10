@@ -23,8 +23,6 @@ public class DoctorDashboard {
     @Autowired
     private AppointmentService appointmentService;
     @Autowired
-    private ScheduleService scheduleService;
-    @Autowired
     private FirebaseService firebaseService;
     @Autowired
     private UserService userService;
@@ -40,16 +38,16 @@ public class DoctorDashboard {
         }
     }
 
-    @GetMapping("/me/appointments")
-    public ResponseEntity<List<Appointment>> getAppointments(@RequestHeader("Authorization") String token) throws Exception {
-        Optional<Doctor> doctor = doctorService.getDoctor(token);
-        List<Appointment> appointments =  new ArrayList<>();
-        if (doctor.isPresent()) {
-            appointments = appointmentService.findByDoctor(doctor.get());
-        }
-        return ResponseEntity.ok(appointments);
-    }
-    @GetMapping("/me/schedule")
+//    @GetMapping("/me/appointments")
+//    public ResponseEntity<List<Appointment>> getAppointments(@RequestHeader("Authorization") String token) throws Exception {
+//        Optional<Doctor> doctor = doctorService.getDoctor(token);
+//        List<Appointment> appointments =  new ArrayList<>();
+//        if (doctor.isPresent()) {
+//            appointments = appointmentService.findByDoctor(doctor.get());
+//        }
+//        return ResponseEntity.ok(appointments);
+//    }
+//    @GetMapping("/me/schedule")
 
     @GetMapping("/me/profile")
     public ResponseEntity<Map<String, Object>> getProfile(@RequestHeader("Authorization") String token) throws Exception {

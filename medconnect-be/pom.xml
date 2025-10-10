@@ -72,6 +72,7 @@
             <artifactId>firebase-admin</artifactId>
             <version>9.7.0</version>
         </dependency>
+
         <dependency>
         <groupId>me.paulschwarz</groupId>
         <artifactId>spring-dotenv</artifactId>

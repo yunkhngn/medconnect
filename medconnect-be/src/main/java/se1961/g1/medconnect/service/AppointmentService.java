@@ -16,16 +16,16 @@ public class AppointmentService {
     @Autowired
     private AppointmentRepository appointmentRepository;
 
-    public List<Appointment> findByDoctor(Doctor doctor) {
-        return appointmentRepository.findByDoctor(doctor);
-    }
+//    public List<Appointment> findByDoctor(Doctor doctor) {
+//        return appointmentRepository.findByDoctor(doctor);
+//    }
 
     public List<Appointment> findByDoctorAndStatus(Doctor doctor, AppointmentStatus status) {
         return appointmentRepository.findByDoctorAndStatus(doctor, status);
     }
 
-    public List<Appointment> findByDoctorAndTime(Doctor doctor) {
-        LocalDate date = LocalDate.now();
-        return appointmentRepository.findByDoctorAndTime(doctor, date);
-    }
+//    public List<Appointment> findByDoctorAndTime(Doctor doctor) {
+//        LocalDate date = LocalDate.now();
+//        return appointmentRepository.findByDoctorAndTime(doctor, date);
+//    }
 }
