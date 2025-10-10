@@ -3,6 +3,7 @@ import { Input, Button, Checkbox } from "@heroui/react";
 import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
 import { auth, googleProvider, facebookProvider } from "../lib/firebase";
 import SocialLogin from "@/components/ui/SocialLogin";
+import Image from 'next/image';
 
 export default function MedConnectRegister() {
   const [formData, setFormData] = useState({
