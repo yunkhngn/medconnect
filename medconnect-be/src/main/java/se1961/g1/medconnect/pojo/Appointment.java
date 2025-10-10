@@ -1,5 +1,6 @@
 package se1961.g1.medconnect.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,14 +20,17 @@ public class Appointment {
 
     @ManyToOne
     @JoinColumn(name = "doctor_id")
+    @JsonIgnore
     private Doctor doctor;
 
     @ManyToOne
     @JoinColumn(name = "patient_id")
+    @JsonIgnore
     private Patient patient;
 
     @ManyToOne
     @JoinColumn(name = "schedule_id")
+    @JsonIgnore
     private Schedule schedule;
 
     @OneToOne(mappedBy = "appointment")

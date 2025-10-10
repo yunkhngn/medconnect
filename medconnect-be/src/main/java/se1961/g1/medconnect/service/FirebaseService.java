@@ -12,13 +12,8 @@ import java.util.Arrays.*;
 
 @Service
 public class FirebaseService {
-    @Autowired
-    private ServiceIntegrationService siService;
-
     public FirebaseToken getDecodedToken(String token) throws Exception {
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
-
-        siService.save(Services.FIREBASE, token, decodedToken.toString());
 
         return decodedToken;
     }
@@ -31,5 +26,10 @@ public class FirebaseService {
             }
         }
         return "password";
+    }
+
+    public String  getUid(String token) throws Exception {
+        FirebaseToken decodedToken = getDecodedToken(token);
+        return decodedToken.getUid();
     }
 }
