@@ -63,7 +63,7 @@ const Nav = () => {
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">
               <DropdownItem key="settings" textValue="Settings">
-                <Link href="/doctor/settings" className="w-full block">
+                <Link href="/bac-si/cai-dat" className="w-full block">
                   Cài đặt
                 </Link>
               </DropdownItem>
