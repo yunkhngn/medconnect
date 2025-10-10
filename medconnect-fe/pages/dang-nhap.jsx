@@ -36,7 +36,7 @@ export default function MedConnectLogin() {
   const sendFirebaseTokenToBackend = async (user) => {
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/auth/login", {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -56,7 +56,7 @@ export default function MedConnectLogin() {
           if (data.role === "ADMIN") {
             window.location.href = "/admin/dashboard";
           } else if (data.role === "DOCTOR") {
-            window.location.href = "/doctor/dashboard";
+            window.location.href = "/bac-si/trang-chu";
           } else {
             window.location.href = "/patient/dashboard";
           }
@@ -183,7 +183,7 @@ export default function MedConnectLogin() {
                     </div>
                   </Form>
                   <Link
-                    href="/signup"
+                    href="/dang-ki"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                   >
                     Chưa có tài khoản? Đăng ký ngay

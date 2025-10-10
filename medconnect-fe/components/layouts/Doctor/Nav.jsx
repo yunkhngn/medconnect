@@ -12,7 +12,7 @@ const Nav = () => {
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userRole');
-    router.push('/login');
+    router.push('/dang-nhap');
   };
 
   return (

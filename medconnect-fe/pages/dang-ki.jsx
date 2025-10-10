@@ -35,7 +35,7 @@ export default function MedConnectRegister() {
     try {
       const idToken = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8080/auth/register", {
+      const response = await fetch("http://localhost:8080/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,7 +55,7 @@ export default function MedConnectRegister() {
 
       showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
       setTimeout(() => {
-        window.location.href = "/login";
+        window.location.href = "/dang-nhap";
       }, 1500);
     } catch (error) {
       console.error("Backend error:", error);
@@ -238,7 +238,7 @@ export default function MedConnectRegister() {
                   </form>
 
                   <Link
-                    href="/login"
+                    href="/dang-nhap"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                   >
                     Đã có tài khoản? Đăng nhập ngay
