@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import se1961.g1.medconnect.enums.Services;
 
-import java.util.Arrays.*;
-
 @Service
 public class FirebaseService {
     @Autowired
