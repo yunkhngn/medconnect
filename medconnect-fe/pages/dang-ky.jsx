@@ -6,8 +6,10 @@ import SocialLogin from "@/components/ui/SocialLogin";
 import { Default } from "@/components/layouts/";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/router";
 
 export default function MedConnectRegister() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -44,10 +46,21 @@ export default function MedConnectRegister() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorText = "Đăng ký thất bại từ backend.";
+        
+        try {
+          const errorData = await response.json();
+          errorText = errorData.message || errorText;
+        } catch {
+          errorText = await response.text() || errorText;
+        }
+        
         console.error("Backend register failed:", response.status, errorText);
         await user.delete();
-        throw new Error("Backend registration failed");
+        
+        showMessage(errorText, "error");
+        setIsLoading(false);
+        return;
       }
 
       const data = await response.json();
@@ -55,7 +68,7 @@ export default function MedConnectRegister() {
 
       showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
       setTimeout(() => {
-        window.location.href = "/login";
+        router.push("/dang-nhap");
       }, 1500);
     } catch (error) {
       console.error("Backend error:", error);
@@ -238,7 +251,7 @@ export default function MedConnectRegister() {
                   </form>
 
                   <Link
-                    href="/login"
+                    href="/dang-nhap"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                   >
                     Đã có tài khoản? Đăng nhập ngay

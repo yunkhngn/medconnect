@@ -7,10 +7,8 @@ const Frame = ({children, title}) => {
     <main className="min-h-screen bg-gray-50">
       <Meta title={title} />
       <Nav />
-      <div className="ml-30 min-h-screen">
-        <div className="p-6 md:p-8 lg:p-10">
+      <div className="fixed left-35 top-5 right-5">
           {children}
-        </div>
       </div>
     </main>
   )

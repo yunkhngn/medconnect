@@ -6,8 +6,10 @@ import { Default } from "@/components/layouts/";
 import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/router";
 
 export default function MedConnectLogin() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -51,16 +53,17 @@ export default function MedConnectLogin() {
 
         showMessage("Đăng nhập thành công!", "success");
 
-        // Điều hướng theo role
+        // Điều hướng theo role với router.push
         setTimeout(() => {
           if (data.role === "ADMIN") {
-            window.location.href = "/admin/dashboard";
+            router.push("/admin/dashboard");
           } else if (data.role === "DOCTOR") {
-            window.location.href = "/doctor/dashboard";
+            router.push("/doctor/dashboard");
           } else {
-            window.location.href = "/patient/dashboard";
+            router.push("/patient/dashboard");
           }
         }, 1000);
+        
       } else if (response.status === 401) {
         showMessage("Email hoặc mật khẩu không đúng!", "error");
       } else {
@@ -183,7 +186,7 @@ export default function MedConnectLogin() {
                     </div>
                   </Form>
                   <Link
-                    href="/signup"
+                    href="/dang-ky"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                   >
                     Chưa có tài khoản? Đăng ký ngay

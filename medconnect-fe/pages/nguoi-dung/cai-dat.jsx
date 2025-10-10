@@ -1,9 +1,13 @@
 import React from 'react'
-import {PatientFrame} from '@/components/layouts/'
+import {PatientFrame, Grid} from '@/components/layouts/'
+
 const Setting = () => {
   return (
     <PatientFrame title="Cài đặt">
-      Cài đặt
+      <Grid
+        leftChildren={<div>Left Side Content</div>}
+        rightChildren={<div>Right Side Content</div>}
+      />
     </PatientFrame>
   )
 }
