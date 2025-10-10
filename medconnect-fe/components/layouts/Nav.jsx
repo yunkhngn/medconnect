@@ -1,8 +1,10 @@
-import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar} from "@heroui/react";
+import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem} from "@heroui/react";
 import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
 
 export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
   return (
@@ -36,10 +38,25 @@ export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...prop
 
 const Nav = () => {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleNavigation = (link) => {
     router.push(link);
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userRole");
+    router.push("/dang-nhap");
+  };
+
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Replace with actual authentication logic
+
   return (
      <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
       <NavbarBrand>
@@ -75,8 +92,55 @@ const Nav = () => {
                 </Button>
           </NavbarItem>
         ))}
-        <NavbarItem>
-           <Avatar src="/assets/homepage/mockup-avatar.jpg" />
+        
+        <NavbarItem className={isLoggedIn ? "" : "hidden"}>
+          <Dropdown placement="bottom-end">
+            <DropdownTrigger>
+              <Avatar 
+                src="/assets/homepage/mockup-avatar.jpg" 
+                className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
+                as="button"
+              />
+            </DropdownTrigger>
+            <DropdownMenu aria-label="User Actions" variant="flat">
+              <DropdownItem 
+                key="dashboard" 
+                startContent={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                }
+                onClick={() => router.push("/dashboard")}
+              >
+                Dashboard
+              </DropdownItem>
+              <DropdownItem 
+                key="settings"
+                startContent={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                }
+                onClick={() => router.push("/settings")}
+              >
+                Settings
+              </DropdownItem>
+              <DropdownItem 
+                key="logout" 
+                color="danger"
+                className="text-danger"
+                startContent={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                }
+                onClick={handleLogout}
+              >
+                Logout
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
         </NavbarItem>
       </NavbarContent>
     </Navbar>
