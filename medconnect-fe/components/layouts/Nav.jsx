@@ -3,7 +3,6 @@ import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
 
 export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
@@ -38,7 +37,6 @@ export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...prop
 
 const Nav = () => {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -56,6 +54,7 @@ const Nav = () => {
   };
 
   const [isLoggedIn, setIsLoggedIn] = useState(true); // Replace with actual authentication logic
+  const userRole = "bac-si"; // Replace with actual user role logic
 
   return (
      <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
@@ -81,7 +80,7 @@ const Nav = () => {
         ))}
       </NavbarContent>
       <NavbarContent justify="end">
-       {navigate.button.map((item, index) => (
+       {isLoggedIn && navigate.button.map((item, index) => (
           <NavbarItem key={index}>
                 <Button 
                   color={item.color} 
@@ -110,7 +109,7 @@ const Nav = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
                 }
-                onClick={() => router.push("/dashboard")}
+                onClick={() => router.push(`/${userRole}/trang-chu`)}
               >
                 Dashboard
               </DropdownItem>
@@ -122,7 +121,7 @@ const Nav = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 }
-                onClick={() => router.push("/settings")}
+                onClick={() => router.push(`/${userRole}/cai-dat`)}
               >
                 Settings
               </DropdownItem>
