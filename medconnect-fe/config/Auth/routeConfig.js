@@ -3,12 +3,12 @@ export const routeConfig = {
     authRequired: false,
     redirectIfAuth: "/redirectByRole",
   },
-  "/login": {
+  "/dang-nhap": {
     authRequired: false,
     redirectIfAuth: "/redirectByRole",
   },
 
-  "/admin/dashboard": {
+  "/admin/trang-chu": {
     authRequired: true,
     roles: ["admin"],
     redirectIfNotAuth: "/",
@@ -21,26 +21,26 @@ export const routeConfig = {
     redirectIfUnauthorized: "/403",
   },
 
-  "/doctor/dashboard": {
+  "/bac-si/trang-chu": {
     authRequired: true,
     roles: ["doctor", "admin"],
     redirectIfNotAuth: "/",
     redirectIfUnauthorized: "/403",
   },
-  "/doctor/*": {
+  "/bac-si/*": {
     authRequired: true,
     roles: ["doctor", "admin"],
     redirectIfNotAuth: "/",
     redirectIfUnauthorized: "/403",
   },
 
-  "/patient/dashboard": {
+  "/nguoi-dung/trang-chu": {
     authRequired: true,
     roles: ["patient", "admin"],
     redirectIfNotAuth: "/",
     redirectIfUnauthorized: "/403",
   },
-  "/patient/*": {
+  "/nguoi-dung/*": {
     authRequired: true,
     roles: ["patient", "admin"],
     redirectIfNotAuth: "/",

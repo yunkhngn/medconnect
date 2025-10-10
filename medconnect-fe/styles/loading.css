@@ -1,3 +1,15 @@
+/* ✅ Căn giữa toàn màn hình */
+.loading-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff; /* hoặc transparent nếu muốn trong suốt */
+  z-index: 9999;
+}
+
+/* ✅ Vùng chữ LOADING */
 .wrapper-grid {
   --animation-duration: 2.1s;
   --cube-color: #0000;
@@ -19,8 +31,11 @@
   font-size: var(--font-size);
   font-weight: 800;
   color: transparent;
+  justify-content: center;
+  align-items: center;
 }
 
+/* ✅ Cấu trúc khối chữ */
 .cube {
   position: relative;
   transform-style: preserve-3d;
@@ -39,6 +54,7 @@
              edge-glow var(--animation-duration) ease-in-out infinite;
 }
 
+/* Mặt trước hiển thị chữ */
 .face-front {
   transform: rotateY(0deg) translateZ(calc(var(--cube-width) / 2));
   animation: face-color var(--animation-duration) ease-in-out infinite,
@@ -46,6 +62,7 @@
              edge-glow var(--animation-duration) ease-in-out infinite;
 }
 
+/* Các mặt còn lại của khối */
 .face-back {
   transform: rotateY(180deg) translateZ(calc(var(--cube-width) / 2));
   opacity: 0.6;
@@ -74,7 +91,7 @@
   opacity: 0.8;
 }
 
-/* Cube delay animation */
+/* ✅ Hiệu ứng delay cho từng chữ */
 .cube:nth-child(1) {
   z-index: 0;
   animation-delay: 0s;
@@ -104,7 +121,7 @@
   animation-delay: 1.2s;
 }
 
-/* Animations */
+/* ✅ Animation chuyển động và ánh sáng */
 @keyframes translate-z {
   0%, 40%, 100% {
     transform: translateZ(-2px);

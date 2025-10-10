@@ -7,6 +7,7 @@ import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import RedirectByRole from "../config/Auth/redirectByRole"; 
 
 export default function MedConnectLogin() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function MedConnectLogin() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Load saved credentials on mount
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function MedConnectLogin() {
     setTimeout(() => setMessage({ text: "", type: "" }), 4000);
   };
 
-  // Gửi token Firebase về backend
+  // Gửi token Firebase về backend để xác thực
   const sendFirebaseTokenToBackend = async (user) => {
     try {
       const idToken = await user.getIdToken();
@@ -49,21 +51,12 @@ export default function MedConnectLogin() {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userRole", data.role);
+        localStorage.setItem("userRole", data.role.toLowerCase());
 
         showMessage("Đăng nhập thành công!", "success");
 
-        // Điều hướng theo role với router.push
-        setTimeout(() => {
-          if (data.role === "ADMIN") {
-            router.push("/admin/trang-chu");
-          } else if (data.role === "DOCTOR") {
-            router.push("/bac-si/trang-chu");
-          } else {
-            router.push("/nguoi-dung/trang-chu");
-          }
-        }, 1000);
-        
+        setIsAuthenticated(true);
+
       } else if (response.status === 401) {
         showMessage("Email hoặc mật khẩu không đúng!", "error");
       } else {
@@ -77,7 +70,7 @@ export default function MedConnectLogin() {
     }
   };
 
-  // Đăng nhập email / password
+  // Xử lý đăng nhập bằng email/password
   const handleEmailLogin = async () => {
     if (!email || !password) {
       showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
@@ -92,7 +85,7 @@ export default function MedConnectLogin() {
         password
       );
 
-      // Save credentials if Remember Me is checked
+      // Lưu thông tin "Ghi nhớ đăng nhập"
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", email);
         localStorage.setItem("rememberedPassword", password);
@@ -110,10 +103,13 @@ export default function MedConnectLogin() {
     }
   };
 
+  if (isAuthenticated) {
+    return <RedirectByRole />;
+  }
+
   return (
-    <Default title="Đăng nhập - MedConnect" >
-      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative "
-      >
+    <Default title="Đăng nhập - MedConnect">
+      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative">
         <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
           <Card
             isBlurred
@@ -124,11 +120,16 @@ export default function MedConnectLogin() {
               {/* LEFT: Login form */}
               <CardBody className="p-6 sm:p-10">
                 <div className="max-w-sm">
-                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Đăng nhập</h1>
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">
+                    Đăng nhập
+                  </h1>
 
                   <Form
                     className="flex flex-col gap-4"
-                    onSubmit={(e) => { e.preventDefault(); handleEmailLogin(); }}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleEmailLogin();
+                    }}
                   >
                     <Input
                       isRequired
@@ -160,9 +161,14 @@ export default function MedConnectLogin() {
                         isSelected={rememberMe}
                         onValueChange={setRememberMe}
                       >
-                        <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
+                        <span className="text-sm text-gray-600">
+                          Ghi nhớ đăng nhập
+                        </span>
                       </Checkbox>
-                      <Link href="/quen-mat-khau" className="text-sm text-primary hover:underline ml-5">
+                      <Link
+                        href="/quen-mat-khau"
+                        className="text-sm text-primary hover:underline ml-5"
+                      >
                         Quên mật khẩu?
                       </Link>
                     </div>
@@ -198,7 +204,11 @@ export default function MedConnectLogin() {
                       fill="none"
                       className="size-5"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+                      />
                     </svg>
                   </Link>
                 </div>

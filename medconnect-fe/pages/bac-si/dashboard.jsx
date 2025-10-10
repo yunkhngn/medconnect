@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { auth } from "../../lib/firebase";
-import { routeConfig } from "../../config/routeConfig";
+import { routeConfig } from "../../config/Auth/routeConfig";
 import Image from "next/image";
 import { HomeIcon, ClockIcon, ChartBarIcon, CalendarIcon, UsersIcon } from "@heroicons/react/24/outline";
 import Link from 'next/link';
