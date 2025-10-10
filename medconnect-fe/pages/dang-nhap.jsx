@@ -1,17 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
-import { Card, CardBody, Input, Button, Form, Divider } from "@heroui/react";
+import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function MedConnectLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    const savedPassword = localStorage.getItem("rememberedPassword");
+    const wasRemembered = localStorage.getItem("rememberMe") === "true";
+
+    if (wasRemembered && savedEmail) {
+      setEmail(savedEmail);
+      setPassword(savedPassword || "");
+      setRememberMe(true);
+    }
+  }, []);
 
   const showMessage = (text, type = "info") => {
     setMessage({ text, type });
@@ -74,6 +88,18 @@ export default function MedConnectLogin() {
         email,
         password
       );
+
+      // Save credentials if Remember Me is checked
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+        localStorage.setItem("rememberedPassword", password);
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("rememberedEmail");
+        localStorage.removeItem("rememberedPassword");
+        localStorage.removeItem("rememberMe");
+      }
+
       await sendFirebaseTokenToBackend(userCredential.user);
     } catch (error) {
       showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
@@ -95,7 +121,7 @@ export default function MedConnectLogin() {
               {/* LEFT: Login form */}
               <CardBody className="p-6 sm:p-10">
                 <div className="max-w-sm">
-                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Sign in</h1>
+                  <h1 className="text-3xl font-semibold tracking-tight mb-6">Đăng nhập</h1>
 
                   <Form
                     className="flex flex-col gap-4"
@@ -117,22 +143,26 @@ export default function MedConnectLogin() {
                       isRequired
                       name="password"
                       type="password"
-                      label="Password"
+                      label="Mật khẩu"
                       labelPlacement="outside"
-                      placeholder="Enter your password"
-                      errorMessage="Password is required"
+                      placeholder="Nhập mật khẩu của bạn"
+                      errorMessage="Mật khẩu là bắt buộc"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
 
                     <div className="flex items-center justify-between text-sm">
-                      <label className="inline-flex items-center gap-2 select-none cursor-pointer">
-                      </label>
-                      <Link href="#" underline="always" className="text-sm">
-                        Forgot password?
-                      </Link>
+                      <Checkbox
+                        size="sm"
+                        isSelected={rememberMe}
+                        onValueChange={setRememberMe}
+                      >
+                        <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
+                      </Checkbox>
                     </div>
-
+                    <Link href="#" className="text-sm text-primary hover:underline">
+                        Quên mật khẩu?
+                      </Link>
                     <Button
                       color="primary"
                       size="md"
@@ -156,7 +186,7 @@ export default function MedConnectLogin() {
                     href="/signup"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
                   >
-                    No account yet? Sign up
+                    Chưa có tài khoản? Đăng ký ngay
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"

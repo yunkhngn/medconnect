@@ -1,9 +1,11 @@
 import React from 'react';
 import { Default } from '@/components/layouts';
 import { Card, CardBody, Divider, Chip, Button } from '@heroui/react';
-import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 const TermsOfService = () => {
+  const router = useRouter();
+
   const sections = [
     {
       title: "1. Giới thiệu",
@@ -36,17 +38,18 @@ const TermsOfService = () => {
       <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
-            <Button 
-              variant="light" 
-              className="mb-6"
-              startContent={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              }
-            >
-              <Link href="/signup">Quay lại đăng ký</Link>
-            </Button>
+          <Button 
+            variant="light" 
+            className="mb-6"
+            onClick={() => router.back()}
+            startContent={
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            }
+          >
+            Quay lại
+          </Button>
 
           {/* Header */}
           <div className="text-center mb-12">
