@@ -20,14 +20,7 @@ public class DoctorService {
     private FirebaseService firebaseService;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
-        Optional<User> userOpt = userService.getUser(uid);
-        if(userOpt.isPresent()) {
-            User user = userOpt.get();
-            if(user instanceof Doctor doctor) {
-                return Optional.of(doctor);
-            }
-        }
-        throw new Exception("Doctor Not Found");
+        return doctorRepository.findByFirebaseUid(uid);
     }
 
     public List<Appointment> getAppointments() throws Exception {

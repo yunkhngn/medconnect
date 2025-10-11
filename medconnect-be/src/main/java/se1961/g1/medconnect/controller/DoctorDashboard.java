@@ -53,18 +53,15 @@ public class DoctorDashboard {
     @GetMapping("/profile")
     public ResponseEntity<Map<String, Object>> getProfile(Authentication authentication) throws Exception {
         String uid = (String) authentication.getPrincipal();
-        Optional<Doctor> doctor = doctorService.getDoctor(uid);
-        if (doctor.isPresent()) {
-            Doctor currDoc = doctor.get();
+        Doctor doctor = doctorService.getDoctor(uid).orElseThrow(() -> new Exception("Doctor not found"));
+
             Map<String, Object> profile = new HashMap<>();
-            profile.put("name", currDoc.getFirstName() + " " + currDoc.getLastName());
-            profile.put("email", currDoc.getEmail());
-            profile.put("phone", currDoc.getPhone());
-            profile.put("specialization", currDoc.getSpecialization());
-            profile.put("license_id",  currDoc.getLicenseId());
+            profile.put("name", doctor.getFirstName() + " " + doctor.getLastName());
+            profile.put("email", doctor.getEmail());
+            profile.put("phone", doctor.getPhone());
+            profile.put("specialization", doctor.getSpecialization());
+            profile.put("license_id",  doctor.getLicenseId());
             return ResponseEntity.ok(profile);
-        }
-        throw new Exception("Doctor not found");
     }
 
     @PatchMapping("/profile")

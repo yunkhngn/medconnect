@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
-    Optional<Doctor> findById(Long userId);
+    Optional<Doctor> findByFirebaseUid(String uid);
 //    List<Appointment> findAppointments(Doctor doctor);
 }
