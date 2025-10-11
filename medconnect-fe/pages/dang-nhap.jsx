@@ -50,7 +50,7 @@ export default function MedConnectLogin() {
 
             if (response.ok) {
                 const data = await response.json();
-                localStorage.setItem("userRole", data.role.toLowerCase());
+                localStorage.setItem("authToken", idToken);
 
                 showMessage("Đăng nhập thành công!", "success");
 

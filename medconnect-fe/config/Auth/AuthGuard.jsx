@@ -67,9 +67,6 @@ const AuthGuard = ({ children }) => {
 
       const data = await response.json();
       const userRole = data.role?.toLowerCase();
-        console.log("User role from backend:", data.role);
-        console.log("User role after lowercase:", userRole);
-      localStorage.setItem("role", userRole);
 
       if (rule.roles && !rule.roles.includes(userRole)) {
         setAuthorized(false);
