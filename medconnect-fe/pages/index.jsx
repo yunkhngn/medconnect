@@ -1,7 +1,6 @@
 import {Default} from "../components/layouts/";
 import {DoctorList} from "../components/ui/";
 import Image from "next/image";
-import Test from "../components/ui/test"
 export default function HomePage() {
   return (
     <Default>
@@ -12,7 +11,6 @@ export default function HomePage() {
           height={1080}
           style={{ borderRadius: "12px", marginTop: "2em" }}
         />
-        <Test/>
         <DoctorList />
     </Default>
   );
