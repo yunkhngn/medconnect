@@ -1,5 +1,6 @@
 package se1961.g1.medconnect.controller;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,15 +23,20 @@ public class Auth {
     private FirebaseService firebaseService;
 
         @PostMapping("/login")
-        public ResponseEntity<User> login(Authentication authentication) throws Exception {
-            String uid = (String) authentication.getPrincipal();
+        public ResponseEntity<User> login(@RequestHeader("Authorization") String token) throws Exception {
+            if(token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+
+            FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
+            String uid = decodedToken.getUid();
+            String email = decodedToken.getEmail();
 
             Optional<User> userOpt = userService.getUser(uid);
 
             if(userOpt.isPresent()) {
                 return ResponseEntity.ok(userOpt.get());
             } else if(!"password".equals(firebaseService.getProvider(uid))) {
-                String email = (String) authentication.getDetails();
                 User newUser = userService.registerUser(uid, email);
                 return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
             }
@@ -38,9 +44,14 @@ public class Auth {
         }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(Authentication authentication) throws Exception {
-        String uid = (String) authentication.getPrincipal();
-        String email = (String) authentication.getDetails();
+    public ResponseEntity<User> register(@RequestHeader("Authorization") String token) throws Exception {
+        if(token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+
+        FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
+        String uid = decodedToken.getUid();
+        String email = decodedToken.getEmail();
 
         Optional<User> userOpt = userService.getUser(uid);
         if(userOpt.isPresent()) {

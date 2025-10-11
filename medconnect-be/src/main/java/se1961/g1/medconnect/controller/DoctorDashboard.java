@@ -4,10 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.service.AppointmentService;
@@ -30,7 +28,7 @@ public class DoctorDashboard {
     private UserService userService;
 
 
-//    @GetMapping("/me")
+//    @GetMapping("/")
 //    public ResponseEntity<Doctor> getMe(@RequestHeader("Authorization") String token)  throws Exception {
 //        Optional<Doctor> doctor = doctorService.getDoctor(token);
 //        if (doctor.isPresent()) {
@@ -40,20 +38,20 @@ public class DoctorDashboard {
 //        }
 //    }
 
-    @GetMapping("/me/appointments")
-    public ResponseEntity<List<Appointment>> getAppointments(@RequestHeader("Authorization") String token) throws Exception {
-        Optional<Doctor> doctor = doctorService.getDoctor(token);
+    @GetMapping("/appointments")
+    public ResponseEntity<List<Appointment>> getAppointments(Authentication authentication) throws Exception {
+        String uid = (String) authentication.getPrincipal();
+        Optional<Doctor> doctor = doctorService.getDoctor(uid);
         List<Appointment> appointments =  new ArrayList<>();
         if (doctor.isPresent()) {
             appointments = doctorService.getAppointments();
         }
         return ResponseEntity.ok(appointments);
     }
-//    @GetMapping("/me/schedule")
+//    @GetMapping("/schedule")
 
-    @GetMapping("/me/profile")
-    public ResponseEntity<Map<String, Object>> getProfile() throws Exception {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    @GetMapping("/profile")
+    public ResponseEntity<Map<String, Object>> getProfile(Authentication authentication) throws Exception {
         String uid = (String) authentication.getPrincipal();
         Optional<Doctor> doctor = doctorService.getDoctor(uid);
         if (doctor.isPresent()) {
@@ -67,5 +65,40 @@ public class DoctorDashboard {
             return ResponseEntity.ok(profile);
         }
         throw new Exception("Doctor not found");
+    }
+
+    @PatchMapping("/profile")
+    public ResponseEntity<Map<String, Object>> updateProfile(Authentication authentication, @RequestBody Map<String, Object> request) throws Exception {
+        String uid = (String) authentication.getPrincipal();
+        Optional<Doctor> doctor = doctorService.getDoctor(uid);
+
+        if(doctor.isEmpty()) {
+            throw new Exception("Doctor not found");
+        }
+
+        Doctor currDoc = doctor.get();
+
+        if(request.containsKey("phone")) {
+            currDoc.setPhone((String) request.get("phone"));
+        }
+
+        if(request.containsKey("specialization")) {
+            try {
+                String specialization = ((String) request.get("specialization")).toUpperCase();
+                Speciality speciality = Speciality.valueOf(specialization);
+                currDoc.setSpecialization(speciality);
+            } catch (IllegalArgumentException e) {
+                throw new Exception("Invalid specialization: " +  request.get("specialization"));
+            }
+
+            doctorService.saveDoctor(currDoc);
+        }
+
+        Map<String, Object> updatedProfile = new HashMap<>();
+        updatedProfile.put("message", "Profile updated successfully");
+        updatedProfile.put("phone", currDoc.getPhone());
+        updatedProfile.put("specialization", currDoc.getSpecialization().name());
+
+        return  ResponseEntity.ok(updatedProfile);
     }
 }

@@ -33,4 +33,8 @@ public class DoctorService {
     public List<Appointment> getAppointments() throws Exception {
         return getAppointments();
     }
+
+    public Doctor saveDoctor(Doctor doctor) throws Exception {
+        return doctorRepository.save(doctor);
+    }
 }
