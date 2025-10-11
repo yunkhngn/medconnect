@@ -2,6 +2,8 @@ package se1961.g1.medconnect.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,8 +52,10 @@ public class DoctorDashboard {
 //    @GetMapping("/me/schedule")
 
     @GetMapping("/me/profile")
-    public ResponseEntity<Map<String, Object>> getProfile(@RequestHeader("Authorization") String token) throws Exception {
-        Optional<Doctor> doctor = doctorService.getDoctor(token);
+    public ResponseEntity<Map<String, Object>> getProfile() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String uid = (String) authentication.getPrincipal();
+        Optional<Doctor> doctor = doctorService.getDoctor(uid);
         if (doctor.isPresent()) {
             Doctor currDoc = doctor.get();
             Map<String, Object> profile = new HashMap<>();

@@ -19,8 +19,7 @@ public class DoctorService {
     @Autowired
     private FirebaseService firebaseService;
 
-    public Optional<Doctor> getDoctor(String token) throws Exception {
-        String uid = firebaseService.getUid(token);
+    public Optional<Doctor> getDoctor(String uid) throws Exception {
         Optional<User> userOpt = userService.getUser(uid);
         if(userOpt.isPresent()) {
             User user = userOpt.get();

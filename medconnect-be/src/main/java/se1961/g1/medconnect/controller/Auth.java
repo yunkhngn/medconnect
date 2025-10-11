@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.pojo.User;
 import se1961.g1.medconnect.service.FirebaseService;
@@ -21,20 +22,15 @@ public class Auth {
     private FirebaseService firebaseService;
 
         @PostMapping("/login")
-        public ResponseEntity<User> login(@RequestHeader("Authorization") String token) throws Exception {
-            if(token.startsWith("Bearer ")) {
-                token = token.substring(7);
-            }
-
-            FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
-            String uid = decodedToken.getUid();
+        public ResponseEntity<User> login(Authentication authentication) throws Exception {
+            String uid = (String) authentication.getPrincipal();
 
             Optional<User> userOpt = userService.getUser(uid);
 
             if(userOpt.isPresent()) {
                 return ResponseEntity.ok(userOpt.get());
             } else if(!"password".equals(firebaseService.getProvider(uid))) {
-                String email = decodedToken.getEmail();
+                String email = (String) authentication.getDetails();
                 User newUser = userService.registerUser(uid, email);
                 return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
             }
@@ -42,14 +38,9 @@ public class Auth {
         }
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestHeader("Authorization") String token) throws Exception {
-        if(token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-
-        FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
-        String uid = decodedToken.getUid();
-        String email = decodedToken.getEmail();
+    public ResponseEntity<User> register(Authentication authentication) throws Exception {
+        String uid = (String) authentication.getPrincipal();
+        String email = (String) authentication.getDetails();
 
         Optional<User> userOpt = userService.getUser(uid);
         if(userOpt.isPresent()) {

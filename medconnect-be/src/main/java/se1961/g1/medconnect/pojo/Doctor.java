@@ -16,8 +16,10 @@ public class Doctor extends User{
     private String lastName;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Speciality specialization;
 
+    @Column(unique = true, nullable = false)
     private String licenseId;
     private String phone;
 

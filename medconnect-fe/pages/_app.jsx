@@ -13,9 +13,9 @@ export default function App({ Component, pageProps }) {
         defaultTheme="light"
         enableSystem={false}
       >
-        <AuthGuard>
-          <Component {...pageProps} />
-        </AuthGuard>
+          <AuthGuard>
+              <Component {...pageProps} />
+          </AuthGuard>
       </NextThemesProvider>
     </HeroUIProvider>
   );

@@ -48,8 +48,7 @@ const Nav = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
+    localStorage.clear();
     router.push("/dang-nhap");
   };
 

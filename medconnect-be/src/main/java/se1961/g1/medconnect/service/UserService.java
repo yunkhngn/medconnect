@@ -30,4 +30,8 @@ public class UserService {
         patient.setRole(Role.PATIENT);
         return userRepository.save(patient);
     }
+
+    public String getEmail(String firebaseUid) {
+        return getEmail(firebaseUid);
+    }
 }

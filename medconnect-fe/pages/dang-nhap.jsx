@@ -7,227 +7,227 @@ import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import RedirectByRole from "../config/Auth/redirectByRole"; 
+import RedirectByRole from "../config/Auth/redirectByRole";
 
 export default function MedConnectLogin() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" });
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const router = useRouter();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState({ text: "", type: "" });
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Load saved credentials on mount
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("rememberedEmail");
-    const savedPassword = localStorage.getItem("rememberedPassword");
-    const wasRemembered = localStorage.getItem("rememberMe") === "true";
+    // Load saved credentials on mount
+    useEffect(() => {
+        const savedEmail = localStorage.getItem("rememberedEmail");
+        const savedPassword = localStorage.getItem("rememberedPassword");
+        const wasRemembered = localStorage.getItem("rememberMe") === "true";
 
-    if (wasRemembered && savedEmail) {
-      setEmail(savedEmail);
-      setPassword(savedPassword || "");
-      setRememberMe(true);
+        if (wasRemembered && savedEmail) {
+            setEmail(savedEmail);
+            setPassword(savedPassword || "");
+            setRememberMe(true);
+        }
+    }, []);
+
+    const showMessage = (text, type = "info") => {
+        setMessage({ text, type });
+        setTimeout(() => setMessage({ text: "", type: "" }), 4000);
+    };
+
+    // Gửi token Firebase về backend để xác thực
+    const sendFirebaseTokenToBackend = async (user) => {
+        try {
+            const idToken = await user.getIdToken();
+            const response = await fetch("http://localhost:8080/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${idToken}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem("authToken", data.token);
+                localStorage.setItem("userRole", data.role.toLowerCase());
+
+                showMessage("Đăng nhập thành công!", "success");
+
+                setIsAuthenticated(true);
+
+            } else if (response.status === 401) {
+                showMessage("Email hoặc mật khẩu không đúng!", "error");
+            } else {
+                showMessage("Đăng nhập thất bại từ backend.", "error");
+            }
+        } catch (error) {
+            console.error(error);
+            showMessage("Lỗi kết nối máy chủ.", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Xử lý đăng nhập bằng email/password
+    const handleEmailLogin = async () => {
+        if (!email || !password) {
+            showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const userCredential = await signInWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
+            // Lưu thông tin "Ghi nhớ đăng nhập"
+            if (rememberMe) {
+                localStorage.setItem("rememberedEmail", email);
+                localStorage.setItem("rememberedPassword", password);
+                localStorage.setItem("rememberMe", "true");
+            } else {
+                localStorage.removeItem("rememberedEmail");
+                localStorage.removeItem("rememberedPassword");
+                localStorage.removeItem("rememberMe");
+            }
+
+            await sendFirebaseTokenToBackend(userCredential.user);
+        } catch (error) {
+            showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
+            setIsLoading(false);
+        }
+    };
+
+    if (isAuthenticated) {
+        return <RedirectByRole />;
     }
-  }, []);
 
-  const showMessage = (text, type = "info") => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 4000);
-  };
+    return (
+        <Default title="Đăng nhập - MedConnect">
+            <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative">
+                <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
+                    <Card
+                        isBlurred
+                        shadow="sm"
+                        className="w-full max-w-5xl border-none bg-background/60 dark:bg-default-100/50 rounded-2xl overflow-hidden"
+                    >
+                        <div className="grid grid-cols-1 md:grid-cols-2">
+                            {/* LEFT: Login form */}
+                            <CardBody className="p-6 sm:p-10">
+                                <div className="max-w-sm">
+                                    <h1 className="text-3xl font-semibold tracking-tight mb-6">
+                                        Đăng nhập
+                                    </h1>
 
-  // Gửi token Firebase về backend để xác thực
-  const sendFirebaseTokenToBackend = async (user) => {
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+                                    <Form
+                                        className="flex flex-col gap-4"
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            handleEmailLogin();
+                                        }}
+                                    >
+                                        <Input
+                                            isRequired
+                                            name="email"
+                                            type="text"
+                                            label="Email"
+                                            labelPlacement="outside"
+                                            placeholder="example@gmail.com"
+                                            errorMessage="Please enter a valid email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                        />
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userRole", data.role.toLowerCase());
+                                        <Input
+                                            isRequired
+                                            name="password"
+                                            type="password"
+                                            label="Mật khẩu"
+                                            labelPlacement="outside"
+                                            placeholder="Nhập mật khẩu của bạn"
+                                            errorMessage="Mật khẩu là bắt buộc"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                        />
 
-        showMessage("Đăng nhập thành công!", "success");
-
-        setIsAuthenticated(true);
-
-      } else if (response.status === 401) {
-        showMessage("Email hoặc mật khẩu không đúng!", "error");
-      } else {
-        showMessage("Đăng nhập thất bại từ backend.", "error");
-      }
-    } catch (error) {
-      console.error(error);
-      showMessage("Lỗi kết nối máy chủ.", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Xử lý đăng nhập bằng email/password
-  const handleEmailLogin = async () => {
-    if (!email || !password) {
-      showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-      // Lưu thông tin "Ghi nhớ đăng nhập"
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
-        localStorage.setItem("rememberedPassword", password);
-        localStorage.setItem("rememberMe", "true");
-      } else {
-        localStorage.removeItem("rememberedEmail");
-        localStorage.removeItem("rememberedPassword");
-        localStorage.removeItem("rememberMe");
-      }
-
-      await sendFirebaseTokenToBackend(userCredential.user);
-    } catch (error) {
-      showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
-      setIsLoading(false);
-    }
-  };
-
-  if (isAuthenticated) {
-    return <RedirectByRole />;
-  }
-
-  return (
-    <Default title="Đăng nhập - MedConnect">
-      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative">
-        <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
-          <Card
-            isBlurred
-            shadow="sm"
-            className="w-full max-w-5xl border-none bg-background/60 dark:bg-default-100/50 rounded-2xl overflow-hidden"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2">
-              {/* LEFT: Login form */}
-              <CardBody className="p-6 sm:p-10">
-                <div className="max-w-sm">
-                  <h1 className="text-3xl font-semibold tracking-tight mb-6">
-                    Đăng nhập
-                  </h1>
-
-                  <Form
-                    className="flex flex-col gap-4"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleEmailLogin();
-                    }}
-                  >
-                    <Input
-                      isRequired
-                      name="email"
-                      type="text"
-                      label="Email"
-                      labelPlacement="outside"
-                      placeholder="example@gmail.com"
-                      errorMessage="Please enter a valid email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-
-                    <Input
-                      isRequired
-                      name="password"
-                      type="password"
-                      label="Mật khẩu"
-                      labelPlacement="outside"
-                      placeholder="Nhập mật khẩu của bạn"
-                      errorMessage="Mật khẩu là bắt buộc"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-
-                    <div className="flex items-center justify-between text-sm">
-                      <Checkbox
-                        size="sm"
-                        isSelected={rememberMe}
-                        onValueChange={setRememberMe}
-                      >
+                                        <div className="flex items-center justify-between text-sm">
+                                            <Checkbox
+                                                size="sm"
+                                                isSelected={rememberMe}
+                                                onValueChange={setRememberMe}
+                                            >
                         <span className="text-sm text-gray-600">
                           Ghi nhớ đăng nhập
                         </span>
-                      </Checkbox>
-                      <Link
-                        href="/quen-mat-khau"
-                        className="text-sm text-primary hover:underline ml-5"
-                      >
-                        Quên mật khẩu?
-                      </Link>
-                    </div>
-                    <Button
-                      color="primary"
-                      size="md"
-                      type="submit"
-                      className="mt-2"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-                    </Button>
+                                            </Checkbox>
+                                            <Link
+                                                href="/quen-mat-khau"
+                                                className="text-sm text-primary hover:underline ml-5"
+                                            >
+                                                Quên mật khẩu?
+                                            </Link>
+                                        </div>
+                                        <Button
+                                            color="primary"
+                                            size="md"
+                                            type="submit"
+                                            className="mt-2"
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                                        </Button>
 
-                    <Divider className="my-2" />
+                                        <Divider className="my-2" />
 
-                    <div className="flex items-center justify-center">
-                      <SocialLoginButtons
-                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
-                        onError={(msg) => showMessage(msg, "error")}
-                      />
-                    </div>
-                  </Form>
-                  <Link
-                    href="/dang-ky"
-                    className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
-                  >
-                    Chưa có tài khoản? Đăng ký ngay
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      strokeWidth="1.5"
-                      stroke="currentColor"
-                      fill="none"
-                      className="size-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                      />
-                    </svg>
-                  </Link>
+                                        <div className="flex items-center justify-center">
+                                            <SocialLoginButtons
+                                                onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                                                onError={(msg) => showMessage(msg, "error")}
+                                            />
+                                        </div>
+                                    </Form>
+                                    <Link
+                                        href="/dang-ky"
+                                        className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
+                                    >
+                                        Chưa có tài khoản? Đăng ký ngay
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth="1.5"
+                                            stroke="currentColor"
+                                            fill="none"
+                                            className="size-5"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+                                            />
+                                        </svg>
+                                    </Link>
+                                </div>
+                            </CardBody>
+
+                            {/* RIGHT: Welcome panel */}
+                            <CardBody className="hidden md:flex p-0">
+                                <Image
+                                    src="/assets/homepage/cover.jpg"
+                                    alt="Welcome Image"
+                                    width={600}
+                                    height={800}
+                                    className="w-full h-full object-cover"
+                                />
+                            </CardBody>
+                        </div>
+                    </Card>
                 </div>
-              </CardBody>
-
-              {/* RIGHT: Welcome panel */}
-              <CardBody className="hidden md:flex p-0">
-                <Image
-                  src="/assets/homepage/cover.jpg"
-                  alt="Welcome Image"
-                  width={600}
-                  height={800}
-                  className="w-full h-full object-cover"
-                />
-              </CardBody>
             </div>
-          </Card>
-        </div>
-      </div>
-    </Default>
-  );
+        </Default>
+    );
 }
