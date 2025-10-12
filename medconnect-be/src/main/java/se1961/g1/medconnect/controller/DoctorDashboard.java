@@ -53,6 +53,7 @@ public class DoctorDashboard {
     @GetMapping("/profile")
     public ResponseEntity<Map<String, Object>> getProfile(Authentication authentication) throws Exception {
         String uid = (String) authentication.getPrincipal();
+        System.out.println("authenticated uid: " + uid);
         Doctor doctor = doctorService.getDoctor(uid).orElseThrow(() -> new Exception("Doctor not found"));
 
             Map<String, Object> profile = new HashMap<>();

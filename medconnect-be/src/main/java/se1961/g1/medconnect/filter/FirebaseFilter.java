@@ -47,7 +47,7 @@ public class FirebaseFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(uid, null,
                                     Collections.singletonList(
-                                            new SimpleGrantedAuthority("ROLE_" + role)));
+                                            new SimpleGrantedAuthority("ROLE_" + role.name())));
                     authentication.setDetails(email);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {

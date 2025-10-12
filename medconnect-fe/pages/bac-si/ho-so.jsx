@@ -52,7 +52,8 @@ const DoctorProfile = () => {
     setIsLoading(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/doctor/dashboard/profile', {
+      localStorage.setItem("token", token);
+      const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -100,7 +101,7 @@ const DoctorProfile = () => {
     setIsSaving(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/doctor/dashboard/profile', {
+      const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

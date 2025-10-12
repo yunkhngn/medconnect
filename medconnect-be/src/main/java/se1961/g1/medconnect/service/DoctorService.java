@@ -14,10 +14,6 @@ import java.util.Optional;
 public class DoctorService {
     @Autowired
     private DoctorRepository doctorRepository;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private FirebaseService firebaseService;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
         return doctorRepository.findByFirebaseUid(uid);
