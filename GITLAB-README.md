@@ -1,6 +1,6 @@
 # Quy tắc Commit Gitlab
 
-Mỗi người sẽ được phân code các branch **`fe`** (frontend) và **`be`** (backend) cho từng team. Mỗi thành viên sẽ code trên branch cá nhân và tạo Merge Request (MR) vào branch team khi hoàn thành task.
+Mỗi người sẽ được phân code các branch **`fe`** (frontend) và **`be`** (backend). Mỗi thành viên sẽ code trên branch cá nhân và tạo Merge Request (MR) vào branch team khi hoàn thành task.
 
 Lưu ý: mỗi ngày nên commit ít nhất 1 lần để đảm bảo tiến độ dự án.
 
@@ -35,11 +35,11 @@ Lưu ý: mỗi ngày nên commit ít nhất 1 lần để đảm bảo tiến đ
 - [ ] Nếu có thay đổi quan trọng thì mô tả chi tiết ở phần body  
 
 ## Quy tắc sử dụng Git
-- Không commit trực tiếp vào `main`, `dev/fe`, `dev/be`
-- Mỗi thành viên chỉ code trên branch cá nhân (`dev/fe-<tên>`, `dev/be-<tên>`)
-- Hoàn thành task → tạo Merge Request vào nhánh team (`dev/fe`, `dev/be`)
+- Không commit trực tiếp vào `main`, `dev`
+- Mỗi thành viên chỉ code trên branch cá nhân (`feature/your-feature`)
+- Hoàn thành task → tạo Merge Request vào nhánh team (`dev`)
 - PM/Reviewer review code trước khi merge
 - Khi cần cập nhật code mới từ `main`, sync theo flow:
-  - `main` → `dev/fe` và `dev/be`
+  - `dev` → `feature/your-feature`
   - Các branch cá nhân sync từ branch team tương ứng
 - Thường xuyên `git pull` để tránh xung đột
