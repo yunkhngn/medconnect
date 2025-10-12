@@ -49,9 +49,6 @@ export default function MedConnectLogin() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem("authToken", idToken);
-
                 showMessage("Đăng nhập thành công!", "success");
 
                 setIsAuthenticated(true);
