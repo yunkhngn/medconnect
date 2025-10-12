@@ -1,8 +1,14 @@
 import React from 'react'
+import {AdminFrame, Grid} from '@/components/layouts/'
 
 const Appointment = () => {
   return (
-    <div>Appointment</div>
+    <AdminFrame title="Lịch hẹn">
+      <Grid
+              leftChildren={<div>Left Side Content</div>}
+              rightChildren={<div>Right Side Content</div>}
+            />
+    </AdminFrame>
   )
 }
 

@@ -1,8 +1,14 @@
 import React from 'react'
+import {AdminFrame, Grid} from '@/components/layouts/'
 
 const Payment = () => {
   return (
-    <div>Payment</div>
+    <AdminFrame title="Thanh toán">
+      <Grid
+              leftChildren={<div>Left Side Content</div>}
+              rightChildren={<div>Right Side Content</div>}
+            />
+    </AdminFrame>
   )
 }
 
