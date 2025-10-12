@@ -52,7 +52,6 @@ const DoctorProfile = () => {
     setIsLoading(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      localStorage.setItem("token", token);
       const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
         headers: {
           'Authorization': `Bearer ${token}`

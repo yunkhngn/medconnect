@@ -11,7 +11,6 @@ const AuthGuard = ({ children }) => {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    // 🔹 Theo dõi trạng thái đăng nhập Firebase
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         authCheck(router.pathname, user);
@@ -22,7 +21,6 @@ const AuthGuard = ({ children }) => {
       setCheckingAuth(false);
     });
 
-    // 🔹 Lắng nghe thay đổi route
     const handleStart = () => setAuthorized(false);
     const handleComplete = (url) => authCheck(url, auth.currentUser);
 
@@ -36,10 +34,8 @@ const AuthGuard = ({ children }) => {
     };
   }, []);
 
-  // 🔹 Tìm rule phù hợp trong routeConfig
   const findMatchingRouteRule = (path) => {
     if (routeConfig[path]) return routeConfig[path];
-
     const matchedKey = Object.keys(routeConfig).find((key) => {
       if (key.endsWith("/*")) {
         const base = key.slice(0, -1);
@@ -51,7 +47,6 @@ const AuthGuard = ({ children }) => {
     return matchedKey ? routeConfig[matchedKey] : null;
   };
 
-  // 🔹 Kiểm tra xác thực & quyền
   const authCheck = async (url, user) => {
     const path = url.split("?")[0];
     const rule = findMatchingRouteRule(path);
@@ -68,9 +63,7 @@ const AuthGuard = ({ children }) => {
     }
 
     try {
-      // 🔹 Lấy ID token trực tiếp từ Firebase user
       const token = await user.getIdToken();
-
       const response = await fetch("http://localhost:8080/api/user/role", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -100,7 +93,6 @@ const AuthGuard = ({ children }) => {
     }
   };
 
-  // 🔹 Khi đang kiểm tra hoặc chưa xác thực xong → hiển thị Loading
   if (checkingAuth || !authorized) {
     return <Loading />;
   }

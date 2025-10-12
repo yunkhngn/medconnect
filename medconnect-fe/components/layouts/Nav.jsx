@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { getAuth, signOut } from "firebase/auth";
 
 export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
   return (
@@ -47,10 +48,15 @@ const Nav = () => {
     router.push(link);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    router.push("/dang-nhap");
-  };
+ const handleLogout = async () => {
+  const auth = getAuth();
+  try {
+    await signOut(auth);
+    router.push('/dang-nhap');
+  } catch (error) {
+    console.error("Logout failed: ", error);
+  }
+};
 
   const [isLoggedIn, setIsLoggedIn] = useState(true); // Replace with actual authentication logic
   const userRole = "bac-si"; // Replace with actual user role logic
