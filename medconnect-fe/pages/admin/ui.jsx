@@ -1,11 +1,11 @@
 import React from 'react'
-import DoctorFrame from '@/components/layouts/Admin/Frame'
+import AdminFrame from '@/components/layouts/Admin/Frame'
 
 const UI = () => {
   return (
-    <DoctorFrame title="Admin">
+    <AdminFrame title="Admin">
       Admin
-    </DoctorFrame>
+    </AdminFrame>
   )
 }
 
