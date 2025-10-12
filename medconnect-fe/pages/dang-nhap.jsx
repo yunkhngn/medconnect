@@ -19,7 +19,6 @@ export default function MedConnectLogin() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-    // Load saved credentials on mount
     useEffect(() => {
         const savedEmail = localStorage.getItem("rememberedEmail");
         const savedPassword = localStorage.getItem("rememberedPassword");
@@ -99,35 +98,9 @@ export default function MedConnectLogin() {
         }
     };
 
-    if (isAuthenticated) {
-        return <RedirectByRole />;
-    }
-
-    setIsLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-      // Save credentials if Remember Me is checked
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
-        localStorage.setItem("rememberedPassword", password);
-        localStorage.setItem("rememberMe", "true");
-      } else {
-        localStorage.removeItem("rememberedEmail");
-        localStorage.removeItem("rememberedPassword");
-        localStorage.removeItem("rememberMe");
-      }
-
-      await sendFirebaseTokenToBackend(userCredential.user);
-    } catch (error) {
-      showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
-      setIsLoading(false);
-    }
-  };
+  if (isAuthenticated) {
+      return <RedirectByRole />;
+  }
 
   const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
 
@@ -212,118 +185,55 @@ export default function MedConnectLogin() {
                       className="mt-2"
                       disabled={isLoading}
                     >
-                        <div className="grid grid-cols-1 md:grid-cols-2">
-                            {/* LEFT: Login form */}
-                            <CardBody className="p-6 sm:p-10">
-                                <div className="max-w-sm">
-                                    <h1 className="text-3xl font-semibold tracking-tight mb-6">
-                                        Đăng nhập
-                                    </h1>
+                      {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                    </Button>
 
-                                    <Form
-                                        className="flex flex-col gap-4"
-                                        onSubmit={(e) => {
-                                            e.preventDefault();
-                                            handleEmailLogin();
-                                        }}
-                                    >
-                                        <Input
-                                            isRequired
-                                            name="email"
-                                            type="text"
-                                            label="Email"
-                                            labelPlacement="outside"
-                                            placeholder="example@gmail.com"
-                                            errorMessage="Please enter a valid email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                        />
+                    <Divider className="my-2" />
 
-                                        <Input
-                                            isRequired
-                                            name="password"
-                                            type="password"
-                                            label="Mật khẩu"
-                                            labelPlacement="outside"
-                                            placeholder="Nhập mật khẩu của bạn"
-                                            errorMessage="Mật khẩu là bắt buộc"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                        />
-
-                                        <div className="flex items-center justify-between text-sm">
-                                            <Checkbox
-                                                size="sm"
-                                                isSelected={rememberMe}
-                                                onValueChange={setRememberMe}
-                                            >
-                        <span className="text-sm text-gray-600">
-                          Ghi nhớ đăng nhập
-                        </span>
-                                            </Checkbox>
-                                            <Link
-                                                href="/quen-mat-khau"
-                                                className="text-sm text-primary hover:underline ml-5"
-                                            >
-                                                Quên mật khẩu?
-                                            </Link>
-                                        </div>
-                                        <Button
-                                            color="primary"
-                                            size="md"
-                                            type="submit"
-                                            className="mt-2"
-                                            disabled={isLoading}
-                                        >
-                                            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-                                        </Button>
-
-                                        <Divider className="my-2" />
-
-                                        <div className="flex items-center justify-center">
-                                            <SocialLoginButtons
-                                                onSuccess={(user) => sendFirebaseTokenToBackend(user)}
-                                                onError={(msg) => showMessage(msg, "error")}
-                                            />
-                                        </div>
-                                    </Form>
-                                    <Link
-                                        href="/dang-ky"
-                                        className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
-                                    >
-                                        Chưa có tài khoản? Đăng ký ngay
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth="1.5"
-                                            stroke="currentColor"
-                                            fill="none"
-                                            className="size-5"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                                            />
-                                        </svg>
-                                    </Link>
-                                </div>
-                            </CardBody>
-
-                            {/* RIGHT: Welcome panel */}
-                            <CardBody className="hidden md:flex p-0">
-                                <Image
-                                    src="/assets/homepage/cover.jpg"
-                                    alt="Welcome Image"
-                                    width={600}
-                                    height={800}
-                                    className="w-full h-full object-cover"
-                                />
-                            </CardBody>
-                        </div>
-                    </Card>
+                    <div className="flex items-center justify-center">
+                      <SocialLoginButtons
+                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                        onError={(msg) => showMessage(msg, "error")}
+                      />
+                    </div>
+                  </Form>
+                  <Link
+                    href="/dang-ky"
+                    className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
+                  >
+                    Chưa có tài khoản? Đăng ký ngay
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      fill="none"
+                      className="size-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
+                      />
+                    </svg>
+                  </Link>
                 </div>
+              </CardBody>
+
+              {/* RIGHT: Welcome panel */}
+              <CardBody className="hidden md:flex p-0">
+                <Image
+                  src="/assets/homepage/cover.jpg"
+                  alt="Welcome Image"
+                  width={600}
+                  height={800}
+                  className="w-full h-full object-cover"
+                />
+              </CardBody>
             </div>
-        </Default>
-    );
+          </Card>
+        </div>
+      </div>
+    </Default>
+  );
 }
