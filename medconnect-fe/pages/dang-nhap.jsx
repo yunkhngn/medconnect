@@ -50,7 +50,6 @@ export default function MedConnectLogin() {
 
             if (response.ok) {
                 showMessage("Đăng nhập thành công!", "success");
-
                 setIsAuthenticated(true);
 
             } else if (response.status === 401) {

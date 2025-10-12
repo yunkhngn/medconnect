@@ -24,10 +24,8 @@ export default function RedirectByRole() {
             }
 
             try {
-                // 🔹 Get Firebase token
                 const token = await user.getIdToken();
 
-                // 🔹 Ask backend who this user really is
                 const res = await fetch(`http://localhost:8080/api/user/role`, {
                     headers: {
                         Authorization: `Bearer ${token}`,

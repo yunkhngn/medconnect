@@ -4,16 +4,20 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import menuItems from "@/config/Nav/adminNav";
-
+import { getAuth, signOut } from "firebase/auth";
 const Nav = () => {
   const router = useRouter();
   const isActive = (href) => router.pathname === href;
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    router.push('/login');
-  };
+  const handleLogout = async () => {
+  const auth = getAuth();
+  try {
+    await signOut(auth);
+    router.push('/dang-nhap');
+  } catch (error) {
+    console.error("Logout failed: ", error);
+  }
+};
 
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
