@@ -28,6 +28,8 @@ const API_CONFIG = {
 const SystemConfig = () => {
   const [isSaving, setIsSaving] = useState(false);
   
+  const isProduction = process.env.NODE_ENV === 'production';
+
   // General Settings
   const [generalSettings, setGeneralSettings] = useState({
     siteName: 'MedConnect',
@@ -153,8 +155,8 @@ const SystemConfig = () => {
           <h4 className="font-semibold mb-3">Thông tin phiên bản</h4>
           <div className="space-y-2 text-sm">
             <p className="text-gray-600">Version: <span className="font-medium">1.0.0</span></p>
-            <p className="text-gray-600">Build: <span className="font-medium">2024.01.15</span></p>
-            <p className="text-gray-600">Environment: <span className="font-medium">Production</span></p>
+            <p className="text-gray-600">Build: <span className="font-medium">10.10.2025</span></p>
+            <p className="text-gray-600">Environment: <span className="font-medium">{isProduction ? 'Production' : 'Development'}</span></p>
           </div>
         </CardBody>
       </Card>
