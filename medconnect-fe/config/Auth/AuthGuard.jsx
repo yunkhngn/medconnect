@@ -1,102 +1,109 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { routeConfig } from "./routeConfig";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { isAuthenticated, getUserRole } from "@/utils/auth";
 
+/**
+ * Client-side guard (optional). Server-side middleware is authoritative.
+ * - public routes allowed
+ * - protected prefixes: /admin -> ADMIN, /bac-si -> DOCTOR, /nguoi-dung -> PATIENT
+ * - guest -> redirect /dang-nhap
+ * - wrong role -> redirect to role home
+ */
 const AuthGuard = ({ children }) => {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  const publicRoutes = [
+    "/",
+    "/dang-nhap",
+    "/dang-ky",
+    "/quen-mat-khau",
+    "/tim-bac-si",
+    "/chinh-sach",
+  ];
+
+  const getRoleHome = (role) => {
+    if (!role) return "/";
+    switch (role.toUpperCase()) {
+      case "ADMIN":
+        return "/admin/trang-chu";
+      case "DOCTOR":
+        return "/bac-si/trang-chu";
+      case "PATIENT":
+        return "/nguoi-dung/trang-chu";
+      default:
+        return "/";
+    }
+  };
+
+  const checkRoute = (path) => {
+    // allow public
+    if (publicRoutes.some((r) => path === r || path.startsWith(r + "/")))
+      return true;
+
+    // protected prefixes
+    if (path.startsWith("/admin")) return "ADMIN";
+    if (path.startsWith("/bac-si")) return "DOCTOR";
+    if (path.startsWith("/nguoi-dung")) return "PATIENT";
+
+    // default allow
+    return true;
+  };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        authCheck(router.pathname, user);
-      } else {
-        setAuthorized(false);
-        router.push("/");
+    const guard = () => {
+      const path = router.pathname;
+      const rule = checkRoute(path);
+
+      // no strict role required
+      if (rule === true) {
+        setReady(true);
+        return;
       }
-      setCheckingAuth(false);
-    });
 
-    const handleStart = () => setAuthorized(false);
-    const handleComplete = (url) => authCheck(url, auth.currentUser);
+      const logged = isAuthenticated();
+      const role = getUserRole();
 
-    router.events.on("routeChangeStart", handleStart);
-    router.events.on("routeChangeComplete", handleComplete);
+      if (!logged) {
+        // guest -> login
+        router.replace("/dang-nhap");
+        return;
+      }
+
+      // role required
+      if (typeof rule === "string") {
+        if (!role || role.toUpperCase() !== rule) {
+          // redirect to user's home
+          router.replace(getRoleHome(role));
+          return;
+        }
+      }
+
+      setReady(true);
+    };
+
+    // initial check
+    guard();
+
+    // check on route change
+    const handleRoute = (url) => {
+      setReady(false);
+      // run guard after route settles
+      setTimeout(() => guard(), 10);
+    };
+
+    router.events.on("routeChangeComplete", handleRoute);
+    router.events.on("routeChangeError", handleRoute);
 
     return () => {
-      unsubscribe();
-      router.events.off("routeChangeStart", handleStart);
-      router.events.off("routeChangeComplete", handleComplete);
+      router.events.off("routeChangeComplete", handleRoute);
+      router.events.off("routeChangeError", handleRoute);
     };
-  }, []);
+  }, [router]);
 
-  const findMatchingRouteRule = (path) => {
-    if (routeConfig[path]) return routeConfig[path];
-    const matchedKey = Object.keys(routeConfig).find((key) => {
-      if (key.endsWith("/*")) {
-        const base = key.slice(0, -1);
-        return path.startsWith(base);
-      }
-      return false;
-    });
+  if (!ready) return null; // or simple spinner
 
-    return matchedKey ? routeConfig[matchedKey] : null;
-  };
-
-  const authCheck = async (url, user) => {
-    const path = url.split("?")[0];
-    const rule = findMatchingRouteRule(path);
-
-    if (!rule || !rule.authRequired) {
-      setAuthorized(true);
-      return;
-    }
-
-    if (!user) {
-      setAuthorized(false);
-      router.push(rule.redirectIfNotAuth || "/");
-      return;
-    }
-
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/user/role", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        setAuthorized(false);
-        router.push("/403");
-        return;
-      }
-
-      const data = await response.json();
-      const userRole = data.role?.toLowerCase();
-
-      if (rule.roles && !rule.roles.includes(userRole)) {
-        setAuthorized(false);
-        router.push(rule.redirectIfUnauthorized || "/403");
-        return;
-      }
-
-      setAuthorized(true);
-    } catch (error) {
-      console.error("Lỗi khi xác thực role:", error);
-      setAuthorized(false);
-      router.push("/403");
-    }
-  };
-
-  if (checkingAuth || !authorized) {
-    return null;
-  }
-
-  return children;
+  return <>{children}</>;
 };
 
 export default AuthGuard;
