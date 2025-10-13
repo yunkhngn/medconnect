@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { routeConfig } from "./routeConfig";
-import Loading from "@/components/ui/loading";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -94,7 +93,7 @@ const AuthGuard = ({ children }) => {
   };
 
   if (checkingAuth || !authorized) {
-    return <Loading />;
+    return null;
   }
 
   return children;

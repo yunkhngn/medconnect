@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { auth } from "../../lib/firebase";
-import Loading from "../../components/ui/loading";
 
 export default function RedirectByRole() {
     const router = useRouter();
@@ -69,5 +68,5 @@ export default function RedirectByRole() {
         checkUser();
     }, [isClient, router]);
 
-    return <Loading />;
+    return null;
 }
