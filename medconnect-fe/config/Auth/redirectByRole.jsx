@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { auth } from "../../lib/firebase";
-import Loading from "../../components/ui/loading";
 
 export default function RedirectByRole() {
     const router = useRouter();
@@ -33,7 +32,7 @@ export default function RedirectByRole() {
                 });
 
                 if (res.status === 401 || res.status === 403) {
-                    router.push("/403");
+                    router.push("/");
                     return;
                 }
 
@@ -57,7 +56,7 @@ export default function RedirectByRole() {
                         router.push("/nguoi-dung/trang-chu");
                         break;
                     default:
-                        router.push("/403");
+                        router.push("/");
                         break;
                 }
             } catch (err) {
@@ -69,5 +68,5 @@ export default function RedirectByRole() {
         checkUser();
     }, [isClient, router]);
 
-    return <Loading />;
+    return null;
 }

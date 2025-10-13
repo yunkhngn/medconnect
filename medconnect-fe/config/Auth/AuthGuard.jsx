@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { routeConfig } from "./routeConfig";
-import Loading from "@/components/ui/loading";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -72,7 +71,7 @@ const AuthGuard = ({ children }) => {
 
       if (!response.ok) {
         setAuthorized(false);
-        router.push("/403");
+        router.push("/");
         return;
       }
 
@@ -81,7 +80,7 @@ const AuthGuard = ({ children }) => {
 
       if (rule.roles && !rule.roles.includes(userRole)) {
         setAuthorized(false);
-        router.push(rule.redirectIfUnauthorized || "/403");
+        router.push(rule.redirectIfUnauthorized || "/");
         return;
       }
 
@@ -89,12 +88,12 @@ const AuthGuard = ({ children }) => {
     } catch (error) {
       console.error("Lỗi khi xác thực role:", error);
       setAuthorized(false);
-      router.push("/403");
+      router.push("/");
     }
   };
 
   if (checkingAuth || !authorized) {
-    return <Loading />;
+    return null;
   }
 
   return children;
