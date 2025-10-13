@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getAuth, signOut } from "firebase/auth";
-import { isAuthenticated, logout as authLogout } from "@/utils/auth";
+import { isAuthenticated, logout as authLogout, getUserRole } from "@/utils/auth";
 
 export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
   return (
@@ -41,10 +41,12 @@ const Nav = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     setMounted(true);
     setIsLoggedIn(isAuthenticated());
+    setUserRole(getUserRole());
   }, []);
 
   const handleNavigation = (link) => {
@@ -55,8 +57,6 @@ const Nav = () => {
     authLogout();
     router.push("/dang-nhap");
   };
-
-  const userRole = "bac-si"; // Replace with actual user role logic
 
   return (
      <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
@@ -118,7 +118,12 @@ const Nav = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
                   }
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => {
+                    const role = (userRole || "").toUpperCase();
+                    if (role === "ADMIN") router.push("/admin/trang-chu");
+                    else if (role === "DOCTOR") router.push("/bac-si/trang-chu");
+                    else router.push("/nguoi-dung/trang-chu");
+                  }}
                 >
                   Dashboard
                 </DropdownItem>
@@ -130,7 +135,12 @@ const Nav = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   }
-                  onClick={() => router.push("/settings")}
+                  onClick={() => {
+                    const role = (userRole || "").toUpperCase();
+                    if (role === "ADMIN") router.push("/admin/cai-dat");
+                    else if (role === "DOCTOR") router.push("/bac-si/cai-dat");
+                    else router.push("/nguoi-dung/cai-dat");
+                  }}
                 >
                   Settings
                 </DropdownItem>
