@@ -3,111 +3,134 @@ import SocialLoginButtons from "@/components/ui/SocialLogin";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
-import { Card, CardBody, Input, Button, Form, Divider, Checkbox } from "@heroui/react";
+import { Card, CardBody, Input, Button, Divider, Checkbox } from "@heroui/react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import RedirectByRole from "../config/Auth/redirectByRole";
+import { saveAuthData, isAuthenticated, redirectToDashboard } from "@/utils/auth";
 
 export default function MedConnectLogin() {
-    const router = useRouter();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [rememberMe, setRememberMe] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [message, setMessage] = useState({ text: "", type: "" });
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState({ text: "", type: "" });
 
-    useEffect(() => {
-        const savedEmail = localStorage.getItem("rememberedEmail");
-        const savedPassword = localStorage.getItem("rememberedPassword");
-        const wasRemembered = localStorage.getItem("rememberMe") === "true";
+  // Redirect if already logged in (client session)
+  useEffect(() => {
+    if (isAuthenticated()) {
+      redirectToDashboard(router);
+    }
+  }, [router]);
 
-        if (wasRemembered && savedEmail) {
-            setEmail(savedEmail);
-            setPassword(savedPassword || "");
-            setRememberMe(true);
+  const showMessage = (text, type = "info") => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: "", type: "" }), 5000);
+  };
+
+  // send firebase idToken to backend, save returned auth token & role
+  const sendFirebaseTokenToBackend = async (user) => {
+    try {
+      setIsLoading(true);
+      const idToken = await user.getIdToken();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          showMessage("Email hoặc mật khẩu không đúng!", "error");
+        } else {
+          showMessage("Đăng nhập thất bại từ backend.", "error");
         }
-    }, []);
+        setIsLoading(false);
+        return;
+      }
 
-    const showMessage = (text, type = "info") => {
-        setMessage({ text, type });
-        setTimeout(() => setMessage({ text: "", type: "" }), 4000);
-    };
+      const data = await response.json();
+      // save token + role + optional user info (will also set cookies)
+      saveAuthData(data.token, data.role, { email: data.email || user.email, name: data.name || user.displayName });
 
-    // Gửi token Firebase về backend để xác thực
-    const sendFirebaseTokenToBackend = async (user) => {
-        try {
-            const idToken = await user.getIdToken();
-            const response = await fetch("http://localhost:8080/api/auth/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${idToken}`,
-                },
-            });
+      showMessage("Đăng nhập thành công!", "success");
 
-            if (response.ok) {
-                showMessage("Đăng nhập thành công!", "success");
-                setIsAuthenticated(true);
+      // redirect to role dashboard
+      setTimeout(() => redirectToDashboard(router), 700);
+    } catch (error) {
+      console.error("Backend error:", error);
+      showMessage("Lỗi kết nối máy chủ.", "error");
+      setIsLoading(false);
+    }
+  };
 
-            } else if (response.status === 401) {
-                showMessage("Email hoặc mật khẩu không đúng!", "error");
-            } else {
-                showMessage("Đăng nhập thất bại từ backend.", "error");
-            }
-        } catch (error) {
-            console.error(error);
-            showMessage("Lỗi kết nối máy chủ.", "error");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  // Email/password login
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
+      return;
+    }
 
-    // Xử lý đăng nhập bằng email/password
-    const handleEmailLogin = async () => {
-        if (!email || !password) {
-            showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
-            return;
-        }
+    setIsLoading(true);
+    
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-        setIsLoading(true);
-        try {
-            const userCredential = await signInWithEmailAndPassword(
-                auth,
-                email,
-                password
-            );
+      // remember credentials if requested
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email);
+        localStorage.setItem("rememberedPassword", password);
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("rememberedEmail");
+        localStorage.removeItem("rememberedPassword");
+        localStorage.removeItem("rememberMe");
+      }
 
-            // Lưu thông tin "Ghi nhớ đăng nhập"
-            if (rememberMe) {
-                localStorage.setItem("rememberedEmail", email);
-                localStorage.setItem("rememberedPassword", password);
-                localStorage.setItem("rememberMe", "true");
-            } else {
-                localStorage.removeItem("rememberedEmail");
-                localStorage.removeItem("rememberedPassword");
-                localStorage.removeItem("rememberMe");
-            }
-
-            await sendFirebaseTokenToBackend(userCredential.user);
-        } catch (error) {
-            showMessage("Đăng nhập thất bại. Kiểm tra lại thông tin!", "error");
-            setIsLoading(false);
-        }
-    };
-
-  if (isAuthenticated) {
-      return <RedirectByRole />;
-  }
+      await sendFirebaseTokenToBackend(userCredential.user);
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      let errorMessage = "Đăng nhập thất bại!";
+      
+      switch (error.code) {
+        case "auth/invalid-credential":
+        case "auth/wrong-password":
+        case "auth/user-not-found":
+          errorMessage = "Email hoặc mật khẩu không chính xác!";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Email không hợp lệ!";
+          break;
+        case "auth/user-disabled":
+          errorMessage = "Tài khoản đã bị khóa!";
+          break;
+        case "auth/too-many-requests":
+          errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau!";
+          break;
+        case "auth/network-request-failed":
+          errorMessage = "Lỗi kết nối mạng!";
+          break;
+        default:
+          errorMessage = `Đăng nhập thất bại: ${error.message}`;
+      }
+      
+      showMessage(errorMessage, "error");
+      setIsLoading(false);
+    }
+  };
 
   const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
 
   return (
-    <Default title="Đăng nhập - MedConnect" >
-      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative "
-      >
+    <Default title="Đăng nhập - MedConnect">
+      <div className="min-h-screen flex items-center justify-center p-10">
         <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
           <Card
             isBlurred
@@ -115,35 +138,40 @@ export default function MedConnectLogin() {
             className="w-full max-w-5xl border-none bg-background/60 dark:bg-default-100/50 rounded-2xl overflow-hidden"
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
-              {/* LEFT: Login form */}
               <CardBody className="p-6 sm:p-10">
                 <div className="max-w-sm">
                   <h1 className="text-3xl font-semibold tracking-tight mb-6">Đăng nhập</h1>
 
-                  <Form
-                    className="flex flex-col gap-4"
-                    onSubmit={(e) => { e.preventDefault(); handleEmailLogin(); }}
-                  >
+                  {/* Error/Success Message */}
+                  {message.text && (
+                    <div
+                      className={`p-3 rounded-lg mb-4 text-sm ${
+                        message.type === "error"
+                          ? "bg-red-50 text-red-600 border border-red-200"
+                          : "bg-green-50 text-green-600 border border-green-200"
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleEmailLogin} className="flex flex-col gap-4">
                     <Input
                       isRequired
-                      name="email"
-                      type="text"
+                      type="email"
                       label="Email"
                       labelPlacement="outside"
                       placeholder="example@gmail.com"
-                      errorMessage="Please enter a valid email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
 
                     <Input
                       isRequired
-                      name="password"
                       type={isPasswordVisible ? "text" : "password"}
                       label="Mật khẩu"
                       labelPlacement="outside"
                       placeholder="Nhập mật khẩu của bạn"
-                      errorMessage="Mật khẩu là bắt buộc"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       endContent={
@@ -174,15 +202,17 @@ export default function MedConnectLogin() {
                       >
                         <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
                       </Checkbox>
-                      <Link href="/quen-mat-khau" className="text-sm text-primary hover:underline ml-5">
+                      <Link href="/quen-mat-khau" className="text-sm text-primary hover:underline">
                         Quên mật khẩu?
                       </Link>
                     </div>
+
                     <Button
                       color="primary"
                       size="md"
                       type="submit"
                       className="mt-2"
+                      isLoading={isLoading}
                       disabled={isLoading}
                     >
                       {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
@@ -196,7 +226,8 @@ export default function MedConnectLogin() {
                         onError={(msg) => showMessage(msg, "error")}
                       />
                     </div>
-                  </Form>
+                  </form>
+
                   <Link
                     href="/dang-ky"
                     className="mt-8 inline-flex items-center gap-2 text-gray-400 underline underline-offset-4"
@@ -210,11 +241,7 @@ export default function MedConnectLogin() {
                       fill="none"
                       className="size-5"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
                     </svg>
                   </Link>
                 </div>

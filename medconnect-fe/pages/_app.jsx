@@ -1,22 +1,61 @@
-import { HeroUIProvider } from "@heroui/system";
+import { HeroUIProvider } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import "@/styles/globals.css";
+import NextTopLoader from 'nextjs-toploader';
+import Head from "next/head";
+import { useEffect } from "react";
 import { useRouter } from "next/router";
-import AuthGuard from "../config/Auth/AuthGuard";
-import "../styles/globals.css";
+import AuthGuard from '@/config/Auth/AuthGuard';
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
+
+  useEffect(() => {
+    // Save auth to cookies for middleware
+    const authToken = localStorage.getItem('authToken');
+    const userRole = localStorage.getItem('userRole');
+    
+    if (authToken && userRole) {
+      document.cookie = `authToken=${authToken}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `userRole=${userRole}; path=/; max-age=86400; SameSite=Lax`;
+    }
+  }, []);
+
   return (
-    <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem={false}
-      >
+    <>
+      <Head>
+        <title>MedConnect - Healthcare Platform</title>
+        <meta name="description" content="MedConnect - Nền tảng đặt lịch khám bệnh trực tuyến" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        
+        {/* Favicon */}
+        <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+        <link rel="manifest" href="/favicon/site.webmanifest" />
+      </Head>
+      
+      <HeroUIProvider>
+        <NextThemesProvider attribute="class" defaultTheme="light">
+          <NextTopLoader
+            //color blue 
+            color="linear-gradient(to right, #62cff4, #62cff4)"
+            initialPosition={0.08}
+            crawlSpeed={200}
+            height={5}
+            crawl={true}
+            showSpinner={false}
+            easing="ease"
+            speed={200}
+            shadow="0 0 16px #10B981, 0 0 8px #10B981"
+            showAtBottom={false}
+          />
           <AuthGuard>
-              <Component {...pageProps} />
+            <Component {...pageProps} />
           </AuthGuard>
-      </NextThemesProvider>
-    </HeroUIProvider>
+        </NextThemesProvider>
+      </HeroUIProvider>
+    </>
   );
 }
