@@ -7,41 +7,57 @@
 
 > A comprehensive healthcare management system connecting patients, healthcare providers, and administrators through a modern web platform.
 
+## 📋 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [Architecture](#-architecture)
+- [Technology Stack](#️-technology-stack)
+- [Features](#-features)
+- [Docker Setup](#-docker-setup)
+- [Local Development](#-local-development)
+- [Configuration](#-configuration)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
+- [Team](#-team)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/get-started) (20.10+)
-- [Docker Compose](https://docs.docker.com/compose/install/) (2.0+)
+- [Docker](https://www.docker.com/get-started) 20.10+
+- [Docker Compose](https://docs.docker.com/compose/install/) 2.0+
 - Git
 
-### Run with Docker
+### Run with Docker (Recommended)
 
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone https://gitlab.com/manhnc2/g1-se1961-nj-swp391-fal25.git
 cd g1-se1961-nj-swp391-fal25
 
-# Create .env file from template
+# 2. Setup environment
 cp .env.example .env
+nano .env  # Edit with your Firebase credentials
 
-# Edit .env with your actual Firebase credentials
-# (Get from Firebase Console - see "How to get Firebase credentials" section)
-nano .env
+# 3. Create frontend production env
+cat > medconnect-fe/.env.production << 'EOF'
+NEXT_PUBLIC_FIREBASE_API_KEY=your_actual_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+EOF
 
-# Start application
+# 4. Start application
 docker-compose up -d --build
 
-# Check logs
-docker-compose logs -f
-
-# Access
+# 5. Access application
 # Frontend: http://localhost:3000
-# Backend API: http://localhost:8080
+# Backend: http://localhost:8080
 # Database: localhost:1433 (sa/Toilakhoa1204!)
-
-# Stop application
-docker-compose down
 ```
 
 ### Run Locally
@@ -103,24 +119,53 @@ medconnect/
 - 🎥 **Telemedicine** - Virtual consultations
 - 📊 **Admin Dashboard** - Facility management
 
-## 🧪 Testing
+## 🐳 Docker Setup
+
+### Docker Commands Cheat Sheet
+
+| Command | Description |
+| ------- | ----------- |
+| `docker-compose up` | Start services |
+| `docker-compose down` | Stop services |
+| `docker-compose logs` | View logs |
+| `docker-compose exec` | Execute command in a running container |
+
+### Common Docker Issues
+
+- **Port conflicts:** Ensure ports in `docker-compose.yml` are not used by other services.
+- **Permission denied:** Run commands with `sudo` or adjust permissions.
+- **Network issues:** Ensure Docker Desktop or daemon is running.
+
+### Docker for Mac/Windows
+
+- Use **Docker Desktop** for an easy-to-use interface and integration with your system.
+- Ensure **WSL 2** is enabled on Windows for better performance.
+
+### Docker for Linux
+
+- Install Docker using your package manager (e.g., `apt`, `yum`).
+- Add your user to the `docker` group to run commands without `sudo`.
+
+## 🚀 Local Development
+
+For development, you can run the backend and frontend locally without Docker.
+
+### Backend
 
 ```bash
-# Backend
-cd medconnect-be && ./mvnw test
-
-# Frontend
-cd medconnect-fe && npm test
+cd medconnect-be
+./mvnw spring-boot:run
 ```
 
-## 🚢 Deployment
-
-### Production Build
+### Frontend
 
 ```bash
-docker-compose -f docker-compose.prod.yml build
-docker-compose -f docker-compose.prod.yml up -d
+cd medconnect-fe
+npm install
+npm run dev
 ```
+
+## 🔧 Configuration
 
 ### Environment Variables
 
@@ -191,6 +236,25 @@ SPRING_PROFILES_ACTIVE=prod
 NEXT_PUBLIC_API_URL=http://localhost:8080/api
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
 # ... other Firebase credentials
+```
+
+## 🧪 Testing
+
+```bash
+# Backend
+cd medconnect-be && ./mvnw test
+
+# Frontend
+cd medconnect-fe && npm test
+```
+
+## 🚢 Deployment
+
+### Production Build
+
+```bash
+docker-compose -f docker-compose.prod.yml build
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ## 🤝 Contributing
@@ -420,4 +484,97 @@ docker-compose up -d
 docker-compose logs -f fe
 
 # 7. Test login at http://localhost:3000
+```
+
+**Firebase "build-time-dummy" error (FINAL FIX):**
+```bash
+# Error: projects/build-time-dummy/installations
+# This means Next.js didn't receive Firebase credentials during build
+
+# SOLUTION: Create .env.production file
+# 1. Create the file with actual credentials
+cat > medconnect-fe/.env.production << 'EOF'
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDVhKvRppmWjfg8RLylH6YE6G7Q1a0CPOM
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=medconnect-2eaff.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=medconnect-2eaff
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=medconnect-2eaff.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=183795808131
+NEXT_PUBLIC_FIREBASE_APP_ID=1:183795808131:web:f367eea401528b3bf168b6
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-LF9M9EJ4J8
+NEXT_PUBLIC_API_URL=http://be:8080/api
+EOF
+
+# 2. Verify the file was created
+cat medconnect-fe/.env.production
+
+# 3. Complete rebuild (MUST remove old image)
+docker-compose down
+docker rmi g1-se1961-nj-swp391-fal25-fe 2>/dev/null || true
+docker-compose build --no-cache fe
+docker-compose up -d
+
+# 4. Test in browser
+# Open http://localhost:3000 and check Console (F12)
+# Run: console.log(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)
+# Should show: medconnect-2eaff (NOT build-time-dummy)
+```
+
+**Why .env.production is needed:**
+```bash
+# Next.js in Docker needs .env.production because:
+# 1. docker-compose build args don't work reliably with Next.js
+# 2. NEXT_PUBLIC_* vars must be embedded at BUILD time
+# 3. .env.production is the standard way for Next.js production builds
+
+# The Dockerfile copies .env.production before npm run build
+# Next.js automatically reads it and embeds values into the bundle
+```
+
+**Verify Firebase is working:**
+```bash
+# After rebuild, check in browser console:
+console.log({
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+});
+
+# Should show actual values, NOT:
+# - undefined
+# - build-time-dummy
+# - null
+```
+
+**Backend "Failed to fetch" error in Docker:**
+```bash
+# Error: TypeError: Failed to fetch
+# This happens when frontend tries to call http://be:8080/api from browser
+
+# Browser cannot resolve Docker service name 'be'
+# Only Docker internal network can resolve it
+
+# Solution: Use localhost for browser API calls
+# Update medconnect-fe/.env.production:
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+
+# Then rebuild:
+docker-compose down
+docker rmi g1-se1961-nj-swp391-fal25-fe
+docker-compose build --no-cache fe
+docker-compose up -d
+
+# Verify in browser console:
+# console.log(process.env.NEXT_PUBLIC_API_URL)
+# Should show: http://localhost:8080/api
+```
+
+**API URL configuration:**
+```bash
+# Client-side (browser): http://localhost:8080/api
+# Server-side (Docker): http://be:8080/api
+
+# For apps with SSR, use dynamic API URL:
+const API_URL = typeof window !== 'undefined' 
+  ? 'http://localhost:8080/api'  // Browser
+  : 'http://be:8080/api';         // Server
 ```
