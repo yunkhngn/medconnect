@@ -22,7 +22,9 @@ export const googleProvider = new GoogleAuthProvider();
 
 // Analytics (check trước khi chạy vì nó chỉ hoạt động trên trình duyệt)
 let analytics;
-if (typeof window !== "undefined") {
+if (typeof window === "undefined") {
+  analytics = null;
+} else if (typeof window !== "undefined") {
   isSupported().then((yes) => {
     if (yes) analytics = getAnalytics(app);
   });
