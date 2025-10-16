@@ -59,7 +59,7 @@ export default function HomePage() {
   return (
     <Default>
       {/* HERO */}
-      <section className="relative overflow-hidden rounded-2xl mx-3 md:mx-6 mt-6 md:mt-10">
+      <section className="relative overflow-hidden rounded-2xl mx-3 md:mx-6 mt-6 md:mt-1">
         {/* gradient backdrop */}
         <div className="absolute inset-0 bg-gradient-to-tr from-[#f1e1ff] via-[#ffe6ea] to-[#e6f0ff]" />
         <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/60 blur-2xl" />
@@ -133,10 +133,9 @@ export default function HomePage() {
 
             {/* floating chips */}
             <div className="absolute right-6 top-6 flex flex-wrap gap-2">
-              <Chip variant="flat" color="secondary">Clinic</Chip>
-              <Chip variant="flat" color="default">Lifestyle</Chip>
-              <Chip variant="flat" color="primary">MedicineCL</Chip>
-              <Chip variant="flat" color="success">Healthcare</Chip>
+              <Chip variant="flat" color="secondary">TeleMedicine</Chip>
+              <Chip variant="flat" color="primary">24/7</Chip>
+              <Chip variant="flat" color="success">Online</Chip>
             </div>
 
             {/* floating small product cards */}
