@@ -1,4 +1,4 @@
-import {Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem} from "@heroui/react";
+import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
 import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { getAuth, signOut } from "firebase/auth";
 import { isAuthenticated, logout as authLogout, getUserRole } from "@/utils/auth";
 
-export const SearchIcon = ({size = 24, strokeWidth = 1.5, width, height, ...props}) => {
+export const SearchIcon = ({ size = 24, strokeWidth = 1.5, width, height, ...props }) => {
   return (
     <svg
       aria-hidden="true"
@@ -49,17 +49,13 @@ const Nav = () => {
     setUserRole(getUserRole());
   }, []);
 
-  const handleNavigation = (link) => {
-    router.push(link);
-  };
-
- const handleLogout = () => {
+  const handleLogout = () => {
     authLogout();
     router.push("/dang-nhap");
   };
 
   return (
-     <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
+    <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
       <NavbarBrand>
         <Link href="/" passHref className="flex items-center text-lg text-primary-600 dark:text-primary-400">
           <Image
@@ -85,34 +81,39 @@ const Nav = () => {
         {/* Show buttons only when NOT logged in */}
         {!isLoggedIn && (
           <>
-            {navigate.button.map((item, index) => (
-              <NavbarItem key={index}>
-                <Button 
-                  color={item.color} 
-                  variant={item.variant}
-                  onPress={() => handleNavigation(item.link)}
-                >
-                  {item.text}
-                </Button>
+            <NavbarItem>
+                  <Link href="/dang-nhap" passHref
+                    className="px-4 py-3 rounded-md font-medium transition-colors
+                    bg-primary text-white hover:bg-primary-700 focus:outline-none"
+                  >
+                    Đăng nhập
+                  </Link>
               </NavbarItem>
-            ))}
+              <NavbarItem>
+                  <Link href="/dang-ky" passHref
+                     className="px-4 py-3 rounded-md font-medium transition-colors
+                     text-gray hover:bg-gray-200  focus:outline-none"
+                  >
+                    Đăng ký
+                  </Link>
+              </NavbarItem>
           </>
         )}
-        
+
         {/* Show avatar only when logged in */}
         {isLoggedIn && (
           <NavbarItem>
             <Dropdown placement="bottom-end">
               <DropdownTrigger>
-                <Avatar 
-                  src="/assets/homepage/mockup-avatar.jpg" 
+                <Avatar
+                  src="/assets/homepage/mockup-avatar.jpg"
                   className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
                   as="button"
                 />
               </DropdownTrigger>
               <DropdownMenu aria-label="User Actions" variant="flat">
-                <DropdownItem 
-                  key="dashboard" 
+                <DropdownItem
+                  key="dashboard"
                   startContent={
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -127,7 +128,7 @@ const Nav = () => {
                 >
                   Dashboard
                 </DropdownItem>
-                <DropdownItem 
+                <DropdownItem
                   key="settings"
                   startContent={
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,8 +145,8 @@ const Nav = () => {
                 >
                   Settings
                 </DropdownItem>
-                <DropdownItem 
-                  key="logout" 
+                <DropdownItem
+                  key="logout"
                   color="danger"
                   className="text-danger"
                   startContent={
