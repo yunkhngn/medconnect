@@ -1,94 +1,113 @@
 import { useState } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const useGemini = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [chat, setChat] = useState(null);
 
-  const generateContent = async (prompt, model = "gemini-2.0-flash-exp") => {
-    setIsLoading(true);
+  const sendMessage = async (message) => {
+    setLoading(true);
     setError(null);
 
     try {
-      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
-      const geminiModel = genAI.getGenerativeModel({ model });
-
-      const result = await geminiModel.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
-      setIsLoading(false);
-      return text;
-    } catch (err) {
-      console.error("Gemini AI Error:", err);
-      setError(err.message || "Failed to generate content");
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  const generateChat = async (messages, model = "gemini-2.0-flash-exp") => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
-      const geminiModel = genAI.getGenerativeModel({ model });
-
-      const chat = geminiModel.startChat({
-        history: messages.slice(0, -1).map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }],
-        })),
-      });
-
-      const lastMessage = messages[messages.length - 1];
-      const result = await chat.sendMessage(lastMessage.content);
-      const response = await result.response;
-      const text = response.text();
-
-      setIsLoading(false);
-      return text;
-    } catch (err) {
-      console.error("Gemini Chat Error:", err);
-      setError(err.message || "Failed to generate chat response");
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  const generateStreamContent = async (prompt, onChunk, model = "gemini-2.0-flash-exp") => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
-      const geminiModel = genAI.getGenerativeModel({ model });
-
-      const result = await geminiModel.generateContentStream(prompt);
-
-      let fullText = '';
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        fullText += chunkText;
-        if (onChunk) onChunk(chunkText, fullText);
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('API key chưa được cấu hình');
       }
 
-      setIsLoading(false);
-      return fullText;
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ 
+        model: 'gemini-2.5-flash',
+      });
+
+      // Simple prompt without complex instructions
+      const prompt = `Bạn là trợ lý y tế AI của MedConnect. Hãy tư vấn ngắn gọn về: ${message}\n\nLưu ý: Đây chỉ là tư vấn sơ bộ, bạn nên đặt lịch khám bác sĩ.`;
+
+      let chatSession = chat;
+      
+      if (!chatSession) {
+        chatSession = model.startChat({
+          generationConfig: {
+            temperature: 0.9,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 2048,
+          },
+          history: [],
+        });
+        setChat(chatSession);
+      }
+
+      // Send message and get response
+      const result = await chatSession.sendMessage(prompt);
+      
+      // Comprehensive response extraction
+      let text = '';
+      
+      // Try multiple ways to extract text
+      if (result && result.response) {
+        const response = result.response;
+        
+        // Method 1: Direct text() function
+        if (typeof response.text === 'function') {
+          try {
+            text = response.text();
+          } catch (e) {
+            console.warn('text() method failed:', e);
+          }
+        }
+        
+        // Method 2: candidates array
+        if (!text && response.candidates && response.candidates.length > 0) {
+          const candidate = response.candidates[0];
+          if (candidate.content && candidate.content.parts) {
+            text = candidate.content.parts.map(part => part.text || '').join('');
+          }
+        }
+        
+        // Method 3: Direct parts
+        if (!text && response.parts) {
+          text = response.parts.map(part => part.text || '').join('');
+        }
+      }
+      
+      // Final check
+      if (!text || text.trim() === '') {
+        console.error('Empty response structure:', JSON.stringify(result, null, 2));
+        
+        // Return helpful error message
+        text = 'Xin lỗi, tôi không thể trả lời câu hỏi này lúc này. Vui lòng thử lại hoặc đặt câu hỏi khác.';
+      }
+      
+      setLoading(false);
+      return text.trim();
+      
     } catch (err) {
-      console.error("Gemini Stream Error:", err);
-      setError(err.message || "Failed to generate stream content");
-      setIsLoading(false);
-      return null;
+      console.error('Gemini AI error:', err);
+      
+      let errorMessage = 'Đã có lỗi xảy ra';
+      
+      if (err.message?.includes('API key')) {
+        errorMessage = 'API key không hợp lệ';
+      } else if (err.message?.includes('quota')) {
+        errorMessage = 'Đã vượt quá giới hạn API';
+      } else if (err.message?.includes('SAFETY')) {
+        errorMessage = 'Câu hỏi không phù hợp. Vui lòng hỏi về vấn đề sức khỏe khác';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      setLoading(false);
+      throw new Error(errorMessage);
     }
   };
 
-  return {
-    generateContent,
-    generateChat,
-    generateStreamContent,
-    isLoading,
-    error,
+  const resetChat = () => {
+    setChat(null);
   };
+
+  return { sendMessage, loading, error, resetChat };
 };
