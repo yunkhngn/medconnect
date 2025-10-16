@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getAuth, signOut } from "firebase/auth";
 import { isAuthenticated, logout as authLogout, getUserRole } from "@/utils/auth";
 
 export const SearchIcon = ({ size = 24, strokeWidth = 1.5, width, height, ...props }) => {
