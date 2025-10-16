@@ -18,9 +18,17 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
+    @Column(nullable = false)
+    private String name;
+
+    private String avatarUrl;
+
     @Email
     @Column(unique = true, nullable = false)
     private String email;
+
+    @Column(nullable = false)
+    private String phone;
 
     @Column(unique = true, nullable = false)
     private String firebaseUid;
