@@ -2,6 +2,7 @@ import { Default } from "../components/layouts/";
 import { Card, CardBody, Button, Chip, Avatar } from "@heroui/react";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import Link from "next/link";
 
 export default function HomePage() {
   const router = useRouter();
@@ -80,10 +81,16 @@ export default function HomePage() {
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button size="lg" color="primary" className="font-semibold shadow-sm" onPress={() => router.push("/tim-bac-si")}>Tìm bác sĩ</Button>
-              <Button size="lg" variant="bordered" 
-              color="primary"
-              onPress={() => router.push("/dang-ky")}>Đăng ký miễn phí</Button>
+              <Link href="/tim-bac-si"
+              className="px-4 py-3 rounded-lg font-medium transition-colors text-center text-white bg-primary hover:bg-primary/90 md:inline-block md:text-lg"
+              >
+                Tìm bác sĩ
+              </Link>
+              <Link href="/dang-ky"
+              className="px-4 py-3 rounded-lg font-medium transition-colors text-center text-primary hover:bg-gray-100 md:inline-block md:text-lg"
+              >
+                Đăng ký miễn phí
+              </Link>
             </div>
 
             {/* mini cards under CTA */}
