@@ -254,9 +254,11 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-8">
-            <Button color="primary" variant="bordered" onPress={() => router.push("/tim-bac-si")}>
+            <Link href="/tim-bac-si"
+            className="px-4 py-3 rounded-lg font-medium transition-colors text-center text-primary hover:bg-gray-100 md:inline-block md:text-lg"
+            >
               Xem tất cả bác sĩ
-            </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -311,18 +313,10 @@ export default function HomePage() {
                 <p className="mt-4 text-sm text-gray-500">
                   Không phí ẩn — Hỗ trợ mọi lúc, mọi nơi.
                 </p>
-                 <Button
-                  size="lg"
-                  className="px-6 py-3 rounded-lg shadow-md mt-5"
-                  style={{
-                    background: 'linear-gradient(90deg,#8B5CF6,#EC4899)',
-                    color: '#fff',
-                    boxShadow: '0 8px 24px rgba(139,92,246,0.18)',
-                  }}
-                  onPress={() => router.push("/dang-ky")}
-                >
+                 <Link href="/dang-ky" 
+                 className="mt-6 inline-block px-6 py-3 rounded-lg font-medium transition-colors text-center text-white bg-primary hover:bg-primary/90 md:text-lg">
                   Đăng ký ngay
-                </Button>
+                 </Link>
               </div>
             </div>
           </div>
