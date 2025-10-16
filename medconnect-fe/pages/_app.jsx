@@ -4,14 +4,12 @@ import "@/styles/globals.css";
 import NextTopLoader from 'nextjs-toploader';
 import Head from "next/head";
 import { useEffect } from "react";
-import { useRouter } from "next/router";
 import AuthGuard from '@/config/Auth/AuthGuard';
+import Chatbot from "@/components/ui/Chatbot";
+
 
 export default function App({ Component, pageProps }) {
-  const router = useRouter();
-
   useEffect(() => {
-    // Save auth to cookies for middleware
     const authToken = localStorage.getItem('authToken');
     const userRole = localStorage.getItem('userRole');
     
@@ -52,6 +50,7 @@ export default function App({ Component, pageProps }) {
             showAtBottom={false}
           />
           <AuthGuard>
+            <Chatbot />
             <Component {...pageProps} />
           </AuthGuard>
         </NextThemesProvider>
