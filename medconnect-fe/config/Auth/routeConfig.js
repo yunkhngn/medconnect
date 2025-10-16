@@ -12,38 +12,38 @@ export const routeConfig = {
     authRequired: true,
     roles: ["admin"],
     redirectIfNotAuth: "/",
-    redirectIfUnauthorized: "/403",
+    redirectIfUnauthorized: "/",
   },
   "/admin/*": {
     authRequired: true,
     roles: ["admin"],
     redirectIfNotAuth: "/",
-    redirectIfUnauthorized: "/403",
+    redirectIfUnauthorized: "/",
   },
 
   "/bac-si/trang-chu": {
     authRequired: true,
     roles: ["doctor", "admin"],
     redirectIfNotAuth: "/",
-    redirectIfUnauthorized: "/403",
+    redirectIfUnauthorized: "/",
   },
   "/bac-si/*": {
     authRequired: true,
     roles: ["doctor", "admin"],
     redirectIfNotAuth: "/",
-    redirectIfUnauthorized: "/403",
+    redirectIfUnauthorized: "/",
   },
 
   "/nguoi-dung/trang-chu": {
     authRequired: true,
     roles: ["patient", "admin"],
     redirectIfNotAuth: "/",
-    redirectIfUnauthorized: "/403",
+    redirectIfUnauthorized: "/",
   },
   "/nguoi-dung/*": {
     authRequired: true,
     roles: ["patient", "admin"],
     redirectIfNotAuth: "/",
-    redirectIfUnauthorized: "/403",
+    redirectIfUnauthorized: "/",
   },
 };
