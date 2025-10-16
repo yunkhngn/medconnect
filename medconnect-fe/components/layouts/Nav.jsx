@@ -81,20 +81,22 @@ const Nav = () => {
         {/* Show buttons only when NOT logged in */}
         {!isLoggedIn && (
           <>
-            {navigate.button.map((item, index) => (
-              <NavbarItem key={index}>
-                <Button
-                  color={item.color}
-                  variant={item.variant}
-                >
-                  <Link href={item.link} passHref>
-
-                    {item.text}
-
+            <NavbarItem>
+                  <Link href="/dang-nhap" passHref
+                    className="px-4 py-3 rounded-md font-medium transition-colors
+                    bg-primary text-white hover:bg-primary-700 focus:outline-none"
+                  >
+                    Đăng nhập
                   </Link>
-                </Button>
               </NavbarItem>
-            ))}
+              <NavbarItem>
+                  <Link href="/dang-ky" passHref
+                     className="px-4 py-3 rounded-md font-medium transition-colors
+                     text-gray hover:bg-gray-200  focus:outline-none"
+                  >
+                    Đăng ký
+                  </Link>
+              </NavbarItem>
           </>
         )}
 
