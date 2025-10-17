@@ -1,18 +1,32 @@
-import React, { useEffect, useState } from 'react';
-import { Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import Image from 'next/image';
-import menuItems from "@/config/Nav/patientNav";
+import React, { useEffect, useState } from "react";
+import {
+  Avatar,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import Image from "next/image";
+import { Home, FileText, Calendar } from "lucide-react"; // ✅ Dùng lucide-react icon
+import { isAuthenticated, logout as authLogout } from "@/utils/auth";
 
-const Nav = () => {
+const PatientNav = () => {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setIsLoggedIn(isAuthenticated());
+  }, []);
+
   const isActive = (href) => router.pathname === href;
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
-    router.push('/login');
+    authLogout();
+    router.push("/dang-nhap");
   };
 
   const [userEmail, setUserEmail] = useState('');
@@ -24,43 +38,74 @@ const Nav = () => {
   }, []);
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
+    <div className="fixed left-0 top-0 h-screen w-28 bg-white border-r border-gray-200 flex flex-col justify-between z-50">
       {/* Logo */}
-      <Link href="/">
-        <div className="p-4 flex items-center justify-center border-b border-gray-100">
-          <div className="w-13 h-13 bg-gray-100 rounded-xl flex items-center justify-center">
-            <Image src="/assets/logo.svg" alt="Logo" width={40} height={40} />
-          </div>
-        </div>
-      </Link>
+      <div className="p-4 flex items-center justify-center border-b border-gray-100">
+        <Link href="/nguoi-dung/trang-chu">
+          <Image
+            src="/assets/logo.svg"
+            alt="Logo"
+            width={40}
+            height={40}
+            className="cursor-pointer"
+          />
+        </Link>
+      </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-2 py-6 space-y-2">
-        {menuItems.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <div
-              className={`
-                transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-lg
-                ${isActive(item.href) 
-                  ? 'bg-teal-50 text-teal-700' 
-                  : 'text-gray-400 hover:bg-gray-50 hover:text-gray-700'
-                }
-              `}
-            >
-              <div className="w-6 h-6">
-                {item.icon}
-              </div>
-              <span className="text-xs font-medium text-center">
-                {item.label}
-              </span>
-            </div>
-          </Link>
-        ))}
+      <nav className="flex-1 px-2 py-6 space-y-4 flex flex-col items-center">
+        {/* Trang chủ */}
+        <Link href="/nguoi-dung/trang-chu">
+          <div
+            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
+              ${
+                isActive("/nguoi-dung/trang-chu")
+                  ? "bg-teal-50 text-teal-700"
+                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+              }
+            `}
+          >
+            <Home className="w-6 h-6" strokeWidth={2} />
+            <span className="text-xs font-medium text-center">Trang chủ</span>
+          </div>
+        </Link>
+
+        {/* Hồ sơ bệnh án */}
+        <Link href="/nguoi-dung/ho-so-benh-an">
+          <div
+            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
+              ${
+                isActive("/nguoi-dung/ho-so-benh-an")
+                  ? "bg-teal-50 text-teal-700"
+                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+              }
+            `}
+          >
+            <FileText className="w-6 h-6" strokeWidth={2} />
+            <span className="text-xs font-medium text-center">Hồ sơ</span>
+          </div>
+        </Link>
+
+        {/* Lịch hẹn */}
+        <Link href="/nguoi-dung/lich-hen">
+          <div
+            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
+              ${
+                isActive("/nguoi-dung/lich-hen")
+                  ? "bg-teal-50 text-teal-700"
+                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+              }
+            `}
+          >
+            <Calendar className="w-6 h-6" strokeWidth={2} />
+            <span className="text-xs font-medium text-center">Lịch hẹn</span>
+          </div>
+        </Link>
       </nav>
 
       {/* User Avatar */}
-      <div className="p-4 border-t border-gray-100">
-        <div className="flex items-center justify-center">
+      {isLoggedIn && (
+        <div className="p-4 border-t border-gray-100 flex items-center justify-center">
           <Dropdown placement="top">
             <DropdownTrigger>
               <Avatar
@@ -75,16 +120,15 @@ const Nav = () => {
               />
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">
-              <DropdownItem key="settings" textValue="Settings">
+              <DropdownItem key="settings">
                 <Link href="/nguoi-dung/cai-dat" className="w-full block">
                   Cài đặt
                 </Link>
               </DropdownItem>
-              <DropdownItem 
-                key="logout" 
-                className="bg-gray-100 text-red-600"
+              <DropdownItem
+                key="logout"
                 color="danger"
-                variant="flat"
+                className="text-red-600"
                 onClick={handleLogout}
               >
                 Đăng xuất
@@ -92,9 +136,9 @@ const Nav = () => {
             </DropdownMenu>
           </Dropdown>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default Nav;
+export default PatientNav;
