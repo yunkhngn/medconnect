@@ -1,47 +1,106 @@
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
+import React, { useEffect, useState } from "react";
+import {
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+  Button,
+  Avatar,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/react";
 import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { isAuthenticated, logout as authLogout, getUserRole } from "@/utils/auth";
+import { Home, FileText, Calendar } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import getUserRole from "../../config/Auth/GetUserRole";
 
 const Nav = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
-  const [userEmail, setUserEmail] = useState('');
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhoto, setUserPhoto] = useState(null);
 
   useEffect(() => {
     setMounted(true);
-    setIsLoggedIn(isAuthenticated());
-    setUserRole(getUserRole());
-    if (typeof window !== 'undefined') {
-      const email = localStorage.getItem('userEmail') || '';
-      setUserEmail(email);
-    }
+
+    // Subscribe to Firebase auth state changes
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setUserEmail(user.email || localStorage.getItem("userEmail") || "");
+        setUserPhoto(user.photoURL || null);
+
+        // attempt to get role (reads custom claim or falls back to backend)
+        try {
+          const role = await getUserRole(user, { fallbackToBackend: true });
+          setUserRole(role ? role.toLowerCase() : null);
+        } catch (err) {
+          console.warn("Failed to get user role:", err);
+          setUserRole(null);
+        }
+
+        // keep a fallback in localStorage for compatibility
+        try {
+          if (user.email) localStorage.setItem("userEmail", user.email);
+        } catch (e) {
+          // ignore localStorage errors
+        }
+      } else {
+        // not signed in
+        setIsLoggedIn(false);
+        setUserRole(null);
+        setUserPhoto(null);
+        // keep fallback from localStorage if available
+        try {
+          setUserEmail(localStorage.getItem("userEmail") || "");
+        } catch (e) {
+          setUserEmail("");
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const handleLogout = () => {
-    authLogout();
-    router.push("/dang-nhap");
+  const isActive = (href) => router.pathname === href;
+
+  const handleLogout = async () => {
+    try {
+      // Sign out from Firebase client
+      await signOut(auth);
+
+      // OPTIONAL: If you use a server-side session cookie, you can call your backend logout endpoint here
+      // await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/auth/logout`, {
+      //   method: "POST",
+      //   credentials: "include",
+      // });
+
+      // Note: per your request we do NOT remove remember-me keys here,
+      // so rememberedEmail/rememberedPassword/rememberMe remain in localStorage.
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      router.push("/dang-nhap");
+    }
   };
 
   return (
     <Navbar shouldHideOnScroll maxWidth="full" className="px-6 sm:px-12">
       <NavbarBrand>
         <Link href="/" passHref className="flex items-center text-lg text-primary-600 dark:text-primary-400">
-          <Image
-            src="/assets/logo.svg"
-            alt="MedConnect Logo"
-            width={40}
-            height={40}
-            className="mr-2"
-          />
+          <Image src="/assets/logo.svg" alt="MedConnect Logo" width={40} height={40} className="mr-2" />
           <p className="font-bold text-inherit">MedConnect</p>
         </Link>
       </NavbarBrand>
+
       <NavbarContent className="hidden sm:flex gap-4" justify="center">
         {navigate.route.map((item, index) => (
           <NavbarItem key={index}>
@@ -51,26 +110,29 @@ const Nav = () => {
           </NavbarItem>
         ))}
       </NavbarContent>
+
       <NavbarContent justify="end">
         {/* Show buttons only when NOT logged in */}
         {!isLoggedIn && (
           <>
             <NavbarItem>
-                  <Link href="/dang-nhap" passHref
-                    className="px-4 py-3 rounded-md font-medium transition-colors
-                    bg-primary text-white hover:bg-primary-700 focus:outline-none"
-                  >
-                    Đăng nhập
-                  </Link>
-              </NavbarItem>
-              <NavbarItem>
-                  <Link href="/dang-ky" passHref
-                     className="px-4 py-3 rounded-md font-medium transition-colors
-                     text-gray hover:bg-gray-200  focus:outline-none"
-                  >
-                    Đăng ký
-                  </Link>
-              </NavbarItem>
+              <Link
+                href="/dang-nhap"
+                passHref
+                className="px-4 py-3 rounded-md font-medium transition-colors bg-primary text-white hover:bg-primary-700 focus:outline-none"
+              >
+                Đăng nhập
+              </Link>
+            </NavbarItem>
+            <NavbarItem>
+              <Link
+                href="/dang-ky"
+                passHref
+                className="px-4 py-3 rounded-md font-medium transition-colors text-gray hover:bg-gray-200 focus:outline-none"
+              >
+                Đăng ký
+              </Link>
+            </NavbarItem>
           </>
         )}
 
@@ -81,11 +143,13 @@ const Nav = () => {
               <DropdownTrigger>
                 <Avatar
                   src={
-                    userEmail
+                    userPhoto
+                      ? userPhoto
+                      : userEmail
                       ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
                       : "/assets/homepage/mockup-avatar.jpg"
                   }
-                  alt={userEmail ? userEmail : 'User Avatar'}
+                  alt={userEmail ? userEmail : "User Avatar"}
                   className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
                   as="button"
                 />
@@ -107,6 +171,7 @@ const Nav = () => {
                 >
                   Dashboard
                 </DropdownItem>
+
                 <DropdownItem
                   key="settings"
                   startContent={
@@ -124,6 +189,7 @@ const Nav = () => {
                 >
                   Settings
                 </DropdownItem>
+
                 <DropdownItem
                   key="logout"
                   color="danger"

@@ -34,8 +34,7 @@ public class DoctorDashBoardTest {
 
         Doctor doctor = new Doctor();
         doctor.setFirebaseUid(uid);
-        doctor.setFirstName("Stephen");
-        doctor.setLastName("Strange");
+        doctor.setName("Stephen Strange");
         doctor.setEmail("dr.strange@example.com");
         doctor.setPhone("123456789");
         doctor.setSpecialization(Speciality.CARDIOLOGY);

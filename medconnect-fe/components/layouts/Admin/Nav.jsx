@@ -4,24 +4,44 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import menuItems from "@/config/Nav/adminNav";
-import { logout as authLogout } from "@/utils/auth";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const Nav = () => {
   const router = useRouter();
   const isActive = (href) => router.pathname === href;
 
-  const handleLogout = () => {
-    authLogout();
-    router.push("/dang-nhap");
-  };
-
   const [userEmail, setUserEmail] = useState('');
+  const [userPhoto, setUserPhoto] = useState(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setUserEmail(localStorage.getItem('userEmail') || '');
-    }
+    if (typeof window === 'undefined') return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserEmail(user.email || '');
+        setUserPhoto(user.photoURL || null);
+        try {
+          if (user.email) localStorage.setItem('userEmail', user.email);
+        } catch (e) {
+        }
+      } else {
+        setUserEmail(localStorage.getItem('userEmail') || '');
+        setUserPhoto(null);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  const handleLogout = async () => {
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.error("Logout error:", err);
+      } finally {
+        router.push("/dang-nhap");
+      }
+    };
 
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
@@ -65,7 +85,9 @@ const Nav = () => {
             <DropdownTrigger>
               <Avatar
                 src={
-                  userEmail
+                  userPhoto
+                    ? userPhoto
+                    : userEmail
                     ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
                     : '/assets/homepage/mockup-avatar.jpg'
                 }

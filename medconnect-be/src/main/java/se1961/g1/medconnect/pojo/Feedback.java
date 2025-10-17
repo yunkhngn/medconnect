@@ -1,5 +1,6 @@
 package se1961.g1.medconnect.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +18,8 @@ public class Feedback {
     private Long feedbackId;
 
     private String comment;
+
+    @Column(nullable = false)
     private int rating;
 
     @CreationTimestamp
@@ -24,6 +27,12 @@ public class Feedback {
 
     @ManyToOne
     @JoinColumn(name = "patient")
+    @JsonIgnore
     private Patient patient;
+
+    @ManyToOne
+    @JoinColumn(name = "doctor")
+    @JsonIgnore
+    private Doctor doctor;
 }
 
