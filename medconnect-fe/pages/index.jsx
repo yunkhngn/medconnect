@@ -261,7 +261,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
+      <section className="px-6 md:px-10 lg:px-16 py-16 bg-gray-50">
+      </section>
       {/* TESTIMONIALS */}
       <section className="px-6 md:px-10 lg:px-16 py-16 bg-gray-50">
         <div className="max-w-6xl mx-auto">

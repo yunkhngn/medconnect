@@ -96,7 +96,7 @@ const Chatbot = () => {
     <>
       {/* Chat Panel */}
       {isOpen && (
-        <div className={`fixed z-50 transition-all ${
+        <div className={`fixed z-9999 transition-all ${
           isFullscreen 
             ? 'inset-0' 
             : 'bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)]'
@@ -225,7 +225,7 @@ const Chatbot = () => {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || loading || questionCount >= MAX_QUESTIONS}
-                  className="w-10 h-10 rounded-xl bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                  className="w-10 h-10 rounded-xl bg-rose-400 text-white hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -245,7 +245,7 @@ const Chatbot = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blue-500 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center group"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-rose-400 to-fuchsia-200 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center group"
         aria-label="Open chatbot"
       >
         {isOpen ? (
@@ -254,9 +254,13 @@ const Chatbot = () => {
           </svg>
         ) : (
           <>
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
+            <Image 
+              src="/assets/chatbot.svg" 
+              alt="Chatbot" 
+              width={40} 
+              height={40}
+              className="brightness-0 invert"
+            />
             {questionCount >= MAX_QUESTIONS && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-[10px] font-semibold">!</span>
