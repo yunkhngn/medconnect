@@ -10,12 +10,11 @@ import Chatbot from "@/components/ui/Chatbot";
 
 export default function App({ Component, pageProps }) {
   useEffect(() => {
+    // Only sync token to cookie (NO userRole)
     const authToken = localStorage.getItem('authToken');
-    const userRole = localStorage.getItem('userRole');
-    
-    if (authToken && userRole) {
+
+    if (authToken) {
       document.cookie = `authToken=${authToken}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `userRole=${userRole}; path=/; max-age=86400; SameSite=Lax`;
     }
   }, []);
 

@@ -3,19 +3,18 @@
  */
 export const isAuthenticated = () => {
   if (typeof window === 'undefined') return false;
-  
   const authToken = localStorage.getItem("authToken");
-  const userRole = localStorage.getItem("userRole");
-  
-  return !!(authToken && userRole);
+  return !!authToken;
 };
 
 /**
- * Get current user role
+ * Get current user role FROM COOKIE ONLY (set by middleware after backend verification)
  */
 export const getUserRole = () => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem("userRole");
+  const cookies = document.cookie.split(';');
+  const roleCookie = cookies.find(c => c.trim().startsWith('userRole='));
+  return roleCookie ? roleCookie.split('=')[1] : null;
 };
 
 /**
@@ -27,46 +26,45 @@ export const getAuthToken = () => {
 };
 
 /**
- * Get user info from localStorage
+ * Get user info
  */
 export const getUserInfo = () => {
   if (typeof window === 'undefined') return null;
   
   return {
     token: localStorage.getItem("authToken"),
-    role: localStorage.getItem("userRole"),
+    role: getUserRole(), // Read from cookie, not localStorage
     email: localStorage.getItem("userEmail"),
     name: localStorage.getItem("userName"),
   };
 };
 
 /**
- * Save auth data to localStorage and cookies
+ * Save auth data - ONLY TOKEN in localStorage, role in cookie
  */
 export const saveAuthData = (token, role, userData = {}) => {
   if (typeof window === 'undefined') return;
   
-  // Save to localStorage
+  // ONLY save token to localStorage (NO ROLE)
   localStorage.setItem("authToken", token);
-  localStorage.setItem("userRole", role);
   
+  // Save user metadata (optional)
   if (userData.email) localStorage.setItem("userEmail", userData.email);
   if (userData.name) localStorage.setItem("userName", userData.name);
   
-  // Save to cookies for middleware
+  // Save to cookies (will be verified by middleware)
   document.cookie = `authToken=${token}; path=/; max-age=86400; SameSite=Lax`;
   document.cookie = `userRole=${role}; path=/; max-age=86400; SameSite=Lax`;
 };
 
 /**
- * Logout user
+ * Logout user - clear everything
  */
 export const logout = () => {
   if (typeof window === 'undefined') return;
   
-  // Clear localStorage
+  // Clear localStorage (NO userRole here)
   localStorage.removeItem("authToken");
-  localStorage.removeItem("userRole");
   localStorage.removeItem("userEmail");
   localStorage.removeItem("userName");
   localStorage.removeItem("rememberedEmail");
@@ -79,17 +77,17 @@ export const logout = () => {
 };
 
 /**
- * Redirect to dashboard based on role
+ * Redirect to dashboard based on role FROM COOKIE
  */
 export const redirectToDashboard = (router) => {
-  const userRole = getUserRole();
+  const userRole = getUserRole(); // Read from cookie only
   
   if (!userRole) {
     router.push("/dang-nhap");
     return;
   }
   
-  switch (userRole) {
+  switch (userRole.toUpperCase()) {
     case "ADMIN":
       router.push("/admin/trang-chu");
       break;
@@ -105,16 +103,16 @@ export const redirectToDashboard = (router) => {
 };
 
 /**
- * Check if user has permission to access route
+ * Check permission (read from cookie, no localStorage)
  */
 export const hasPermission = (requiredRole) => {
-  const userRole = getUserRole();
+  const userRole = getUserRole(); // Read from cookie
   
   if (!userRole) return false;
   
   if (Array.isArray(requiredRole)) {
-    return requiredRole.includes(userRole);
+    return requiredRole.map(r => r.toUpperCase()).includes(userRole.toUpperCase());
   }
   
-  return userRole === requiredRole;
+  return userRole.toUpperCase() === requiredRole.toUpperCase();
 };

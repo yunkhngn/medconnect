@@ -4,49 +4,23 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getAuth, signOut } from "firebase/auth";
 import { isAuthenticated, logout as authLogout, getUserRole } from "@/utils/auth";
-
-export const SearchIcon = ({ size = 24, strokeWidth = 1.5, width, height, ...props }) => {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      focusable="false"
-      height={height || size}
-      role="presentation"
-      viewBox="0 0 24 24"
-      width={width || size}
-      {...props}
-    >
-      <path
-        d="M11.5 21C16.7467 21 21 16.7467 21 11.5C21 6.25329 16.7467 2 11.5 2C6.25329 2 2 6.25329 2 11.5C2 16.7467 6.25329 21 11.5 21Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={strokeWidth}
-      />
-      <path
-        d="M22 22L20 20"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={strokeWidth}
-      />
-    </svg>
-  );
-};
 
 const Nav = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
     setMounted(true);
     setIsLoggedIn(isAuthenticated());
     setUserRole(getUserRole());
+    if (typeof window !== 'undefined') {
+      const email = localStorage.getItem('userEmail') || '';
+      setUserEmail(email);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -106,7 +80,12 @@ const Nav = () => {
             <Dropdown placement="bottom-end">
               <DropdownTrigger>
                 <Avatar
-                  src="/assets/homepage/mockup-avatar.jpg"
+                  src={
+                    userEmail
+                      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+                      : "/assets/homepage/mockup-avatar.jpg"
+                  }
+                  alt={userEmail ? userEmail : 'User Avatar'}
                   className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
                   as="button"
                 />
