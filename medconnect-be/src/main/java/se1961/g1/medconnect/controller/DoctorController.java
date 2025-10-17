@@ -3,8 +3,8 @@ package se1961.g1.medconnect.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
@@ -17,7 +17,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/doctor/dashboard")
-public class DoctorDashboard {
+public class DoctorController {
     @Autowired
     private DoctorService doctorService;
     @Autowired
@@ -39,13 +39,11 @@ public class DoctorDashboard {
 //    }
 
     @GetMapping("/appointments")
-    public ResponseEntity<List<Appointment>> getAppointments(Authentication authentication) throws Exception {
+    public ResponseEntity<List<AppointmentDTO>> getAppointments(Authentication authentication) throws Exception {
         String uid = (String) authentication.getPrincipal();
-        Optional<Doctor> doctor = doctorService.getDoctor(uid);
-        List<Appointment> appointments =  new ArrayList<>();
-        if (doctor.isPresent()) {
-            appointments = doctorService.getAppointments();
-        }
+        Doctor doctor = doctorService.getDoctor(uid)
+                .orElseThrow(() -> new Exception("Doctor not found"));
+        List<AppointmentDTO> appointments =  doctorService.getAppointments(doctor);
         return ResponseEntity.ok(appointments);
     }
 //    @GetMapping("/schedule")
@@ -53,7 +51,6 @@ public class DoctorDashboard {
     @GetMapping("/profile")
     public ResponseEntity<Map<String, Object>> getProfile(Authentication authentication) throws Exception {
         String uid = (String) authentication.getPrincipal();
-        System.out.println("authenticated uid: " + uid);
         Doctor doctor = doctorService.getDoctor(uid).orElseThrow(() -> new Exception("Doctor not found"));
 
             Map<String, Object> profile = new HashMap<>();
