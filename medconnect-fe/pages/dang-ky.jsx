@@ -35,100 +35,127 @@ export default function MedConnectRegister() {
     });
   };
 
-  const sendFirebaseTokenToBackend = async (user) => {
+  const sendFirebaseTokenToBackend = async (user, extra = {}) => {
+  try {
+    setIsLoading(true);
+
+    await user.reload();
+    const idToken = await user.getIdToken(true);
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+    const body = {
+      name: extra.name || user.displayName || "",
+      email: extra.email || user.email || "",
+    };
+
+    const response = await fetch(`${apiUrl}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    let responseBody = null;
     try {
-      const idToken = await user.getIdToken();
+      responseBody = await response.json();
+    } catch (e) {
+      responseBody = null;
+    }
 
-      const response = await fetch("http://localhost:8080/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+    if (!response.ok) {
+      let errorText = "Đăng ký thất bại từ backend.";
+      if (responseBody && responseBody.message) errorText = responseBody.message;
+      console.error("Backend register failed:", response.status, errorText);
+      showMessage(errorText, "error");
+      setIsLoading(false);
+      return false;
+    }
 
-      if (!response.ok) {
-        let errorText = "Đăng ký thất bại từ backend.";
-        
-        try {
-          const errorData = await response.json();
-          errorText = errorData.message || errorText;
-        } catch {
-          errorText = await response.text() || errorText;
-        }
-        
-        console.error("Backend register failed:", response.status, errorText);
-        await user.delete();
-        
-        showMessage(errorText, "error");
-        setIsLoading(false);
-        return;
-      }
+    showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
+    setTimeout(() => {
+      router.push("/dang-nhap");
+    }, 1500);
 
-      const data = await response.json();
-      console.log("Backend response:", data);
+    return true;
+  } catch (error) {
+    console.error("Backend error:", error);
+    showMessage("Lỗi kết nối với máy chủ. Vui lòng thử lại.", "error");
+    setIsLoading(false);
+    return false;
+  }
+};
 
+
+  const handleEmailRegister = async (e) => {
+  e.preventDefault();
+
+  if (!termsAccepted || !privacyAccepted) {
+    showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
+    return;
+  }
+
+  if (formData.password !== formData.confirmPassword) {
+    showMessage("Mật khẩu xác nhận không khớp.", "error");
+    return;
+  }
+
+  if (formData.password.length < 6) {
+    showMessage("Mật khẩu phải có ít nhất 6 ký tự.", "error");
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      formData.email,
+      formData.password
+    );
+
+    try {
+      await updateProfile(userCredential.user, { displayName: formData.fullName });
+    } catch (updErr) {
+      console.warn("Không thể update profile:", updErr);
+    }
+
+    const ok = await sendFirebaseTokenToBackend(userCredential.user, {
+      name: formData.fullName,
+      email: formData.email,
+    });
+
+    try {
+      await auth.signOut();
+    } catch (err) {
+      console.warn("Không thể signOut:", err);
+    }
+
+    if (ok) {
       showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
       setTimeout(() => {
         router.push("/dang-nhap");
-      }, 1500);
-    } catch (error) {
-      console.error("Backend error:", error);
-      try {
-        const currentUser = auth.currentUser;
-        if (currentUser) await currentUser.delete();
-      } catch (deleteError) {
-        console.warn("Không thể xóa user Firebase:", deleteError);
-      }
-
-      showMessage("Lỗi kết nối với máy chủ. Vui lòng thử lại.", "error");
+      }, 1);
+    } else {
       setIsLoading(false);
     }
-  };
 
-  const handleEmailRegister = async (e) => {
-    e.preventDefault();
+  } catch (error) {
+    let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
 
-    if (!termsAccepted || !privacyAccepted) {
-      showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
-      return;
-    }
+    if (error.code === "auth/email-already-in-use")
+      errorMessage = "Email đã được sử dụng.";
+    else if (error.code === "auth/invalid-email")
+      errorMessage = "Email không hợp lệ.";
+    else if (error.code === "auth/weak-password")
+      errorMessage = "Mật khẩu quá yếu.";
 
-    if (formData.password !== formData.confirmPassword) {
-      showMessage("Mật khẩu xác nhận không khớp.", "error");
-      return;
-    }
+    showMessage(errorMessage, "error");
+    setIsLoading(false);
+  }
+};
 
-    if (formData.password.length < 6) {
-      showMessage("Mật khẩu phải có ít nhất 6 ký tự.", "error");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-
-      await updateProfile(userCredential.user, { displayName: formData.fullName });
-      await sendFirebaseTokenToBackend(userCredential.user);
-    } catch (error) {
-      let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
-
-      if (error.code === "auth/email-already-in-use")
-        errorMessage = "Email đã được sử dụng.";
-      else if (error.code === "auth/invalid-email")
-        errorMessage = "Email không hợp lệ.";
-      else if (error.code === "auth/weak-password")
-        errorMessage = "Mật khẩu quá yếu.";
-
-      showMessage(errorMessage, "error");
-      setIsLoading(false);
-    }
-  };
 
   const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
   const toggleConfirmPasswordVisibility = () => setIsConfirmPasswordVisible(!isConfirmPasswordVisible);
@@ -137,16 +164,16 @@ export default function MedConnectRegister() {
     <Default title="Đăng ký - MedConnect">
       <div className="min-h-[calc(100vh-4em)] flex items-center justify-center p-10 relative overflow-hidden">
         {/* Background Image with Blur */}
-       <div className="absolute inset-0">
-                 <Image
-                   src="/assets/homepage/stock-3.jpg"
-                   alt="Background"
-                   fill
-                   className="object-cover"
-                   priority
-                 />
-                 {/* Blur Overlay */}
-                 <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/stock-3.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Blur Overlay */}
+          <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
         </div>
 
         {/* Content */}
@@ -164,11 +191,10 @@ export default function MedConnectRegister() {
 
                   {message.text && (
                     <div
-                      className={`p-3 rounded-lg mb-4 text-sm ${
-                        message.type === "error"
+                      className={`p-3 rounded-lg mb-4 text-sm ${message.type === "error"
                           ? "bg-red-50 text-red-600 border border-red-200"
                           : "bg-green-50 text-green-600 border border-green-200"
-                      }`}
+                        }`}
                     >
                       {message.text}
                     </div>
@@ -257,31 +283,29 @@ export default function MedConnectRegister() {
 
                     <div className="space-y-2">
                       <div>
-                      <Checkbox
-                        isSelected={termsAccepted}
-                        onValueChange={setTermsAccepted}
-                      >
-                      </Checkbox>
-                      <span className="text-sm text-gray-600">
+                        <Checkbox
+                          isSelected={termsAccepted}
+                          onValueChange={setTermsAccepted}
+                        />
+                        <span className="text-sm text-gray-600">
                           Tôi đồng ý với{" "}
                           <Link href="/chinh-sach/dieu-khoan-su-dung" className="text-primary font-medium hover:underline">
                             Điều khoản sử dụng
                           </Link>
                         </span>
-                    </div>
-                    <div>
-                      <Checkbox
-                        isSelected={privacyAccepted}
-                        onValueChange={setPrivacyAccepted}
-                      >
-                      </Checkbox>
-                      <span className="text-sm text-gray-600">
+                      </div>
+                      <div>
+                        <Checkbox
+                          isSelected={privacyAccepted}
+                          onValueChange={setPrivacyAccepted}
+                        />
+                        <span className="text-sm text-gray-600">
                           Tôi đã đọc và chấp nhận{" "}
                           <Link href="/chinh-sach/chinh-sach-bao-mat" className="text-primary font-medium hover:underline">
                             Chính sách bảo mật
                           </Link>
                         </span>
-                        </div>
+                      </div>
                     </div>
 
                     <Button
@@ -299,7 +323,13 @@ export default function MedConnectRegister() {
 
                     <div className="flex items-center justify-center">
                       <SocialLogin
-                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                        onSuccess={async (user) => {
+                          // For social login, attempt to send displayName/email to backend as well
+                          await sendFirebaseTokenToBackend(user, {
+                            name: user.displayName || "",
+                            email: user.email || ""
+                          });
+                        }}
                         onError={(msg) => showMessage(msg, "error")}
                       />
                     </div>
