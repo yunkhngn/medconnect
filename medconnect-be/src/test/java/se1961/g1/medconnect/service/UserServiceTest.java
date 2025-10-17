@@ -58,11 +58,12 @@ public class UserServiceTest {
 
         String firebaseUid = "uid123";
         String email = "email123";
+        String name = "name123";
 
         when(userRepository.save(any(User.class)))
                 .thenAnswer(i -> i.getArgument(0));
 
-        User saved =  userService.registerUser(firebaseUid, email);
+        User saved =  userService.registerUser(firebaseUid, email,  name);
 
         assertEquals("uid123", saved.getFirebaseUid());
         assertEquals("email123", saved.getEmail());
@@ -77,7 +78,7 @@ public class UserServiceTest {
                 .thenReturn(Optional.of(user));
 
         assertThrows(RuntimeException.class,
-                () -> userService.registerUser("uid123", "email123"));
+                () -> userService.registerUser("uid123", "email123",  "name123"));
     }
 }
 
