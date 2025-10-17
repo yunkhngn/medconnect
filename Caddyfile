@@ -1,0 +1,9 @@
+http://143.198.220.198 {
+    encode zstd gzip
+    reverse_proxy fe:3000
+}
+
+http://143.198.220.198:8080 {
+    encode zstd gzip
+    reverse_proxy be:8080
+}
