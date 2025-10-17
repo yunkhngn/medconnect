@@ -1,18 +1,18 @@
 package se1961.g1.medconnect.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.AppointmentDTO;
+import se1961.g1.medconnect.dto.ScheduleDTO;
 import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
-import se1961.g1.medconnect.service.AppointmentService;
-import se1961.g1.medconnect.service.DoctorService;
-import se1961.g1.medconnect.service.FirebaseService;
-import se1961.g1.medconnect.service.UserService;
+import se1961.g1.medconnect.service.*;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @RestController
@@ -23,9 +23,7 @@ public class DoctorController {
     @Autowired
     private AppointmentService appointmentService;
     @Autowired
-    private FirebaseService firebaseService;
-    @Autowired
-    private UserService userService;
+    private ScheduleService scheduleService;
 
 
 //    @GetMapping("/")
@@ -46,12 +44,35 @@ public class DoctorController {
         List<AppointmentDTO> appointments =  doctorService.getAppointments(doctor);
         return ResponseEntity.ok(appointments);
     }
-//    @GetMapping("/schedule")
+
+    @PatchMapping("/appoitments/{id}")
+    public ResponseEntity<AppointmentDTO> updateAppointments(
+            @PathVariable String id,
+            @RequestBody AppointmentDTO appointmentDTO)
+            throws Exception {
+        Long appointmentId = Long.parseLong(id.replace("APT", ""));
+        AppointmentDTO updated = appointmentService.updateAppointment(appointmentId, appointmentDTO);
+        return ResponseEntity.ok(updated);
+    }
+    @GetMapping("/schedule")
+    public ResponseEntity<List<ScheduleDTO>> getScheduleWeekly(
+            Authentication authentication,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)LocalDate end)
+            throws Exception {
+        String uid = (String) authentication.getPrincipal();
+        Doctor doctor = doctorService.getDoctor(uid)
+                .orElseThrow(() -> new Exception("Doctor not found"));
+        Long userId = doctor.getUserId();
+        List<ScheduleDTO> schedules = scheduleService.getWeeklySchedule(userId, start, end);
+        return ResponseEntity.ok(schedules);
+    }
 
     @GetMapping("/profile")
     public ResponseEntity<Map<String, Object>> getProfile(Authentication authentication) throws Exception {
         String uid = (String) authentication.getPrincipal();
-        Doctor doctor = doctorService.getDoctor(uid).orElseThrow(() -> new Exception("Doctor not found"));
+        Doctor doctor = doctorService.getDoctor(uid).orElseThrow(
+                () -> new Exception("Doctor not found"));
 
             Map<String, Object> profile = new HashMap<>();
             profile.put("name", doctor.getName());
@@ -65,13 +86,8 @@ public class DoctorController {
     @PatchMapping("/profile")
     public ResponseEntity<Map<String, Object>> updateProfile(Authentication authentication, @RequestBody Map<String, Object> request) throws Exception {
         String uid = (String) authentication.getPrincipal();
-        Optional<Doctor> doctor = doctorService.getDoctor(uid);
-
-        if(doctor.isEmpty()) {
-            throw new Exception("Doctor not found");
-        }
-
-        Doctor currDoc = doctor.get();
+        Doctor currDoc = doctorService.getDoctor(uid).orElseThrow(
+                () -> new Exception("Doctor not found"));
 
         if(request.containsKey("phone")) {
             currDoc.setPhone((String) request.get("phone"));

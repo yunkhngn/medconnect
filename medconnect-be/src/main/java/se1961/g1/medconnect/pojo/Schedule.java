@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import se1961.g1.medconnect.enums.ScheduleStatus;
+import se1961.g1.medconnect.enums.Slot;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -21,9 +22,12 @@ public class Schedule {
     private Long scheduleId;
 
     @Enumerated(EnumType.STRING)
+
     private ScheduleStatus status;
     private LocalDate date;
-    private LocalTime slot;
+
+    @Enumerated(EnumType.STRING)
+    private Slot slot;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
