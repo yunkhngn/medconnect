@@ -47,6 +47,14 @@ services:
       retries: 10
       start_period: 60s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.50'
+          memory: 1G
 
   be:
     build: ./medconnect-be
@@ -80,6 +88,14 @@ services:
       retries: 10
       start_period: 40s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   fe:
     build:
@@ -99,6 +115,14 @@ services:
       retries: 10
       start_period: 40s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1.5G
+        reservations:
+          cpus: '0.50'
+          memory: 512M
 
   caddy:
     image: caddy:2
@@ -113,6 +137,14 @@ services:
       - fe
       - be
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
 volumes:
   sqlserver-data:
