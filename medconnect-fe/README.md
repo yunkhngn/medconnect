@@ -1,55 +1,185 @@
-# Next.js & HeroUI Template
+# MedConnect - Online Medical Appointment Platform
 
-This is a template for creating applications using Next.js 14 (pages directory) and HeroUI (v2).
+MedConnect is a modern web platform that connects patients with specialist doctors, supporting online medical appointments and consultations.
 
-[Try it on CodeSandbox](https://githubbox.com/heroui-inc/next-pages-template)
+## Technologies
 
-> Note: Since Next.js 14, the pages router is recommend migrating to the [new App Router](https://nextjs.org/docs/app) to leverage React's latest features
->
-> Read more: [Pages Router](https://nextjs.org/docs/pages)
+- **Framework**: Next.js 14 (Pages Router)
+- **UI Library**: HeroUI v2
+- **Styling**: Tailwind CSS
+- **Authentication**: Firebase Auth
+- **AI Integration**: Google Gemini AI
+- **Language**: JavaScript/JSX
+- **Package Manager**: npm/yarn/pnpm
 
-## Technologies Used
+## Main Features
 
-- [Next.js 14](https://nextjs.org/docs/getting-started)
-- [HeroUI](https://heroui.com)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Tailwind Variants](https://tailwind-variants.org)
-- [TypeScript](https://www.typescriptlang.org)
-- [Framer Motion](https://www.framer.com/motion)
-- [next-themes](https://github.com/pacocoursey/next-themes)
+### User (Patient)
+- Register/Login (Email, Google)
+- Search doctors by specialty
+- AI symptom consultation
+- Book medical appointments
+- Manage personal profile
+- Online payment
 
-## How to Use
+### Doctor
+- Manage appointments
+- View patient information
+- Update professional profile
 
-To create a new project based on this template using `create-next-app`, run the following command:
+### Admin
+- Dashboard with statistics
+- Doctor management (CRUD)
+- User management (CRUD)
+- Appointment management
+- Payment management
+- Doctor payment processing
+- System settings
+
+## Installation
+
+### Requirements
+- Node.js 18+ 
+- npm/yarn/pnpm
+
+### Step 1: Clone repository
 
 ```bash
-npx create-next-app -e https://github.com/heroui-inc/next-pages-template
+git clone https://github.com/your-repo/medconnect-fe.git
+cd medconnect-fe
 ```
 
-### Install dependencies
-
-You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `npm`:
+### Step 2: Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run the development server
+### Step 3: Configure environment variables
+
+Create `.env.local` file:
+
+```env
+# Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+# Google Gemini AI
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+
+# Backend API
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+```
+
+### Step 4: Run development server
 
 ```bash
 npm run dev
 ```
 
-### Setup pnpm (optional)
+Open http://localhost:3000 in browser.
 
-If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
+## Project Structure
 
-```bash
-public-hoist-pattern[]=*@heroui/*
+```
+medconnect-fe/
+├── components/          # React components
+│   ├── layouts/        # Layout components
+│   └── ui/             # UI components
+├── pages/              # Next.js pages
+│   ├── admin/          # Admin pages
+│   ├── bac-si/         # Doctor pages
+│   ├── nguoi-dung/     # Patient pages
+│   └── chinh-sach/     # Policy pages
+├── hooks/              # Custom React hooks
+├── lib/                # Libraries & utilities
+├── utils/              # Utility functions
+├── config/             # Configuration files
+├── public/             # Static assets
+└── styles/             # Global styles
 ```
 
-After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
+## UI Components
+
+Project uses HeroUI components:
+- Card, CardBody, CardHeader
+- Table, TableHeader, TableBody, TableRow, TableCell
+- Modal, ModalContent, ModalHeader, ModalBody, ModalFooter
+- Button, Input, Select, Textarea
+- Avatar, Chip, Badge
+- Dropdown, Pagination
+- Switch, Checkbox
+
+## Authentication Flow
+
+1. User registers/logs in via Firebase
+2. Firebase returns ID Token
+3. Send token to backend for verification
+4. Backend returns JWT token and role
+5. Save token to localStorage
+6. Redirect by role (Admin/Doctor/Patient)
+
+## Database Schema (Backend)
+
+Main tables:
+- users - User information
+- doctors - Doctor information
+- appointments - Appointments
+- payments - Payments
+
+## Deployment
+
+### Vercel
+
+```bash
+npm run build
+vercel deploy
+```
+
+### Docker
+
+```bash
+docker build -t medconnect-fe .
+docker run -p 3000:3000 medconnect-fe
+```
+
+## Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+```
+
+## Contributing
+
+1. Fork repo
+2. Create new branch
+3. Commit changes
+4. Push to branch
+5. Open Pull Request
+
+## Team
+
+- Team Name: G1-SE1961-NJ
+- Project: SWP391 - Fall 2025
 
 ## License
 
-Licensed under the [MIT license](https://github.com/heroui-inc/next-pages-template/blob/main/LICENSE).
+This project is licensed under the MIT License.
+
+## Contact
+
+- Email: support@medconnect.vn
+- Hotline: 1900-xxxx
+- Website: medconnect.vn
+
+---
+
+Made by Team G1-SE1961-NJ

@@ -27,9 +27,6 @@ public class Payment {
     private Double amount;
 
     @ManyToOne
-    private Admin admin;
-
-    @ManyToOne
     @JoinColumn(name = "patient_id")
     private Patient patient;
 

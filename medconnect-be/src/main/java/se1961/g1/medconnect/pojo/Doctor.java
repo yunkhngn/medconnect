@@ -13,16 +13,12 @@ import java.util.List;
 @Getter
 @Setter
 public class Doctor extends User{
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Speciality specialization;
 
     @Column(unique = true, nullable = false)
     private String licenseId;
-
-    @Column(nullable = false)
-    private String licenseUrl;
 
     @Enumerated(EnumType.STRING)
     private DoctorStatus status;

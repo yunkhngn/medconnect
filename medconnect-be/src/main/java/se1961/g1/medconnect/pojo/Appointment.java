@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import se1961.g1.medconnect.enums.AppoimentType;
 import se1961.g1.medconnect.enums.AppointmentStatus;
-import se1961.g1.medconnect.enums.AppointmentType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,17 +20,16 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long appointmentId;
 
-    @CreationTimestamp
-    private LocalDate createdAt;
-
-    @Column(nullable = false)
-    private LocalDateTime date;
-
     @Enumerated(EnumType.STRING)
     private AppointmentStatus status;
 
+    @CreationTimestamp
+    private LocalDate createdAt;
+
+    private LocalDateTime date;
+
     @Enumerated(EnumType.STRING)
-    private AppointmentType type;
+    private AppoimentType type;
 
     @ManyToOne
     @JoinColumn(name = "doctor_id")
@@ -41,11 +40,6 @@ public class Appointment {
     @JoinColumn(name = "patient_id")
     @JsonIgnore
     private Patient patient;
-
-    @ManyToOne
-    @JoinColumn(name = "schedule_id")
-    @JsonIgnore
-    private Schedule schedule;
 
     @OneToOne(mappedBy = "appointment")
     private Payment payment;

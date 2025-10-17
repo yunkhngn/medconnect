@@ -23,12 +23,12 @@ public class User {
 
     private String avatarUrl;
 
+    @Column(unique = true)
+    private String phone;
+
     @Email
     @Column(unique = true, nullable = false)
     private String email;
-
-    @Column(nullable = false)
-    private String phone;
 
     @Column(unique = true, nullable = false)
     private String firebaseUid;

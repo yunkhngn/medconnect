@@ -19,7 +19,7 @@ public class UserService {
     }
 
     //default as Patient
-    public User registerUser(String firebaseUid, String email) {
+    public User registerUser(String firebaseUid, String email, String name) {
         if(userRepository.findByFirebaseUid(firebaseUid).isPresent()) {
             throw new RuntimeException("User already exists");
         }
@@ -27,6 +27,7 @@ public class UserService {
         Patient patient = new Patient();
         patient.setEmail(email);
         patient.setFirebaseUid(firebaseUid);
+        patient.setName((name != null && !name.isBlank()) ? name : "Unknown User");
         patient.setRole(Role.PATIENT);
         return userRepository.save(patient);
     }

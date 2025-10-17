@@ -1,7 +1,9 @@
-// firebase.js
+// lib/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,14 +15,17 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Firebase Auth
+// Auth
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Analytics (check trước khi chạy vì nó chỉ hoạt động trên trình duyệt)
+// Firestore + Storage
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+// Analytics (optional)
 let analytics;
 if (typeof window !== "undefined") {
   isSupported().then((yes) => {

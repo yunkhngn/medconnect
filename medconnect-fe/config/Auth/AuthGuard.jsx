@@ -61,15 +61,34 @@ const AuthGuard = ({ children }) => {
       return;
     }
 
+    // Check cached role from COOKIE only
+    const getCookieRole = () => {
+      const cookies = document.cookie.split(';');
+      const roleCookie = cookies.find(c => c.trim().startsWith('userRole='));
+      return roleCookie ? roleCookie.split('=')[1] : null;
+    };
+
+    const cachedRole = getCookieRole();
+    
+    if (cachedRole && rule.roles) {
+      const roleMatch = rule.roles.map(r => r.toLowerCase()).includes(cachedRole.toLowerCase());
+      if (roleMatch) {
+        setAuthorized(true);
+        return;
+      }
+    }
+
     try {
       const token = await user.getIdToken();
       const response = await fetch("http://localhost:8080/api/user/role", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
+        // Clear everything on error
+        localStorage.removeItem('authToken');
+        document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         setAuthorized(false);
         router.push("/");
         return;
@@ -78,7 +97,10 @@ const AuthGuard = ({ children }) => {
       const data = await response.json();
       const userRole = data.role?.toLowerCase();
 
-      if (rule.roles && !rule.roles.includes(userRole)) {
+      // Update cookie ONLY (NOT localStorage)
+      document.cookie = `userRole=${userRole}; path=/; max-age=86400; SameSite=Lax`;
+
+      if (rule.roles && !rule.roles.map(r => r.toLowerCase()).includes(userRole)) {
         setAuthorized(false);
         router.push(rule.redirectIfUnauthorized || "/");
         return;
@@ -87,6 +109,9 @@ const AuthGuard = ({ children }) => {
       setAuthorized(true);
     } catch (error) {
       console.error("Lỗi khi xác thực role:", error);
+      localStorage.removeItem('authToken');
+      document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       setAuthorized(false);
       router.push("/");
     }

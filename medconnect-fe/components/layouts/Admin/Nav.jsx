@@ -1,23 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import menuItems from "@/config/Nav/adminNav";
-import { getAuth, signOut } from "firebase/auth";
+import { logout as authLogout } from "@/utils/auth";
+
 const Nav = () => {
   const router = useRouter();
   const isActive = (href) => router.pathname === href;
 
-  const handleLogout = async () => {
-  const auth = getAuth();
-  try {
-    await signOut(auth);
-    router.push('/dang-nhap');
-  } catch (error) {
-    console.error("Logout failed: ", error);
-  }
-};
+  const handleLogout = () => {
+    authLogout();
+    router.push("/dang-nhap");
+  };
+
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserEmail(localStorage.getItem('userEmail') || '');
+    }
+  }, []);
 
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
@@ -60,9 +64,14 @@ const Nav = () => {
           <Dropdown placement="top">
             <DropdownTrigger>
               <Avatar
-                src="/assets/homepage/mockup-avatar.jpg"
-                alt="User Avatar"
-                className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer"
+                src={
+                  userEmail
+                    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+                    : '/assets/homepage/mockup-avatar.jpg'
+                }
+                alt={userEmail ? userEmail : 'User Avatar'}
+                className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
+                as="button"
               />
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">

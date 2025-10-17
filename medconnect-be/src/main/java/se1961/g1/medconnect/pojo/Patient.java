@@ -12,7 +12,10 @@ import java.util.List;
 @Getter
 @Setter
 public class Patient extends User{
+    @Column(unique = true)
     private String citizenship;
+
+    @Column(unique = true)
     private String socialInsurance;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
@@ -25,5 +28,5 @@ public class Patient extends User{
     private List<Feedback> feedbacks;
 
     @OneToOne(mappedBy = "patient", cascade = CascadeType.ALL)
-    private MedicalRecord mr;
+    private MR mr;
 }
