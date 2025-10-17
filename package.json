@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "isomorphic-dompurify": "^2.29.0",
     "nextjs-toploader": "^3.9.17"
   }
 }

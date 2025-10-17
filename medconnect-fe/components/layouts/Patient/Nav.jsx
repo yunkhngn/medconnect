@@ -9,33 +9,54 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { Home, FileText, Calendar } from "lucide-react"; // ✅ Dùng lucide-react icon
-import { isAuthenticated, logout as authLogout } from "@/utils/auth";
+import { Home, FileText, Calendar } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const PatientNav = () => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhoto, setUserPhoto] = useState(null);
 
   useEffect(() => {
     setMounted(true);
-    setIsLoggedIn(isAuthenticated());
+
+    // Listen for firebase auth state and update user info
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setUserEmail(user.email || "");
+        setUserPhoto(user.photoURL || null);
+
+        // keep a fallback in localStorage for compatibility if some flows still read it
+        try {
+          if (user.email) localStorage.setItem("userEmail", user.email);
+        } catch (e) {
+          // ignore localStorage errors
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserEmail(localStorage.getItem("userEmail") || "");
+        setUserPhoto(null);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const isActive = (href) => router.pathname === href;
 
-  const handleLogout = () => {
-    authLogout();
-    router.push("/dang-nhap");
-  };
-
-  const [userEmail, setUserEmail] = useState('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setUserEmail(localStorage.getItem('userEmail') || '');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      router.push("/dang-nhap");
     }
-  }, []);
+  };
 
   return (
     <div className="fixed left-0 top-0 h-screen w-28 bg-white border-r border-gray-200 flex flex-col justify-between z-50">
@@ -109,8 +130,16 @@ const PatientNav = () => {
           <Dropdown placement="top">
             <DropdownTrigger>
               <Avatar
-                src="/assets/homepage/mockup-avatar.jpg"
-                alt="User Avatar"
+                src={
+                  userPhoto
+                    ? userPhoto
+                    : userEmail
+                    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        userEmail
+                      )}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+                    : "/assets/homepage/mockup-avatar.jpg"
+                }
+                alt={userEmail ? userEmail : "User Avatar"}
                 className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
               />
             </DropdownTrigger>
