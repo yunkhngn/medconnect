@@ -1,271 +1,252 @@
 import { useEffect, useState } from "react";
-import { Calendar, Clock, User } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Globe, MapPin } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
 
   useEffect(() => {
     const mock = [
       {
         id: "1",
-        appointment_date: selectedDate,
+        appointment_date: currentWeekStart.toISOString().split("T")[0],
         appointment_time: "09:00:00",
         duration_minutes: 30,
         status: "scheduled",
         reason: "Khám tổng quát",
         notes: "Nhịn ăn trước khi xét nghiệm máu.",
         doctor: { full_name: "BS. Trần Minh Khoa", specialty: "Nội tổng quát" },
+        appointment_type: "offline", // Khám tại phòng khám
       },
       {
         id: "2",
-        appointment_date: selectedDate,
+        appointment_date: currentWeekStart.toISOString().split("T")[0],
         appointment_time: "10:30:00",
         duration_minutes: 20,
         status: "completed",
         reason: "Tái khám",
         notes: "",
         doctor: { full_name: "BS. Nguyễn Thu Hà", specialty: "Da liễu" },
+        appointment_type: "online", // Khám online
       },
-      {
-        id: "3",
-        appointment_date: addDaysISO(selectedDate, 1),
-        appointment_time: "14:00:00",
-        duration_minutes: 45,
-        status: "scheduled",
-        reason: "Khám tim mạch",
-        notes: "Mang theo kết quả ECG lần trước.",
-        doctor: { full_name: "BS. Lê Hoàng Nam", specialty: "Tim mạch" },
-      },
-      {
-        id: "4",
-        appointment_date: addDaysISO(selectedDate, -1),
-        appointment_time: "16:30:00",
-        duration_minutes: 15,
-        status: "cancelled",
-        reason: "Khám răng",
-        notes: "Bệnh nhân xin hủy.",
-        doctor: { full_name: "BS. Phạm Mỹ Dung", specialty: "Răng - Hàm - Mặt" },
-      },
+      // Thêm các lịch hẹn mẫu khác ở đây
     ];
+
+
     const t = setTimeout(() => {
       setAppointments(mock);
       setLoading(false);
     }, 300);
     return () => clearTimeout(t);
-  }, []);
+  }, [currentWeekStart]);
 
-  const getAppointmentsByDate = (date) =>
-    appointments.filter((apt) => apt.appointment_date === date);
+  function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  }
+
+  function getWeekDays(startDate) {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      days.push(date);
+    }
+    return days;
+  }
+
+  function previousWeek() {
+    const newStart = new Date(currentWeekStart);
+    newStart.setDate(currentWeekStart.getDate() - 7);
+    setCurrentWeekStart(newStart);
+  }
+
+  function nextWeek() {
+    const newStart = new Date(currentWeekStart);
+    newStart.setDate(currentWeekStart.getDate() + 7);
+    setCurrentWeekStart(newStart);
+  }
+
+  const weekDays = getWeekDays(currentWeekStart);
 
   const getStatusColor = (status) => {
     switch (status) {
       case "scheduled":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-50 border-blue-300 text-blue-900";
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "bg-green-50 border-green-300 text-green-900";
       case "cancelled":
-        return "bg-red-100 text-red-800";
+        return "bg-red-50 border-red-300 text-red-900";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-50 border-gray-300 text-gray-900";
     }
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case "scheduled":
-        return "Đã lên lịch";
-      case "completed":
-        return "Đã hoàn thành";
-      case "cancelled":
-        return "Đã hủy";
-      default:
-        return status;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
-  const timeSlots = generateTimeSlots();
-  const dateAppointments = getAppointmentsByDate(selectedDate);
-
-  return (
-    <PatientFrame title="Lịch hẹn">
-      <div className="p-6 md:p-8 max-w-7xl mx-auto md:pl-28 lg:pl-32 xl:pl-36">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
+return (
+  <PatientFrame title="Lịch hẹn">
+    <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-x-hidden">
+      <div className="ml-[150px] mr-8 px-4 w-[calc(100%-200px)]"> {/* trừ sidebar */}
+        {/* Header */}
+        <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
               <Calendar className="text-white" size={24} />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Lịch hẹn khám</h1>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Lịch hẹn khám</h1>
+              <p className="text-gray-600 text-sm md:text-base">Xem lịch hẹn theo tuần</p>
+            </div>
           </div>
-          <p className="text-gray-600">Xem và quản lý lịch hẹn của bạn</p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={previousWeek}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Tuần trước"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={() => setCurrentWeekStart(getWeekStart(new Date()))}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+            >
+              Tuần hiện tại
+            </button>
+            <button
+              onClick={nextWeek}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Tuần sau"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4" />
-            <div className="h-96 bg-gray-200 rounded" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Cột chọn ngày + danh sách tổng */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Chọn ngày</h2>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-6"
-                />
-
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-700">Tất cả lịch hẹn</h3>
-                  {appointments.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Không có lịch hẹn nào</p>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {appointments.map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          onClick={() =>
-                            setSelectedDate(appointment.appointment_date)
-                          }
-                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                            appointment.appointment_date === selectedDate
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
-                        >
-                          <p className="text-sm font-medium text-gray-900">
-                            {new Date(
-                              appointment.appointment_date
-                            ).toLocaleDateString("vi-VN")}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {appointment.appointment_time.slice(0, 5)} -{" "}
-                            {appointment.doctor?.full_name}
-                          </p>
-                          <span
-                            className={`inline-block mt-2 px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                              appointment.status
-                            )}`}
-                          >
-                            {getStatusText(appointment.status)}
-                          </span>
-                        </div>
-                      ))}
+        {/* Bảng lịch */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto max-h-[70vh]">
+          <table className="w-full text-sm border-collapse">
+            <thead className="sticky top-0 bg-gray-50 z-10">
+              <tr>
+                <th className="border border-gray-200 p-3 text-left font-semibold text-gray-700 min-w-[100px]">
+                  Thời gian
+                </th>
+                {weekDays.map((day, index) => (
+                  <th key={index} className="border border-gray-200 p-3 text-center font-semibold text-gray-700 min-w-[120px]">
+                    <div className="text-sm text-blue-600">
+                      {day.toLocaleDateString("vi-VN", { weekday: "short" }).toUpperCase()}
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                    <div className="text-lg">{day.getDate()}/{day.getMonth() + 1}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-            {/* Cột lịch theo khung giờ */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Lịch hẹn ngày{" "}
-                    {new Date(selectedDate).toLocaleDateString("vi-VN")}
-                  </h2>
-                  <span className="text-sm text-gray-600">
-                    {dateAppointments.length} lịch hẹn
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {timeSlots.map((time) => {
-                    const appointment = dateAppointments.find(
-                      (apt) => apt.appointment_time.slice(0, 5) === time
-                    );
+            <tbody>
+              {[
+                "07:30", "08:00", "08:30", "09:00", "09:30", "10:00",
+                "10:30", "11:00", "13:00", "13:30", "14:00", "15:00",
+                "15:30", "16:00", "17:00",
+              ].map((timeSlot) => (
+                <tr key={timeSlot} className="hover:bg-gray-50">
+                  <td className="border border-gray-200 p-3 text-gray-600 bg-gray-50 font-medium">
+                    {timeSlot}
+                  </td>
+                  {weekDays.map((day, i) => {
+                    const dayAppointments = appointments.filter((apt) => {
+                      const aptTime = apt.appointment_time.slice(0, 5);
+                      return (
+                        apt.appointment_date === day.toISOString().split("T")[0] &&
+                        aptTime === timeSlot
+                      );
+                    });
 
                     return (
-                      <div
-                        key={time}
-                        className="flex items-start gap-4 border-b border-gray-100 pb-2"
-                      >
-                        <div className="w-20 flex-shrink-0 pt-2">
-                          <p className="text-sm font-medium text-gray-600">
-                            {time}
-                          </p>
-                        </div>
-
-                        {appointment ? (
-                          <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <User size={16} className="text-blue-600" />
-                                  <p className="font-semibold text-gray-900">
-                                    {appointment.doctor?.full_name}
-                                  </p>
-                                </div>
-                                <p className="text-sm text-gray-600 mb-1">
-                                  {appointment.doctor?.specialty}
-                                </p>
-                                {appointment.reason && (
-                                  <p className="text-sm text-gray-700 mb-2">
-                                    <span className="font-medium">Lý do:</span>{" "}
-                                    {appointment.reason}
-                                  </p>
+                      <td key={i} className="border border-gray-200 p-2 align-top text-xs">
+                        {dayAppointments.length > 0 ? (
+                          dayAppointments.map((apt) => (
+                            <div
+                              key={apt.id}
+                              className={`border-2 rounded-lg p-2 mb-2 ${getStatusColor(apt.status)}`}
+                            >
+                              <div className="font-semibold">{apt.doctor?.full_name}</div>
+                              <div className="text-gray-600">{apt.doctor?.specialty}</div>
+                              <div className="text-gray-700">
+                                <span className="font-medium">Lý do:</span> {apt.reason}
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-600">
+                                <span>({apt.duration_minutes} phút)</span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-1">
+                                {apt.appointment_type === "online" ? (
+                                  <>
+                                    <Globe size={12} className="text-green-600" />
+                                    <span className="text-green-700 font-medium">Online</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <MapPin size={12} className="text-orange-600" />
+                                    <span className="text-orange-700 font-medium">Offline</span>
+                                  </>
                                 )}
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                  <span className="flex items-center gap-1">
-                                    <Clock size={14} />
-                                    {appointment.duration_minutes} phút
-                                  </span>
-                                </div>
                               </div>
-                              <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                  appointment.status
-                                )}`}
-                              >
-                                {getStatusText(appointment.status)}
-                              </span>
                             </div>
-                            {appointment.notes && (
-                              <div className="mt-3 pt-3 border-t border-blue-200">
-                                <p className="text-sm text-gray-700">
-                                  <span className="font-medium">Ghi chú:</span>{" "}
-                                  {appointment.notes}
-                                </p>
-                              </div>
-                            )}
-                          </div>
+                          ))
                         ) : (
-                          <div className="flex-1 text-gray-400 text-sm pt-2">
-                            Trống
-                          </div>
+                          <div className="text-gray-300 text-center">-</div>
                         )}
-                      </div>
+                      </td>
                     );
                   })}
-                </div>
-              </div>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Chú thích */}
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 text-sm">
+          <h3 className="font-semibold text-gray-900 mb-3">Chú thích:</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-blue-50 border-2 border-blue-300 rounded"></div>
+              <span>Đã lên lịch</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-50 border-2 border-green-300 rounded"></div>
+              <span>Đã hoàn thành</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-50 border-2 border-red-300 rounded"></div>
+              <span>Đã hủy</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe size={14} className="text-green-600" />
+              <span>Khám online</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin size={14} className="text-orange-600" />
+              <span>Khám tại phòng khám</span>
             </div>
           </div>
-        )}
+        </div>
       </div>
-    </PatientFrame>
-  );
-}
+    </div>
+  </PatientFrame>
+);
 
-/* ---------- helpers ---------- */
-function generateTimeSlots() {
-  const slots = [];
-  for (let hour = 8; hour < 18; hour++) {
-    slots.push(`${String(hour).padStart(2, "0")}:00`);
-    slots.push(`${String(hour).padStart(2, "0")}:30`);
-  }
-  return slots;
-}
-function addDaysISO(isoDate, days) {
-  const d = new Date(isoDate);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
 }
