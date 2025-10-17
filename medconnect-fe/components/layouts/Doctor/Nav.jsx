@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import menuItems from "@/config/Nav/doctorNav";
 import { getAuth, signOut } from "firebase/auth";
+import { useTheme } from 'next-themes';
 
 const Nav = () => {
   const router = useRouter();
@@ -19,6 +20,47 @@ const Nav = () => {
     console.error("Logout failed: ", error);
   }
 };
+
+  const [userEmail, setUserEmail] = useState('');
+  const { resolvedTheme } = useTheme();
+  const [mountedTheme, setMountedTheme] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserEmail(localStorage.getItem('userEmail') || '');
+    }
+    setMountedTheme(true);
+  }, []);
+
+  const getInitials = (email) => {
+    if (!email) return '';
+    const local = email.split('@')[0];
+    const parts = local.split(/[\.\-_]/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const hashToHue = (str) => {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (h + str.charCodeAt(i) * (i + 1)) % 360;
+    return h;
+  };
+
+  const getAvatarStyle = (email) => {
+    if (!email || !mountedTheme) return {};
+    const hue = hashToHue(email);
+    const isDark = resolvedTheme === 'dark';
+    const saturation = '66%';
+    const lightA = isDark ? '36%' : '92%';
+    const lightB = isDark ? '26%' : '76%';
+    const bg1 = `hsl(${hue} ${saturation} ${lightA})`;
+    const bg2 = `hsl(${(hue + 30) % 360} ${saturation} ${lightB})`;
+    const textColor = isDark ? '#ffffff' : '#0f172a';
+    return {
+      background: `linear-gradient(135deg, ${bg1}, ${bg2})`,
+      color: textColor,
+    };
+  };
 
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
@@ -60,11 +102,21 @@ const Nav = () => {
         <div className="flex items-center justify-center">
           <Dropdown placement="top">
             <DropdownTrigger>
-              <Avatar
-                src="/assets/homepage/mockup-avatar.jpg"
-                alt="User Avatar"
-                className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer"
-              />
+              {userEmail ? (
+                <Avatar
+                  className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer flex items-center justify-center"
+                  as="button"
+                  style={getAvatarStyle(userEmail)}
+                >
+                  {getInitials(userEmail)}
+                </Avatar>
+              ) : (
+                <Avatar
+                  src="/assets/homepage/mockup-avatar.jpg"
+                  alt="User Avatar"
+                  className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer"
+                />
+              )}
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">
               <DropdownItem key="settings" textValue="Settings">
