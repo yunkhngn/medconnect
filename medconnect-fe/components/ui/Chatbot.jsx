@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardBody, Button, Input, Chip } from '@heroui/react';
 import { useGemini } from '@/hooks/useGemini';
 import Image from 'next/image';
+import DOMPurify from 'isomorphic-dompurify';
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,9 +76,9 @@ const Chatbot = () => {
     }
   };
 
-  // Format AI response to clean HTML
+  // Format AI response to clean HTML with XSS protection
   const formatMessage = (text) => {
-    return text
+    const formatted = text
       // Bold text: **text** -> <strong>
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
       // Italic text: *text* -> <em>
@@ -90,6 +91,13 @@ const Chatbot = () => {
       // Line breaks
       .replace(/\n\n/g, '<br/><br/>')
       .replace(/\n/g, '<br/>');
+    
+    // Sanitize HTML to prevent XSS
+    return DOMPurify.sanitize(formatted, {
+      ALLOWED_TAGS: ['strong', 'em', 'h2', 'h3', 'li', 'br'],
+      ALLOWED_ATTR: ['class'],
+      KEEP_CONTENT: true,
+    });
   };
 
   return (
