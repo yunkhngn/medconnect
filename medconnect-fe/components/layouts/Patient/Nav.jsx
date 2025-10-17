@@ -29,6 +29,14 @@ const PatientNav = () => {
     router.push("/dang-nhap");
   };
 
+  const [userEmail, setUserEmail] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserEmail(localStorage.getItem('userEmail') || '');
+    }
+  }, []);
+
   return (
     <div className="fixed left-0 top-0 h-screen w-28 bg-white border-r border-gray-200 flex flex-col justify-between z-50">
       {/* Logo */}
@@ -101,9 +109,14 @@ const PatientNav = () => {
           <Dropdown placement="top">
             <DropdownTrigger>
               <Avatar
-                src="/assets/homepage/mockup-avatar.jpg"
-                alt="User Avatar"
+                src={
+                  userEmail
+                    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+                    : '/assets/homepage/mockup-avatar.jpg'
+                }
+                alt={userEmail ? userEmail : 'User Avatar'}
                 className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
+                as="button"
               />
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">

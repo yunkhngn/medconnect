@@ -4,11 +4,12 @@ services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-      SA_PASSWORD: "Toilakhoa1204!"
+      SA_PASSWORD: "MedConnectG1SE1961NJ"
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
-    ports:
-      - "1433:1433"
+    # Không public ra ngoài nếu không cần quản trị từ máy local
+    # ports:
+    #   - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -19,10 +20,10 @@ services:
         # Start SQL Server in background
         /opt/mssql/bin/sqlservr &
         
-        # Wait for SQL Server to be ready
+        # Wait for SQL Server to be ready...
         echo "Waiting for SQL Server to start..."
         for i in {1..50}; do
-          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Toilakhoa1204!" -C -Q "SELECT 1" > /dev/null 2>&1
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "MedConnectG1SE1961NJ" -C -Q "SELECT 1" > /dev/null 2>&1
           if [ $$? -eq 0 ]; then
             echo "SQL Server is ready!"
             break
@@ -33,18 +34,19 @@ services:
         
         # Create database
         echo "Creating MedConnect database..."
-        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Toilakhoa1204!" -C -i /docker-entrypoint-initdb.d/init-db.sql
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "MedConnectG1SE1961NJ" -C -i /docker-entrypoint-initdb.d/init-db.sql
         
         echo "Database initialization completed!"
         
         # Keep container running
         wait
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Toilakhoa1204!' -C -d MedConnect -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'MedConnectG1SE1961NJ' -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 60s
+    restart: unless-stopped
 
   be:
     build: ./medconnect-be
@@ -52,7 +54,7 @@ services:
       # Database Configuration
       SPRING_DATASOURCE_URL: jdbc:sqlserver://db:1433;databaseName=MedConnect;encrypt=false;trustServerCertificate=true
       SPRING_DATASOURCE_USERNAME: sa
-      SPRING_DATASOURCE_PASSWORD: "Toilakhoa1204!"
+      SPRING_DATASOURCE_PASSWORD: "MedConnectG1SE1961NJ"
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       
       # Firebase Configuration for Backend
@@ -66,12 +68,18 @@ services:
       FIREBASE_TOKEN_URI: ${FIREBASE_TOKEN_URI:-https://oauth2.googleapis.com/token}
       FIREBASE_AUTH_PROVIDER_X509_CERT_URL: ${FIREBASE_AUTH_PROVIDER_X509_CERT_URL:-https://www.googleapis.com/oauth2/v1/certs}
       FIREBASE_CLIENT_X509_CERT_URL: ${FIREBASE_CLIENT_X509_CERT_URL}
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       db:
         condition: service_healthy
-    restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
 
   fe:
     build:
@@ -79,10 +87,34 @@ services:
       dockerfile: Dockerfile
     environment:
       NODE_ENV: production
-    ports:
-      - "3000:3000"
+      PORT: 3000
+    expose:
+      - "3000"
     depends_on:
       - be
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - fe
+      - be
+    restart: unless-stopped
 
 volumes:
   sqlserver-data:
+  caddy_data:
+  caddy_config:

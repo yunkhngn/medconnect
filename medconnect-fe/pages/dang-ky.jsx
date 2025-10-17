@@ -135,17 +135,31 @@ export default function MedConnectRegister() {
 
   return (
     <Default title="Đăng ký - MedConnect">
-      <div className="min-h-screen flex items-center justify-center p-10 bg-cover bg-center bg-no-repeat relative">
-        <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6">
+      <div className="min-h-[calc(100vh-4em)] flex items-center justify-center p-10 relative overflow-hidden">
+        {/* Background Image with Blur */}
+       <div className="absolute inset-0">
+                 <Image
+                   src="/assets/homepage/stock-3.jpg"
+                   alt="Background"
+                   fill
+                   className="object-cover"
+                   priority
+                 />
+                 {/* Blur Overlay */}
+                 <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
+        </div>
+
+        {/* Content */}
+        <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6 relative z-10">
           <Card
             isBlurred
-            shadow="sm"
-            className="w-full max-w-5xl border-none bg-background/60 dark:bg-default-100/50 rounded-2xl overflow-hidden"
+            shadow="lg"
+            className="w-full max-w-5xl border border-white/20 bg-white/90 backdrop-blur-md dark:bg-default-100/50 rounded-2xl overflow-hidden shadow-2xl"
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* LEFT: Register form */}
-              <CardBody className="p-6 sm:p-10">
-                <div className="max-w-sm">
+              <CardBody className="p-6 sm:p-10 flex items-center justify-center">
+                <div className="w-full max-w-sm">
                   <h1 className="text-3xl font-semibold tracking-tight mb-6">Đăng ký</h1>
 
                   {message.text && (
@@ -313,7 +327,7 @@ export default function MedConnectRegister() {
               {/* RIGHT: Welcome panel */}
               <CardBody className="hidden md:flex p-0">
                 <Image
-                  src="/assets/homepage/cover.jpg"
+                  src="/assets/homepage/stock-3.jpg"
                   alt="Welcome Image"
                   width={600}
                   height={800}
