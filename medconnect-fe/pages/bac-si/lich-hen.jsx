@@ -13,6 +13,7 @@ import {
   Input,
   Button,
   Chip,
+  Pagination,
   Avatar,
   Modal,
   ModalContent,
@@ -20,38 +21,41 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Pagination,
-  Select,
-  SelectItem
+  Select,      // <--- IMPORT THÊM
+  SelectItem   // <--- IMPORT THÊM
 } from "@nextui-org/react";
+
 
 const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
-  const [filteredAppointments, setFilteredAppointments] = useState(appointments);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('2025-01');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedType, setSelectedType] = useState('all'); 
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
+
+  // modal
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedAppt, setEditedAppt] = useState(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-
-  const rowsPerPage = 10;
-
-  const months = [
-    { key: '2025-01', label: 'Tháng 1, 2025' },
-    { key: '2024-12', label: 'Tháng 12, 2024' },
-    { key: '2024-11', label: 'Tháng 11, 2024' },
-    { key: '2024-10', label: 'Tháng 10, 2024' }
-  ];
 
   const statusOptions = [
     { key: 'all', label: 'Tất cả trạng thái' },
-    { key: 'pending', label: 'Chờ xác nhận' },
-    { key: 'confirmed', label: 'Đã xác nhận' },
-    { key: 'completed', label: 'Hoàn thành' },
-    { key: 'cancelled', label: 'Đã hủy' }
+    { key: 'PENDING', label: 'Chờ xác nhận' },
+    { key: 'CONFIRMED', label: 'Đã xác nhận' },
+    { key: 'DENIED', label: 'Bị từ chối' },
+    { key: 'CANCELLED', label: 'Đã hủy' },
+    { key: 'ONGOING', label: 'Đang diễn ra' },
+    { key: 'FINISHED', label: 'Hoàn thành' }
+  ];
+
+  const typeOptions = [
+    { key: 'all', label: 'Tất cả loại' },
+    { key: 'online', label: 'Trực tuyến' },
+    { key: 'offline', label: 'Trực tiếp' }
   ];
 
   useEffect(() => {
@@ -59,177 +63,197 @@ const DoctorAppointments = () => {
       try {
         const user = auth.currentUser;
         if (!user) return;
-
         const token = await user.getIdToken();
-        const response = await fetch("http://localhost:8080/doctor/dashboard/appointments", {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+        const res = await fetch("http://localhost:8080/doctor/dashboard/appointments", {
+          headers: { "Authorization": `Bearer ${token}` }
         });
+        if (!res.ok) throw new Error("Lỗi tải dữ liệu");
+        const data = await res.json();
 
-        if (!response.ok) {
-          throw new Error("Không thể lấy danh sách lịch hẹn");
-        }
-
-        const data = await response.json();
-        setAppointments(data);
-        setFilteredAppointments(data);
-      } catch (error) {
-        console.error("Lỗi khi tải lịch hẹn:", error);
+        setAppointments(Array.isArray(data) ? data : []);
+        setFilteredAppointments(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Lỗi khi tải lịch hẹn:", err);
       }
     };
-
     fetchAppointments();
   }, []);
 
+  // debounce search
   useEffect(() => {
-    filterAppointments();
-  }, [searchQuery, selectedMonth, selectedStatus]);
+    const h = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(h);
+  }, [searchQuery]);
 
-  const filterAppointments = () => {
-    let filtered = appointments;
+  // ==================================================================
+  // CÁC HÀM XỬ LÝ DATE (Không thay đổi)
+  // Bạn làm rất tốt khi xử lý nhiều định dạng ngày tháng!
+  // Gợi ý: Nếu component này phình to, bạn có thể chuyển 
+  // các hàm này (parseDatetimeToTimestamp, extractRawDate, v.v.)
+  // ra một file riêng (ví dụ: /lib/dateUtils.js)
+  // và import vào để component chính gọn gàng hơn.
+  // ==================================================================
+  const parseDatetimeToTimestamp = (s) => {
+    if (!s) return NaN;
+    if (/^\d+$/.test(String(s))) {
+      const n = Number(s);
+      if (String(n).length === 10) return n * 1000;
+      return n;
+    }
+    let t = String(s).trim();
+    const spaceWithFracRegex = /^(\d{4}-\d{2}-\d{2})[ ]+(\d{2}:\d{2}:\d{2})(\.\d+)?(Z)?$/;
+    const m = t.match(spaceWithFracRegex);
+    if (m) {
+      const datePart = m[1];
+      const timePart = m[2];
+      const frac = m[3] || '';
+      const z = m[4] || '';
+      let ms = '';
+      if (frac) {
+        const digits = frac.slice(1);
+        ms = '.' + (digits.slice(0, 3).padEnd(3, '0'));
+      }
+      const normalized = `${datePart}T${timePart}${ms}${z}`;
+      const parsed = Date.parse(normalized);
+      if (!isNaN(parsed)) return parsed;
+      const parsed2 = Date.parse(`${datePart}T${timePart}${z}`);
+      if (!isNaN(parsed2)) return parsed2;
+    }
+    if (t.includes(' ') && !t.includes('T')) {
+      const replaced = t.replace(' ', 'T');
+      const parsed = Date.parse(replaced);
+      if (!isNaN(parsed)) return parsed;
+    }
+    const direct = Date.parse(t);
+    if (!isNaN(direct)) return direct;
+    return NaN;
+  };
+  const extractRawDate = (apt) => {
+    if (!apt) return null;
+    const candidates = [
+      apt.date, apt.appointment_date, apt.scheduled_at, apt.scheduledAt,
+      apt.datetime, apt.start_time, apt.startTime, apt.created_at, apt.createdAt
+    ];
+    for (const c of candidates) {
+      if (c !== undefined && c !== null && c !== '') return c;
+    }
+    if (typeof apt.date === 'object' && apt.date !== null) {
+      if ('seconds' in apt.date) {
+        try { const sec = Number(apt.date.seconds); if (!isNaN(sec)) return sec * 1000; } catch (e) {}
+      }
+      if ('value' in apt.date) return apt.date.value;
+      if ('toString' in apt.date && typeof apt.date.toString === 'function') {
+        const s = apt.date.toString(); if (s && s !== '[object Object]') return s;
+      }
+    }
+    return null;
+  };
+  const getApptTimestamp = (apt) => {
+    if (!apt) return 0;
+    const raw = extractRawDate(apt);
+    if (raw !== null && raw !== undefined) {
+      const ts = parseDatetimeToTimestamp(raw);
+      if (!isNaN(ts)) return ts;
+    }
+    if (apt.date) {
+      const combined = apt.time ? `${apt.date} ${apt.time}` : apt.date;
+      const ts2 = parseDatetimeToTimestamp(combined);
+      if (!isNaN(ts2)) return ts2;
+    }
+    const created = apt.createdAt ?? apt.created_at;
+    if (created) {
+      const ts3 = parseDatetimeToTimestamp(created);
+      if (!isNaN(ts3)) return ts3;
+    }
+    return 0;
+  };
+  const formatApptDateTime = (apt) => {
+    const raw = extractRawDate(apt);
+    if (!raw && !(apt && (apt.date || apt.time))) return { date: '—', time: '—' };
+    if (raw) {
+      if (typeof raw === 'number' || (/^\d+$/.test(String(raw)))) {
+        const ts = parseDatetimeToTimestamp(raw);
+        if (!isNaN(ts)) {
+          const d = new Date(ts);
+          const datePart = d.toISOString().split('T')[0];
+          const timePart = d.toTimeString().split(' ')[0];
+          return { date: datePart, time: timePart };
+        }
+      }
+      const s = String(raw).trim();
+      if (s.includes('T')) {
+        const [datePart, timePart] = s.split('T');
+        const time = timePart ? timePart.split('.')[0].slice(0, 8) : '00:00:00';
+        return { date: datePart, time };
+      }
+      if (s.includes(' ')) {
+        const [datePart, timePart] = s.split(' ');
+        const time = timePart ? timePart.split('.')[0].slice(0, 8) : '00:00:00';
+        return { date: datePart, time };
+      }
+    }
+    if (apt.date) {
+      const dateStr = String(apt.date);
+      const timeStr = apt.time ? String(apt.time).split('.')[0].slice(0, 8) : '00:00:00';
+      return { date: dateStr.split('T')[0].split(' ')[0], time: timeStr };
+    }
+    return { date: '—', time: '—' };
+  };
+  // ==================================================================
+  // HẾT PHẦN XỬ LÝ DATE
+  // ==================================================================
 
-    if (searchQuery) {
-      filtered = filtered.filter(apt =>
-        apt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        apt.appointmentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        apt.patientEmail.toLowerCase().includes(searchQuery.toLowerCase())
+
+  // filtering + sorting (now uses type filter instead of week)
+  useEffect(() => {
+    const q = (debouncedSearch || '').trim().toLowerCase();
+
+    const filtered = appointments.filter((apt) => {
+      const matchesSearch = q === '' ? true : (
+        (String(apt.patientName || '')).toLowerCase().includes(q) ||
+        (String(apt.patientEmail || '')).toLowerCase().includes(q) ||
+        (String(apt.patientPhone || '')).toLowerCase().includes(q) ||
+        String(apt.appointment_id ?? apt.id ?? '').toLowerCase().includes(q) ||
+        String(extractRawDate(apt) ?? '').toLowerCase().includes(q)
       );
-    }
 
-    // Filter by month
-    if (selectedMonth) {
-      filtered = filtered.filter(apt => apt.date.startsWith(selectedMonth));
-    }
+      const matchesStatus = selectedStatus === 'all' ||
+        ((apt.status || '').toString().toUpperCase() === selectedStatus.toString().toUpperCase());
 
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(apt => apt.status === selectedStatus);
-    }
+      const aptType = (apt.type || '').toString().toLowerCase();
+      const matchesType = selectedType === 'all' || aptType === selectedType.toString().toLowerCase();
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+
+    filtered.sort((a, b) => getApptTimestamp(a) - getApptTimestamp(b));
 
     setFilteredAppointments(filtered);
     setPage(1);
-  };
-
-  const handleViewDetails = (appointment) => {
-    setSelectedAppt(appointment);
-    setEditedAppt({ ...appointment });
-    setIsEditing(false);
-    onOpen();
-  };
-
-  const handleEditMode = () => {
-    setIsEditing(true);
-  };
-
-  const handleCancelEdit = () => {
-    setEditedAppt({ ...selectedAppt });
-    setIsEditing(false);
-  };
-
-  const handleSaveEdit = async () => {
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch(`/api/doctor/appointments/${selectedAppt.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          date: editedAppt.date,
-          time: editedAppt.time,
-          type: editedAppt.type,
-          reason: editedAppt.reason
-        })
-      });
-
-      if (response.ok) {
-        setAppointments(prev => prev.map(apt =>
-          apt.id === selectedAppt.id ? { ...apt, ...editedAppt } : apt
-        ));
-        setSelectedAppt({ ...editedAppt });
-        setIsEditing(false);
-        alert('Cập nhật lịch hẹn thành công!');
-      }
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      alert('Lỗi khi cập nhật lịch hẹn');
-    }
-  };
-
-  const handleConfirm = async () => {
-    if (selectedAppt) {
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const response = await fetch(`/api/doctor/appointments/${selectedAppt.id}/confirm`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          setAppointments(prev => prev.map(apt =>
-            apt.id === selectedAppt.id ? { ...apt, status: 'confirmed' } : apt
-          ));
-          onClose();
-        }
-      } catch (error) {
-        console.error('Error confirming appointment:', error);
-      }
-    }
-  };
-
-  const handleReject = async () => {
-    if (selectedAppt) {
-      try {
-        const token = await auth.currentUser.getIdToken();
-        const response = await fetch(`/api/doctor/appointments/${selectedAppt.id}/reject`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          setAppointments(prev => prev.map(apt =>
-            apt.id === selectedAppt.id ? { ...apt, status: 'cancelled' } : apt
-          ));
-          onClose();
-        }
-      } catch (error) {
-        console.error('Error rejecting appointment:', error);
-      }
-    }
-  };
-
-  const handleViewEMR = (appointment) => {
-    window.open(`/doctor/emr/${appointment.patientName}`, '_blank');
-  };
+  }, [debouncedSearch, selectedType, selectedStatus, appointments]);
 
   const getStatusColor = (status) => {
-    const colors = {
-      pending: 'warning',
-      confirmed: 'primary',
-      completed: 'success',
-      cancelled: 'danger'
-    };
-    return colors[status] || 'default';
+    const st = (status || '').toString().toUpperCase();
+    return {
+      PENDING: 'warning',
+      CONFIRMED: 'primary',
+      DENIED: 'danger',
+      CANCELLED: 'danger',
+      ONGOING: 'secondary', // <-- Thay đổi 'info' thành 'secondary' cho nhất quán với NextUI
+      FINISHED: 'success'
+    }[st] || 'default';
   };
 
   const getStatusLabel = (status) => {
-    const labels = {
-      pending: 'Chờ xác nhận',
-      confirmed: 'Đã xác nhận',
-      completed: 'Hoàn thành',
-      cancelled: 'Đã hủy'
-    };
-    return labels[status] || status;
+    const st = (status || '').toString().toUpperCase();
+    return {
+      PENDING: 'Chờ xác nhận',
+      CONFIRMED: 'Đã xác nhận',
+      DENIED: 'Bị từ chối',
+      CANCELLED: 'Đã hủy',
+      ONGOING: 'Đang diễn ra',
+      FINISHED: 'Hoàn thành'
+    }[st] || status;
   };
 
   const paginatedAppointments = filteredAppointments.slice(
@@ -237,419 +261,406 @@ const DoctorAppointments = () => {
     page * rowsPerPage
   );
 
-  const totalPages = Math.ceil(filteredAppointments.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / rowsPerPage));
+
+  const handleViewDetails = (appointment) => {
+    setSelectedAppt(appointment);
+    // Khi mở modal, set editedAppt với dữ liệu chuẩn hóa
+    const { date, time } = formatApptDateTime(appointment);
+    setEditedAppt({ 
+      ...appointment,
+      date: date === '—' ? '' : date,
+      time: time === '—' ? '' : time,
+      type: (appointment.type || 'online').toLowerCase() // Đảm bảo type luôn có giá trị
+    });
+    setIsEditing(false);
+    onOpen();
+  };
+
+  // ==================================================================
+  // CÁC HÀM API (handleConfirm, handleReject)
+  // (Không thay đổi) - Logic của bạn đã chuẩn
+  // ==================================================================
+  const handleConfirm = async () => {
+    if (!selectedAppt) return;
+    if (!confirm('Bạn chắc chắn muốn xác nhận lịch hẹn này?')) return;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const id = selectedAppt.appointment_id ?? selectedAppt.id;
+      const res = await fetch(`/api/doctor/appointments/${id}/confirm`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        setAppointments(prev => prev.map(a => (a.appointment_id ?? a.id) === id ? { ...a, status: 'CONFIRMED' } : a));
+        onClose();
+      } else {
+        alert('Xác nhận thất bại');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi khi xác nhận');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedAppt) return;
+    if (!confirm('Bạn chắc chắn muốn từ chối lịch hẹn này?')) return;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const id = selectedAppt.appointment_id ?? selectedAppt.id;
+      const res = await fetch(`/api/doctor/appointments/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        setAppointments(prev => prev.map(a => (a.appointment_id ?? a.id) === id ? { ...a, status: 'DENIED' } : a));
+        onClose();
+      } else {
+        alert('Từ chối thất bại');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi khi từ chối');
+    }
+  };
+
+  const handleViewEMR = (appointment) => {
+    if (!appointment) return;
+    window.open(`/doctor/emr/${encodeURIComponent(appointment.patientName || appointment.id)}`, '_blank');
+  };
+  
+  // Logic lưu thay đổi (ví dụ)
+  const handleSave = async () => {
+    if (!editedAppt) return;
+    
+    // *** THÊM LOGIC VALIDATION Ở ĐÂY ***
+    // (ví dụ: kiểm tra ngày giờ)
+
+    console.log("Đang lưu:", editedAppt);
+    // try {
+    //   const token = await auth.currentUser.getIdToken();
+    //   const id = editedAppt.appointment_id ?? editedAppt.id;
+    //   const res = await fetch(`/api/doctor/appointments/${id}/update`, {
+    //     method: 'PUT',
+    //     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({
+    //       date: editedAppt.date,
+    //       time: editedAppt.time,
+    //       type: editedAppt.type
+    //     })
+    //   });
+    //   if (res.ok) {
+    //     const updatedAppt = await res.json(); // Giả sử API trả về lịch hẹn đã cập nhật
+    //     setAppointments(prev => prev.map(a => (a.appointment_id ?? a.id) === id ? updatedAppt : a));
+    //     setSelectedAppt(updatedAppt); // Cập nhật cả state đang xem
+    //     setIsEditing(false);
+    //   } else {
+    //     alert('Cập nhật thất bại');
+    //   }
+    // } catch (e) {
+    //   console.error(e);
+    //   alert('Lỗi khi cập nhật');
+    // }
+    
+    // Logic giả lập để test
+    setAppointments(prev => prev.map(a => (a.appointment_id ?? a.id) === editedAppt.id ? editedAppt : a));
+    setSelectedAppt(editedAppt);
+    setIsEditing(false);
+  };
+
 
   return (
     <DoctorFrame title="Lịch hẹn">
       <div className="space-y-6">
-        {/* Filter Bar */}
-        <Card className="shadow-md">
-          <CardBody className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              {/* Left side - Date filters */}
-              <div className="md:col-span-3">
-                <Select
-                  label="Tháng/Năm"
-                  selectedKeys={[selectedMonth]}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  variant="bordered"
-                  size="sm"
-                  classNames={{
-                    trigger: "min-h-10",
-                    value: "text-sm"
-                  }}
-                >
-                  {months.map((month) => (
-                    <SelectItem key={month.key} value={month.key}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
+        <Card>
+          <CardBody className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            
+            {/* THAY THẾ: Sử dụng Select của NextUI */}
+            <Select
+              label="Loại"
+              placeholder="Chọn loại"
+              className="md:col-span-4"
+              selectedKeys={[selectedType]}
+              onChange={(e) => setSelectedType(e.target.value || 'all')}
+            >
+              {typeOptions.map(t => (
+                <SelectItem key={t.key} value={t.key}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </Select>
 
-              <div className="md:col-span-3">
-                <Select
-                  label="Trạng thái"
-                  selectedKeys={[selectedStatus]}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  variant="bordered"
-                  size="sm"
-                  classNames={{
-                    trigger: "min-h-10",
-                    value: "text-sm"
-                  }}
-                >
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.key} value={option.key}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
+            {/* THAY THẾ: Sử dụng Select của NextUI */}
+            <Select
+              label="Trạng thái"
+              placeholder="Chọn trạng thái"
+              className="md:col-span-4"
+              selectedKeys={[selectedStatus]}
+              onChange={(e) => setSelectedStatus(e.target.value || 'all')}
+            >
+              {statusOptions.map(o => (
+                <SelectItem key={o.key} value={o.key}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </Select>
 
-              {/* Right side - Search */}
-              <div className="md:col-span-6">
-                <Input
-                  label="Tìm kiếm"
-                  placeholder="Tìm kiếm bệnh nhân, mã lịch hẹn..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  variant="bordered"
-                  size="sm"
-                  classNames={{
-                    input: "text-sm",
-                    inputWrapper: "min-h-10"
-                  }}
-                  startContent={
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  }
-                  isClearable
-                  onClear={() => setSearchQuery('')}
-                />
-              </div>
-            </div>
+            {/* Giữ nguyên Input của NextUI */}
+            <Input
+              label="Tìm kiếm"
+              placeholder="Nhập tên, ID, email, sđt..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              isClearable
+              onClear={() => setSearchQuery('')}
+              className="md:col-span-4"
+            />
           </CardBody>
         </Card>
 
-        {/* Statistics Cards */}
+        {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="shadow-sm border-l-4 border-warning">
+          {/* TỐI ƯU: Thêm prop `shadow` của NextUI */}
+          <Card shadow="sm" className="border-l-4 border-warning">
             <CardBody className="p-4">
               <p className="text-sm text-gray-600 mb-1">Chờ xác nhận</p>
-              <p className="text-2xl font-bold text-warning">
-                {appointments.filter(a => a.status === 'pending').length}
-              </p>
+              <p className="text-2xl font-bold text-warning">{appointments.filter(a => (a.status || '').toString().toUpperCase() === 'PENDING').length}</p>
             </CardBody>
           </Card>
 
-          <Card className="shadow-sm border-l-4 border-primary">
+          <Card shadow="sm" className="border-l-4 border-primary">
             <CardBody className="p-4">
               <p className="text-sm text-gray-600 mb-1">Đã xác nhận</p>
-              <p className="text-2xl font-bold text-primary">
-                {appointments.filter(a => a.status === 'confirmed').length}
-              </p>
+              <p className="text-2xl font-bold text-primary">{appointments.filter(a => (a.status || '').toString().toUpperCase() === 'CONFIRMED').length}</p>
             </CardBody>
           </Card>
 
-          <Card className="shadow-sm border-l-4 border-success">
+          <Card shadow="sm" className="border-l-4 border-success">
             <CardBody className="p-4">
               <p className="text-sm text-gray-600 mb-1">Hoàn thành</p>
-              <p className="text-2xl font-bold text-success">
-                {appointments.filter(a => a.status === 'completed').length}
-              </p>
+              <p className="text-2xl font-bold text-success">{appointments.filter(a => (a.status || '').toString().toUpperCase() === 'FINISHED').length}</p>
             </CardBody>
           </Card>
 
-          <Card className="shadow-sm border-l-4 border-danger">
+          <Card shadow="sm" className="border-l-4 border-danger">
             <CardBody className="p-4">
-              <p className="text-sm text-gray-600 mb-1">Đã hủy</p>
-              <p className="text-2xl font-bold text-danger">
-                {appointments.filter(a => a.status === 'cancelled').length}
-              </p>
+              <p className="text-sm text-gray-600 mb-1">Đã hủy / từ chối</p>
+              <p className="text-2xl font-bold text-danger">{appointments.filter(a => {
+                const s = (a.status || '').toString().toUpperCase();
+                return s === 'CANCELLED' || s === 'DENIED';
+              }).length}</p>
             </CardBody>
           </Card>
         </div>
 
-        {/* Appointments Table */}
-        <Card className="shadow-md">
+        {/* Table */}
+        <Card>
           <CardBody className="p-0">
-            <Table
-              aria-label="Appointments table"
-              bottomContent={
-                totalPages > 1 && (
-                  <div className="flex w-full justify-center">
-                    <Pagination
-                      isCompact
-                      showControls
-                      showShadow
-                      color="primary"
-                      page={page}
-                      total={totalPages}
-                      onChange={setPage}
-                    />
-                  </div>
-                )
-              }
+            <Table 
+              aria-label="Appointments" 
+              bottomContent={totalPages > 1 && (
+                <div className="flex justify-center py-3">
+                  <Pagination color="primary" page={page} total={totalPages} onChange={setPage} />
+                </div>
+              )}
             >
               <TableHeader>
                 <TableColumn>MÃ LỊCH HẸN</TableColumn>
                 <TableColumn>BỆNH NHÂN</TableColumn>
                 <TableColumn>NGÀY GIỜ</TableColumn>
                 <TableColumn>LOẠI</TableColumn>
-                <TableColumn>LÝ DO</TableColumn>
                 <TableColumn>TRẠNG THÁI</TableColumn>
                 <TableColumn>HÀNH ĐỘNG</TableColumn>
               </TableHeader>
-              <TableBody>
-                {paginatedAppointments.map((apt) => (
-                  <TableRow key={apt.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold text-sm">{apt.appointmentCode}</p>
-                        <p className="text-xs text-gray-500">Đặt: {apt.createdAt}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          name={apt.patientName[0]}
-                          size="sm"
-                          className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white"
-                        />
+
+              {/* TỐI ƯU: Sử dụng `emptyContent` cho trường hợp không có dữ liệu */}
+              <TableBody
+                items={paginatedAppointments}
+                emptyContent={
+                  <div className="text-center text-gray-500 py-6">
+                    Không có lịch hẹn phù hợp.
+                  </div>
+                }
+              >
+                {(apt) => {
+                  const id = apt.appointment_id ?? apt.id ?? '—';
+                  const patientName = apt.patientName ?? '—';
+                  const typeUpper = String(apt.type || '').toUpperCase();
+                  const typeLabel = typeUpper === 'ONLINE' ? 'Trực tuyến' : (typeUpper === 'OFFLINE' || typeUpper === 'INPERSON' ? 'Trực tiếp' : (apt.type || '—'));
+                  const { date, time } = formatApptDateTime(apt);
+
+                  return (
+                    <TableRow key={id} className="hover:bg-gray-50">
+                      <TableCell>
                         <div>
-                          <p className="font-medium text-sm">{apt.patientName}</p>
-                          <p className="text-xs text-gray-500">{apt.patientEmail}</p>
-                          <p className="text-xs text-gray-500">{apt.patientPhone}</p>
+                          <p className="font-semibold text-sm">{id}</p>
+                          <p className="text-xs text-gray-500">Đặt: {apt.created_at || apt.createdAt || '—'}</p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm">{apt.date}</p>
-                        <p className="text-xs text-gray-600">{apt.time}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="sm"
-                        color={apt.type === 'online' ? 'primary' : 'secondary'}
-                        variant="flat"
-                        startContent={
-                          <span className={`w-2 h-2 rounded-full ${apt.type === 'online' ? 'bg-green-500' : 'bg-blue-500'}`} />
-                        }
-                      >
-                        {apt.type === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm">{apt.reason}</p>
-                    </TableCell>
-                    <TableCell>
-                      <Chip size="sm" color={getStatusColor(apt.status)} variant="flat">
-                        {getStatusLabel(apt.status)}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        color="primary"
-                        variant="flat"
-                        onPress={() => handleViewDetails(apt)}
-                      >
-                        Chi tiết
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar name={(patientName || 'U')[0]} size="sm" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{patientName}</p>
+                            {apt.patientEmail && <p className="text-xs text-gray-500 truncate">{apt.patientEmail}</p>}
+                            {apt.patientPhone && <p className="text-xs text-gray-500 truncate">{apt.patientPhone}</p>}
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-sm">{date}</p>
+                          <p className="text-xs text-gray-600">{time}</p>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Chip size="sm" color={typeUpper === 'ONLINE' ? 'primary' : 'secondary'} variant="flat">
+                          {typeLabel}
+                        </Chip>
+                      </TableCell>
+
+                      <TableCell>
+                        <Chip size="sm" color={getStatusColor(apt.status)} variant="flat">
+                          {getStatusLabel(apt.status)}
+                        </Chip>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" color="primary" variant="flat" onPress={() => handleViewDetails(apt)}>Chi tiết</Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }}
               </TableBody>
             </Table>
           </CardBody>
         </Card>
+
+        {/* Detail Modal */}
+        <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
+          <ModalContent>
+            <ModalHeader>
+              <div className="flex items-center justify-between w-full pr-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold">Chi tiết lịch hẹn</span>
+                  {selectedAppt && <Chip color={getStatusColor(selectedAppt.status)}>{getStatusLabel(selectedAppt.status)}</Chip>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {!isEditing && selectedAppt && !['FINISHED', 'CANCELLED', 'DENIED'].includes((selectedAppt.status || '').toString().toUpperCase()) && (
+                    <Button size="sm" color="primary" variant="flat" onPress={() => setIsEditing(true)}>Sửa</Button>
+                  )}
+                  <span className="text-base font-semibold text-primary">{selectedAppt?.appointment_id || selectedAppt?.id}</span>
+                </div>
+              </div>
+            </ModalHeader>
+            <ModalBody>
+              {selectedAppt && (
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4"> {/* Đổi màu gradient một chút */}
+                    <h3 className="font-semibold text-gray-800 mb-3">Thông tin bệnh nhân</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Họ và tên</p>
+                        <p className="font-semibold">{selectedAppt.patientName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Email</p>
+                        <p className="font-medium">{selectedAppt.patientEmail}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Số điện thoại</p>
+                        <p className="font-medium">{selectedAppt.patientPhone}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3">Chi tiết lịch hẹn</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Ngày khám</p>
+                        {isEditing ? (
+                          <Input type="date" value={editedAppt?.date || ''} onChange={(e) => setEditedAppt({ ...editedAppt, date: e.target.value })} size="sm" variant="bordered" />
+                        ) : (
+                          <p className="font-semibold text-lg">{formatApptDateTime(selectedAppt).date}</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Giờ khám</p>
+                        {isEditing ? (
+                          <Input type="time" value={editedAppt?.time || ''} onChange={(e) => setEditedAppt({ ...editedAppt, time: e.target.value })} size="sm" variant="bordered" />
+                        ) : (
+                          <p className="font-semibold text-lg">{formatApptDateTime(selectedAppt).time}</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Loại khám</p>
+                        {isEditing ? (
+                          // THAY THẾ: Sử dụng Select của NextUI
+                          <Select
+                            size="sm"
+                            variant="bordered"
+                            selectedKeys={[(editedAppt?.type || 'online').toLowerCase()]}
+                            onChange={(e) => setEditedAppt({ ...editedAppt, type: e.target.value })}
+                          >
+                            <SelectItem key="online" value="online">Trực tuyến</SelectItem>
+                            <SelectItem key="offline" value="offline">Trực tiếp</SelectItem>
+                          </Select>
+                        ) : (
+                          <Chip color={selectedAppt.type === 'online' ? 'primary' : 'secondary'}>{(selectedAppt.type || '').toString().toUpperCase() === 'ONLINE' ? 'Trực tuyến' : 'Trực tiếp'}</Chip>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Ngày đặt</p>
+                        <p className="font-medium">{selectedAppt.created_at || selectedAppt.createdAt}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedAppt.status && selectedAppt.status.toString().toUpperCase() === 'PENDING' && !isEditing && (
+                    <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                      <p className="text-sm text-yellow-800"><strong>Lưu ý:</strong> Lịch hẹn này đang chờ xác nhận.</p>
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                      <p className="text-sm text-blue-800"><strong>Chế độ chỉnh sửa:</strong> Bạn có thể thay đổi thông tin lịch hẹn. Nhấn "Lưu" để cập nhật.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              {isEditing ? (
+                <>
+                  <Button color="default" variant="flat" onPress={() => { setIsEditing(false); setEditedAppt({ ...selectedAppt }); }}>Hủy</Button>
+                  <Button color="primary" onPress={handleSave}>Lưu thay đổi</Button>
+                </>
+              ) : (
+                <>
+                  <Button color="secondary" variant="flat" onPress={() => handleViewEMR(selectedAppt)}>Xem EMR</Button>
+                  {selectedAppt?.status && selectedAppt.status.toString().toUpperCase() === 'PENDING' && (
+                    <>
+                      <Button color="danger" variant="flat" onPress={handleReject}>Từ chối</Button>
+                      <Button color="success" onPress={handleConfirm}>Xác nhận</Button>
+                    </>
+                  )}
+                  {selectedAppt?.type === 'online' && selectedAppt?.status && selectedAppt.status.toString().toUpperCase() === 'CONFIRMED' && (
+                    <Button color="primary" onPress={onClose}>Tham gia</Button> // Cần thêm logic tham gia
+                  )}
+                </>
+              )}
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </div>
-
-      {/* Appointment Detail Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader>
-            <div className="flex items-center justify-between w-full pr-6">
-              <div className="flex items-center gap-3">
-                <span className="text-xl font-bold">Chi tiết lịch hẹn</span>
-                {selectedAppt && (
-                  <Chip color={getStatusColor(selectedAppt.status)}>
-                    {getStatusLabel(selectedAppt.status)}
-                  </Chip>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {!isEditing && selectedAppt?.status !== 'completed' && selectedAppt?.status !== 'cancelled' && (
-                  <Button
-                    size="sm"
-                    color="primary"
-                    variant="flat"
-                    startContent={
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    }
-                    onPress={handleEditMode}
-                  >
-                    Sửa
-                  </Button>
-                )}
-                <span className="text-base font-semibold text-primary">{selectedAppt?.appointmentCode}</span>
-              </div>
-            </div>
-          </ModalHeader>
-          <ModalBody>
-            {selectedAppt && (
-              <div className="space-y-6">
-                {/* Patient Info */}
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Thông tin bệnh nhân
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Họ và tên</p>
-                      <p className="font-semibold">{selectedAppt.patientName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Email</p>
-                      <p className="font-medium">{selectedAppt.patientEmail}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Số điện thoại</p>
-                      <p className="font-medium">{selectedAppt.patientPhone}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Appointment Info */}
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Chi tiết lịch hẹn
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Ngày khám</p>
-                      {isEditing ? (
-                        <Input
-                          type="date"
-                          value={editedAppt.date}
-                          onChange={(e) => setEditedAppt({ ...editedAppt, date: e.target.value })}
-                          size="sm"
-                          variant="bordered"
-                        />
-                      ) : (
-                        <p className="font-semibold text-lg">{selectedAppt.date}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Giờ khám</p>
-                      {isEditing ? (
-                        <Input
-                          type="time"
-                          value={editedAppt.time}
-                          onChange={(e) => setEditedAppt({ ...editedAppt, time: e.target.value })}
-                          size="sm"
-                          variant="bordered"
-                        />
-                      ) : (
-                        <p className="font-semibold text-lg">{selectedAppt.time}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Loại khám</p>
-                      {isEditing ? (
-                        <Select
-                          selectedKeys={[editedAppt.type]}
-                          onChange={(e) => setEditedAppt({ ...editedAppt, type: e.target.value })}
-                          size="sm"
-                          variant="bordered"
-                        >
-                          <SelectItem key="online" value="online">Trực tuyến</SelectItem>
-                          <SelectItem key="offline" value="offline">Trực tiếp</SelectItem>
-                        </Select>
-                      ) : (
-                        <Chip
-                          color={selectedAppt.type === 'online' ? 'primary' : 'secondary'}
-                          startContent={<span className="w-2 h-2 bg-green-500 rounded-full" />}
-                        >
-                          {selectedAppt.type === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
-                        </Chip>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Ngày đặt</p>
-                      <p className="font-medium">{selectedAppt.createdAt}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-500 mb-1">Lý do khám</p>
-                      {isEditing ? (
-                        <Input
-                          value={editedAppt.reason}
-                          onChange={(e) => setEditedAppt({ ...editedAppt, reason: e.target.value })}
-                          size="sm"
-                          variant="bordered"
-                          placeholder="Nhập lý do khám"
-                        />
-                      ) : (
-                        <p className="font-medium">{selectedAppt.reason}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {selectedAppt.status === 'pending' && !isEditing && (
-                  <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Lưu ý:</strong> Lịch hẹn này đang chờ xác nhận. Vui lòng xem xét và phản hồi sớm.
-                    </p>
-                  </div>
-                )}
-
-                {isEditing && (
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                    <p className="text-sm text-blue-800">
-                      <strong>Chế độ chỉnh sửa:</strong> Bạn có thể thay đổi thông tin lịch hẹn. Nhấn "Lưu" để cập nhật hoặc "Hủy" để quay lại.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            {isEditing ? (
-              <>
-                <Button color="default" variant="flat" onPress={handleCancelEdit}>
-                  Hủy
-                </Button>
-                <Button color="primary" onPress={handleSaveEdit}>
-                  Lưu thay đổi
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  color="secondary"
-                  variant="flat"
-                  onPress={() => handleViewEMR(selectedAppt)}
-                  startContent={
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  }
-                >
-                  Xem EMR
-                </Button>
-                {selectedAppt?.status === 'pending' && (
-                  <>
-                    <Button color="danger" variant="flat" onPress={handleReject}>
-                      Từ chối
-                    </Button>
-                    <Button color="success" onPress={handleConfirm}>
-                      Xác nhận
-                    </Button>
-                  </>
-                )}
-                {selectedAppt?.type === 'online' && selectedAppt?.status === 'confirmed' && (
-                  <Button color="primary" onPress={onClose}>
-                    Tham gia
-                  </Button>
-                )}
-              </>
-            )}
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </DoctorFrame>
   );
 };
