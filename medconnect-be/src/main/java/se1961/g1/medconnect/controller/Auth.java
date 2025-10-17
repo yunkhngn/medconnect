@@ -31,13 +31,14 @@ public class Auth {
             FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
             String uid = decodedToken.getUid();
             String email = decodedToken.getEmail();
+            String name = decodedToken.getName();
 
             Optional<User> userOpt = userService.getUser(uid);
 
             if(userOpt.isPresent()) {
                 return ResponseEntity.ok(userOpt.get());
             } else if(!"password".equals(firebaseService.getProvider(uid))) {
-                User newUser = userService.registerUser(uid, email);
+                User newUser = userService.registerUser(uid, email, name);
                 return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
             }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -52,13 +53,14 @@ public class Auth {
         FirebaseToken decodedToken = firebaseService.getDecodedToken(token);
         String uid = decodedToken.getUid();
         String email = decodedToken.getEmail();
+        String name = decodedToken.getName();
 
         Optional<User> userOpt = userService.getUser(uid);
         if(userOpt.isPresent()) {
             return ResponseEntity.ok(userOpt.get());
         }
 
-        User newUser = userService.registerUser(uid, email);
+        User newUser = userService.registerUser(uid, email,  name);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
     }
