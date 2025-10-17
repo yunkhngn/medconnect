@@ -26,74 +26,7 @@ import {
 } from "@nextui-org/react";
 
 const DoctorAppointments = () => {
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      appointmentCode: 'APT001',
-      patientName: 'Nguyễn Văn A',
-      patientEmail: 'nguyenvana@email.com',
-      patientPhone: '0901234567',
-      date: '2025-01-15',
-      time: '09:00',
-      type: 'online',
-      status: 'pending',
-      reason: 'Khám tổng quát',
-      createdAt: '2025-01-10'
-    },
-    {
-      id: 2,
-      appointmentCode: 'APT002',
-      patientName: 'Trần Thị B',
-      patientEmail: 'tranthib@email.com',
-      patientPhone: '0902345678',
-      date: '2025-01-14',
-      time: '10:30',
-      type: 'offline',
-      status: 'confirmed',
-      reason: 'Tái khám',
-      createdAt: '2025-01-09'
-    },
-    {
-      id: 3,
-      appointmentCode: 'APT003',
-      patientName: 'Lê Văn C',
-      patientEmail: 'levanc@email.com',
-      patientPhone: '0903456789',
-      date: '2025-01-13',
-      time: '14:00',
-      type: 'online',
-      status: 'completed',
-      reason: 'Tư vấn sức khỏe',
-      createdAt: '2025-01-05'
-    },
-    {
-      id: 4,
-      appointmentCode: 'APT004',
-      patientName: 'Phạm Thị D',
-      patientEmail: 'phamthid@email.com',
-      patientPhone: '0904567890',
-      date: '2025-01-12',
-      time: '15:30',
-      type: 'offline',
-      status: 'cancelled',
-      reason: 'Khám bệnh',
-      createdAt: '2025-01-08'
-    },
-    {
-      id: 5,
-      appointmentCode: 'APT005',
-      patientName: 'Hoàng Văn E',
-      patientEmail: 'hoangvane@email.com',
-      patientPhone: '0905678901',
-      date: '2025-01-16',
-      time: '08:30',
-      type: 'online',
-      status: 'pending',
-      reason: 'Kiểm tra định kỳ',
-      createdAt: '2025-01-11'
-    }
-  ]);
-
+  const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState(appointments);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('2025-01');
@@ -122,13 +55,42 @@ const DoctorAppointments = () => {
   ];
 
   useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const token = await user.getIdToken();
+        const response = await fetch("http://localhost:8080/doctor/dashboard/appointments", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể lấy danh sách lịch hẹn");
+        }
+
+        const data = await response.json();
+        setAppointments(data);
+        setFilteredAppointments(data);
+      } catch (error) {
+        console.error("Lỗi khi tải lịch hẹn:", error);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  useEffect(() => {
     filterAppointments();
   }, [searchQuery, selectedMonth, selectedStatus]);
 
   const filterAppointments = () => {
     let filtered = appointments;
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(apt =>
         apt.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
