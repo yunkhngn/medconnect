@@ -85,10 +85,6 @@ const SearchDoctor = () => {
   const [filteredDoctors, setFilteredDoctors] = useState(mockDoctors);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [aiMessages]);
-
-  useEffect(() => {
     filterDoctors();
   }, [searchQuery, selectedSpecialty]);
 
@@ -235,7 +231,7 @@ const SearchDoctor = () => {
               </div>
             </Float>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
               {/* AI Consultation Card */}
               <Float delay={0.1} className="lg:col-span-1">
                 <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl h-full">
@@ -290,8 +286,8 @@ const SearchDoctor = () => {
                     </div>
 
                     {/* Upload Image */}
-                    <div className="mb-4">
-                      <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
+                    <div className="mb-3">
+                      <label className="block w-full px-4 py-3 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
                         <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -301,21 +297,24 @@ const SearchDoctor = () => {
                     </div>
 
                     {/* Input */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-stretch">
                       <Input
+                        className="flex-1 w-full"
+                        classNames={{ inputWrapper: "h-12" }}
                         placeholder="Mô tả triệu chứng..."
                         value={aiInput}
                         onChange={(e) => setAiInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleAIChat()}
                         disabled={loading}
-                        size="sm"
+                        size="md"
                       />
                       <Button
                         isIconOnly
+                        size="md"
                         color="primary"
                         onClick={handleAIChat}
                         disabled={!aiInput.trim() || loading}
-                        className="bg-gradient-to-r from-blue-500 to-cyan-600"
+                        className="bg-gradient-to-r from-blue-500 to-cyan-600 h-12 w-12"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -327,7 +326,7 @@ const SearchDoctor = () => {
               </Float>
 
               {/* Recommended Doctors Card */}
-              <Float delay={0.2} className="lg:col-span-2">
+              <Float delay={0.2} className="lg:col-span-2 flex flex-col h-full">
                 <Card className="bg-gradient-to-br from-blue-50/90 to-cyan-50/90 backdrop-blur-md border border-blue-200/50 shadow-2xl">
                   <CardHeader className="p-6 pb-0">
                     <div className="flex items-center gap-3">
@@ -387,23 +386,22 @@ const SearchDoctor = () => {
                 </Card>
 
                 {/* Health Tips Banner */}
-                <Float delay={0.3} className="lg:col-span-2 mt-6">
-                  <Card className="bg-gradient-to-br from-green-50/90 to-emerald-50/90 backdrop-blur-md border border-green-200/50 shadow-2xl">
-                    <CardBody className="p-6">
-                      <div className="flex items-center gap-4">
+                <Float delay={0.3} className="mt-6 h-full flex-1">
+                  <Card className="bg-gradient-to-br from-green-50/90 to-emerald-50/90 backdrop-blur-md border border-green-200/50 shadow-2xl h-full min-h-[40px] sm:min-h-[50px]">
+                    <CardBody className="p-6 h-full w-full flex items-center">
+                      <div className="relative max-w-3xl w-full h-full mx-auto flex items-center justify-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
                           <span className="text-2xl">{healthTips[currentTipIndex].icon}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 text-center">
                           <h4 className="font-semibold text-gray-900 mb-1">{healthTips[currentTipIndex].title}</h4>
                           <p className="text-sm text-gray-600 leading-relaxed">{healthTips[currentTipIndex].desc}</p>
                         </div>
-                        <div className="flex space-x-1">
+                        <div className="absolute right-6 inset-y-0 flex items-center space-x-1">
                           {healthTips.map((_, idx) => (
                             <div
                               key={idx}
-                              className={`w-2 h-2 rounded-full transition-colors ${idx === currentTipIndex ? 'bg-green-500' : 'bg-gray-300'
-                                }`}
+                              className={`w-2 h-2 rounded-full transition-colors ${idx === currentTipIndex ? 'bg-green-500' : 'bg-gray-300'}`}
                             />
                           ))}
                         </div>
