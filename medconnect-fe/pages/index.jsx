@@ -4,58 +4,100 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Float from "@/components/ui/Float";
+import mockDoctors from "@/lib/doctorProps";
+import { useState, useEffect } from "react";
 
 export default function HomePage() {
   const router = useRouter();
 
   const features = [
+  {
+    title: "Tìm bác sĩ nhanh",
+    description: "Lọc theo chuyên khoa, đánh giá và giờ làm việc để chọn người phù hợp."
+  },
+  {
+    title: "Khám từ xa qua video",
+    description: "Trao đổi trực tiếp với bác sĩ, gửi hình ảnh và mô tả triệu chứng ngay trên ứng dụng."
+  },
+  {
+    title: "Theo dõi sức khỏe",
+    description: "Xem lại đơn thuốc, kết quả khám và lịch sử tư vấn mọi lúc."
+  }
+];
+
+ const services = [
+  { title: "Tư vấn trực tuyến", desc: "Gặp bác sĩ mọi lúc, mọi nơi qua video call"},
+  { title: "Đặt lịch khám", desc: "Chọn bác sĩ, khung giờ, được xác nhận ngay"},
+  { title: "Theo dõi hồ sơ", desc: "Xem lại kê đơn, lịch sử khám trên ứng dụng"},
+  { title: "Nhắc lịch & thông báo", desc: "Tự động nhắc tái khám, nhận kết quả"},
+  { title: "Kết nối bác sĩ", desc: "Trò chuyện an toàn, bảo mật với chuyên gia"},
+  { title: "Chăm sóc từ xa", desc: "Bác sĩ theo dõi và hướng dẫn điều trị tại nhà"}
+];
+
+  const doctors = mockDoctors.slice(0, 4).map(doctor => ({
+    name: doctor.name,
+    specialty: doctor.specialty,
+    years: doctor.experience,
+    avatar: doctor.avatar
+  }));
+
+  const testimonials = [
     {
-      title: "Search for branch",
-      description: "Tìm phòng khám, nha khoa, bác sĩ gần bạn với đánh giá rõ ràng"
+      name: "Thanh Ngọc",
+      quote: "Bác sĩ phản hồi rất nhanh, tư vấn rõ ràng. Tôi đặt khám từ xa mà vẫn thấy yên tâm.",
+      role: "Patient",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Thanh Ngọc")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
     },
     {
-      title: "Cosmetic Dentistry",
-      description: "Hiểu đúng về răng sứ thẩm mỹ và các quy trình an toàn"
+      name: "Thuỳ Trang",
+      quote: "Đặt lịch khám chưa đến 5 phút, nhận thông báo ngay. Không cần gọi điện như trước.",
+      role: "Patient",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Thuỳ Trang")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
     },
     {
-      title: "Small changes, big impact",
-      description: "Chăm sóc định kỳ giúp ngừa bệnh và tiết kiệm chi phí"
+      name: "Hà Vi",
+      quote: "Kết quả trả trực tiếp trên ứng dụng, rất tiện. Bác sĩ dặn dò sau khi xem kết quả.",
+      role: "Patient",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Hà Vi")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+    },
+    {
+      name: "Minh Anh",
+      quote: "Giao diện dễ sử dụng, tìm bác sĩ theo chuyên khoa rất nhanh. Rất hài lòng.",
+      role: "Patient",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Minh Anh")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+    },
+    {
+      name: "Quang Huy",
+      quote: "Bác sĩ tư vấn tận tình, giải thích rõ ràng về tình trạng sức khỏe. Cảm ơn MedConnect!",
+      role: "Patient",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Quang Huy")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
+    },
+    {
+      name: "Lan Anh",
+      quote: "Dịch vụ chăm sóc khách hàng tốt, hỗ trợ kịp thời. Sẽ tiếp tục sử dụng.",
+      role: "Patient",
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Lan Anh")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
     }
   ];
 
-  const services = [
-    { title: "General Checkup", desc: "Khám tổng quát định kỳ", icon: "🩺" },
-    { title: "Pediatrics", desc: "Chăm sóc sức khỏe trẻ em", icon: "🧒" },
-    { title: "Cardiology", desc: "Tim mạch chuyên sâu", icon: "❤️" },
-    { title: "Dentistry", desc: "Nha khoa thẩm mỹ & điều trị", icon: "🦷" },
-    { title: "Mental Health", desc: "Tư vấn tâm lý", icon: "🧠" },
-    { title: "Lab Tests", desc: "Xét nghiệm nhanh & chuẩn", icon: "🧪" }
-  ];
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
 
-  const doctors = [
-    { name: "BS. Nguyễn Văn A", specialty: "Tim mạch", years: 15, avatar: "/assets/homepage/mockup-avatar.jpg" },
-    { name: "BS. Trần Thị B", specialty: "Nội khoa", years: 12, avatar: "/assets/homepage/mockup-avatar.jpg" },
-    { name: "BS. Lê Văn C", specialty: "Nhi khoa", years: 10, avatar: "/assets/homepage/mockup-avatar.jpg" },
-    { name: "BS. Phạm D", specialty: "Răng hàm mặt", years: 8, avatar: "/assets/homepage/mockup-avatar.jpg" }
-  ];
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonialIndex((prevIndex) => (prevIndex + 3) % testimonials.length);
+    }, 5000); // Change every 5 seconds
 
-  const testimonials = [
-    { name: "Maria Reed", quote: "Bác sĩ tận tâm, quy trình gọn nhẹ.", role: "Patient", avatar: "/assets/homepage/mockup-avatar.jpg" },
-    { name: "Brian Kim", quote: "Đặt lịch 5 phút, không phải chờ.", role: "Patient", avatar: "/assets/homepage/mockup-avatar.jpg" },
-    { name: "Lan Phạm", quote: "Kết quả xét nghiệm có trong ngày.", role: "Patient", avatar: "/assets/homepage/mockup-avatar.jpg" }
-  ];
+    return () => clearInterval(interval);
+  }, [testimonials.length]);
 
-  const articles = [
-    { title: "5 dấu hiệu cần đi khám ngay", tag: "Health", cover: "/assets/homepage/cover.jpg" },
-    { title: "Hiểu đúng về bệnh răng miệng", tag: "Dentistry", cover: "/assets/homepage/cover.jpg" },
-    { title: "Thói quen ngủ và sức khỏe tinh thần", tag: "Mental", cover: "/assets/homepage/cover.jpg" }
-  ];
-
-  const faqs = [
-    { q: "Làm sao để đặt lịch?", a: "Chọn chuyên khoa → Chọn bác sĩ → Chọn giờ → Xác nhận." },
-    { q: "Thanh toán thế nào?", a: "Hỗ trợ ví điện tử, thẻ, hoặc thanh toán tại cơ sở." },
-    { q: "Có hủy lịch được không?", a: "Được hủy miễn phí trước 2 giờ so với lịch hẹn." }
-  ];
+  const getVisibleTestimonials = () => {
+    const visible = [];
+    for (let i = 0; i < 3; i++) {
+      const index = (currentTestimonialIndex + i) % testimonials.length;
+      visible.push(testimonials[index]);
+    }
+    return visible;
+  };
 
   return (
     <Default>
@@ -211,9 +253,9 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 text-center text-gray-900">
             {[
-              {k:"Bác sĩ",v:"1,200+"},
-              {k:"Bệnh nhân",v:"80K+"},
-              {k:"Lịch hẹn",v:"200K+"},
+              {k:"Bác sĩ",v:"100+"},
+              {k:"Bệnh nhân",v:"1K+"},
+              {k:"Lịch hẹn",v:"1K+"},
               {k:"Đánh giá",v:"4.9/5"}
             ].map((it, idx)=>(
               <Float key={idx} variant="scaleIn" delay={idx * 0.05}>
@@ -278,27 +320,45 @@ export default function HomePage() {
                 Bệnh nhân nói gì về chúng tôi
               </h2>
               <p className="text-sm sm:text-base md:text-lg text-gray-600">
-                Hơn 80,000 bệnh nhân đã tin tưởng sử dụng dịch vụ
+                Hơn 1,000 bệnh nhân đã tin tưởng sử dụng dịch vụ
               </p>
             </div>
           </Float>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-            {testimonials.map((t, i) => (
-              <Float key={i} variant="fadeInLeft" delay={i * 0.1}>
-                <Card className="border-none shadow-sm">
-                  <CardBody className="p-4 sm:p-6">
-                    <p className="text-sm sm:text-base text-gray-700 italic mb-3 sm:mb-4">"{t.quote}"</p>
-                    <div className="flex items-center gap-3">
-                      <Avatar src={t.avatar} size="sm" />
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm sm:text-base">{t.name}</p>
-                        <p className="text-xs text-gray-500">{t.role}</p>
+          <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+              {getVisibleTestimonials().map((t, i) => (
+                <Float key={`${currentTestimonialIndex}-${i}`} variant="fadeInLeft" delay={i * 0.1}>
+                  <Card className="border-none shadow-sm hover:shadow-md transition-all duration-300">
+                    <CardBody className="p-4 sm:p-6">
+                      <p className="text-sm sm:text-base text-gray-700 italic mb-3 sm:mb-4">"{t.quote}"</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar src={t.avatar} size="sm" />
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm sm:text-base">{t.name}</p>
+                          <p className="text-xs text-gray-500">{t.role}</p>
+                        </div>
                       </div>
-                    </div>
-                  </CardBody>
-                </Card>
-              </Float>
-            ))}
+                    </CardBody>
+                  </Card>
+                </Float>
+              ))}
+            </div>
+            
+            {/* Carousel Indicators */}
+            <div className="flex justify-center mt-6 space-x-2">
+              {Array.from({ length: Math.ceil(testimonials.length / 3) }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentTestimonialIndex(i * 3)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    Math.floor(currentTestimonialIndex / 3) === i
+                      ? 'bg-primary scale-125'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  aria-label={`Go to testimonial set ${i + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>

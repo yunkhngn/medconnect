@@ -5,6 +5,7 @@ import Float from '@/components/ui/Float';
 import Image from 'next/image';
 import { useGemini } from '@/hooks/useGemini';
 import DOMPurify from 'isomorphic-dompurify';
+import mockDoctors from '@/lib/doctorProps';
 
 const SearchDoctor = () => {
   // AI Chat states
@@ -39,19 +40,6 @@ const SearchDoctor = () => {
     { value: 'da-lieu', label: 'Da liễu' },
     { value: 'mat', label: 'Mắt' },
     { value: 'tai-mui-hong', label: 'Tai mũi họng' },
-  ];
-
-  const mockDoctors = [
-    { id: 1, name: 'BS. Nguyễn Văn A', specialty: 'Tim mạch', experience: 15, rating: 4.9, patients: 1200, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'tim-mach' },
-    { id: 2, name: 'BS. Trần Thị B', specialty: 'Nội khoa', experience: 12, rating: 4.8, patients: 980, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'noi-khoa' },
-    { id: 3, name: 'BS. Lê Văn C', specialty: 'Nhi khoa', experience: 10, rating: 4.7, patients: 850, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'nhi-khoa' },
-    { id: 4, name: 'BS. Phạm Thị D', specialty: 'Sản phụ khoa', experience: 18, rating: 4.9, patients: 1500, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'san-phu-khoa' },
-    { id: 5, name: 'BS. Hoàng Văn E', specialty: 'Ngoại khoa', experience: 20, rating: 5.0, patients: 1800, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'ngoai-khoa' },
-    { id: 6, name: 'BS. Đỗ Thị F', specialty: 'Thần kinh', experience: 14, rating: 4.8, patients: 1100, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'than-kinh' },
-    { id: 7, name: 'BS. Vũ Văn G', specialty: 'Da liễu', experience: 11, rating: 4.6, patients: 920, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'da-lieu' },
-    { id: 8, name: 'BS. Bùi Thị H', specialty: 'Mắt', experience: 16, rating: 4.9, patients: 1350, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'mat' },
-    { id: 9, name: 'BS. Đinh Văn I', specialty: 'Tai mũi họng', experience: 13, rating: 4.7, patients: 1050, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'tai-mui-hong' },
-    { id: 10, name: 'BS. Cao Thị K', specialty: 'Tim mạch', experience: 19, rating: 4.9, patients: 1650, avatar: '/assets/homepage/mockup-avatar.jpg', specialtyValue: 'tim-mach' },
   ];
 
   const healthTips = [

@@ -31,7 +31,7 @@ const Footer = () => {
             </p>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
               <p>📧 support@medconnect.vn</p>
-              <p>📞 Hotline: 1900-xxxx</p>
+              <p>📞 Hotline: 1900-6969</p>
             </div>
           </section>
 
