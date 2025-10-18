@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { Home, FileText, Calendar } from "lucide-react";
+import { Home, FileText, Calendar, Clock } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
@@ -124,6 +124,23 @@ const PatientNav = () => {
           >
             <Calendar className="w-6 h-6" strokeWidth={2} />
             <span className="text-xs font-medium text-center">Lịch hẹn</span>
+          </div>
+        </Link>
+      
+
+      {/* Lịch sử */}
+        <Link href="/nguoi-dung/lich-su">
+          <div
+            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
+              ${
+                isActive("/nguoi-dung/lich-su")
+                  ? "bg-teal-50 text-teal-700"
+                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+              }
+            `}
+          >
+            <Clock className="w-6 h-6" strokeWidth={2} />
+            <span className="text-xs font-medium text-center">Lịch sử</span>
           </div>
         </Link>
       </nav>
