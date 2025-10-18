@@ -109,13 +109,13 @@ const Chatbot = () => {
             ? 'inset-0' 
             : 'bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)]'
         }`}>
-          <div className={`bg-white/10 backdrop-blur-2xl shadow-2xl border border-white/20 overflow-hidden ${
+          <div className={`bg-white/10 backdrop-blur-3xl shadow-2xl border border-white/20 overflow-hidden ${
             isFullscreen ? 'h-full' : 'rounded-3xl'
           }`}>
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-white/5 backdrop-blur-sm">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-white/5 backdrop-blur-2xl">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg">
                   <Image src="/assets/logo.svg" alt="Logo" width={24} height={24} />
                 </div>
                 <div>
@@ -156,7 +156,7 @@ const Chatbot = () => {
             </div>
 
             {/* Rate Limit */}
-            <div className="px-6 py-3 bg-white/5 backdrop-blur-sm border-b border-white/10">
+            <div className="px-6 py-3 bg-white/5 backdrop-blur-2xl border-b border-white/10">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-700 font-medium">
                   {questionCount}/{MAX_QUESTIONS} câu hỏi
@@ -222,7 +222,7 @@ const Chatbot = () => {
             </div>
 
             {/* Input */}
-            <div className="p-6 border-t border-white/10 bg-white/5 backdrop-blur-sm">
+            <div className="p-6 border-t border-white/10 bg-white/5 backdrop-blur-2xl">
               <div className="flex gap-3">
                 <div className="flex-1 relative">
                   <input
@@ -248,12 +248,12 @@ const Chatbot = () => {
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || loading || questionCount >= MAX_QUESTIONS}
-                  className="w-14 h-14 rounded-3xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:hover:scale-100"
+                  className="w-14 h-14 rounded-3xl bg-gradient-to-r from-sky-600 to-sky-500 text-white hover:from-sky-700 hover:to-sky-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:hover:scale-100 transform rotate-12 hover:rotate-0"
                 >
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 transform -rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   )}
@@ -268,7 +268,7 @@ const Chatbot = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-r from-teal-400 to-cyan-200 text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group backdrop-blur-sm border-4 border-white"
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group backdrop-blur-sm border-4 border-white"
         aria-label="Open chatbot"
       >
         {isOpen ? (
