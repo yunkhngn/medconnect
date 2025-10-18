@@ -21,12 +21,58 @@ const Chatbot = () => {
   const { sendMessage, loading, error } = useGemini();
 
   const MAX_QUESTIONS = 5;
-  const RESET_INTERVAL = 60000;
+  const RESET_INTERVAL = 60000; // 1 minute
+
+  // Load question count and reset time from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedQuestionCount = sessionStorage.getItem('chatbot_questionCount');
+      const savedResetTime = sessionStorage.getItem('chatbot_resetTime');
+      
+      if (savedQuestionCount) {
+        setQuestionCount(parseInt(savedQuestionCount, 10));
+      }
+      
+      if (savedResetTime) {
+        const resetTimeValue = parseInt(savedResetTime, 10);
+        setResetTime(resetTimeValue);
+        
+        // Check if reset time has passed
+        if (Date.now() - resetTimeValue >= RESET_INTERVAL) {
+          setQuestionCount(0);
+          setResetTime(Date.now());
+          sessionStorage.setItem('chatbot_questionCount', '0');
+          sessionStorage.setItem('chatbot_resetTime', Date.now().toString());
+        }
+      } else {
+        setResetTime(Date.now());
+        sessionStorage.setItem('chatbot_resetTime', Date.now().toString());
+      }
+    }
+  }, []);
+
+  // Save question count to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('chatbot_questionCount', questionCount.toString());
+    }
+  }, [questionCount]);
+
+  // Save reset time to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('chatbot_resetTime', resetTime.toString());
+    }
+  }, [resetTime]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setQuestionCount(0);
       setResetTime(Date.now());
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('chatbot_questionCount', '0');
+        sessionStorage.setItem('chatbot_resetTime', Date.now().toString());
+      }
     }, RESET_INTERVAL);
     return () => clearInterval(interval);
   }, []);
