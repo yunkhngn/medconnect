@@ -69,6 +69,11 @@ public class ScheduleService {
     public ScheduleDTO updateSchedule(Long scheduleId, ScheduleStatus status) throws Exception {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new Exception("Schedule not found"));
+        if(status == ScheduleStatus.EMPTY) {
+            scheduleRepository.delete(schedule);
+            return null;
+        }
+
         schedule.setStatus(status);
         scheduleRepository.save(schedule);
         return new ScheduleDTO(schedule);
