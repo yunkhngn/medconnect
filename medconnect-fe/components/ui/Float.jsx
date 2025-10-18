@@ -5,7 +5,7 @@ const Float = ({
   children, 
   variant = 'fadeInUp', 
   delay = 0, 
-  duration = 0.4, 
+  duration = 0.4,
   threshold = 0.1,
   once = true,
   className = '',
@@ -15,6 +15,8 @@ const Float = ({
   const ref = useRef(null);
 
   useEffect(() => {
+    if (!ref.current) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -29,9 +31,7 @@ const Float = ({
       { threshold }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
+    observer.observe(ref.current);
 
     return () => observer.disconnect();
   }, [threshold, once]);

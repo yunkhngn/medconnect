@@ -3,20 +3,33 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 import "@/styles/globals.css";
 import NextTopLoader from 'nextjs-toploader';
 import Head from "next/head";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AuthGuard from '@/config/Auth/AuthGuard';
 import Chatbot from "@/components/ui/Chatbot";
 
 
 export default function App({ Component, pageProps }) {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mounted) return;
+    
     // Only sync token to cookie (NO userRole)
     const authToken = localStorage.getItem('authToken');
-
+    
     if (authToken) {
       document.cookie = `authToken=${authToken}; path=/; max-age=86400; SameSite=Lax`;
     }
-  }, []);
+  }, [mounted]);
+
+  // Prevent flash of unstyled content
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <>
