@@ -57,7 +57,7 @@ public class DoctorDashboard {
         Doctor doctor = doctorService.getDoctor(uid).orElseThrow(() -> new Exception("Doctor not found"));
 
             Map<String, Object> profile = new HashMap<>();
-            profile.put("name", doctor.getFirstName() + " " + doctor.getLastName());
+            profile.put("name", doctor.getName());
             profile.put("email", doctor.getEmail());
             profile.put("phone", doctor.getPhone());
             profile.put("specialization", doctor.getSpecialization());

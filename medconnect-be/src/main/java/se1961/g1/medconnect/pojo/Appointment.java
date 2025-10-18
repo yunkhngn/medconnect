@@ -4,7 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import se1961.g1.medconnect.enums.AppoimentType;
 import se1961.g1.medconnect.enums.AppointmentStatus;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Appointment")
@@ -18,6 +23,14 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     private AppointmentStatus status;
 
+    @CreationTimestamp
+    private LocalDate createdAt;
+
+    private LocalDateTime date;
+
+    @Enumerated(EnumType.STRING)
+    private AppoimentType type;
+
     @ManyToOne
     @JoinColumn(name = "doctor_id")
     @JsonIgnore
@@ -27,11 +40,6 @@ public class Appointment {
     @JoinColumn(name = "patient_id")
     @JsonIgnore
     private Patient patient;
-
-    @ManyToOne
-    @JoinColumn(name = "schedule_id")
-    @JsonIgnore
-    private Schedule schedule;
 
     @OneToOne(mappedBy = "appointment")
     private Payment payment;
