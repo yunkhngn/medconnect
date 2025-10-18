@@ -2,5 +2,6 @@ package se1961.g1.medconnect.enums;
 
 public enum ScheduleStatus {
     BUSY,
-    EMPTY
+    EMPTY,
+    RESERVED
 }
