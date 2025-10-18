@@ -40,4 +40,8 @@ public class AppointmentService {
         result.setStatus(appointment.getStatus().name());
         return result;
     }
+
+    public List<Appointment> findByDoctorUserIdAndDateBetween(Long userId, LocalDate start, LocalDate end) {
+        return appointmentRepository.findByDoctorUserIdAndDateBetween(userId, start, end);
+    }
 }

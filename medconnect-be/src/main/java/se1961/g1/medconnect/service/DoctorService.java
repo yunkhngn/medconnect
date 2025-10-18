@@ -22,24 +22,13 @@ public class DoctorService {
     }
 
     public List<AppointmentDTO> getAppointments(Doctor doctor) throws Exception {
-        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
+        if (doctor == null || doctor.getAppointments() == null) {
+            throw new Exception("Doctor or appointment list not found");
+        }
 
-        return doctor.getAppointments().stream()
-                .map(app -> {
-                    Patient patient = app.getPatient();
-                    AppointmentDTO dto = new AppointmentDTO();
-                    dto.setId("APT" + String.format("%03d", app.getAppointmentId()));
-                    dto.setPatientName(patient.getName());
-                    dto.setPatientEmail(patient.getEmail());
-                    dto.setPatientPhone(patient.getPhone());
-                    dto.setDate(app.getDate().format(dateFmt));
-                    dto.setTime(app.getDate().format(timeFmt));
-                    dto.setType(app.getType().name());
-                    dto.setStatus(app.getStatus().name());
-                    dto.setCreatedAt(app.getCreatedAt().format(dateFmt));
-                    return dto;
-                })
+        return doctor.getAppointments()
+                .stream()
+                .map(AppointmentDTO::new)
                 .collect(Collectors.toList());
     }
 

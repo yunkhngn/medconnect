@@ -2,9 +2,11 @@ package se1961.g1.medconnect.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.ScheduleDTO;
 import se1961.g1.medconnect.enums.ScheduleStatus;
 import se1961.g1.medconnect.enums.Slot;
+import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Schedule;
 import se1961.g1.medconnect.pojo.User;
 import se1961.g1.medconnect.repository.ScheduleRepository;
@@ -23,12 +25,16 @@ public class ScheduleService {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private AppointmentService appointmentService;
+
     public List<ScheduleDTO> getWeeklySchedule(Long userId, LocalDate start, LocalDate end) throws Exception {
         if (!userService.findById(userId).isPresent()) {
             throw new Exception("User not found");
         }
 
         List<Schedule> scheduleList = scheduleRepository.findByUserUserIdAndDateBetween(userId, start, end);
+        List<Appointment> appointmentList = appointmentService.findByDoctorUserIdAndDateBetween(userId, start, end);
         List<LocalDate> dates = start.datesUntil(end.plusDays(1)).toList();
         List<Slot> slots = Arrays.asList(Slot.values());
 
@@ -46,9 +52,17 @@ public class ScheduleService {
                             empty.setStatus(ScheduleStatus.EMPTY);
                             return empty;
                         });
+                if (scheduleDTO.getStatus() == ScheduleStatus.BUSY) {
+                    appointmentList.stream()
+                            .filter(a -> a.getDate().equals(date) && a.getSlot() == slot)
+                            .findFirst()
+                            .ifPresent(a -> scheduleDTO.setAppointment(new AppointmentDTO(a)));
+                }
+
                 fullWeek.add(scheduleDTO);
             }
         }
+
         return fullWeek;
     }
 
