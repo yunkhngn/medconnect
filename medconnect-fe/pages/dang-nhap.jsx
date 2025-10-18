@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
 import { Card, CardBody, Input, Button, Divider, Checkbox } from "@heroui/react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { saveAuthData, isAuthenticated, redirectToDashboard } from "@/utils/auth";
+import RedirectByRole from "../config/Auth/redirectByRole";
+import getUserRole from "../config/Auth/GetUserRole";
 
 export default function MedConnectLogin() {
   const router = useRouter();
@@ -17,25 +18,44 @@ export default function MedConnectLogin() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [redirect, setRedirect] = useState(false);
 
-  // Redirect if already logged in (client session)
+  // If user already signed in 
   useEffect(() => {
-    if (isAuthenticated()) {
-      redirectToDashboard(router);
+    if (!router.isReady) return;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setRedirect(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [router.isReady]);
+
+  // Remember me
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    const savedPassword = localStorage.getItem("rememberedPassword");
+    const wasRemembered = localStorage.getItem("rememberMe") === "true";
+    if (wasRemembered && savedEmail) {
+      setEmail(savedEmail);
+      setPassword(savedPassword || "");
+      setRememberMe(true);
     }
-  }, [router]);
+  }, []);
 
   const showMessage = (text, type = "info") => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "" }), 5000);
   };
 
-  // send firebase idToken to backend, save returned auth token & role
-  const sendFirebaseTokenToBackend = async (user) => {
+  // Notify backend with Firebase ID token so server can set httpOnly session/cookie.
+  // Returns an object: { ok: boolean, body: parsedJson|null }
+  const notifyBackendLogin = async (user) => {
     try {
       setIsLoading(true);
       const idToken = await user.getIdToken();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/auth/login`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -43,46 +63,81 @@ export default function MedConnectLogin() {
         },
       });
 
+      let body = null;
+      try {
+        body = await response.json();
+      } catch (e) {
+        body = null;
+      }
+
       if (!response.ok) {
         if (response.status === 401) {
           showMessage("Email hoặc mật khẩu không đúng!", "error");
         } else {
-          showMessage("Đăng nhập thất bại từ backend.", "error");
+          showMessage((body && body.message) || "Đăng nhập thất bại từ backend.", "error");
         }
         setIsLoading(false);
-        return;
+        return { ok: false, body };
       }
 
-      const data = await response.json();
-      // save token + role + optional user info (will also set cookies)
-      saveAuthData(data.token, data.role, { email: data.email || user.email, name: data.name || user.displayName });
-
-      showMessage("Đăng nhập thành công!", "success");
-
-      // redirect to role dashboard
-      setTimeout(() => redirectToDashboard(router), 700);
-    } catch (error) {
-      console.error("Backend error:", error);
+      return { ok: true, body };
+    } catch (err) {
+      console.error("Backend notify error:", err);
       showMessage("Lỗi kết nối máy chủ.", "error");
       setIsLoading(false);
+      return { ok: false, body: null };
     }
   };
 
-  // Email/password login
+  // After Firebase sign-in notify backend and get role, then redirect.
+  // Logic:
+  // 1) notify backend; if backend returns role in body -> use it immediately.
+  // 2) else force refresh token (getIdToken(true)) then call getUserRole to read custom claim or fallback endpoint.
+  const finalizeLogin = async (firebaseUser) => {
+    const notifyRes = await notifyBackendLogin(firebaseUser);
+    if (!notifyRes.ok) return;
+
+    // If backend returned role in the login response, use it directly.
+    const backendRole = notifyRes.body && (notifyRes.body.role || notifyRes.body.data?.role);
+    if (backendRole) {
+      showMessage("Đăng nhập thành công!", "success");
+      setTimeout(() => setRedirect(true), 200);
+      return;
+    }
+
+    try {
+      // Force refresh the ID token to pick up any newly-set custom claims.
+      await firebaseUser.getIdToken(true);
+    } catch (err) {
+      console.warn("Failed to refresh token:", err);
+    }
+
+    // Call API to get role
+    const role = await getUserRole(firebaseUser, { fallbackToBackend: true });
+
+    if (role) {
+      showMessage("Đăng nhập thành công!", "success");
+      setTimeout(() => setRedirect(true), 200);
+    } else {
+      showMessage("Đăng nhập thành công nhưng không thể xác định vai trò. Chuyển đến trang chính.", "warning");
+      setTimeout(() => router.push("/"), 700);
+    }
+  };
+
   const handleEmailLogin = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // remember credentials if requested
+      // Remember me
       if (rememberMe) {
         localStorage.setItem("rememberedEmail", email);
         localStorage.setItem("rememberedPassword", password);
@@ -93,12 +148,12 @@ export default function MedConnectLogin() {
         localStorage.removeItem("rememberMe");
       }
 
-      await sendFirebaseTokenToBackend(userCredential.user);
+      await finalizeLogin(userCredential.user);
     } catch (error) {
       console.error("Login error:", error);
-      
+
       let errorMessage = "Đăng nhập thất bại!";
-      
+
       switch (error.code) {
         case "auth/invalid-credential":
         case "auth/wrong-password":
@@ -118,9 +173,9 @@ export default function MedConnectLogin() {
           errorMessage = "Lỗi kết nối mạng!";
           break;
         default:
-          errorMessage = `Đăng nhập thất bại: ${error.message}`;
+          errorMessage = `Đăng nhập thất bại: ${error.message || error}`;
       }
-      
+
       showMessage(errorMessage, "error");
       setIsLoading(false);
     }
@@ -128,23 +183,28 @@ export default function MedConnectLogin() {
 
   const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
 
+  if (redirect) {
+    return <RedirectByRole />;
+  }
+
   return (
     <Default title="Đăng nhập - MedConnect">
       <div className="min-h-screen flex items-center justify-center p-10 relative overflow-hidden">
-        {/* Background Image with Blur */}
-        <div className="absolute inset-0">
-          <Image
-            src="/assets/homepage/stock-6.jpg"
-            alt="Background"
-            fill
-            className="object-cover"
-            priority
-          />
-          {/* Blur Overlay */}
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
-          
-          
-        </div>
+        {/* Background with blur */}
+                <div className="absolute inset-0">
+                  <Image
+                    src="/assets/homepage/cover.jpg"
+                    alt="Background"
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+
+                  <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-transparent to-yellow-500/10"></div>
+                  <div className="absolute top-20 left-20 w-72 h-72 bg-pink-200/20 rounded-full blur-3xl"></div>
+                  <div className="absolute bottom-20 right-20 w-96 h-96 bg-yellow-200/20 rounded-full blur-3xl"></div>
+                </div>
 
         {/* Content */}
         <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6 relative z-10">
@@ -164,7 +224,9 @@ export default function MedConnectLogin() {
                       className={`p-3 rounded-lg mb-4 text-sm ${
                         message.type === "error"
                           ? "bg-red-50 text-red-600 border border-red-200"
-                          : "bg-green-50 text-green-600 border border-green-200"
+                          : message.type === "success"
+                          ? "bg-green-50 text-green-600 border border-green-200"
+                          : "bg-yellow-50 text-yellow-700 border border-yellow-200"
                       }`}
                     >
                       {message.text}
@@ -235,10 +297,9 @@ export default function MedConnectLogin() {
                     </Button>
 
                     <Divider className="my-2" />
-
                     <div className="flex items-center justify-center">
                       <SocialLoginButtons
-                        onSuccess={(user) => sendFirebaseTokenToBackend(user)}
+                        onSuccess={(user) => finalizeLogin(user)}
                         onError={(msg) => showMessage(msg, "error")}
                       />
                     </div>

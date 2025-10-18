@@ -12,9 +12,11 @@ import java.util.List;
 @Getter
 @Setter
 public class Patient extends User{
-    private String firstName;
-    private String lastName;
-    private String phone;
+    @Column(unique = true)
+    private String citizenship;
+
+    @Column(unique = true)
+    private String socialInsurance;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
     private List<Appointment> appointments;

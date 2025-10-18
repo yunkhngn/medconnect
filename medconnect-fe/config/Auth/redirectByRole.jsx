@@ -7,6 +7,7 @@ export default function RedirectByRole() {
     const router = useRouter();
     const [isClient, setIsClient] = useState(false);
 
+    // All hooks must be called at the top level
     useEffect(() => {
         setIsClient(true);
     }, []);
@@ -25,11 +26,14 @@ export default function RedirectByRole() {
             try {
                 const token = await user.getIdToken();
 
-                const res = await fetch(`http://localhost:8080/api/user/role`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/user/role`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                );
 
                 if (res.status === 401 || res.status === 403) {
                     router.push("/");
@@ -44,7 +48,6 @@ export default function RedirectByRole() {
                 const data = await res.json();
                 const role = data.role?.toLowerCase();
 
-                // 🔹 Redirect based on actual backend role
                 switch (role) {
                     case "admin":
                         router.push("/admin/trang-chu");

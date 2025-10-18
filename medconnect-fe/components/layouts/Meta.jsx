@@ -4,7 +4,7 @@ const Meta = ({
   title = 'MedConnect - Healthcare Platform', 
   description = 'Nền tảng đặt lịch khám bệnh trực tuyến',
   keywords = 'bác sĩ, khám bệnh, đặt lịch, y tế',
-  ogImage = '/assets/logo.svg'
+  ogImage = '/assets/cover.jpg'
 }) => {
   const fullTitle = title.includes('MedConnect') ? title : `${title} - MedConnect`;
   
