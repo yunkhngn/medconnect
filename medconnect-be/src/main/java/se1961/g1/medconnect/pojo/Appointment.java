@@ -5,8 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import se1961.g1.medconnect.enums.AppoimentType;
 import se1961.g1.medconnect.enums.AppointmentStatus;
+import se1961.g1.medconnect.enums.AppointmentType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,7 +29,7 @@ public class Appointment {
     private LocalDateTime date;
 
     @Enumerated(EnumType.STRING)
-    private AppoimentType type;
+    private AppointmentType type;
 
     @ManyToOne
     @JoinColumn(name = "doctor_id")

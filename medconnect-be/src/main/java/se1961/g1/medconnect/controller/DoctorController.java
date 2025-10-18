@@ -55,6 +55,7 @@ public class DoctorController {
         AppointmentDTO updated = appointmentService.updateAppointment(appointmentId, appointmentDTO);
         return ResponseEntity.ok(updated);
     }
+
     @GetMapping("/schedule")
     public ResponseEntity<List<ScheduleDTO>> getScheduleWeekly(
             Authentication authentication,
