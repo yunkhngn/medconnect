@@ -122,12 +122,12 @@ const Nav = () => {
         <NavbarContent justify="end">
           {/* Desktop Auth Buttons */}
           {!isLoggedIn && (
-            <div className="hidden sm:flex gap-2">
+            <div className="hidden sm:flex gap-3">
               <NavbarItem>
                 <Link
                   href="/dang-nhap"
                   passHref
-                  className="px-4 py-2 rounded-md font-medium transition-colors bg-primary text-white hover:bg-primary-700 focus:outline-none"
+                  className="px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 bg-gradient-to-r from-blue-500 to-cyan-600 text-white hover:from-blue-600 hover:to-cyan-700 hover:scale-105 shadow-lg hover:shadow-xl backdrop-blur-sm border border-white/20 hover:border-white/30"
                 >
                   Đăng nhập
                 </Link>
@@ -136,7 +136,7 @@ const Nav = () => {
                 <Link
                   href="/dang-ky"
                   passHref
-                  className="px-4 py-2 rounded-md font-medium transition-colors text-gray hover:bg-gray-200 focus:outline-none"
+                  className="px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 bg-white/90 backdrop-blur-md text-gray-700 hover:bg-white hover:text-gray-900 hover:scale-105 shadow-lg hover:shadow-xl border border-white/30 hover:border-white/50"
                 >
                   Đăng ký
                 </Link>
@@ -265,11 +265,11 @@ const Nav = () => {
 
                 {/* Auth Section */}
                 {!isLoggedIn ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <Button
                       color="primary"
                       size="lg"
-                      className="w-full"
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                       onClick={() => {
                         onClose();
                         router.push("/dang-nhap");
@@ -280,7 +280,7 @@ const Nav = () => {
                     <Button
                       variant="bordered"
                       size="lg"
-                      className="w-full"
+                      className="w-full bg-white/90 backdrop-blur-md border-white/30 hover:bg-white hover:scale-105 shadow-lg hover:shadow-xl transition-all duration-300"
                       onClick={() => {
                         onClose();
                         router.push("/dang-ky");
