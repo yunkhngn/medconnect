@@ -8,6 +8,7 @@ const AuthGuard = ({ children }) => {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -15,29 +16,29 @@ const AuthGuard = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!isMounted) return;
 
-      const path = router.pathname.split("?")[0];
-      const rule = findMatchingRouteRule(path);
-
-      // Public route - always allow
-      if (!rule || !rule.authRequired) {
-        setAuthorized(true);
-        setLoading(false);
-        return;
-      }
-
-      // Protected route - check authentication
-      if (!user) {
-        setAuthorized(false);
-        setLoading(false);
-        const redirectPath = rule.redirectIfNotAuth || "/dang-nhap";
-        if (router.pathname !== redirectPath) {
-          router.replace(redirectPath);
-        }
-        return;
-      }
-
-      // User logged in - check role
       try {
+        const path = router.pathname.split("?")[0];
+        const rule = findMatchingRouteRule(path);
+
+        // Public route - always allow
+        if (!rule || !rule.authRequired) {
+          setAuthorized(true);
+          setLoading(false);
+          return;
+        }
+
+        // Protected route - check authentication
+        if (!user) {
+          setAuthorized(false);
+          setLoading(false);
+          const redirectPath = rule.redirectIfNotAuth || "/dang-nhap";
+          if (router.pathname !== redirectPath) {
+            router.replace(redirectPath);
+          }
+          return;
+        }
+
+        // User logged in - check role
         const token = await user.getIdToken();
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/user/role`,
@@ -70,8 +71,11 @@ const AuthGuard = ({ children }) => {
         }
       } catch (error) {
         console.error("Auth check error:", error);
+        setError(error.message);
         setAuthorized(false);
-        router.replace("/dang-nhap");
+        if (isMounted) {
+          router.replace("/dang-nhap");
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -81,7 +85,7 @@ const AuthGuard = ({ children }) => {
       isMounted = false;
       unsubscribe();
     };
-  }, [router.pathname]);
+  }, [router.pathname, router.asPath]); // Add router.asPath to dependencies
 
   const findMatchingRouteRule = (path) => {
     if (routeConfig[path]) return routeConfig[path];
@@ -117,6 +121,22 @@ const AuthGuard = ({ children }) => {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-600">Đang xác thực...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-red-600">Có lỗi xảy ra: {error}</p>
+          <button
+            onClick={() => router.reload()}
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-lg"
+          >
+            Thử lại
+          </button>
         </div>
       </div>
     );

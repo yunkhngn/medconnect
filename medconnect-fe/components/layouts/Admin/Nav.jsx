@@ -9,13 +9,16 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const Nav = () => {
   const router = useRouter();
-  const isActive = (href) => router.pathname === href;
-
+  const [mounted, setMounted] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userPhoto, setUserPhoto] = useState(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !mounted) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserEmail(user.email || '');
@@ -31,7 +34,9 @@ const Nav = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [mounted]);
+
+  const isActive = (href) => router.pathname === href;
 
   const handleLogout = async () => {
       try {
@@ -42,6 +47,10 @@ const Nav = () => {
         router.push("/dang-nhap");
       }
     };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="fixed left-0 top-0 h-screen w-30 bg-white border-r border-gray-200 flex flex-col z-50">
