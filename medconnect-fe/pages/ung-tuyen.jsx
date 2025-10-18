@@ -2,6 +2,17 @@ import React, { useState } from "react";
 import { Card, CardBody, CardHeader, Input, Button, Textarea, Select, SelectItem, Chip, Divider } from "@heroui/react";
 import { Default } from "@/components/layouts/";
 import { useRouter } from "next/router";
+import Float from "@/components/ui/Float";
+import Image from "next/image";
+import { DollarSign, Clock, Building, TrendingUp, Users, BookOpen } from "lucide-react";
+
+// API Configuration
+const API_CONFIG = {
+  BASE_URL: 'http://localhost:8080/api',
+  ENDPOINTS: {
+    SUBMIT_APPLICATION: '/doctor-applications',
+  },
+};
 
 export default function DoctorApplication() {
   const router = useRouter();
@@ -57,13 +68,32 @@ export default function DoctorApplication() {
     setIsLoading(true);
 
     try {
-      // TODO: Call API to submit application
-      const response = await fetch("/api/doctor-application", {
+      // Prepare JSON data for API
+      const applicationData = {
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        specialty: formData.specialty,
+        experience: parseInt(formData.experience) || 0,
+        education: formData.education,
+        certifications: formData.certifications,
+        bio: formData.bio,
+        clinicAddress: formData.clinicAddress,
+        workingHours: formData.workingHours,
+        applicationDate: new Date().toISOString(),
+        status: "pending"
+      };
+
+      // TODO: Replace with actual API call
+      console.log("Submitting application data:", applicationData);
+      
+      // Mock API call
+      const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.SUBMIT_APPLICATION, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(applicationData),
       });
 
       if (response.ok) {
@@ -75,6 +105,7 @@ export default function DoctorApplication() {
         throw new Error("Gửi đơn thất bại");
       }
     } catch (error) {
+      console.error("Submission error:", error);
       showMessage("Có lỗi xảy ra. Vui lòng thử lại sau.", "error");
     } finally {
       setIsLoading(false);
@@ -83,234 +114,274 @@ export default function DoctorApplication() {
 
   return (
     <Default title="Ứng tuyển Bác sĩ - MedConnect">
-      <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <Chip color="primary" variant="flat" className="mb-4">
-              Tuyển dụng Bác sĩ
-            </Chip>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Đăng ký Trở thành Bác sĩ
-            </h1>
-            <p className="text-lg text-gray-600">
-              Tham gia đội ngũ bác sĩ chuyên nghiệp của MedConnect
-            </p>
-          </div>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Background with blur */}
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/cover.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-2xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-blue-500/10"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-cyan-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>
+        </div>
 
-          {/* Benefits */}
-          <Card className="mb-8 bg-gradient-to-r from-blue-50 to-cyan-50">
-            <CardBody className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Quyền lợi khi tham gia MedConnect
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  "💼 Thu nhập hấp dẫn, cạnh tranh",
-                  "⏰ Linh hoạt thời gian làm việc",
-                  "🏥 Hệ thống quản lý bệnh nhân hiện đại",
-                  "📈 Cơ hội phát triển nghề nghiệp",
-                  "🤝 Đội ngũ hỗ trợ chuyên nghiệp",
-                  "💡 Đào tạo và cập nhật kiến thức liên tục"
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-center text-gray-700">
-                    <span className="text-xl mr-2">{benefit.split(" ")[0]}</span>
-                    <span>{benefit.substring(benefit.indexOf(" ") + 1)}</span>
-                  </div>
-                ))}
+        {/* Content */}
+        <div className="relative z-10 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <Float>
+              <div className="text-center mb-8 sm:mb-12">
+                <Chip color="primary" variant="flat" className="mb-4 bg-white/90 backdrop-blur-sm">
+                  Tuyển dụng Bác sĩ
+                </Chip>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+                  Đăng ký Trở thành Bác sĩ
+                </h1>
+                <p className="text-base sm:text-lg text-gray-700">
+                  Tham gia đội ngũ bác sĩ chuyên nghiệp của MedConnect
+                </p>
               </div>
-            </CardBody>
-          </Card>
+            </Float>
 
-          {/* Application Form */}
-          <Card>
-            <CardHeader className="flex flex-col items-start p-6 pb-0">
-              <h2 className="text-2xl font-semibold text-gray-900">Thông tin ứng tuyển</h2>
-              <p className="text-sm text-gray-600 mt-1">Vui lòng điền đầy đủ thông tin bên dưới</p>
-            </CardHeader>
-            <CardBody className="p-6">
-              {message.text && (
-                <div
-                  className={`p-3 rounded-lg mb-6 text-sm ${
-                    message.type === "error"
-                      ? "bg-red-50 text-red-600 border border-red-200"
-                      : "bg-green-50 text-green-600 border border-green-200"
-                  }`}
-                >
-                  {message.text}
-                </div>
-              )}
+            {/* Benefits */}
+            <Float delay={0.1}>
+              <Card className="mb-6 sm:mb-8 bg-gradient-to-r from-cyan-50 to-blue-50/90 backdrop-blur-md border border-cyan-200/50 shadow-2xl">
+                <CardBody className="p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
+                    Quyền lợi khi tham gia MedConnect
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    {[
+                     { icon: DollarSign, text: "Thu nhập hấp dẫn, cạnh tranh" },
+                     { icon: Clock, text: "Linh hoạt thời gian làm việc" },
+                     { icon: Building, text: "Hệ thống quản lý bệnh nhân hiện đại" },
+                     { icon: TrendingUp, text: "Cơ hội phát triển nghề nghiệp" },
+                     { icon: Users, text: "Đội ngũ hỗ trợ chuyên nghiệp" },
+                     { icon: BookOpen, text: "Đào tạo và cập nhật kiến thức liên tục" }
+                    ].map((benefit, index) => (
+                      <div key={index} className="flex items-center text-gray-700 text-sm sm:text-base">
+                        <benefit.icon className="w-5 h-5 sm:w-6 sm:h-6 mr-3 text-cyan-600" />
+                        <span>{benefit.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardBody>
+              </Card>
+            </Float>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Personal Info */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Thông tin cá nhân</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      isRequired
-                      label="Họ và tên"
-                      name="fullName"
-                      placeholder="Bác sĩ Nguyễn Văn A"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                    />
-                    <Input
-                      isRequired
-                      label="Email"
-                      name="email"
-                      type="email"
-                      placeholder="bacsi@email.com"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                    />
-                    <Input
-                      isRequired
-                      label="Số điện thoại"
-                      name="phone"
-                      type="tel"
-                      placeholder="0123456789"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                    />
-                    <Select
-                      isRequired
-                      label="Chuyên khoa"
-                      name="specialty"
-                      placeholder="Chọn chuyên khoa"
-                      selectedKeys={formData.specialty ? [formData.specialty] : []}
-                      onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
-                      labelPlacement="outside"
+            {/* Application Form */}
+            <Float delay={0.2}>
+              <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardHeader className="flex flex-col items-start p-4 sm:p-6 pb-0">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Thông tin ứng tuyển</h2>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">Vui lòng điền đầy đủ thông tin bên dưới</p>
+                </CardHeader>
+                <CardBody className="p-4 sm:p-6">
+                  {message.text && (
+                    <div
+                      className={`p-3 rounded-lg mb-4 sm:mb-6 text-sm ${
+                        message.type === "error"
+                          ? "bg-red-50 text-red-600 border border-red-200"
+                          : "bg-green-50 text-green-600 border border-green-200"
+                      }`}
                     >
-                      {specialties.map((specialty) => (
-                        <SelectItem key={specialty.value} value={specialty.value}>
-                          {specialty.label}
-                        </SelectItem>
-                      ))}
-                    </Select>
+                      {message.text}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                    {/* Personal Info */}
+                    <div className="space-y-3 sm:space-y-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Thông tin cá nhân</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <Input
+                          isRequired
+                          label="Họ và tên"
+                          name="fullName"
+                          placeholder="Bác sĩ Nguyễn Văn A"
+                          value={formData.fullName}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          size="sm"
+                        />
+                        <Input
+                          isRequired
+                          label="Email"
+                          name="email"
+                          type="email"
+                          placeholder="bacsi@email.com"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          size="sm"
+                        />
+                        <Input
+                          isRequired
+                          label="Số điện thoại"
+                          name="phone"
+                          type="tel"
+                          placeholder="0123456789"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          size="sm"
+                        />
+                        <Select
+                          isRequired
+                          label="Chuyên khoa"
+                          name="specialty"
+                          placeholder="Chọn chuyên khoa"
+                          selectedKeys={formData.specialty ? [formData.specialty] : []}
+                          onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
+                          labelPlacement="outside"
+                          size="sm"
+                        >
+                          {specialties.map((specialty) => (
+                            <SelectItem key={specialty.value} value={specialty.value}>
+                              {specialty.label}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Divider className="bg-gray-200" />
+
+                    {/* Professional Info */}
+                    <div className="space-y-3 sm:space-y-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Thông tin chuyên môn</h3>
+                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                        <Input
+                          label="Kinh nghiệm (năm)"
+                          name="experience"
+                          type="number"
+                          placeholder="5"
+                          value={formData.experience}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          size="sm"
+                        />
+                        <Input
+                          label="Trình độ học vấn"
+                          name="education"
+                          placeholder="Bác sĩ Đại học Y Hà Nội"
+                          value={formData.education}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          size="sm"
+                        />
+                        <Textarea
+                          label="Chứng chỉ hành nghề"
+                          name="certifications"
+                          placeholder="Liệt kê các chứng chỉ, bằng cấp..."
+                          value={formData.certifications}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          minRows={3}
+                          size="sm"
+                        />
+                        <Textarea
+                          label="Giới thiệu bản thân"
+                          name="bio"
+                          placeholder="Mô tả ngắn gọn về bản thân, kinh nghiệm làm việc..."
+                          value={formData.bio}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          minRows={4}
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
+                    <Divider className="bg-gray-200" />
+
+                    {/* Work Info */}
+                    <div className="space-y-3 sm:space-y-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Thông tin công việc</h3>
+                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                        <Textarea
+                          label="Địa chỉ phòng khám/Bệnh viện"
+                          name="clinicAddress"
+                          placeholder="Nhập địa chỉ nơi làm việc hiện tại (nếu có)"
+                          value={formData.clinicAddress}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          minRows={2}
+                          size="sm"
+                        />
+                        <Input
+                          label="Thời gian làm việc mong muốn"
+                          name="workingHours"
+                          placeholder="VD: Thứ 2-6, 8h-17h"
+                          value={formData.workingHours}
+                          onChange={handleInputChange}
+                          labelPlacement="outside"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+                      <Button
+                        type="submit"
+                        color="primary"
+                        size="lg"
+                        isLoading={isLoading}
+                        className="flex-1"
+                      >
+                        {isLoading ? "Đang gửi..." : "Gửi đơn ứng tuyển"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="light"
+                        size="lg"
+                        onPress={() => router.back()}
+                        className="flex-1 sm:flex-none"
+                      >
+                        Hủy
+                      </Button>
+                    </div>
+                  </form>
+                </CardBody>
+              </Card>
+            </Float>
+
+            {/* Process Info */}
+            <Float delay={0.3}>
+              <Card className="mt-6 sm:mt-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
+                    Quy trình tuyển dụng
+                  </h3>
+                  <div className="space-y-2 sm:space-y-3 mb-4">
+                    {[
+                     { step: "1", text: "Gửi đơn ứng tuyển" },
+                     { step: "2", text: "Phỏng vấn trực tuyến" },
+                     { step: "3", text: "Xác minh chứng chỉ hành nghề" },
+                     { step: "4", text: "Đào tạo hệ thống" },
+                     { step: "5", text: "Bắt đầu làm việc" }
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center text-gray-700 text-sm sm:text-base">
+                        <div className="flex items-center justify-center w-6 h-6 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold mr-3">
+                          {item.step}
+                        </div>
+                        <span>{item.text}</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                <Divider />
-
-                {/* Professional Info */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Thông tin chuyên môn</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    <Input
-                      label="Kinh nghiệm (năm)"
-                      name="experience"
-                      type="number"
-                      placeholder="5"
-                      value={formData.experience}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                    />
-                    <Input
-                      label="Trình độ học vấn"
-                      name="education"
-                      placeholder="Bác sĩ Đại học Y Hà Nội"
-                      value={formData.education}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                    />
-                    <Textarea
-                      label="Chứng chỉ hành nghề"
-                      name="certifications"
-                      placeholder="Liệt kê các chứng chỉ, bằng cấp..."
-                      value={formData.certifications}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                      minRows={3}
-                    />
-                    <Textarea
-                      label="Giới thiệu bản thân"
-                      name="bio"
-                      placeholder="Mô tả ngắn gọn về bản thân, kinh nghiệm làm việc..."
-                      value={formData.bio}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                      minRows={4}
-                    />
-                  </div>
-                </div>
-
-                <Divider />
-
-                {/* Work Info */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Thông tin công việc</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    <Textarea
-                      label="Địa chỉ phòng khám/Bệnh viện"
-                      name="clinicAddress"
-                      placeholder="Nhập địa chỉ nơi làm việc hiện tại (nếu có)"
-                      value={formData.clinicAddress}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                      minRows={2}
-                    />
-                    <Input
-                      label="Thời gian làm việc mong muốn"
-                      name="workingHours"
-                      placeholder="VD: Thứ 2-6, 8h-17h"
-                      value={formData.workingHours}
-                      onChange={handleInputChange}
-                      labelPlacement="outside"
-                    />
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex gap-4 pt-4">
-                  <Button
-                    type="submit"
-                    color="primary"
-                    size="lg"
-                    isLoading={isLoading}
-                    className="flex-1"
-                  >
-                    {isLoading ? "Đang gửi..." : "Gửi đơn ứng tuyển"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="light"
-                    size="lg"
-                    onPress={() => router.back()}
-                  >
-                    Hủy
-                  </Button>
-                </div>
-              </form>
-            </CardBody>
-          </Card>
-
-          {/* Additional Info */}
-          <Card className="mt-8">
-            <CardBody className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Quy trình tuyển dụng
-              </h3>
-              <div className="space-y-3">
-                {[
-                  "1️⃣ Gửi đơn ứng tuyển",
-                  "2️⃣ Phỏng vấn trực tuyến",
-                  "3️⃣ Xác minh chứng chỉ hành nghề",
-                  "4️⃣ Đào tạo hệ thống",
-                  "5️⃣ Bắt đầu làm việc"
-                ].map((step, index) => (
-                  <div key={index} className="flex items-center text-gray-700">
-                    <span className="mr-3">{step}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-gray-600 mt-4">
-                Thời gian xử lý: <strong>3-5 ngày làm việc</strong>
-              </p>
-            </CardBody>
-          </Card>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Thời gian xử lý: <strong>3-5 ngày làm việc</strong>
+                  </p>
+                </CardBody>
+              </Card>
+            </Float>
+          </div>
         </div>
       </div>
     </Default>

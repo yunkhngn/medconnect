@@ -104,38 +104,38 @@ const Chatbot = () => {
     <>
       {/* Chat Panel */}
       {isOpen && (
-        <div className={`fixed z-9999 transition-all ${
+        <div className={`fixed z-9999 transition-all duration-300 ${
           isFullscreen 
             ? 'inset-0' 
             : 'bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)]'
         }`}>
-          <div className={`bg-white/95 backdrop-blur-xl shadow-2xl border border-gray-200/50 overflow-hidden ${
-            isFullscreen ? 'h-full' : 'rounded-2xl'
+          <div className={`bg-white/10 backdrop-blur-2xl shadow-2xl border border-white/20 overflow-hidden ${
+            isFullscreen ? 'h-full' : 'rounded-3xl'
           }`}>
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-white/5 backdrop-blur-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
                   <Image src="/assets/logo.svg" alt="Logo" width={24} height={24} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">MedConnect AI</h3>
-                  <p className="text-xs text-gray-500">Trợ lý sức khỏe của bạn</p>
+                  <h3 className="font-bold text-gray-900 text-lg">MedConnect AI</h3>
+                  <p className="text-sm text-gray-600">Trợ lý sức khỏe của bạn</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {/* Fullscreen Toggle */}
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  className="w-10 h-10 rounded-2xl hover:bg-white/20 flex items-center justify-center transition-all duration-200 hover:scale-105"
                   title={isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}
                 >
                   {isFullscreen ? (
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
                     </svg>
                   ) : (
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                     </svg>
                   )}
@@ -146,9 +146,9 @@ const Chatbot = () => {
                     setIsOpen(false);
                     setIsFullscreen(false);
                   }}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  className="w-10 h-10 rounded-2xl hover:bg-white/20 flex items-center justify-center transition-all duration-200 hover:scale-105"
                 >
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -156,16 +156,16 @@ const Chatbot = () => {
             </div>
 
             {/* Rate Limit */}
-            <div className="px-5 py-2 bg-gray-50/50 border-b border-gray-200/50">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600">
+            <div className="px-6 py-3 bg-white/5 backdrop-blur-sm border-b border-white/10">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-700 font-medium">
                   {questionCount}/{MAX_QUESTIONS} câu hỏi
                 </span>
                 <Chip 
                   size="sm" 
                   variant="flat" 
                   color={questionCount >= MAX_QUESTIONS ? 'danger' : 'success'}
-                  className="text-xs"
+                  className="text-xs bg-white/20 backdrop-blur-sm border border-white/20"
                 >
                   {questionCount >= MAX_QUESTIONS ? 'Hết lượt' : 'Sẵn sàng'}
                 </Chip>
@@ -173,19 +173,19 @@ const Chatbot = () => {
             </div>
 
             {/* Messages */}
-            <div className={`overflow-y-auto p-5 space-y-4 bg-gray-50/30 ${
-              isFullscreen ? 'h-[calc(100vh-180px)]' : 'h-96'
+            <div className={`overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-white/5 to-transparent ${
+              isFullscreen ? 'h-[calc(100vh-220px)]' : 'h-96'
             }`}>
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                    className={`max-w-[85%] rounded-3xl px-5 py-4 shadow-lg backdrop-blur-sm border border-white/20 ${
                       msg.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-gray-900 shadow-sm border border-gray-200/50'
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-blue-500/25'
+                        : 'bg-white/80 text-gray-900 shadow-gray-200/50'
                     }`}
                   >
                     {msg.role === 'user' ? (
@@ -196,21 +196,24 @@ const Chatbot = () => {
                         dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }}
                       />
                     )}
-                    <p className={`text-[10px] mt-1.5 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
+                    <p className={`text-xs mt-3 opacity-70 ${
+                      msg.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    }`}>
                       {msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
               ))}
               {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-white rounded-2xl px-4 py-2.5 shadow-sm border border-gray-200/50">
-                    <div className="flex items-center gap-2">
+                <div className="flex justify-start animate-fade-in">
+                  <div className="bg-white/80 rounded-3xl px-5 py-4 shadow-lg backdrop-blur-sm border border-white/20">
+                    <div className="flex items-center gap-3">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                       </div>
+                      <span className="text-sm text-gray-600">Đang trả lời...</span>
                     </div>
                   </div>
                 </div>
@@ -219,32 +222,44 @@ const Chatbot = () => {
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200/50 bg-white">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhập triệu chứng..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={loading || questionCount >= MAX_QUESTIONS}
-                  className="flex-1 px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-50"
-                />
+            <div className="p-6 border-t border-white/10 bg-white/5 backdrop-blur-sm">
+              <div className="flex gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Nhập triệu chứng..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={loading || questionCount >= MAX_QUESTIONS}
+                    className="w-full px-5 py-4 text-sm bg-white/60 backdrop-blur-sm border border-white/30 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500 transition-all duration-200"
+                  />
+                  {input.trim() && (
+                    <button
+                      onClick={() => setInput('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || loading || questionCount >= MAX_QUESTIONS}
-                  className="w-10 h-10 rounded-xl bg-rose-400 text-white hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                  className="w-14 h-14 rounded-3xl bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:hover:scale-100"
                 >
                   {loading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   )}
                 </button>
               </div>
-              {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+              {error && <p className="text-xs text-red-500 mt-3 bg-red-50/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-red-200/50">{error}</p>}
             </div>
           </div>
         </div>
@@ -253,25 +268,27 @@ const Chatbot = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-rose-400 to-fuchsia-200 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center group"
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-r from-teal-400 to-cyan-200 text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group backdrop-blur-sm border-4 border-white"
         aria-label="Open chatbot"
       >
         {isOpen ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         ) : (
           <>
-            <Image 
-              src="/assets/chatbot.svg" 
-              alt="Chatbot" 
-              width={40} 
-              height={40}
-              className="brightness-0 invert"
-            />
+            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
+              <Image 
+                src="/assets/chatbot.svg" 
+                alt="Chatbot" 
+                width={24} 
+                height={24}
+                
+              />
+            </div>
             {questionCount >= MAX_QUESTIONS && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-[10px] font-semibold">!</span>
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                <span className="text-[10px] font-bold text-white">!</span>
               </span>
             )}
           </>

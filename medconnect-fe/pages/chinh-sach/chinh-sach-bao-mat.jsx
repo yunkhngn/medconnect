@@ -2,6 +2,8 @@ import React from 'react';
 import { Default } from '@/components/layouts';
 import { Card, CardBody, Divider, Chip, Button } from '@heroui/react';
 import { useRouter } from 'next/router';
+import Float from '@/components/ui/Float';
+import Image from 'next/image';
 
 const PrivacyPolicy = () => {
   const router = useRouter();
@@ -39,91 +41,138 @@ const PrivacyPolicy = () => {
 
   return (
     <Default title="Chính Sách Bảo Mật - MedConnect">
-      <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Back Button */}
-          <Button 
-            variant="light" 
-            className="mb-6"
-            onClick={() => router.back()}
-            startContent={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            }
-          >
-            Quay lại
-          </Button>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Background with blur */}
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/cover.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-2xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-blue-500/10"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-green-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>
+        </div>
 
-          {/* Header */}
-          <div className="text-center mb-12">
-            <Chip color="success" variant="flat" className="mb-4">
-              Có hiệu lực từ: {new Date().toLocaleDateString('vi-VN')}
-            </Chip>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Chính Sách Bảo Mật
-            </h1>
-            <p className="text-lg text-gray-600">
-              MedConnect cam kết bảo vệ quyền riêng tư và thông tin cá nhân của bạn
-            </p>
-          </div>
+        {/* Content */}
+        <div className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Back Button */}
+            <Float>
+              <Button 
+                variant="light" 
+                className="mb-6 bg-white/80 backdrop-blur-sm"
+                onClick={() => router.back()}
+                startContent={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                }
+              >
+                Quay lại
+              </Button>
+            </Float>
 
-          {/* Important Notice */}
-          <Card className="mb-8 bg-blue-50 border-blue-200">
-            <CardBody className="p-6">
-              <div className="flex items-start space-x-3">
-                <svg className="w-6 h-6 text-blue-600 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                    Cam kết bảo mật thông tin y tế
-                  </h3>
-                  <p className="text-blue-800">
-                    Thông tin sức khỏe của bạn được mã hóa và bảo vệ theo tiêu chuẩn quốc tế về bảo mật dữ liệu y tế.
-                  </p>
-                </div>
+            {/* Header */}
+            <Float variant="fadeInUp" delay={0.1}>
+              <div className="text-center mb-12">
+                <Chip color="success" variant="flat" className="mb-4 bg-white/90 backdrop-blur-sm">
+                  Có hiệu lực từ: {new Date().toLocaleDateString('vi-VN')}
+                </Chip>
+                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                  Chính Sách Bảo Mật
+                </h1>
+                <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+                  MedConnect cam kết bảo vệ quyền riêng tư và thông tin cá nhân của bạn
+                </p>
               </div>
-            </CardBody>
-          </Card>
+            </Float>
 
-          {/* Content */}
-          <Card className="mb-8">
-            <CardBody className="p-8">
-              <div className="prose prose-lg max-w-none">
-                {sections.map((section, index) => (
-                  <div key={index} className="mb-8">
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                      {section.title}
-                    </h2>
-                    <p className="text-gray-700 leading-relaxed">
-                      {section.content}
-                    </p>
-                    {index < sections.length - 1 && (
-                      <Divider className="my-6" />
-                    )}
+            {/* Important Notice */}
+            <Float variant="fadeInUp" delay={0.2}>
+              <Card className="mb-8 bg-green-50/90 backdrop-blur-md border border-green-200/50 shadow-2xl">
+                <CardBody className="p-6">
+                  <Float variant="fadeInUp">
+                    <div className="flex items-start space-x-3">
+                      <svg className="w-6 h-6 text-green-600 mt-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <div>
+                        <h3 className="text-lg font-semibold text-green-900 mb-2">
+                          Cam kết bảo mật thông tin y tế
+                        </h3>
+                        <p className="text-green-800">
+                          Thông tin sức khỏe của bạn được mã hóa và bảo vệ theo tiêu chuẩn quốc tế về bảo mật dữ liệu y tế.
+                        </p>
+                      </div>
+                    </div>
+                  </Float>
+                </CardBody>
+              </Card>
+            </Float>
+
+            {/* Content */}
+            <Float variant="fadeInUp" delay={0.3}>
+              <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-8 md:p-12">
+                  <div className="prose prose-lg max-w-none">
+                    {sections.map((section, index) => (
+                      <Float key={index} variant="fadeInUp" delay={0.4 + index * 0.1}>
+                        <div className="mb-8">
+                          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                            {section.title}
+                          </h2>
+                          <p className="text-gray-700 leading-relaxed text-base md:text-lg">
+                            {section.content}
+                          </p>
+                          {index < sections.length - 1 && (
+                            <Divider className="my-8 bg-gray-200" />
+                          )}
+                        </div>
+                      </Float>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
+                </CardBody>
+              </Card>
+            </Float>
 
-          {/* Contact Info */}
-          <Card>
-            <CardBody className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Liên hệ về vấn đề bảo mật
-              </h3>
-              <p className="text-gray-700">
-                Nếu bạn có bất kỳ thắc mắc nào về chính sách bảo mật, vui lòng liên hệ:
-              </p>
-              <ul className="mt-4 space-y-2 text-gray-700">
-                <li>📧 Email: privacy@medconnect.vn</li>
-                <li>📞 Hotline: 1900-xxxx</li>
-                <li>📍 Địa chỉ: [Địa chỉ văn phòng]</li>
-              </ul>
-            </CardBody>
-          </Card>
+            {/* Contact Info */}
+            <Float variant="fadeInUp" delay={0.9}>
+              <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-8 md:p-12">
+                  <Float variant="fadeInUp">
+                    <h3 className="text-2xl font-semibold text-gray-900 mb-6">
+                      Liên hệ về vấn đề bảo mật
+                    </h3>
+                  </Float>
+                  <Float variant="fadeInUp" delay={0.1}>
+                    <p className="text-gray-700 text-base md:text-lg mb-6">
+                      Nếu bạn có bất kỳ thắc mắc nào về chính sách bảo mật, vui lòng liên hệ với chúng tôi qua:
+                    </p>
+                  </Float>
+                  <Float variant="fadeInUp" delay={0.2}>
+                    <ul className="space-y-4 text-gray-700">
+                      <li className="flex items-center space-x-3 text-base md:text-lg">
+                        <span className="text-2xl">📧</span>
+                        <span>Email: privacy@medconnect.vn</span>
+                      </li>
+                      <li className="flex items-center space-x-3 text-base md:text-lg">
+                        <span className="text-2xl">📞</span>
+                        <span>Hotline: 1900-xxxx</span>
+                      </li>
+                      <li className="flex items-center space-x-3 text-base md:text-lg">
+                        <span className="text-2xl">📍</span>
+                        <span>Địa chỉ: [Địa chỉ văn phòng]</span>
+                      </li>
+                    </ul>
+                  </Float>
+                </CardBody>
+              </Card>
+            </Float>
+          </div>
         </div>
       </div>
     </Default>
