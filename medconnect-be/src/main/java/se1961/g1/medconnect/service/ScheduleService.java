@@ -16,22 +16,25 @@ import java.util.List;
 
 @Service
 public class ScheduleService {
+
     @Autowired
     private ScheduleRepository scheduleRepository;
+
     @Autowired
     private UserService userService;
 
-    public List<ScheduleDTO> getWeeklySchedule(Long userId, LocalDate start, LocalDate end) throws Exception{
-        if(!userService.findById(userId).isPresent()) {
+    public List<ScheduleDTO> getWeeklySchedule(Long userId, LocalDate start, LocalDate end) throws Exception {
+        if (!userService.findById(userId).isPresent()) {
             throw new Exception("User not found");
         }
-        List<Schedule> scheduleList = scheduleRepository.findByUserIdAndDateBetween(userId, start, end);
+
+        List<Schedule> scheduleList = scheduleRepository.findByUserUserIdAndDateBetween(userId, start, end);
         List<LocalDate> dates = start.datesUntil(end.plusDays(1)).toList();
         List<Slot> slots = Arrays.asList(Slot.values());
 
         List<ScheduleDTO> fullWeek = new ArrayList<>();
-        for(LocalDate date: dates) {
-            for(Slot slot: slots) {
+        for (LocalDate date : dates) {
+            for (Slot slot : slots) {
                 ScheduleDTO scheduleDTO = scheduleList.stream()
                         .filter(s -> s.getDate().equals(date) && s.getSlot() == slot)
                         .findFirst()
@@ -41,7 +44,7 @@ public class ScheduleService {
                             empty.setDate(date);
                             empty.setSlot(slot);
                             empty.setStatus(ScheduleStatus.EMPTY);
-                            return  empty;
+                            return empty;
                         });
                 fullWeek.add(scheduleDTO);
             }
@@ -50,19 +53,21 @@ public class ScheduleService {
     }
 
     public ScheduleDTO updateSchedule(Long scheduleId, ScheduleStatus status) throws Exception {
-        Schedule schedule = scheduleRepository.findById(scheduleId).orElseThrow(
-                () -> new Exception("Schedule not found"));
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new Exception("Schedule not found"));
         schedule.setStatus(status);
         scheduleRepository.save(schedule);
-        return new  ScheduleDTO(schedule);
+        return new ScheduleDTO(schedule);
     }
 
     public ScheduleDTO addSchedule(ScheduleDTO dto, Long userId) throws Exception {
         User user = userService.findById(userId)
                 .orElseThrow(() -> new Exception("User not found"));
-        if(scheduleRepository.findByUserIdAndDateAndSlot(userId, dto.getDate(), dto.getSlot()).isPresent()) {
+
+        if (scheduleRepository.findByUserUserIdAndDateAndSlot(userId, dto.getDate(), dto.getSlot()).isPresent()) {
             throw new Exception("Schedule already exists");
         }
+
         Schedule schedule = new Schedule();
         schedule.setDate(dto.getDate());
         schedule.setSlot(dto.getSlot());
@@ -70,6 +75,6 @@ public class ScheduleService {
         schedule.setUser(user);
         scheduleRepository.save(schedule);
 
-        return new  ScheduleDTO(schedule);
+        return new ScheduleDTO(schedule);
     }
 }

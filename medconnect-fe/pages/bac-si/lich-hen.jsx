@@ -21,22 +21,28 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Select,      // <--- IMPORT THÊM
-  SelectItem   // <--- IMPORT THÊM
+  Select,
+  SelectItem
 } from "@nextui-org/react";
 
+const SLOTS = {
+  SLOT_1: { label: 'Slot 1', start: '07:30', end: '09:50' },
+  SLOT_2: { label: 'Slot 2', start: '10:00', end: '12:20' },
+  SLOT_3: { label: 'Slot 3', start: '12:50', end: '15:10' },
+  SLOT_4: { label: 'Slot 4', start: '15:20', end: '17:40' }
+};
 
 const DoctorAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedType, setSelectedType] = useState('all'); 
+  const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedTimeRange, setSelectedTimeRange] = useState('today');
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
 
-  // modal
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -58,6 +64,25 @@ const DoctorAppointments = () => {
     { key: 'offline', label: 'Trực tiếp' }
   ];
 
+  const timeRangeOptions = [
+    { key: 'history', label: 'Lịch sử' },
+    { key: 'today', label: 'Hôm nay' },
+    { key: 'future', label: 'Tương lai' }
+  ];
+
+  const getLocalDateString = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getLocalDateAtMidnight = (date = new Date()) => {
+    const localDate = new Date(date);
+    localDate.setHours(0, 0, 0, 0);
+    return localDate;
+  };
+
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
@@ -69,9 +94,7 @@ const DoctorAppointments = () => {
         });
         if (!res.ok) throw new Error("Lỗi tải dữ liệu");
         const data = await res.json();
-
         setAppointments(Array.isArray(data) ? data : []);
-        setFilteredAppointments(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Lỗi khi tải lịch hẹn:", err);
       }
@@ -79,20 +102,11 @@ const DoctorAppointments = () => {
     fetchAppointments();
   }, []);
 
-  // debounce search
   useEffect(() => {
     const h = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(h);
   }, [searchQuery]);
 
-  // ==================================================================
-  // CÁC HÀM XỬ LÝ DATE (Không thay đổi)
-  // Bạn làm rất tốt khi xử lý nhiều định dạng ngày tháng!
-  // Gợi ý: Nếu component này phình to, bạn có thể chuyển 
-  // các hàm này (parseDatetimeToTimestamp, extractRawDate, v.v.)
-  // ra một file riêng (ví dụ: /lib/dateUtils.js)
-  // và import vào để component chính gọn gàng hơn.
-  // ==================================================================
   const parseDatetimeToTimestamp = (s) => {
     if (!s) return NaN;
     if (/^\d+$/.test(String(s))) {
@@ -101,6 +115,15 @@ const DoctorAppointments = () => {
       return n;
     }
     let t = String(s).trim();
+    
+    // ✅ FIX: Handle DD-MM-YYYY format (convert to YYYY-MM-DD)
+    const ddmmyyyyRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const ddmmMatch = t.match(ddmmyyyyRegex);
+    if (ddmmMatch) {
+      const [, day, month, year] = ddmmMatch;
+      t = `${year}-${month}-${day}`; // Convert to YYYY-MM-DD
+    }
+    
     const spaceWithFracRegex = /^(\d{4}-\d{2}-\d{2})[ ]+(\d{2}:\d{2}:\d{2})(\.\d+)?(Z)?$/;
     const m = t.match(spaceWithFracRegex);
     if (m) {
@@ -128,11 +151,17 @@ const DoctorAppointments = () => {
     if (!isNaN(direct)) return direct;
     return NaN;
   };
+
   const extractRawDate = (apt) => {
     if (!apt) return null;
     const candidates = [
-      apt.date, apt.appointment_date, apt.scheduled_at, apt.scheduledAt,
-      apt.datetime, apt.start_time, apt.startTime, apt.created_at, apt.createdAt
+      apt.date,
+      apt.appointment_date,
+      apt.scheduled_at,
+      apt.scheduledAt,
+      apt.datetime,
+      apt.start_time,
+      apt.startTime
     ];
     for (const c of candidates) {
       if (c !== undefined && c !== null && c !== '') return c;
@@ -148,6 +177,7 @@ const DoctorAppointments = () => {
     }
     return null;
   };
+
   const getApptTimestamp = (apt) => {
     if (!apt) return 0;
     const raw = extractRawDate(apt);
@@ -167,6 +197,7 @@ const DoctorAppointments = () => {
     }
     return 0;
   };
+
   const formatApptDateTime = (apt) => {
     const raw = extractRawDate(apt);
     if (!raw && !(apt && (apt.date || apt.time))) return { date: '—', time: '—' };
@@ -199,12 +230,50 @@ const DoctorAppointments = () => {
     }
     return { date: '—', time: '—' };
   };
-  // ==================================================================
-  // HẾT PHẦN XỬ LÝ DATE
-  // ==================================================================
 
+  const getSlotLabel = (timeStr) => {
+    if (!timeStr || timeStr === '—') return '—';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return '—';
+    const appointmentTime = hours * 60 + minutes;
 
-  // filtering + sorting (now uses type filter instead of week)
+    for (const [slotKey, slot] of Object.entries(SLOTS)) {
+      const [slotHours, slotMins] = slot.start.split(':').map(Number);
+      const slotStart = slotHours * 60 + slotMins;
+      const [slotEndHours, slotEndMins] = slot.end.split(':').map(Number);
+      const slotEnd = slotEndHours * 60 + slotEndMins;
+
+      if (appointmentTime >= slotStart && appointmentTime <= slotEnd) {
+        return slot.label;
+      }
+    }
+    return '—';
+  };
+
+  const isInTimeRange = (aptDate, range) => {
+    if (!aptDate) return false;
+
+    const ts = parseDatetimeToTimestamp(aptDate);
+    if (isNaN(ts)) return false;
+
+    const aptDateObj = new Date(ts);
+    const aptDateStr = getLocalDateString(aptDateObj);
+    const todayDateStr = getLocalDateString();
+    const todayDate = getLocalDateAtMidnight();
+
+    if (range === 'today') {
+      return aptDateStr === todayDateStr;
+    } else if (range === 'history') {
+      return aptDateObj < todayDate;
+    } else if (range === 'future') {
+      const tomorrowDate = new Date(todayDate);
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      return aptDateObj >= tomorrowDate;
+    }
+    
+    return false;
+  };
+
   useEffect(() => {
     const q = (debouncedSearch || '').trim().toLowerCase();
 
@@ -223,14 +292,16 @@ const DoctorAppointments = () => {
       const aptType = (apt.type || '').toString().toLowerCase();
       const matchesType = selectedType === 'all' || aptType === selectedType.toString().toLowerCase();
 
-      return matchesSearch && matchesStatus && matchesType;
+      const matchesTimeRange = isInTimeRange(extractRawDate(apt), selectedTimeRange);
+
+      return matchesSearch && matchesStatus && matchesType && matchesTimeRange;
     });
 
     filtered.sort((a, b) => getApptTimestamp(a) - getApptTimestamp(b));
 
     setFilteredAppointments(filtered);
     setPage(1);
-  }, [debouncedSearch, selectedType, selectedStatus, appointments]);
+  }, [debouncedSearch, selectedType, selectedStatus, selectedTimeRange, appointments]);
 
   const getStatusColor = (status) => {
     const st = (status || '').toString().toUpperCase();
@@ -239,7 +310,7 @@ const DoctorAppointments = () => {
       CONFIRMED: 'primary',
       DENIED: 'danger',
       CANCELLED: 'danger',
-      ONGOING: 'secondary', // <-- Thay đổi 'info' thành 'secondary' cho nhất quán với NextUI
+      ONGOING: 'secondary',
       FINISHED: 'success'
     }[st] || 'default';
   };
@@ -265,22 +336,17 @@ const DoctorAppointments = () => {
 
   const handleViewDetails = (appointment) => {
     setSelectedAppt(appointment);
-    // Khi mở modal, set editedAppt với dữ liệu chuẩn hóa
     const { date, time } = formatApptDateTime(appointment);
-    setEditedAppt({ 
+    setEditedAppt({
       ...appointment,
       date: date === '—' ? '' : date,
       time: time === '—' ? '' : time,
-      type: (appointment.type || 'online').toLowerCase() // Đảm bảo type luôn có giá trị
+      type: (appointment.type || 'online').toLowerCase()
     });
     setIsEditing(false);
     onOpen();
   };
 
-  // ==================================================================
-  // CÁC HÀM API (handleConfirm, handleReject)
-  // (Không thay đổi) - Logic của bạn đã chuẩn
-  // ==================================================================
   const handleConfirm = async () => {
     if (!selectedAppt) return;
     if (!confirm('Bạn chắc chắn muốn xác nhận lịch hẹn này?')) return;
@@ -329,84 +395,56 @@ const DoctorAppointments = () => {
     if (!appointment) return;
     window.open(`/doctor/emr/${encodeURIComponent(appointment.patientName || appointment.id)}`, '_blank');
   };
-  
-  // Logic lưu thay đổi (ví dụ)
+
   const handleSave = async () => {
     if (!editedAppt) return;
-    
-    // *** THÊM LOGIC VALIDATION Ở ĐÂY ***
-    // (ví dụ: kiểm tra ngày giờ)
-
     console.log("Đang lưu:", editedAppt);
-    // try {
-    //   const token = await auth.currentUser.getIdToken();
-    //   const id = editedAppt.appointment_id ?? editedAppt.id;
-    //   const res = await fetch(`/api/doctor/appointments/${id}/update`, {
-    //     method: 'PUT',
-    //     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({
-    //       date: editedAppt.date,
-    //       time: editedAppt.time,
-    //       type: editedAppt.type
-    //     })
-    //   });
-    //   if (res.ok) {
-    //     const updatedAppt = await res.json(); // Giả sử API trả về lịch hẹn đã cập nhật
-    //     setAppointments(prev => prev.map(a => (a.appointment_id ?? a.id) === id ? updatedAppt : a));
-    //     setSelectedAppt(updatedAppt); // Cập nhật cả state đang xem
-    //     setIsEditing(false);
-    //   } else {
-    //     alert('Cập nhật thất bại');
-    //   }
-    // } catch (e) {
-    //   console.error(e);
-    //   alert('Lỗi khi cập nhật');
-    // }
-    
-    // Logic giả lập để test
     setAppointments(prev => prev.map(a => (a.appointment_id ?? a.id) === editedAppt.id ? editedAppt : a));
     setSelectedAppt(editedAppt);
     setIsEditing(false);
   };
-
 
   return (
     <DoctorFrame title="Lịch hẹn">
       <div className="space-y-6">
         <Card>
           <CardBody className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-            
-            {/* THAY THẾ: Sử dụng Select của NextUI */}
             <Select
               label="Loại"
               placeholder="Chọn loại"
-              className="md:col-span-4"
+              className="md:col-span-2"
               selectedKeys={[selectedType]}
               onChange={(e) => setSelectedType(e.target.value || 'all')}
             >
               {typeOptions.map(t => (
-                <SelectItem key={t.key} value={t.key}>
-                  {t.label}
-                </SelectItem>
+                <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
               ))}
             </Select>
 
-            {/* THAY THẾ: Sử dụng Select của NextUI */}
             <Select
               label="Trạng thái"
               placeholder="Chọn trạng thái"
-              className="md:col-span-4"
+              className="md:col-span-3"
               selectedKeys={[selectedStatus]}
               onChange={(e) => setSelectedStatus(e.target.value || 'all')}
             >
               {statusOptions.map(o => (
-                <SelectItem key={o.key} value={o.key}>
-                  {o.label}
-                </SelectItem>
+                <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
               ))}
             </Select>
 
-            {/* Giữ nguyên Input của NextUI */}
+            <Select
+              label="Thời gian"
+              placeholder="Chọn thời gian"
+              className="md:col-span-2"
+              selectedKeys={[selectedTimeRange]}
+              onChange={(e) => setSelectedTimeRange(e.target.value || 'today')}
+            >
+              {timeRangeOptions.map(t => (
+                <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
+              ))}
+            </Select>
+
             <Input
               label="Tìm kiếm"
               placeholder="Nhập tên, ID, email, sđt..."
@@ -414,14 +452,13 @@ const DoctorAppointments = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               isClearable
               onClear={() => setSearchQuery('')}
-              className="md:col-span-4"
+              className="md:col-span-5"
             />
           </CardBody>
         </Card>
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* TỐI ƯU: Thêm prop `shadow` của NextUI */}
           <Card shadow="sm" className="border-l-4 border-warning">
             <CardBody className="p-4">
               <p className="text-sm text-gray-600 mb-1">Chờ xác nhận</p>
@@ -457,8 +494,8 @@ const DoctorAppointments = () => {
         {/* Table */}
         <Card>
           <CardBody className="p-0">
-            <Table 
-              aria-label="Appointments" 
+            <Table
+              aria-label="Appointments"
               bottomContent={totalPages > 1 && (
                 <div className="flex justify-center py-3">
                   <Pagination color="primary" page={page} total={totalPages} onChange={setPage} />
@@ -469,12 +506,12 @@ const DoctorAppointments = () => {
                 <TableColumn>MÃ LỊCH HẸN</TableColumn>
                 <TableColumn>BỆNH NHÂN</TableColumn>
                 <TableColumn>NGÀY GIỜ</TableColumn>
+                <TableColumn>SLOT</TableColumn>
                 <TableColumn>LOẠI</TableColumn>
                 <TableColumn>TRẠNG THÁI</TableColumn>
                 <TableColumn>HÀNH ĐỘNG</TableColumn>
               </TableHeader>
 
-              {/* TỐI ƯU: Sử dụng `emptyContent` cho trường hợp không có dữ liệu */}
               <TableBody
                 items={paginatedAppointments}
                 emptyContent={
@@ -489,6 +526,7 @@ const DoctorAppointments = () => {
                   const typeUpper = String(apt.type || '').toUpperCase();
                   const typeLabel = typeUpper === 'ONLINE' ? 'Trực tuyến' : (typeUpper === 'OFFLINE' || typeUpper === 'INPERSON' ? 'Trực tiếp' : (apt.type || '—'));
                   const { date, time } = formatApptDateTime(apt);
+                  const slotLabel = getSlotLabel(time);
 
                   return (
                     <TableRow key={id} className="hover:bg-gray-50">
@@ -515,6 +553,12 @@ const DoctorAppointments = () => {
                           <p className="font-medium text-sm">{date}</p>
                           <p className="text-xs text-gray-600">{time}</p>
                         </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Chip size="sm" color="secondary" variant="flat">
+                          {slotLabel}
+                        </Chip>
                       </TableCell>
 
                       <TableCell>
@@ -562,7 +606,7 @@ const DoctorAppointments = () => {
             <ModalBody>
               {selectedAppt && (
                 <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4"> {/* Đổi màu gradient một chút */}
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-800 mb-3">Thông tin bệnh nhân</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -600,9 +644,12 @@ const DoctorAppointments = () => {
                         )}
                       </div>
                       <div>
+                        <p className="text-sm text-gray-500 mb-1">Slot</p>
+                        <p className="font-semibold">{getSlotLabel(formatApptDateTime(selectedAppt).time)}</p>
+                      </div>
+                      <div>
                         <p className="text-sm text-gray-500 mb-1">Loại khám</p>
                         {isEditing ? (
-                          // THAY THẾ: Sử dụng Select của NextUI
                           <Select
                             size="sm"
                             variant="bordered"
@@ -653,7 +700,7 @@ const DoctorAppointments = () => {
                     </>
                   )}
                   {selectedAppt?.type === 'online' && selectedAppt?.status && selectedAppt.status.toString().toUpperCase() === 'CONFIRMED' && (
-                    <Button color="primary" onPress={onClose}>Tham gia</Button> // Cần thêm logic tham gia
+                    <Button color="primary" onPress={onClose}>Tham gia</Button>
                   )}
                 </>
               )}

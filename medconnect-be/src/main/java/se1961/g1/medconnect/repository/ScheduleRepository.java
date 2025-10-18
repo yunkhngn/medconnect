@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
-    List<Schedule> findByUserIdAndDateBetween(Long userId,LocalDate start, LocalDate end);
 
-    Optional<Schedule> findByUserIdAndDateAndSlot(Long userId, LocalDate date, Slot slot);
+    List<Schedule> findByUserUserIdAndDateBetween(Long userId, LocalDate start, LocalDate end);
+
+    Optional<Schedule> findByUserUserIdAndDateAndSlot(Long userId, LocalDate date, Slot slot);
 }

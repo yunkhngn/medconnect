@@ -16,7 +16,7 @@ import java.time.LocalTime;
         columnNames = {"user_id", "date", "slot"})})
 @Getter
 @Setter
-public class Schedule {
+public class Schedule { 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long scheduleId;
