@@ -89,11 +89,11 @@ const Footer = () => {
               </p>
               <p className="flex items-center space-x-2">
                 <span>📞</span>
-                <span>1900-xxxx</span>
+                <span>1900-6969</span>
               </p>
               <p className="flex items-center space-x-2">
                 <span>📍</span>
-                <span>TP.HCM, Việt Nam</span>
+                <span>FU Hoà Lạc, Việt Nam</span>
               </p>
             </div>
           </section>
