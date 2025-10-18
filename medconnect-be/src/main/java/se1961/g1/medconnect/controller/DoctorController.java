@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.ScheduleDTO;
+import se1961.g1.medconnect.enums.ScheduleStatus;
 import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
@@ -45,7 +46,7 @@ public class DoctorController {
         return ResponseEntity.ok(appointments);
     }
 
-    @PatchMapping("/appoitments/{id}")
+    @PatchMapping("/appointments/{id}")
     public ResponseEntity<AppointmentDTO> updateAppointments(
             @PathVariable String id,
             @RequestBody AppointmentDTO appointmentDTO)
@@ -66,6 +67,29 @@ public class DoctorController {
         Long userId = doctor.getUserId();
         List<ScheduleDTO> schedules = scheduleService.getWeeklySchedule(userId, start, end);
         return ResponseEntity.ok(schedules);
+    }
+
+    @PatchMapping("/schedule/{id}")
+    public ResponseEntity<ScheduleDTO> updateScheduleWeekly(
+            @PathVariable Long id,
+            @RequestParam String status)
+    throws Exception {
+        ScheduleStatus scheduleStatus = ScheduleStatus.valueOf(status.toUpperCase());
+            ScheduleDTO updated = scheduleService.updateSchedule(id, scheduleStatus);
+            return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/schedule")
+    public ResponseEntity<ScheduleDTO> addSchedule(
+            Authentication authentication,
+            @RequestBody ScheduleDTO dto)
+            throws Exception {
+            String uid = (String) authentication.getPrincipal();
+            Doctor doctor = doctorService.getDoctor(uid)
+                    .orElseThrow(() -> new Exception("Doctor not found"));
+
+            ScheduleDTO created = scheduleService.addSchedule(dto, doctor.getUserId());
+            return ResponseEntity.ok(created);
     }
 
     @GetMapping("/profile")
