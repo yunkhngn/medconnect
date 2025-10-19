@@ -31,71 +31,79 @@ export default function PatientProfileWithFrame() {
   const maxDob = useMemo(() => new Date().toISOString().split("T")[0], []);
 
  
-//   useEffect(() => {
-//   const unsub = onAuthStateChanged(auth, async (u) => {
-//     setUser(u || null);
-//     if (!u) {
-//       setLoading(false);
-//       return;
-//     }
-//     try {
-//       const snap = await getDoc(doc(db, "patients", u.uid));
-//       if (snap.exists()) setPatient((p) => ({ ...p, ...snap.data() }));
-//       else setPatient((p) => ({ ...p, email: u.email || "" }));
-//     } catch (err) {
-//       console.error("Error loading profile:", err);
-//       setLoading(false);
-//       return;
-//     }
-//     setLoading(false);
-//   });
-//   return () => unsub();
+
+// // Fake data cho hiển thị UI không cần Firebase
+// useEffect(() => {
+//   // Giả lập dữ liệu người dùng để hiển thị giao diện
+//   const mockPatient = {
+//     full_name: "Nguyễn Văn A",
+//     email: "nguyenvana@example.com",
+//     phone: "0901234567",
+//     date_of_birth: "2000-01-01",
+//     gender: "Nam",
+//     address: "123 Nguyễn Trãi, Hà Nội",
+//     emergency_contact_name: "Trần Thị B",
+//     emergency_contact_phone: "0987654321",
+//     blood_type: "O",
+//     allergies: "Không có",
+//     avatar_url: "",
+//   };
+
+//   setPatient(mockPatient);
+//   setUser({ uid: "test123" }); // user giả lập
+//   setLoading(false);
 // }, []);
 
-// Fake data cho hiển thị UI không cần Firebase
 useEffect(() => {
-  // Giả lập dữ liệu người dùng để hiển thị giao diện
-  const mockPatient = {
-    full_name: "Nguyễn Văn A",
-    email: "nguyenvana@example.com",
-    phone: "0901234567",
-    date_of_birth: "2000-01-01",
-    gender: "Nam",
-    address: "123 Nguyễn Trãi, Hà Nội",
-    emergency_contact_name: "Trần Thị B",
-    emergency_contact_phone: "0987654321",
-    blood_type: "O",
-    allergies: "Không có",
-    avatar_url: "",
-  };
-
-  setPatient(mockPatient);
-  setUser({ uid: "test123" }); // user giả lập
-  setLoading(false);
+  const userId = 1; // hoặc gán ID thực tế của bệnh nhân đang đăng nhập
+  fetch(`http://localhost:8080/api/patient/${userId}`)
+    .then((res) => res.json())
+    .then((data) => setPatient(data))
+    .catch((err) => console.error("Error fetching patient:", err))
+    .finally(() => setLoading(false));
 }, []);
 
 
-  const handleSave = async () => {
-    if (!user) return alert("Bạn chưa đăng nhập.");
-    setSaving(true);
-    try {
-      await setDoc(
-        doc(db, "patients", user.uid),
-        {
-          ...patient,
-          user_id: user.uid,
-          updated_at: serverTimestamp(),
-        },
-        { merge: true }
-      );
-      alert("Cập nhật thông tin thành công!");
-    } catch (err) {
-      console.error("Error saving profile:", err);
-      alert("Có lỗi xảy ra khi lưu thông tin");
-    } finally {
-      setSaving(false);
-    }
-  };
+
+  // const handleSave = async () => {
+  //   if (!user) return alert("Bạn chưa đăng nhập.");
+  //   setSaving(true);
+  //   try {
+  //     await setDoc(
+  //       doc(db, "patients", user.uid),
+  //       {
+  //         ...patient,
+  //         user_id: user.uid,
+  //         updated_at: serverTimestamp(),
+  //       },
+  //       { merge: true }
+  //     );
+  //     alert("Cập nhật thông tin thành công!");
+  //   } catch (err) {
+  //     console.error("Error saving profile:", err);
+  //     alert("Có lỗi xảy ra khi lưu thông tin");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
+const handleSave = async () => {
+  if (!user) return alert("Bạn chưa đăng nhập.");
+  setSaving(true);
+  try {
+    const response = await fetch("http://localhost:8080/api/patient/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patient),
+    });
+    if (!response.ok) throw new Error("Lỗi khi lưu thông tin");
+    alert("Cập nhật thông tin thành công!");
+  } catch (err) {
+    console.error("Error saving profile:", err);
+    alert("Có lỗi xảy ra khi lưu thông tin");
+  } finally {
+    setSaving(false);
+  }
+};
 
   // Upload avatar lên Firebase Storage
   const handlePickAvatar = () => document.getElementById("avatar-input")?.click();
@@ -277,13 +285,6 @@ useEffect(() => {
                     />
                   </div>
                 </div>
-
-                <LabeledTextarea
-                  label="Dị ứng"
-                  placeholder="Nhập thông tin về dị ứng (nếu có)"
-                  value={patient.allergies}
-                  onChange={(v) => setPatient({ ...patient, allergies: v })}
-                />
 
                 <div className="flex justify-end pt-2">
                   <button
