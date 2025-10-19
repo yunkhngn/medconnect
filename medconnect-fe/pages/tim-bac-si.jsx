@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useGemini } from '@/hooks/useGemini';
 import DOMPurify from 'isomorphic-dompurify';
 import mockDoctors from '@/lib/doctorProps';
+import Link from 'next/link';
 
 const SearchDoctor = () => {
   // AI Chat states
@@ -330,7 +331,20 @@ const SearchDoctor = () => {
                             <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg hover:shadow-xl transition-shadow">
                               <CardBody className="p-4">
                                 <div className="flex flex-col items-center text-center">
-                                  <Avatar src={doctor.avatar} className="w-16 h-16 mb-3" />
+                                  {/* Avatar */}
+                                  <Float variant="scaleIn">
+                                    <div className="relative">
+                                      <Image 
+                                        src={doctor.avatar} 
+                                        alt={doctor.name}
+                                        width={160}
+                                        quality={50}
+                                        height={160}
+                                        className="w-32 h-32 md:w-40 md:h-40 ring-4 ring-blue-100 shadow-2xl rounded-full object-cover" 
+                                      />
+                                    </div>
+                                  </Float>
+
                                   <h4 className="font-semibold text-gray-900 mb-1">{doctor.name}</h4>
                                   <Chip size="sm" variant="flat" color="primary" className="mb-2">{doctor.specialty}</Chip>
                                   <div className="flex items-center gap-1 mb-2">
@@ -341,7 +355,9 @@ const SearchDoctor = () => {
                                   </div>
                                   <p className="text-xs text-gray-600 mb-3">{doctor.experience} năm kinh nghiệm</p>
                                   <Button size="sm" color="primary" fullWidth className="bg-gradient-to-r from-blue-500 to-cyan-600">
-                                    Đặt lịch
+                                    <Link href={`/tim-bac-si/bs-${doctor.id}-${doctor.name.toLowerCase().replace(/\s+/g, '-')}`} className="block w-full h-full flex items-center justify-center">
+                                      Xem chi tiết
+                                    </Link>
                                   </Button>
                                 </div>
                               </CardBody>
@@ -389,7 +405,6 @@ const SearchDoctor = () => {
                 <CardBody className="p-6">
                   {/* Search & Filter */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    <Float delay={0.4}>
                       <Input
                         placeholder="Tìm kiếm theo tên hoặc chuyên khoa..."
                         value={searchQuery}
@@ -400,8 +415,6 @@ const SearchDoctor = () => {
                           </svg>
                         }
                       />
-                    </Float>
-                    <Float delay={0.5}>
                       <Select
                         placeholder="Chọn chuyên khoa"
                         selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
@@ -413,17 +426,22 @@ const SearchDoctor = () => {
                           </SelectItem>
                         ))}
                       </Select>
-                    </Float>
                   </div>
 
                   {/* Doctors Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     {paginatedDoctors.map((doctor, idx) => (
-                      <Float key={doctor.id} delay={0.6 + idx * 0.05}>
                         <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg hover:shadow-xl transition-all hover:scale-105">
                           <CardBody className="p-5">
                             <div className="flex items-start gap-4">
-                              <Avatar src={doctor.avatar} className="w-16 h-16" />
+                              <Image 
+                                src={doctor.avatar} 
+                                alt={doctor.name}
+                                width={64}
+                                height={64}
+                                className="w-16 h-16 rounded-full object-cover"
+                                quality={50}
+                              />
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900 mb-1">{doctor.name}</h4>
                                 <Chip size="sm" variant="flat" color="primary" className="mb-2">{doctor.specialty}</Chip>
@@ -438,18 +456,18 @@ const SearchDoctor = () => {
                                 </div>
                                 <p className="text-xs text-gray-500 mb-3">{doctor.patients}+ bệnh nhân</p>
                                 <Button size="sm" color="primary" fullWidth className="bg-gradient-to-r from-blue-500 to-cyan-600">
-                                  Đặt lịch khám
+                                  <Link href={`/tim-bac-si/bs-${doctor.id}-${doctor.name.toLowerCase().replace(/\s+/g, '-')}`} className="block w-full h-full flex items-center justify-center">
+                                    Xem chi tiết
+                                  </Link>
                                 </Button>
                               </div>
                             </div>
                           </CardBody>
                         </Card>
-                      </Float>
                     ))}
                   </div>
 
                   {/* Pagination */}
-                  <Float delay={0.8}>
                     <div className="flex justify-center">
                       <Pagination
                         total={pages}
@@ -459,7 +477,6 @@ const SearchDoctor = () => {
                         color="primary"
                       />
                     </div>
-                  </Float>
                 </CardBody>
               </Card>
             </Float>
