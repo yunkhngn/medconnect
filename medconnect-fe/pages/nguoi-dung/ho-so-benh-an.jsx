@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FileText, Calendar, User, Pill, Stethoscope } from "lucide-react";
-import PatientFrame from "@/components/layouts/Patient/Frame"; // sửa path nếu khác
+import PatientFrame from "@/components/layouts/Patient/Frame"; 
 
 export default function MedicalRecordsPage() {
   const [records, setRecords] = useState([]);
