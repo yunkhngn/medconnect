@@ -8,8 +8,8 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     # Không public ra ngoài nếu không cần quản trị từ máy local
-    # ports:
-    #   - "1433:1433"
+    ports:
+      - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql

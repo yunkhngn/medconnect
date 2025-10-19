@@ -1,5 +1,5 @@
 import { Default } from "../components/layouts/";
-import { Card, CardBody, Button, Chip, Avatar } from "@heroui/react";
+import { Card, CardBody, Button, Chip, Avatar, Skeleton } from "@heroui/react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -81,6 +81,7 @@ export default function HomePage() {
   ];
 
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+  const [heroLoaded, setHeroLoaded] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -140,12 +141,12 @@ export default function HomePage() {
               {/* mini cards under CTA */}
               <div className="mt-6 sm:mt-8 flex flex-wrap gap-3 sm:gap-4">
                 <Float variant="scaleIn" delay={0.1}>
-                  <Card className="w-full sm:w-60 bg-white/80 backdrop-blur">
+                  <Card className="w-full sm:w-52 bg-white/80 backdrop-blur">
                     <CardBody className="p-3 sm:p-4 flex items-center gap-3">
-                      <Avatar src="/assets/homepage/mockup-avatar.jpg" radius="md" className="w-10 h-10 sm:w-12 sm:h-12" />
                       <div>
                         <p className="text-xs sm:text-sm text-gray-600">Bác sĩ online</p>
                         <p className="font-semibold text-sm sm:text-base">Nói chuyện với hơn 285 bác sĩ</p>
+                         <p className="text-xs text-gray-500">Với nhiều năm kinh nghiệm trong lĩnh vực chăm sóc y khoa</p>
                       </div>
                     </CardBody>
                   </Card>
@@ -168,16 +169,27 @@ export default function HomePage() {
           </Float>
 
           {/* Right hero visual */}
-          <div className="relative min-h-[300px] sm:min-h-[380px] md:min-h-[520px] mt-8 lg:mt-0">
+          <div className="relative min-h-[300px] sm:min-h-[380px] md:min-h-[520px] mt-8 lg:mt-0" aria-busy={!heroLoaded}>
             {/* background circle */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 sm:h-80 sm:w-80 md:h-[28rem] md:w-[28rem] rounded-full bg-white/70" />
+           
+
+            {/* skeleton while hero image loads */}
+            {!heroLoaded && (
+              <div className="absolute inset-0">
+                <Skeleton className="h-full w-full rounded-2xl" />
+              </div>
+            )}
+
             {/* hero image */}
             <Image
               src="/assets/homepage/cover.jpg"
               alt="Doctor hero"
               fill
-              className="object-cover rounded-2xl opacity-80"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className={`object-cover rounded-2xl transition-opacity duration-500 ${heroLoaded ? 'opacity-80' : 'opacity-0'}`}
               priority
+              quality={80}
+              onLoadingComplete={() => setHeroLoaded(true)}
             />
 
             {/* floating chips */}
@@ -287,7 +299,16 @@ export default function HomePage() {
               <Float key={i} variant="fadeInUp" delay={i * 0.05}>
                 <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
                   <CardBody className="p-4 sm:p-6 text-center">
-                    <Avatar src={d.avatar} className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4" />
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 rounded-full overflow-hidden">
+                      <Image
+                        src={d.avatar}
+                        alt={d.name}
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                        quality={50}
+                      />
+                    </div>
                     <h3 className="font-semibold text-base sm:text-lg text-gray-900">{d.name}</h3>
                     <Chip size="sm" variant="flat" color="primary" className="my-2 m-auto mb-2 mt-2">{d.specialty}</Chip>
                     <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Kinh nghiệm {d.years} năm</p>
