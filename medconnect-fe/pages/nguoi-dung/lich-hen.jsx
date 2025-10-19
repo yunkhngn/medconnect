@@ -156,11 +156,12 @@ return (
               </tr>
             </thead>
 
+
             <tbody>
               {[
                 "07:30", "08:00", "08:30", "09:00", "09:30", "10:00",
                 "10:30", "11:00", "13:00", "13:30", "14:00", "15:00",
-                "15:30", "16:00", "17:00",
+                "15:30", "16:00", "17:00","17:30","18:00",
               ].map((timeSlot) => (
                 <tr key={timeSlot} className="hover:bg-gray-50">
                   <td className="border border-gray-200 p-3 text-gray-600 bg-gray-50 font-medium">
