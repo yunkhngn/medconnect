@@ -84,7 +84,7 @@ const DoctorDetail = () => {
             {/* Doctor Header */}
             <Float variant="fadeInUp" delay={0.1}>
               <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                <CardBody className="p-8 md:p-12">
+                <CardBody className="p-10 md:p-14">
                   <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8">
                     {/* Avatar */}
                     <Float variant="scaleIn">
@@ -168,13 +168,12 @@ const DoctorDetail = () => {
                 {/* About */}
                 <Float variant="fadeInUp" delay={0.6}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+                    <CardHeader className="px-8 pt-8">
                       <h3 className="text-2xl font-bold text-gray-900">Giới thiệu</h3>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody className="p-8 md:p-10">
                       <p className="text-gray-700 leading-relaxed">
-                        Bác sĩ {doctor.name} là một chuyên gia hàng đầu trong lĩnh vực {doctor.specialty.toLowerCase()} 
-                        với hơn {doctor.experience} năm kinh nghiệm. Bác sĩ đã giúp đỡ hàng trăm bệnh nhân 
+                        Bác sĩ {doctor.name} là một chuyên gia hàng đầu trong lĩnh vực {doctor.specialty.toLowerCase()}  với hơn {doctor.experience} năm kinh nghiệm. Bác sĩ đã giúp đỡ hàng trăm bệnh nhân 
                         vượt qua các vấn đề sức khỏe phức tạp và luôn cập nhật những phương pháp điều trị tiên tiến nhất.
                       </p>
                       <Divider className="my-6" />
@@ -217,10 +216,10 @@ const DoctorDetail = () => {
                 {/* Education & Certifications */}
                 <Float variant="fadeInUp" delay={0.7}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+                    <CardHeader className="px-8 pt-8">
                       <h3 className="text-2xl font-bold text-gray-900">Học vấn & Chứng chỉ</h3>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody className="p-8 md:p-10">
                       <div className="space-y-4">
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -255,10 +254,10 @@ const DoctorDetail = () => {
                 {/* Reviews */}
                 <Float variant="fadeInUp" delay={0.8}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+                    <CardHeader className="px-8 pt-8">
                       <h3 className="text-2xl font-bold text-gray-900">Đánh giá từ bệnh nhân</h3>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody className="p-8 md:p-10">
                       <div className="space-y-6">
                         {[
                           {
@@ -311,10 +310,10 @@ const DoctorDetail = () => {
                 {/* Schedule */}
                 <Float variant="fadeInRight" delay={0.6}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+                    <CardHeader className="px-8 pt-8">
                       <h3 className="text-xl font-bold text-gray-900">Lịch làm việc</h3>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody className="p-8 md:p-10">
                       <div className="space-y-3">
                         {[
                           { day: "Thứ 2", time: "08:00 - 17:00", available: true },
@@ -351,10 +350,10 @@ const DoctorDetail = () => {
                 {/* Contact Info */}
                 <Float variant="fadeInRight" delay={0.7}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+                    <CardHeader className="px-8 pt-8">
                       <h3 className="text-xl font-bold text-gray-900">Thông tin liên hệ</h3>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody className="p-8 md:p-10">
                       <div className="space-y-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -398,10 +397,10 @@ const DoctorDetail = () => {
                 {/* Quick Actions */}
                 <Float variant="fadeInRight" delay={0.8}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+                    <CardHeader className="px-8 pt-8">
                       <h3 className="text-xl font-bold text-gray-900">Hành động nhanh</h3>
                     </CardHeader>
-                    <CardBody>
+                    <CardBody className="p-8 md:p-10">
                       <div className="space-y-3">
                         <Button 
                           fullWidth 
