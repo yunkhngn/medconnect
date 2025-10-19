@@ -145,7 +145,8 @@ const PatientNav = () => {
         </Link>
       </nav>
 
-      {/* User Avatar */}
+
+      {/* User Avatar */} 
       {isLoggedIn && (
         <div className="p-4 border-t border-gray-100 flex items-center justify-center">
           <Dropdown placement="top">
