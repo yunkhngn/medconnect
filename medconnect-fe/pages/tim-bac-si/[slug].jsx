@@ -45,7 +45,7 @@ const DoctorDetail = () => {
   }
 
   return (
-    <Default title={`${doctor.name} - MedConnect`}>
+    <Default title={`BS. ${doctor.name} - MedConnect`}>
       <div className="min-h-screen relative overflow-hidden">
         {/* Background with blur */}
         <div className="absolute inset-0">
@@ -107,7 +107,7 @@ const DoctorDetail = () => {
                       <Float variant="fadeInUp" delay={0.2}>
                         <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-4">
                           <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-                            {doctor.name}
+                            BS. {doctor.name}
                           </h1>
                           <Chip size="lg" variant="flat" color="primary" className="bg-blue-100 text-blue-800">
                             {doctor.specialty}

@@ -443,7 +443,7 @@ const SearchDoctor = () => {
                                 quality={50}
                               />
                               <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">{doctor.name}</h4>
+                                <h4 className="font-semibold text-gray-900 mb-1">BS. {doctor.name}</h4>
                                 <Chip size="sm" variant="flat" color="primary" className="mb-2">{doctor.specialty}</Chip>
                                 <div className="flex items-center gap-4 text-xs text-gray-600 mb-3">
                                   <div className="flex items-center gap-1">
