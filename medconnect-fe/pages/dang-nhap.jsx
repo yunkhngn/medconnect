@@ -209,18 +209,21 @@ export default function MedConnectLogin() {
   return (
     <Default title="Đăng nhập - MedConnect">
       <div className="min-h-screen flex items-center justify-center p-10 relative overflow-hidden">
-        {/* Background Image with Blur */}
-        <div className="absolute inset-0">
-          <Image
-            src="/assets/homepage/stock-6.jpg"
-            alt="Background"
-            fill
-            className="object-cover"
-            priority
-          />
-          {/* Blur Overlay */}
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
-        </div>
+        {/* Background with blur */}
+                <div className="absolute inset-0">
+                  <Image
+                    src="/assets/homepage/cover.jpg"
+                    alt="Background"
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+
+                  <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 via-transparent to-yellow-500/10"></div>
+                  <div className="absolute top-20 left-20 w-72 h-72 bg-pink-200/20 rounded-full blur-3xl"></div>
+                  <div className="absolute bottom-20 right-20 w-96 h-96 bg-yellow-200/20 rounded-full blur-3xl"></div>
+                </div>
 
         {/* Content */}
         <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6 relative z-10">

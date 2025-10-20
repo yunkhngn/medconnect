@@ -1,10 +1,15 @@
-FROM maven:3.9.11-eclipse-temurin-21 AS build
-WORKDIR /app
+# syntax=docker/dockerfile:1.7
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /src
+RUN apk add --no-cache maven
+COPY pom.xml ./
+# cache repo maven
+RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests dependency:go-offline
 COPY . .
-RUN mvn clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn -q -DskipTests -T 1C clean package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/MedConnect-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /src/target/MedConnect-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

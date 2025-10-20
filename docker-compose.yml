@@ -8,8 +8,8 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     # Không public ra ngoài nếu không cần quản trị từ máy local
-    # ports:
-    #   - "1433:1433"
+    ports:
+      - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -20,7 +20,7 @@ services:
         # Start SQL Server in background
         /opt/mssql/bin/sqlservr &
         
-        # Wait for SQL Server to be ready...
+        # Wait for SQL Server to be ready
         echo "Waiting for SQL Server to start..."
         for i in {1..50}; do
           /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "MedConnectG1SE1961NJ" -C -Q "SELECT 1" > /dev/null 2>&1
@@ -47,6 +47,14 @@ services:
       retries: 10
       start_period: 60s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.50'
+          memory: 1G
 
   be:
     build: ./medconnect-be
@@ -80,6 +88,14 @@ services:
       retries: 10
       start_period: 40s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
 
   fe:
     build:
@@ -99,6 +115,14 @@ services:
       retries: 10
       start_period: 40s
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1.5G
+        reservations:
+          cpus: '0.50'
+          memory: 512M
 
   caddy:
     image: caddy:2
@@ -113,6 +137,14 @@ services:
       - fe
       - be
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
 volumes:
   sqlserver-data:

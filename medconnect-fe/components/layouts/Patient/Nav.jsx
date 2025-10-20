@@ -58,6 +58,10 @@ const PatientNav = () => {
     }
   };
 
+  if (!mounted) {
+    return null; // or return a skeleton loader
+  }
+
   return (
     <div className="fixed left-0 top-0 h-screen w-28 bg-white border-r border-gray-200 flex flex-col justify-between z-50">
       {/* Logo */}
