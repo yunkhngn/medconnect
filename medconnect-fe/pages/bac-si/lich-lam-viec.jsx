@@ -10,11 +10,12 @@ import { auth } from '../../lib/firebase'
 
 /*
   Update summary:
-  - Updated the 'handleDelete' function.
-  - If the slot is BUSY (has an appointment), it now uses the new API
-    (PATCH /appointments/{id}) to cancel the appointment.
-  - If the slot is RESERVED, it uses the old API 
+  - Updated the 'handleDelete' function to match backend API.
+  - If the slot is BUSY (has an appointment), it uses the correct API
+    (PATCH /doctor/dashboard/appointments/{id}) to cancel the appointment with status 'CANCELLED'.
+  - If the slot is RESERVED, it uses the API 
     (PATCH /doctor/dashboard/schedule/{id}?status=EMPTY) to clear the reservation.
+  - Fixed endpoint paths and request body format to match backend AppointmentService.
 */
 
 const WorkingHours = () => {
@@ -146,15 +147,12 @@ const WorkingHours = () => {
     }
   }
 
-  // ===== HÀM `handleDelete` ĐÃ ĐƯỢC CẬP NHẬT =====
   const handleDelete = async () => {
-    // 1. Kiểm tra xem có ca (schedule) được chọn không
     if (!selectedCell?.schedule) {
       pushToast('Không có lịch để xóa.', 'error');
       return;
     }
     
-    // 2. Xác nhận
     if (!confirm('Bạn chắc chắn muốn đặt trống ca này? (Hành động này sẽ hủy lịch hẹn/lịch đặt riêng)')) return;
     
     setIsMutating(true);
@@ -163,29 +161,23 @@ const WorkingHours = () => {
       if (!user) return;
       const token = await user.getIdToken();
       
-      // 3. Kiểm tra xem đây là ca BUSY (có lịch hẹn) hay ca RESERVED (bác sĩ chặn)
-      // (selectedAppointment đã được set trong handleSelectCell)
       const appointmentToCancel = selectedAppointment;
 
       if (appointmentToCancel) {
-        // --- LOGIC MỚI: Hủy APPOINTMENT (dùng API bạn cung cấp) ---
-        // Chúng ta giả định việc hủy là set status thành 'CANCELLED'
-        
-        // Tạo DTO body (dựa trên API của bạn yêu cầu @RequestBody AppointmentDTO)
-        const appointmentDTO_Body = {
-          ...appointmentToCancel, // Gửi lại toàn bộ thông tin DTO cũ
-          status: 'CANCELLED'     // Ghi đè trạng thái
+        const appointmentDTO = {
+          status: 'CANCELLED'
         };
         
-        const appointmentId = appointmentToCancel.id; // (e.g., "APT001")
+        const appointmentIdStr = appointmentToCancel.id;
+        const appointmentId = appointmentIdStr.replace('APT', '');
 
-        const response = await fetch(`http://localhost:8080/appointments/${appointmentId}`, {
+        const response = await fetch(`http://localhost:8080/doctor/dashboard/appointments/${appointmentId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(appointmentDTO_Body) // Gửi DTO trong body
+          body: JSON.stringify(appointmentDTO)
         });
 
         if (!response.ok) {
@@ -193,13 +185,8 @@ const WorkingHours = () => {
           throw new Error(`Failed to cancel appointment: ${response.status} ${text}`);
         }
         pushToast('Đã hủy lịch hẹn thành công.', 'success');
-        
-        // GIẢ ĐỊNH: Backend của bạn sẽ tự động set Schedule -> EMPTY
-        // khi Appointment liên quan được set thành CANCELLED.
 
       } else {
-        // --- LOGIC CŨ: Xóa RESERVED slot (Không có appointment) ---
-        // Chỉ cần set Schedule status về EMPTY
         const response = await fetch(`http://localhost:8080/doctor/dashboard/schedule/${selectedCell.schedule.id}?status=EMPTY`, {
           method: 'PATCH',
           headers: {
@@ -215,7 +202,6 @@ const WorkingHours = () => {
         pushToast('Đã đặt trống ca thành công', 'success');
       }
 
-      // 4. Tải lại dữ liệu và đóng modal
       await fetchSchedule();
       onClose();
 
@@ -226,7 +212,6 @@ const WorkingHours = () => {
       setIsMutating(false);
     }
   }
-  // ===============================================
 
   const handleSaveStatus = async () => {
     if (!selectedCell || !editStatus) return
@@ -244,7 +229,6 @@ const WorkingHours = () => {
       const token = await user.getIdToken()
 
       if (!selectedCell.schedule) {
-        // === TẠO MỚI (POST) ===
         const response = await fetch('http://localhost:8080/doctor/dashboard/schedule', {
           method: 'POST',
           headers: {
@@ -254,7 +238,7 @@ const WorkingHours = () => {
           body: JSON.stringify({
             date: selectedCell.date,
             slot: selectedCell.slot,
-            status: chosenStatus // Gửi RESERVED hoặc EMPTY
+            status: chosenStatus 
           })
         })
         if (!response.ok) {
@@ -263,7 +247,6 @@ const WorkingHours = () => {
         }
         pushToast('Tạo lịch thành công', 'success')
       } else {
-        // === CẬP NHẬT (PATCH ?status=...) ===
         if (selectedCell.schedule.status === chosenStatus) {
             pushToast('Trạng thái không thay đổi', 'info')
             onClose()
