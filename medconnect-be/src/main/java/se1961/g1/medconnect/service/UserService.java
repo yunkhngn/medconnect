@@ -18,6 +18,10 @@ public class UserService {
         return userRepository.findByFirebaseUid(firebaseUid);
     }
 
+    public Optional<User> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
     //default as Patient
     public User registerUser(String firebaseUid, String email, String name) {
         if(userRepository.findByFirebaseUid(firebaseUid).isPresent()) {

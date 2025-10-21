@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useGemini } from '@/hooks/useGemini';
 import DOMPurify from 'isomorphic-dompurify';
 import mockDoctors from '@/lib/doctorProps';
+import Link from 'next/link';
 
 const SearchDoctor = () => {
   // AI Chat states
@@ -13,7 +14,6 @@ const SearchDoctor = () => {
     { role: 'assistant', content: 'Xin chào! Tôi là trợ lý AI của MedConnect. Hãy mô tả triệu chứng của bạn, tôi sẽ gợi ý các bác sĩ phù hợp.', timestamp: new Date() }
   ]);
   const [aiInput, setAiInput] = useState('');
-  const [uploadedImage, setUploadedImage] = useState(null);
   const [recommendedDoctors, setRecommendedDoctors] = useState([]);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const messagesEndRef = useRef(null);
@@ -138,26 +138,9 @@ const SearchDoctor = () => {
     } catch (err) {
       setAiMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.',
+        content: err.message || 'Xin lỗi, đã có lỗi xảy ra.',
         timestamp: new Date()
       }]);
-    }
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImage(reader.result);
-        setAiMessages(prev => [...prev, {
-          role: 'user',
-          content: `[Đã tải lên hình ảnh hồ sơ bệnh án]`,
-          image: reader.result,
-          timestamp: new Date()
-        }]);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -219,10 +202,10 @@ const SearchDoctor = () => {
               </div>
             </Float>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8 items-stretch">
               {/* AI Consultation Card */}
-              <Float delay={0.1} className="lg:col-span-1">
-                <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl h-full">
+              <Float delay={0.1} className="xl:col-span-1">
+                <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl h-full flex flex-col">
                   <CardHeader className="flex flex-col items-start p-6 pb-0">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
@@ -236,18 +219,15 @@ const SearchDoctor = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardBody className="p-6">
+                  <CardBody className="p-6 flex-1 flex flex-col">
                     {/* Messages */}
-                    <div className="h-64 overflow-y-auto mb-4 space-y-3">
+                    <div className="min-h-[16rem] overflow-y-auto mb-4 space-y-3 flex-1">
                       {aiMessages.map((msg, idx) => (
                         <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user'
                               ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white'
                               : 'bg-white/80 backdrop-blur-sm text-gray-900 border border-gray-200'
                             }`}>
-                            {msg.image && (
-                              <img src={msg.image} alt="Uploaded" className="rounded-lg mb-2 max-h-32 object-cover" />
-                            )}
                             {msg.role === 'user' ? (
                               <p className="text-sm">{msg.content}</p>
                             ) : (
@@ -273,28 +253,25 @@ const SearchDoctor = () => {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Upload Image */}
-                    <div className="mb-3">
-                      <label className="block w-full px-4 py-3 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-blue-500 transition-colors">
-                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-sm text-gray-600">Tải ảnh hồ sơ bệnh án</span>
-                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                      </label>
-                    </div>
-
                     {/* Input */}
-                    <div className="flex gap-2 items-stretch">
+                    <div className="flex gap-2 items-end mt-auto">
                       <Input
                         className="flex-1 w-full"
-                        classNames={{ inputWrapper: "h-12" }}
+                        classNames={{ inputWrapper: "min-h-[48px]" }}
                         placeholder="Mô tả triệu chứng..."
                         value={aiInput}
                         onChange={(e) => setAiInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAIChat()}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAIChat();
+                          }
+                        }}
                         disabled={loading}
                         size="md"
+                        type="textarea"
+                        minRows={1}
+                        maxRows={4}
                       />
                       <Button
                         isIconOnly
@@ -302,11 +279,15 @@ const SearchDoctor = () => {
                         color="primary"
                         onClick={handleAIChat}
                         disabled={!aiInput.trim() || loading}
-                        className="bg-gradient-to-r from-blue-500 to-cyan-600 h-12 w-12"
+                        className="bg-gradient-to-r from-blue-500 to-cyan-600 h-12 w-12 mb-0"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
+                        {loading ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        )}
                       </Button>
                     </div>
                   </CardBody>
@@ -314,8 +295,8 @@ const SearchDoctor = () => {
               </Float>
 
               {/* Recommended Doctors Card */}
-              <Float delay={0.2} className="lg:col-span-2 flex flex-col h-full">
-                <Card className="bg-gradient-to-br from-blue-50/90 to-cyan-50/90 backdrop-blur-md border border-blue-200/50 shadow-2xl">
+              <Float delay={0.2} className="xl:col-span-2 flex flex-col h-full">
+                <Card className="bg-gradient-to-br from-blue-50/90 to-cyan-50/90 backdrop-blur-md border border-blue-200/50 shadow-2xl mb-6 flex-1">
                   <CardHeader className="p-6 pb-0">
                     <div className="flex items-center gap-3">
                       <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -350,7 +331,20 @@ const SearchDoctor = () => {
                             <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg hover:shadow-xl transition-shadow">
                               <CardBody className="p-4">
                                 <div className="flex flex-col items-center text-center">
-                                  <Avatar src={doctor.avatar} className="w-16 h-16 mb-3" />
+                                  {/* Avatar */}
+                                  <Float variant="scaleIn">
+                                    <div className="relative">
+                                      <Image 
+                                        src={doctor.avatar} 
+                                        alt={doctor.name}
+                                        width={160}
+                                        quality={50}
+                                        height={160}
+                                        className="w-32 h-32 md:w-40 md:h-40 ring-4 ring-blue-100 shadow-2xl rounded-full object-cover" 
+                                      />
+                                    </div>
+                                  </Float>
+
                                   <h4 className="font-semibold text-gray-900 mb-1">{doctor.name}</h4>
                                   <Chip size="sm" variant="flat" color="primary" className="mb-2">{doctor.specialty}</Chip>
                                   <div className="flex items-center gap-1 mb-2">
@@ -361,7 +355,9 @@ const SearchDoctor = () => {
                                   </div>
                                   <p className="text-xs text-gray-600 mb-3">{doctor.experience} năm kinh nghiệm</p>
                                   <Button size="sm" color="primary" fullWidth className="bg-gradient-to-r from-blue-500 to-cyan-600">
-                                    Đặt lịch
+                                    <Link href={`/tim-bac-si/bs-${doctor.id}-${doctor.name.toLowerCase().replace(/\s+/g, '-')}`} className="block w-full h-full flex items-center justify-center">
+                                      Xem chi tiết
+                                    </Link>
                                   </Button>
                                 </div>
                               </CardBody>
@@ -374,10 +370,10 @@ const SearchDoctor = () => {
                 </Card>
 
                 {/* Health Tips Banner */}
-                <Float delay={0.3} className="mt-6 h-full flex-1">
-                  <Card className="bg-gradient-to-br from-green-50/90 to-emerald-50/90 backdrop-blur-md border border-green-200/50 shadow-2xl h-full min-h-[40px] sm:min-h-[50px]">
-                    <CardBody className="p-6 h-full w-full flex items-center">
-                      <div className="relative max-w-3xl w-full h-full mx-auto flex items-center justify-center gap-4">
+                <Float delay={0.3}>
+                  <Card className="bg-gradient-to-br from-green-50/90 to-emerald-50/90 backdrop-blur-md border border-green-200/50 shadow-2xl">
+                    <CardBody className="p-6">
+                      <div className="relative max-w-3xl w-full mx-auto flex items-center justify-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
                           <span className="text-2xl">{healthTips[currentTipIndex].icon}</span>
                         </div>
@@ -409,7 +405,6 @@ const SearchDoctor = () => {
                 <CardBody className="p-6">
                   {/* Search & Filter */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    <Float delay={0.4}>
                       <Input
                         placeholder="Tìm kiếm theo tên hoặc chuyên khoa..."
                         value={searchQuery}
@@ -420,8 +415,6 @@ const SearchDoctor = () => {
                           </svg>
                         }
                       />
-                    </Float>
-                    <Float delay={0.5}>
                       <Select
                         placeholder="Chọn chuyên khoa"
                         selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
@@ -433,19 +426,24 @@ const SearchDoctor = () => {
                           </SelectItem>
                         ))}
                       </Select>
-                    </Float>
                   </div>
 
                   {/* Doctors Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     {paginatedDoctors.map((doctor, idx) => (
-                      <Float key={doctor.id} delay={0.6 + idx * 0.05}>
                         <Card className="bg-white/80 backdrop-blur-sm border border-white/50 shadow-lg hover:shadow-xl transition-all hover:scale-105">
                           <CardBody className="p-5">
                             <div className="flex items-start gap-4">
-                              <Avatar src={doctor.avatar} className="w-16 h-16" />
+                              <Image 
+                                src={doctor.avatar} 
+                                alt={doctor.name}
+                                width={64}
+                                height={64}
+                                className="w-16 h-16 rounded-full object-cover"
+                                quality={50}
+                              />
                               <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">{doctor.name}</h4>
+                                <h4 className="font-semibold text-gray-900 mb-1">BS. {doctor.name}</h4>
                                 <Chip size="sm" variant="flat" color="primary" className="mb-2">{doctor.specialty}</Chip>
                                 <div className="flex items-center gap-4 text-xs text-gray-600 mb-3">
                                   <div className="flex items-center gap-1">
@@ -458,18 +456,18 @@ const SearchDoctor = () => {
                                 </div>
                                 <p className="text-xs text-gray-500 mb-3">{doctor.patients}+ bệnh nhân</p>
                                 <Button size="sm" color="primary" fullWidth className="bg-gradient-to-r from-blue-500 to-cyan-600">
-                                  Đặt lịch khám
+                                  <Link href={`/tim-bac-si/bs-${doctor.id}-${doctor.name.toLowerCase().replace(/\s+/g, '-')}`} className="block w-full h-full flex items-center justify-center">
+                                    Xem chi tiết
+                                  </Link>
                                 </Button>
                               </div>
                             </div>
                           </CardBody>
                         </Card>
-                      </Float>
                     ))}
                   </div>
 
                   {/* Pagination */}
-                  <Float delay={0.8}>
                     <div className="flex justify-center">
                       <Pagination
                         total={pages}
@@ -479,7 +477,6 @@ const SearchDoctor = () => {
                         color="primary"
                       />
                     </div>
-                  </Float>
                 </CardBody>
               </Card>
             </Float>

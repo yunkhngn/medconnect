@@ -1,5 +1,6 @@
 import Nav from './Nav'
 import Footer from './Footer'
+import ScrollUp from "@/components/ui/ScrollUp";
 
 const Default = ({children}) => {
   return (
@@ -9,7 +10,8 @@ const Default = ({children}) => {
         {children}
         </div>
         <Footer />
-    </main>
+        <ScrollUp />
+    </main> 
   )
 }
 

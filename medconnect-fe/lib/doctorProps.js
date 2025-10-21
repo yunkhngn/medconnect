@@ -1,7 +1,7 @@
 const mockDoctors = [
   {
     id: 1,
-    name: 'BS. Barry Alen',
+    name: 'Barry Alen',
     specialty: 'Tim mạch',
     experience: 15,
     rating: 4.9,
@@ -17,7 +17,7 @@ const mockDoctors = [
   },
   {
     id: 2,
-    name: 'BS. Brian May',
+    name: 'Brian May',
     specialty: 'Nội khoa',
     experience: 12,
     rating: 4.8,
@@ -33,7 +33,7 @@ const mockDoctors = [
   },
   {
     id: 3,
-    name: 'BS. Ching Quin',
+    name: 'Ching Quin',
     specialty: 'Nhi khoa',
     experience: 10,
     rating: 4.7,
@@ -49,7 +49,7 @@ const mockDoctors = [
   },
   {
     id: 4,
-    name: 'BS. Harvard Doc',
+    name: 'Harvard Doc',
     specialty: 'Sản phụ khoa',
     experience: 18,
     rating: 4.9,
@@ -65,7 +65,7 @@ const mockDoctors = [
   },
   {
     id: 5,
-    name: 'BS. John Mayer',
+    name: 'John Mayer',
     specialty: 'Ngoại khoa',
     experience: 20,
     rating: 5.0,
@@ -81,7 +81,7 @@ const mockDoctors = [
   },
   {
     id: 6,
-    name: 'BS. Karen Sama',
+    name: 'Karen Sama',
     specialty: 'Thần kinh',
     experience: 14,
     rating: 4.8,
@@ -97,7 +97,7 @@ const mockDoctors = [
   },
   {
     id: 7,
-    name: 'BS. Taylor Swift',
+    name: 'Taylor Swift',
     specialty: 'Da liễu',
     experience: 11,
     rating: 4.6,
@@ -113,7 +113,7 @@ const mockDoctors = [
   },
   {
     id: 8,
-    name: 'BS. Tim Cook',
+    name: 'Tim Cook',
     specialty: 'Mắt',
     experience: 16,
     rating: 4.9,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
 import { Card, CardBody, Input, Button, Divider, Checkbox } from "@heroui/react";
@@ -20,18 +20,17 @@ export default function MedConnectLogin() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [redirect, setRedirect] = useState(false);
 
-  // If user already signed in 
   useEffect(() => {
-    if (!router.isReady) return;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setRedirect(true);
-      }
-    });
-    return () => unsubscribe();
-  }, [router.isReady]);
+    // keep auth state listener if you need it elsewhere, but do NOT auto-redirect here
+    // (we let finalizeLogin control redirect after successful backend handshake)
+    let unsubscribe;
+    if (auth && typeof auth.onAuthStateChanged === "function") {
+      unsubscribe = auth.onAuthStateChanged(() => {});
+    }
+    return () => unsubscribe && unsubscribe();
+  }, []);
 
-  // Remember me
+  // Remember me (email + password persisted if chosen)
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
     const savedPassword = localStorage.getItem("rememberedPassword");
@@ -50,6 +49,7 @@ export default function MedConnectLogin() {
 
   // Notify backend with Firebase ID token so server can set httpOnly session/cookie.
   // Returns an object: { ok: boolean, body: parsedJson|null }
+  // If fetch (network) throws, sign out from Firebase, keep user on login page and show error.
   const notifyBackendLogin = async (user) => {
     try {
       setIsLoading(true);
@@ -71,31 +71,41 @@ export default function MedConnectLogin() {
       }
 
       if (!response.ok) {
-        if (response.status === 401) {
-          showMessage("Email hoặc mật khẩu không đúng!", "error");
-        } else {
-          showMessage((body && body.message) || "Đăng nhập thất bại từ backend.", "error");
-        }
+        // Backend responded with an error status.
+        const errMsg =
+          (body && body.message) ||
+          (response.status === 401 ? "Email hoặc mật khẩu không đúng!" : "Đăng nhập thất bại từ backend.");
+        // Do NOT sign out here per your previous requests — only sign out on fetch/network error.
         setIsLoading(false);
+        showMessage(errMsg, "error");
         return { ok: false, body };
       }
 
+      // success
       return { ok: true, body };
     } catch (err) {
+      // Network / fetch error (backend not reachable) -> sign out firebase, keep on page, show message
       console.error("Backend notify error:", err);
-      showMessage("Lỗi kết nối máy chủ.", "error");
+      try {
+        await signOut(auth);
+      } catch (signOutErr) {
+        console.warn("Failed to sign out after fetch error:", signOutErr);
+      }
       setIsLoading(false);
-      return { ok: false, body: null };
+      showMessage("Lỗi kết nối máy chủ. Bạn đã đăng xuất khỏi phiên Firebase. Vui lòng thử lại.", "error");
+      // Keep on the login screen (do not redirect)
+      return { ok: false, body: null, fetchError: true };
     }
   };
 
-  // After Firebase sign-in notify backend and get role, then redirect.
-  // Logic:
-  // 1) notify backend; if backend returns role in body -> use it immediately.
-  // 2) else force refresh token (getIdToken(true)) then call getUserRole to read custom claim or fallback endpoint.
+  // finalizeLogin handles backend handshake and role resolution.
   const finalizeLogin = async (firebaseUser) => {
     const notifyRes = await notifyBackendLogin(firebaseUser);
-    if (!notifyRes.ok) return;
+    if (!notifyRes.ok) {
+      // If fetch error occurred, notifyBackendLogin already signed out and showed message.
+      // Keep the user on the login page (no redirect).
+      return;
+    }
 
     // If backend returned role in the login response, use it directly.
     const backendRole = notifyRes.body && (notifyRes.body.role || notifyRes.body.data?.role);
@@ -106,80 +116,89 @@ export default function MedConnectLogin() {
     }
 
     try {
-      // Force refresh the ID token to pick up any newly-set custom claims.
+      // Force refresh the ID token to pick up any newly-set custom claims (if backend or admin set them).
       await firebaseUser.getIdToken(true);
     } catch (err) {
       console.warn("Failed to refresh token:", err);
     }
 
-    // Call API to get role
+    // Try to get role via getUserRole (custom claim or backend /user/role)
     const role = await getUserRole(firebaseUser, { fallbackToBackend: true });
 
     if (role) {
       showMessage("Đăng nhập thành công!", "success");
       setTimeout(() => setRedirect(true), 200);
     } else {
-      showMessage("Đăng nhập thành công nhưng không thể xác định vai trò. Chuyển đến trang chính.", "warning");
-      setTimeout(() => router.push("/"), 700);
+      // Role not available — show warning and do NOT redirect to role dashboards automatically.
+      showMessage("Đăng nhập thành công nhưng không thể xác định vai trò. Vui lòng kiểm tra lại.", "warning");
+      setIsLoading(false);
     }
   };
 
   const handleEmailLogin = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!email || !password) {
-      showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
-      return;
+  if (!email || !password) {
+    showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    await signOut(auth); 
+
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+    // Remember me
+    if (rememberMe) {
+      localStorage.setItem("rememberedEmail", email);
+      localStorage.setItem("rememberedPassword", password);
+      localStorage.setItem("rememberMe", "true");
+    } else {
+      localStorage.removeItem("rememberedEmail");
+      localStorage.removeItem("rememberedPassword");
+      localStorage.removeItem("rememberMe");
     }
 
-    setIsLoading(true);
+    await finalizeLogin(userCredential.user);
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    if (!redirect) setIsLoading(false);
+  } catch (error) {
+    console.error("Login error:", error);
 
-      // Remember me
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
-        localStorage.setItem("rememberedPassword", password);
-        localStorage.setItem("rememberMe", "true");
-      } else {
+    let errorMessage = "Đăng nhập thất bại!";
+
+    switch (error.code) {
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
         localStorage.removeItem("rememberedEmail");
         localStorage.removeItem("rememberedPassword");
         localStorage.removeItem("rememberMe");
-      }
-
-      await finalizeLogin(userCredential.user);
-    } catch (error) {
-      console.error("Login error:", error);
-
-      let errorMessage = "Đăng nhập thất bại!";
-
-      switch (error.code) {
-        case "auth/invalid-credential":
-        case "auth/wrong-password":
-        case "auth/user-not-found":
-          errorMessage = "Email hoặc mật khẩu không chính xác!";
-          break;
-        case "auth/invalid-email":
-          errorMessage = "Email không hợp lệ!";
-          break;
-        case "auth/user-disabled":
-          errorMessage = "Tài khoản đã bị khóa!";
-          break;
-        case "auth/too-many-requests":
-          errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau!";
-          break;
-        case "auth/network-request-failed":
-          errorMessage = "Lỗi kết nối mạng!";
-          break;
-        default:
-          errorMessage = `Đăng nhập thất bại: ${error.message || error}`;
-      }
-
-      showMessage(errorMessage, "error");
-      setIsLoading(false);
+        errorMessage = "Email hoặc mật khẩu không chính xác!";
+        break;
+      case "auth/invalid-email":
+        errorMessage = "Email không hợp lệ!";
+        break;
+      case "auth/user-disabled":
+        errorMessage = "Tài khoản đã bị khóa!";
+        break;
+      case "auth/too-many-requests":
+        errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau!";
+        break;
+      case "auth/network-request-failed":
+        errorMessage = "Lỗi kết nối mạng!";
+        break;
+      default:
+        errorMessage = `Đăng nhập thất bại: ${error.message || error}`;
     }
-  };
+
+    showMessage(errorMessage, "error");
+    setIsLoading(false);
+  }
+};
+
 
   const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
 

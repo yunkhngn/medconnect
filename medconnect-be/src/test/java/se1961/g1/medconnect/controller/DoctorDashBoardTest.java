@@ -21,7 +21,7 @@ public class DoctorDashBoardTest {
     private DoctorService doctorService;
 
     @InjectMocks
-    private DoctorDashboard doctorDashboard;
+    private DoctorController doctorDashboard;
 
     @BeforeEach
     public void setup() {
