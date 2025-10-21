@@ -56,7 +56,7 @@ export default function PatientProfileWithFrame() {
 
 useEffect(() => {
   const userId = 1; // hoặc gán ID thực tế của bệnh nhân đang đăng nhập
-  fetch(`http://localhost:8080/api/patient/${userId}`)
+  fetch(`http://localhost:3000/api/patient/${userId}`)
     .then((res) => res.json())
     .then((data) => setPatient(data))
     .catch((err) => console.error("Error fetching patient:", err))
@@ -86,11 +86,12 @@ useEffect(() => {
   //     setSaving(false);
   //   }
   // };
+  
 const handleSave = async () => {
   if (!user) return alert("Bạn chưa đăng nhập.");
   setSaving(true);
   try {
-    const response = await fetch("http://localhost:8080/api/patient/update", {
+    const response = await fetch("http://localhost:3000/api/patient/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patient),
