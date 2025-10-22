@@ -45,34 +45,34 @@ GO
 SET IDENTITY_INSERT Users ON;
 
 INSERT INTO Users (user_id, name, email, phone, avatar_url, firebase_uid, role) VALUES
-(1, 'Admin System', 'admin.system@medconnect.vn', '0901000001', 'https://i.pravatar.cc/150?img=1', 'QOw1Uf8Vr0a8JGMMBNzjr7CSXFa2', 'ADMIN'),
-(2, 'Admin Manager', 'admin.manager@medconnect.vn', '0901000002', 'https://i.pravatar.cc/150?img=2', 'firebase_uid_admin_2', 'ADMIN');
+(1, N'Admin System', 'admin.system@medconnect.vn', '0901000001', 'https://i.pravatar.cc/150?img=1', 'QOw1Uf8Vr0a8JGMMBNzjr7CSXFa2', 'ADMIN'),
+(2, N'Admin Manager', 'admin.manager@medconnect.vn', '0901000002', 'https://i.pravatar.cc/150?img=2', 'firebase_uid_admin_2', 'ADMIN');
 
 -- Insert 10 Doctors
 INSERT INTO Users (user_id, name, email, phone, avatar_url, firebase_uid, role) VALUES
-(3, 'BS. Nguyễn Văn An', 'doctor.an@medconnect.vn', '0902000001', 'https://i.pravatar.cc/150?img=11', '1e094cFqC1XLnblL7Lrd1W4QxLu1', 'DOCTOR'),
-(4, 'BS. Trần Thị Bình', 'doctor.binh@medconnect.vn', '0902000002', 'https://i.pravatar.cc/150?img=12', 'firebase_uid_doctor_2', 'DOCTOR'),
-(5, 'BS. Lê Hoàng Cường', 'doctor.cuong@medconnect.vn', '0902000003', 'https://i.pravatar.cc/150?img=13', 'firebase_uid_doctor_3', 'DOCTOR'),
-(6, 'BS. Phạm Thị Dung', 'doctor.dung@medconnect.vn', '0902000004', 'https://i.pravatar.cc/150?img=14', 'firebase_uid_doctor_4', 'DOCTOR'),
-(7, 'BS. Hoàng Văn Em', 'doctor.em@medconnect.vn', '0902000005', 'https://i.pravatar.cc/150?img=15', 'firebase_uid_doctor_5', 'DOCTOR'),
-(8, 'BS. Vũ Thị Phương', 'doctor.phuong@medconnect.vn', '0902000006', 'https://i.pravatar.cc/150?img=16', 'firebase_uid_doctor_6', 'DOCTOR'),
-(9, 'BS. Đặng Minh Giang', 'doctor.giang@medconnect.vn', '0902000007', 'https://i.pravatar.cc/150?img=17', 'firebase_uid_doctor_7', 'DOCTOR'),
-(10, 'BS. Bùi Thị Hà', 'doctor.ha@medconnect.vn', '0902000008', 'https://i.pravatar.cc/150?img=18', 'firebase_uid_doctor_8', 'DOCTOR'),
-(11, 'BS. Ngô Văn Hùng', 'doctor.hung@medconnect.vn', '0902000009', 'https://i.pravatar.cc/150?img=19', 'firebase_uid_doctor_9', 'DOCTOR'),
-(12, 'BS. Mai Thị Lan', 'doctor.lan@medconnect.vn', '0902000010', 'https://i.pravatar.cc/150?img=20', 'firebase_uid_doctor_10', 'DOCTOR');
+(3, N'BS. Nguyễn Văn An', 'doctor.an@medconnect.vn', '0902000001', 'https://i.pravatar.cc/150?img=11', '1e094cFqC1XLnblL7Lrd1W4QxLu1', 'DOCTOR'),
+(4, N'BS. Trần Thị Bình', 'doctor.binh@medconnect.vn', '0902000002', 'https://i.pravatar.cc/150?img=12', 'firebase_uid_doctor_2', 'DOCTOR'),
+(5, N'BS. Lê Hoàng Cường', 'doctor.cuong@medconnect.vn', '0902000003', 'https://i.pravatar.cc/150?img=13', 'firebase_uid_doctor_3', 'DOCTOR'),
+(6, N'BS. Phạm Thị Dung', 'doctor.dung@medconnect.vn', '0902000004', 'https://i.pravatar.cc/150?img=14', 'firebase_uid_doctor_4', 'DOCTOR'),
+(7, N'BS. Hoàng Văn Em', 'doctor.em@medconnect.vn', '0902000005', 'https://i.pravatar.cc/150?img=15', 'firebase_uid_doctor_5', 'DOCTOR'),
+(8, N'BS. Vũ Thị Phương', 'doctor.phuong@medconnect.vn', '0902000006', 'https://i.pravatar.cc/150?img=16', 'firebase_uid_doctor_6', 'DOCTOR'),
+(9, N'BS. Đặng Minh Giang', 'doctor.giang@medconnect.vn', '0902000007', 'https://i.pravatar.cc/150?img=17', 'firebase_uid_doctor_7', 'DOCTOR'),
+(10, N'BS. Bùi Thị Hà', 'doctor.ha@medconnect.vn', '0902000008', 'https://i.pravatar.cc/150?img=18', 'firebase_uid_doctor_8', 'DOCTOR'),
+(11, N'BS. Ngô Văn Hùng', 'doctor.hung@medconnect.vn', '0902000009', 'https://i.pravatar.cc/150?img=19', 'firebase_uid_doctor_9', 'DOCTOR'),
+(12, N'BS. Mai Thị Lan', 'doctor.lan@medconnect.vn', '0902000010', 'https://i.pravatar.cc/150?img=20', 'firebase_uid_doctor_10', 'DOCTOR');
 
 -- Insert 10 Patients
 INSERT INTO Users (user_id, name, email, phone, avatar_url, firebase_uid, role) VALUES
-(13, 'Nguyễn Thị Mai', 'patient.mai@gmail.com', '0903000001', 'https://i.pravatar.cc/150?img=21', 'cOOC9hjI9pYoyZd2pCPKsjxgZmd2', 'PATIENT'),
-(14, 'Trần Văn Nam', 'patient.nam@gmail.com', '0903000002', 'https://i.pravatar.cc/150?img=22', 'firebase_uid_patient_2', 'PATIENT'),
-(15, 'Lê Thị Oanh', 'patient.oanh@gmail.com', '0903000003', 'https://i.pravatar.cc/150?img=23', 'firebase_uid_patient_3', 'PATIENT'),
-(16, 'Phạm Văn Phúc', 'patient.phuc@gmail.com', '0903000004', 'https://i.pravatar.cc/150?img=24', 'firebase_uid_patient_4', 'PATIENT'),
-(17, 'Hoàng Thị Quỳnh', 'patient.quynh@gmail.com', '0903000005', 'https://i.pravatar.cc/150?img=25', 'firebase_uid_patient_5', 'PATIENT'),
-(18, 'Vũ Văn Sơn', 'patient.son@gmail.com', '0903000006', 'https://i.pravatar.cc/150?img=26', 'firebase_uid_patient_6', 'PATIENT'),
-(19, 'Đặng Thị Thảo', 'patient.thao@gmail.com', '0903000007', 'https://i.pravatar.cc/150?img=27', 'firebase_uid_patient_7', 'PATIENT'),
-(20, 'Bùi Văn Tùng', 'patient.tung@gmail.com', '0903000008', 'https://i.pravatar.cc/150?img=28', 'firebase_uid_patient_8', 'PATIENT'),
-(21, 'Ngô Thị Uyên', 'patient.uyen@gmail.com', '0903000009', 'https://i.pravatar.cc/150?img=29', 'firebase_uid_patient_9', 'PATIENT'),
-(22, 'Mai Văn Vũ', 'patient.vu@gmail.com', '0903000010', 'https://i.pravatar.cc/150?img=30', 'firebase_uid_patient_10', 'PATIENT');
+(13, N'Nguyễn Thị Mai', 'patient.mai@gmail.com', '0903000001', 'https://i.pravatar.cc/150?img=21', 'cOOC9hjI9pYoyZd2pCPKsjxgZmd2', 'PATIENT'),
+(14, N'Trần Văn Nam', 'patient.nam@gmail.com', '0903000002', 'https://i.pravatar.cc/150?img=22', 'firebase_uid_patient_2', 'PATIENT'),
+(15, N'Lê Thị Oanh', 'patient.oanh@gmail.com', '0903000003', 'https://i.pravatar.cc/150?img=23', 'firebase_uid_patient_3', 'PATIENT'),
+(16, N'Phạm Văn Phúc', 'patient.phuc@gmail.com', '0903000004', 'https://i.pravatar.cc/150?img=24', 'firebase_uid_patient_4', 'PATIENT'),
+(17, N'Hoàng Thị Quỳnh', 'patient.quynh@gmail.com', '0903000005', 'https://i.pravatar.cc/150?img=25', 'firebase_uid_patient_5', 'PATIENT'),
+(18, N'Vũ Văn Sơn', 'patient.son@gmail.com', '0903000006', 'https://i.pravatar.cc/150?img=26', 'firebase_uid_patient_6', 'PATIENT'),
+(19, N'Đặng Thị Thảo', 'patient.thao@gmail.com', '0903000007', 'https://i.pravatar.cc/150?img=27', 'firebase_uid_patient_7', 'PATIENT'),
+(20, N'Bùi Văn Tùng', 'patient.tung@gmail.com', '0903000008', 'https://i.pravatar.cc/150?img=28', 'firebase_uid_patient_8', 'PATIENT'),
+(21, N'Ngô Thị Uyên', 'patient.uyen@gmail.com', '0903000009', 'https://i.pravatar.cc/150?img=29', 'firebase_uid_patient_9', 'PATIENT'),
+(22, N'Mai Văn Vũ', 'patient.vu@gmail.com', '0903000010', 'https://i.pravatar.cc/150?img=30', 'firebase_uid_patient_10', 'PATIENT');
 
 SET IDENTITY_INSERT Users OFF;
 
@@ -283,18 +283,18 @@ GO
 SET IDENTITY_INSERT Medical_Record ON;
 
 INSERT INTO Medical_Record (record_id, detail, doctor_id, patient_id, created_at, updated_at) VALUES
-(1, 'Triệu chứng: Đau ngực, khó thở. Chẩn đoán: Tăng huyết áp. Đơn thuốc: Amlodipine 5mg x 1 viên/ngày. Tái khám sau 2 tuần.', 3, 13, '2025-10-20 09:35:00', '2025-10-20 09:35:00'),
-(2, 'Triệu chứng: Ho, sốt. Chẩn đoán: Viêm phổi nhẹ. Đơn thuốc: Amoxicillin 500mg x 3 lần/ngày x 7 ngày. Nghỉ ngơi, uống nhiều nước.', 3, 14, '2025-10-21 10:30:00', '2025-10-21 10:30:00'),
-(3, 'Triệu chứng: Đau đầu, chóng mặt. Chẩn đoán: Migraine. Đơn thuốc: Paracetamol 500mg khi đau. Tránh stress.', 4, 16, '2025-10-19 09:20:00', '2025-10-19 09:20:00'),
-(4, 'Triệu chứng: Đau bụng, tiêu chảy. Chẩn đoán: Viêm dạ dày. Đơn thuốc: Omeprazole 20mg x 2 lần/ngày trước ăn. Ăn nhẹ, tránh cay nóng.', 5, 19, '2025-10-18 11:45:00', '2025-10-18 11:45:00'),
-(5, 'Triệu chứng: Mệt mỏi, tăng cân. Chẩn đoán: Suy giáp. Xét nghiệm TSH: 8.5. Đơn thuốc: Levothyroxine 50mcg x 1 viên/ngày lúc đói. Tái khám sau 1 tháng.', 5, 20, '2025-10-22 13:50:00', '2025-10-22 13:50:00'),
-(6, 'Triệu chứng: Khó thở, ho khè khè. Chẩn đoán: Hen phế quản. Đơn thuốc: Salbutamol inhaler 2 nhát khi cần. Tránh yếu tố kích thích.', 6, 22, '2025-10-17 10:30:00', '2025-10-17 10:30:00'),
-(7, 'Triệu chứng: Đau khớp gối. Chẩn đoán: Thoái hóa khớp độ 2. Đơn thuốc: Glucosamine 1500mg/ngày. Vật lý trị liệu. Giảm cân nếu thừa cân.', 7, 15, '2025-10-16 09:45:00', '2025-10-16 09:45:00'),
-(8, 'Khám định kỳ. Sức khỏe tốt. Không có vấn đề đặc biệt. Tiếp tục duy trì lối sống lành mạnh.', 9, 20, '2025-10-15 14:40:00', '2025-10-15 14:40:00'),
-(9, 'Triệu chứng: Sốt, đau đầu. Chẩn đoán: Cúm mùa. Đơn thuốc: Paracetamol 500mg x 3 lần/ngày. Nghỉ ngơi, uống nhiều nước. Tái khám nếu sốt trên 39°C hoặc không đỡ sau 3 ngày.', 10, 13, '2025-10-14 10:05:00', '2025-10-14 10:05:00'),
-(10, 'Triệu chứng: Mụn trứng cá. Chẩn đoán: Acne vulgaris. Đơn thuốc: Benzoyl peroxide gel bôi tối. Rửa mặt 2 lần/ngày. Tái khám sau 1 tháng.', 10, 14, '2025-10-20 11:30:00', '2025-10-20 11:30:00'),
-(11, 'Triệu chứng: Buồn chán, mất ngủ. Chẩn đoán: Trầm cảm nhẹ. Tư vấn tâm lý. Đơn thuốc: Sertraline 50mg x 1 viên/ngày buổi sáng. Tái khám sau 2 tuần.', 12, 18, '2025-10-13 09:00:00', '2025-10-13 09:00:00'),
-(12, 'Triệu chứng: Đau ngực trái khi gắng sức. Chẩn đoán: Nghi ngờ bệnh mạch vành. Chỉ định: ECG, Siêu âm tim. Tái khám sau khi có kết quả xét nghiệm.', 12, 19, '2025-10-19 11:00:00', '2025-10-19 11:00:00');
+(1, N'Triệu chứng: Đau ngực, khó thở. Chẩn đoán: Tăng huyết áp. Đơn thuốc: Amlodipine 5mg x 1 viên/ngày. Tái khám sau 2 tuần.', 3, 13, '2025-10-20 09:35:00', '2025-10-20 09:35:00'),
+(2, N'Triệu chứng: Ho, sốt. Chẩn đoán: Viêm phổi nhẹ. Đơn thuốc: Amoxicillin 500mg x 3 lần/ngày x 7 ngày. Nghỉ ngơi, uống nhiều nước.', 3, 14, '2025-10-21 10:30:00', '2025-10-21 10:30:00'),
+(3, N'Triệu chứng: Đau đầu, chóng mặt. Chẩn đoán: Migraine. Đơn thuốc: Paracetamol 500mg khi đau. Tránh stress.', 4, 16, '2025-10-19 09:20:00', '2025-10-19 09:20:00'),
+(4, N'Triệu chứng: Đau bụng, tiêu chảy. Chẩn đoán: Viêm dạ dày. Đơn thuốc: Omeprazole 20mg x 2 lần/ngày trước ăn. Ăn nhẹ, tránh cay nóng.', 5, 19, '2025-10-18 11:45:00', '2025-10-18 11:45:00'),
+(5, N'Triệu chứng: Mệt mỏi, tăng cân. Chẩn đoán: Suy giáp. Xét nghiệm TSH: 8.5. Đơn thuốc: Levothyroxine 50mcg x 1 viên/ngày lúc đói. Tái khám sau 1 tháng.', 5, 20, '2025-10-22 13:50:00', '2025-10-22 13:50:00'),
+(6, N'Triệu chứng: Khó thở, ho khè khè. Chẩn đoán: Hen phế quản. Đơn thuốc: Salbutamol inhaler 2 nhát khi cần. Tránh yếu tố kích thích.', 6, 22, '2025-10-17 10:30:00', '2025-10-17 10:30:00'),
+(7, N'Triệu chứng: Đau khớp gối. Chẩn đoán: Thoái hóa khớp độ 2. Đơn thuốc: Glucosamine 1500mg/ngày. Vật lý trị liệu. Giảm cân nếu thừa cân.', 7, 15, '2025-10-16 09:45:00', '2025-10-16 09:45:00'),
+(8, N'Khám định kỳ. Sức khỏe tốt. Không có vấn đề đặc biệt. Tiếp tục duy trì lối sống lành mạnh.', 9, 20, '2025-10-15 14:40:00', '2025-10-15 14:40:00'),
+(9, N'Triệu chứng: Sốt, đau đầu. Chẩn đoán: Cúm mùa. Đơn thuốc: Paracetamol 500mg x 3 lần/ngày. Nghỉ ngơi, uống nhiều nước. Tái khám nếu sốt trên 39°C hoặc không đỡ sau 3 ngày.', 10, 13, '2025-10-14 10:05:00', '2025-10-14 10:05:00'),
+(10, N'Triệu chứng: Mụn trứng cá. Chẩn đoán: Acne vulgaris. Đơn thuốc: Benzoyl peroxide gel bôi tối. Rửa mặt 2 lần/ngày. Tái khám sau 1 tháng.', 10, 14, '2025-10-20 11:30:00', '2025-10-20 11:30:00'),
+(11, N'Triệu chứng: Buồn chán, mất ngủ. Chẩn đoán: Trầm cảm nhẹ. Tư vấn tâm lý. Đơn thuốc: Sertraline 50mg x 1 viên/ngày buổi sáng. Tái khám sau 2 tuần.', 12, 18, '2025-10-13 09:00:00', '2025-10-13 09:00:00'),
+(12, N'Triệu chứng: Đau ngực trái khi gắng sức. Chẩn đoán: Nghi ngờ bệnh mạch vành. Chỉ định: ECG, Siêu âm tim. Tái khám sau khi có kết quả xét nghiệm.', 12, 19, '2025-10-19 11:00:00', '2025-10-19 11:00:00');
 
 SET IDENTITY_INSERT Medical_Record OFF;
 
@@ -313,16 +313,16 @@ GO
 SET IDENTITY_INSERT Feedback ON;
 
 INSERT INTO Feedback (feedback_id, comment, rating, created_at, patient, doctor) VALUES
-(1, 'Bác sĩ tư vấn rất tận tình và chu đáo. Rất hài lòng!', 5, '2025-10-20 10:00:00', 13, 3),
-(2, 'Khám nhanh, chính xác. Đơn thuốc hiệu quả.', 5, '2025-10-21 11:00:00', 14, 3),
-(3, 'Bác sĩ nhiệt tình, giải thích rõ ràng dễ hiểu.', 5, '2025-10-19 09:30:00', 16, 4),
-(4, 'Khám kỹ càng, tư vấn dinh dưỡng chi tiết.', 4, '2025-10-18 12:00:00', 19, 5),
-(5, 'Video call chất lượng tốt, bác sĩ dễ giao tiếp.', 5, '2025-10-22 14:00:00', 20, 5),
-(6, 'Phòng khám sạch sẽ, nhân viên thân thiện.', 4, '2025-10-17 11:00:00', 22, 6),
-(7, 'Bác sĩ lắng nghe và chia sẻ rất tốt.', 5, '2025-10-16 10:00:00', 15, 7),
-(8, 'Khám định kỳ nhanh gọn, chuyên nghiệp.', 4, '2025-10-15 15:00:00', 20, 9),
-(9, 'Giải thích bệnh rõ ràng, đơn thuốc hiệu quả.', 5, '2025-10-14 10:30:00', 13, 10),
-(10, 'Bác sĩ rất kiên nhẫn và chuyên nghiệp.', 5, '2025-10-20 12:00:00', 14, 10);
+(1, N'Bác sĩ tư vấn rất tận tình và chu đáo. Rất hài lòng!', 5, '2025-10-20 10:00:00', 13, 3),
+(2, N'Khám nhanh, chính xác. Đơn thuốc hiệu quả.', 5, '2025-10-21 11:00:00', 14, 3),
+(3, N'Bác sĩ nhiệt tình, giải thích rõ ràng dễ hiểu.', 5, '2025-10-19 09:30:00', 16, 4),
+(4, N'Khám kỹ càng, tư vấn dinh dưỡng chi tiết.', 4, '2025-10-18 12:00:00', 19, 5),
+(5, N'Video call chất lượng tốt, bác sĩ dễ giao tiếp.', 5, '2025-10-22 14:00:00', 20, 5),
+(6, N'Phòng khám sạch sẽ, nhân viên thân thiện.', 4, '2025-10-17 11:00:00', 22, 6),
+(7, N'Bác sĩ lắng nghe và chia sẻ rất tốt.', 5, '2025-10-16 10:00:00', 15, 7),
+(8, N'Khám định kỳ nhanh gọn, chuyên nghiệp.', 4, '2025-10-15 15:00:00', 20, 9),
+(9, N'Giải thích bệnh rõ ràng, đơn thuốc hiệu quả.', 5, '2025-10-14 10:30:00', 13, 10),
+(10, N'Bác sĩ rất kiên nhẫn và chuyên nghiệp.', 5, '2025-10-20 12:00:00', 14, 10);
 
 SET IDENTITY_INSERT Feedback OFF;
 
