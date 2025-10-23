@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Save, Upload, User } from "lucide-react";
+import { Save, Upload, User, Mail, Phone, MapPin, Heart, Calendar, Users, IdCard, Shield, Droplet } from "lucide-react";
+import { Input, Select, SelectItem } from "@heroui/react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
+import BHYTInput from "@/components/ui/BHYTInput";
+import { isValidBHYT } from "@/utils/bhytHelper";
 
 import { auth, db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -116,6 +119,15 @@ export default function PatientProfileWithFrame() {
       toast.warning("Bạn chưa đăng nhập");
       return;
     }
+
+    // Validate mã BHYT nếu có nhập
+    if (patient.socialInsurance && patient.socialInsurance.length > 0) {
+      if (!isValidBHYT(patient.socialInsurance)) {
+        toast.error("Mã số BHYT không hợp lệ. Vui lòng kiểm tra lại!");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const token = await user.getIdToken();
@@ -271,31 +283,185 @@ export default function PatientProfileWithFrame() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <LabeledInput label="Họ và tên" placeholder="Nhập họ và tên" value={patient.name} onChange={(v) => setPatient({ ...patient, name: v })} />
-                  <LabeledInput type="email" label="Email" placeholder="example@email.com" value={patient.email} onChange={(v) => setPatient({ ...patient, email: v })} />
-                  <LabeledInput type="tel" label="Số điện thoại" placeholder="0123456789" value={patient.phone} onChange={(v) => setPatient({ ...patient, phone: v })} />
-                  <LabeledInput type="date" label="Ngày sinh" value={patient.dateOfBirth} onChange={(v) => setPatient({ ...patient, dateOfBirth: v })} inputProps={{ max: maxDob }} />
-                  <LabeledSelect label="Giới tính" value={patient.gender} onChange={(v) => setPatient({ ...patient, gender: v })} options={[{ value: "", label: "Chọn giới tính" }, { value: "Nam", label: "Nam" }, { value: "Nữ", label: "Nữ" }, { value: "Khác", label: "Khác" }]} />
-                  <LabeledSelect label="Nhóm máu" value={patient.bloodType} onChange={(v) => setPatient({ ...patient, bloodType: v })} options={[{ value: "", label: "Chọn nhóm máu" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" }]} />
-                  {/* Mã BHYT & CCCD */}
-                  <LabeledInput label="Mã BHYT" placeholder="Nhập mã BHYT" value={patient.socialInsurance} onChange={(v) => setPatient({ ...patient, socialInsurance: v })} />
-                  <LabeledInput label="Căn cước công dân" placeholder="Nhập CCCD" value={patient.citizenship} onChange={(v) => setPatient({ ...patient, citizenship: v })} />
+                  <Input 
+                    label="Họ và tên" 
+                    placeholder="Nhập họ và tên đầy đủ" 
+                    value={patient.name || ""} 
+                    onValueChange={(v) => setPatient({ ...patient, name: v })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    startContent={<User className="text-default-400" size={20} />}
+                    classNames={{
+                      input: "text-base",
+                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                    }}
+                  />
+                  <Input 
+                    type="email" 
+                    label="Email" 
+                    placeholder="your.email@example.com" 
+                    value={patient.email || ""} 
+                    onValueChange={(v) => setPatient({ ...patient, email: v })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    startContent={<Mail className="text-default-400" size={20} />}
+                    classNames={{
+                      input: "text-base",
+                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                    }}
+                  />
+                  <Input 
+                    type="tel" 
+                    label="Số điện thoại" 
+                    placeholder="0912 345 678" 
+                    value={patient.phone || ""} 
+                    onValueChange={(v) => setPatient({ ...patient, phone: v })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    startContent={<Phone className="text-default-400" size={20} />}
+                    classNames={{
+                      input: "text-base",
+                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                    }}
+                  />
+                  <Input 
+                    type="date" 
+                    label="Ngày sinh" 
+                    value={patient.dateOfBirth || ""} 
+                    onValueChange={(v) => setPatient({ ...patient, dateOfBirth: v })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    max={maxDob}
+                    startContent={<Calendar className="text-default-400" size={20} />}
+                    classNames={{
+                      input: "text-base",
+                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                    }}
+                  />
+                  <Select 
+                    label="Giới tính" 
+                    placeholder="Chọn giới tính"
+                    selectedKeys={patient.gender ? [patient.gender] : []} 
+                    onSelectionChange={(keys) => setPatient({ ...patient, gender: Array.from(keys)[0] || "" })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    startContent={<Users className="text-default-400" size={20} />}
+                    classNames={{
+                      trigger: "border-default-200 hover:border-primary data-[focus=true]:!border-primary"
+                    }}
+                  >
+                    <SelectItem key="Nam" value="Nam">Nam</SelectItem>
+                    <SelectItem key="Nữ" value="Nữ">Nữ</SelectItem>
+                    <SelectItem key="Khác" value="Khác">Khác</SelectItem>
+                  </Select>
+                  <Select 
+                    label="Nhóm máu" 
+                    placeholder="Chọn nhóm máu"
+                    selectedKeys={patient.bloodType ? [patient.bloodType] : []} 
+                    onSelectionChange={(keys) => setPatient({ ...patient, bloodType: Array.from(keys)[0] || "" })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    startContent={<Droplet className="text-default-400" size={20} />}
+                    classNames={{
+                      trigger: "border-default-200 hover:border-primary data-[focus=true]:!border-primary"
+                    }}
+                  >
+                    <SelectItem key="A" value="A">A</SelectItem>
+                    <SelectItem key="B" value="B">B</SelectItem>
+                    <SelectItem key="AB" value="AB">AB</SelectItem>
+                    <SelectItem key="O" value="O">O</SelectItem>
+                  </Select>
                 </div>
 
-                <LabeledInput label="Địa chỉ" placeholder="Nhập địa chỉ" value={patient.address} onChange={(v) => setPatient({ ...patient, address: v })} />
+                {/* Mã BHYT & CCCD */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <BHYTInput 
+                    label="Mã số Bảo hiểm Y tế" 
+                    placeholder="VD: HS 4 01 0120878811" 
+                    value={patient.socialInsurance || ''} 
+                    onChange={(v) => setPatient({ ...patient, socialInsurance: v })} 
+                  />
+                  <Input 
+                    label="Căn cước công dân" 
+                    placeholder="Nhập số CCCD/CMND" 
+                    value={patient.citizenship || ""} 
+                    onValueChange={(v) => setPatient({ ...patient, citizenship: v })} 
+                    variant="bordered"
+                    labelPlacement="outside"
+                    startContent={<IdCard className="text-default-400" size={20} />}
+                    classNames={{
+                      input: "text-base",
+                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                    }}
+                  />
+                </div>
+
+                <Input 
+                  label="Địa chỉ" 
+                  placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" 
+                  value={patient.address || ""} 
+                  onValueChange={(v) => setPatient({ ...patient, address: v })} 
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<MapPin className="text-default-400" size={20} />}
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                  }}
+                />
                 
-                <LabeledInput 
+                <Input 
                   label="Dị ứng (nếu có)" 
-                  placeholder="Ví dụ: Penicillin, hải sản, phấn hoa..." 
-                  value={patient.allergies} 
-                  onChange={(v) => setPatient({ ...patient, allergies: v })} 
+                  placeholder="Ví dụ: Penicillin, hải sản, phấn hoa, bụi, lông thú..." 
+                  value={patient.allergies || ""} 
+                  onValueChange={(v) => setPatient({ ...patient, allergies: v })} 
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Heart className="text-default-400" size={20} />}
+                  description="Thông tin này giúp bác sĩ tư vấn và điều trị an toàn hơn"
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary",
+                    description: "text-xs text-default-500"
+                  }}
                 />
 
                 <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Liên hệ khẩn cấp</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Shield className="text-orange-500" size={24} />
+                    <h3 className="text-lg font-semibold text-gray-900">Liên hệ khẩn cấp</h3>
+                  </div>
+                  <p className="text-sm text-default-500 mb-4">
+                    Thông tin này sẽ được sử dụng để liên lạc trong trường hợp khẩn cấp
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <LabeledInput label="Tên người liên hệ" placeholder="Nhập tên người liên hệ" value={patient.emergencyContactName} onChange={(v) => setPatient({ ...patient, emergencyContactName: v })} />
-                    <LabeledInput type="tel" label="Số điện thoại liên hệ" placeholder="0123456789" value={patient.emergencyContactPhone} onChange={(v) => setPatient({ ...patient, emergencyContactPhone: v })} />
+                    <Input 
+                      label="Tên người liên hệ" 
+                      placeholder="Họ và tên người thân" 
+                      value={patient.emergencyContactName || ""} 
+                      onValueChange={(v) => setPatient({ ...patient, emergencyContactName: v })} 
+                      variant="bordered"
+                      labelPlacement="outside"
+                      startContent={<User className="text-default-400" size={20} />}
+                      classNames={{
+                        input: "text-base",
+                        inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
+                      }}
+                    />
+                    <Input 
+                      type="tel" 
+                      label="Số điện thoại liên hệ" 
+                      placeholder="0912 345 678" 
+                      value={patient.emergencyContactPhone || ""} 
+                      onValueChange={(v) => setPatient({ ...patient, emergencyContactPhone: v })} 
+                      variant="bordered"
+                      labelPlacement="outside"
+                      startContent={<Phone className="text-default-400" size={20} />}
+                      classNames={{
+                        input: "text-base",
+                        inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -325,41 +491,5 @@ export default function PatientProfileWithFrame() {
       </div>
       </PatientFrame>
     </>
-  );
-}
-
-/* ---------- Input helpers ---------- */
-function LabeledInput({ label, value, onChange, type = "text", placeholder, inputProps }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-      <input
-        type={type}
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-        {...inputProps}
-      />
-    </div>
-  );
-}
-
-function LabeledSelect({ label, value, onChange, options }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-      <select
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
