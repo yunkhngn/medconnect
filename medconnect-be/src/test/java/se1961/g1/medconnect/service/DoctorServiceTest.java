@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Doctor;
+import se1961.g1.medconnect.pojo.Speciality;
 import se1961.g1.medconnect.repository.DoctorRepository;
 
 import java.util.Optional;
@@ -32,9 +32,14 @@ public class DoctorServiceTest {
     public void testGetDoctorFound() throws Exception{
         String uid = "1";
 
+        // Create mock speciality
+        Speciality speciality = new Speciality();
+        speciality.setSpecialityId(1);
+        speciality.setName("Tim mạch");
+
         Doctor doctor = new Doctor();
         doctor.setEmail("email@gmail.com");
-        doctor.setSpecialization(Speciality.CARDIOLOGY);
+        doctor.setSpeciality(speciality);
         doctor.setFirebaseUid(uid);
 
         when(doctorRepository.findByFirebaseUid(uid)).thenReturn(Optional.of(doctor));
@@ -43,7 +48,7 @@ public class DoctorServiceTest {
 
         assertTrue(result.isPresent());
         assertEquals("email@gmail.com", result.get().getEmail());
-        assertEquals(Speciality.CARDIOLOGY, result.get().getSpecialization());
+        assertEquals("Tim mạch", result.get().getSpeciality().getName());
         assertEquals(uid, result.get().getFirebaseUid());
     }
 

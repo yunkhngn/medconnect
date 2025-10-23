@@ -3,6 +3,7 @@
 -- Total: ~100 records
 -- Users: Admin(2) + Doctor(10) + Patient(10) = 22
 -- ============================================
+CREATE DATABASE MedConnect;
 
 USE MedConnect;
 GO
@@ -93,22 +94,51 @@ PRINT '2 Admins configured';
 GO
 
 -- ============================================
+-- STEP 3.5: Insert Speciality data (NEW)
+-- ============================================
+
+PRINT 'Inserting Specialities...';
+
+-- Bật IDENTITY_INSERT để insert ID explicit (MSSQL requirement)
+SET IDENTITY_INSERT speciality ON;
+
+INSERT INTO speciality (speciality_id, name, description, created_at, updated_at) VALUES
+(1, N'Tim mạch', N'Chuyên khoa tim mạch, điều trị các bệnh về tim và mạch máu', GETDATE(), GETDATE()),
+(2, N'Nội khoa', N'Chuyên khoa nội tổng quát, điều trị các bệnh nội khoa', GETDATE(), GETDATE()),
+(3, N'Nhi khoa', N'Chuyên khoa nhi, chăm sóc sức khỏe trẻ em', GETDATE(), GETDATE()),
+(4, N'Da liễu', N'Chuyên khoa da liễu, điều trị các bệnh về da', GETDATE(), GETDATE()),
+(5, N'Tai mũi họng', N'Chuyên khoa tai mũi họng, điều trị các bệnh về tai, mũi, họng', GETDATE(), GETDATE()),
+(6, N'Mắt', N'Chuyên khoa mắt, điều trị các bệnh về mắt', GETDATE(), GETDATE()),
+(7, N'Răng hàm mặt', N'Chuyên khoa răng hàm mặt, điều trị các bệnh về răng', GETDATE(), GETDATE()),
+(8, N'Thần kinh', N'Chuyên khoa thần kinh, điều trị các bệnh về thần kinh', GETDATE(), GETDATE()),
+(9, N'Sản phụ khoa', N'Chuyên khoa sản phụ khoa, chăm sóc sức khỏe phụ nữ', GETDATE(), GETDATE()),
+(10, N'Chỉnh hình', N'Chuyên khoa chỉnh hình, điều trị các bệnh về xương khớp', GETDATE(), GETDATE());
+
+-- Tắt IDENTITY_INSERT sau khi xong
+SET IDENTITY_INSERT speciality OFF;
+
+PRINT '10 Specialities inserted';
+GO
+
+-- ============================================
 -- STEP 4: Insert Doctor specific data
 -- ============================================
 
 PRINT 'Inserting Doctor data...';
 
-INSERT INTO Doctor (user_id, specialization, license_id, status) VALUES
-(3, 'CARDIOLOGY', 'LIC-CARD-001', 'ACTIVE'),
-(4, 'CARDIOLOGY', 'LIC-CARD-002', 'ACTIVE'),
-(5, 'CARDIOLOGY', 'LIC-CARD-003', 'ACTIVE'),
-(6, 'CARDIOLOGY', 'LIC-CARD-004', 'ACTIVE'),
-(7, 'CARDIOLOGY', 'LIC-CARD-005', 'ACTIVE'),
-(8, 'CARDIOLOGY', 'LIC-CARD-006', 'PENDING'),
-(9, 'CARDIOLOGY', 'LIC-CARD-007', 'ACTIVE'),
-(10, 'CARDIOLOGY', 'LIC-CARD-008', 'ACTIVE'),
-(11, 'CARDIOLOGY', 'LIC-CARD-009', 'INACTIVE'),
-(12, 'CARDIOLOGY', 'LIC-CARD-010', 'ACTIVE');
+-- Note: Using speciality_id instead of specialization enum
+-- 1=Tim mạch, 2=Nội khoa, 3=Nhi khoa, 4=Da liễu, 5=Tai mũi họng
+INSERT INTO Doctor (user_id, speciality_id, license_id, status, experience_years) VALUES
+(3, 1, 'LIC-CARD-001', 'ACTIVE', 15),  -- Tim mạch
+(4, 1, 'LIC-CARD-002', 'ACTIVE', 10),  -- Tim mạch
+(5, 2, 'LIC-INT-001', 'ACTIVE', 12),   -- Nội khoa
+(6, 2, 'LIC-INT-002', 'ACTIVE', 8),    -- Nội khoa
+(7, 3, 'LIC-PED-001', 'ACTIVE', 14),   -- Nhi khoa
+(8, 4, 'LIC-DER-001', 'PENDING', 6),   -- Da liễu
+(9, 5, 'LIC-ENT-001', 'ACTIVE', 11),   -- Tai mũi họng
+(10, 1, 'LIC-CARD-003', 'ACTIVE', 9),  -- Tim mạch
+(11, 2, 'LIC-INT-003', 'INACTIVE', 20),-- Nội khoa
+(12, 3, 'LIC-PED-002', 'ACTIVE', 7);   -- Nhi khoa
 
 PRINT '10 Doctors inserted';
 GO
@@ -137,7 +167,11 @@ GO
 -- ============================================
 -- STEP 6: Insert Appointments (30 records)
 -- ============================================
+-- ⚠️ COMMENTED OUT - Slot enum đã thay đổi từ 4 slots → 12 slots
+-- ⚠️ Cần tạo lại appointments với slot mới sau khi update
+-- ============================================
 
+/*
 PRINT 'Inserting Appointments...';
 
 DBCC CHECKIDENT ('Appointment', RESEED, 0);
@@ -201,11 +235,18 @@ SET IDENTITY_INSERT Appointment OFF;
 
 PRINT '30 Appointments inserted';
 GO
+*/
+
+PRINT 'Skipped Appointments (need new slot structure)';
+GO
 
 -- ============================================
 -- STEP 7: Insert Payments (25 records - for completed/confirmed appointments)
 -- ============================================
+-- ⚠️ COMMENTED OUT - Phụ thuộc vào appointments
+-- ============================================
 
+/*
 PRINT 'Inserting Payments...';
 
 DBCC CHECKIDENT ('Payment', RESEED, 0);
@@ -244,11 +285,18 @@ SET IDENTITY_INSERT Payment OFF;
 
 PRINT '25 Payments inserted';
 GO
+*/
+
+PRINT 'Skipped Payments (depend on appointments)';
+GO
 
 -- ============================================
 -- STEP 8: Insert VideoCallSessions (15 records - for ONLINE appointments)
 -- ============================================
+-- ⚠️ COMMENTED OUT - Phụ thuộc vào appointments
+-- ============================================
 
+/*
 PRINT 'Inserting VideoCallSessions...';
 
 INSERT INTO Video_Call_Session (appointment_id, connection_status, start_time, end_time) VALUES
@@ -269,6 +317,10 @@ INSERT INTO Video_Call_Session (appointment_id, connection_status, start_time, e
 (23, 'PENDING', NULL, NULL);
 
 PRINT '15 VideoCallSessions inserted';
+GO
+*/
+
+PRINT 'Skipped VideoCallSessions (depend on appointments)';
 GO
 
 -- ============================================

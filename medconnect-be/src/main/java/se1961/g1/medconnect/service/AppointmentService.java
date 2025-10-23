@@ -163,6 +163,7 @@ public class AppointmentService {
         appointment.setDate(request.getDate());
         appointment.setSlot(slot);
         appointment.setType(type);
+        appointment.setReason(request.getReason()); // Optional: reason for appointment
         appointment.setStatus(AppointmentStatus.PENDING); // Default status
         
         return appointmentRepository.save(appointment);

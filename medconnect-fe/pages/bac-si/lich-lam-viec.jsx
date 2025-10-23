@@ -10,10 +10,21 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 
 const SLOTS = [
-  { id: "SLOT_1", time: "07:30 - 09:50" },
-  { id: "SLOT_2", time: "10:00 - 12:20" },
-  { id: "SLOT_3", time: "12:50 - 15:10" },
-  { id: "SLOT_4", time: "15:20 - 17:40" }
+  // Morning slots (7:30 - 12:00)
+  { id: "SLOT_1", time: "07:30 - 08:00", period: "morning" },
+  { id: "SLOT_2", time: "08:15 - 08:45", period: "morning" },
+  { id: "SLOT_3", time: "09:00 - 09:30", period: "morning" },
+  { id: "SLOT_4", time: "09:45 - 10:15", period: "morning" },
+  { id: "SLOT_5", time: "10:30 - 11:00", period: "morning" },
+  { id: "SLOT_6", time: "11:15 - 11:45", period: "morning" },
+  // Lunch break: 12:00 - 13:00
+  // Afternoon slots (13:00 - 17:15)
+  { id: "SLOT_7", time: "13:00 - 13:30", period: "afternoon" },
+  { id: "SLOT_8", time: "13:45 - 14:15", period: "afternoon" },
+  { id: "SLOT_9", time: "14:30 - 15:00", period: "afternoon" },
+  { id: "SLOT_10", time: "15:15 - 15:45", period: "afternoon" },
+  { id: "SLOT_11", time: "16:00 - 16:30", period: "afternoon" },
+  { id: "SLOT_12", time: "16:45 - 17:15", period: "afternoon" }
 ];
 
 export default function DoctorSchedulePage() {
@@ -190,8 +201,77 @@ export default function DoctorSchedulePage() {
     );
   }
 
+  // Calculate stats
+  const emptySlots = scheduleData.filter(s => s.status === "EMPTY").length;
+  const reservedSlots = scheduleData.filter(s => s.status === "RESERVED").length;
+  const bookedSlots = scheduleData.filter(s => s.status === "BUSY").length;
+  const totalWeekSlots = 7 * 12; // 7 days * 12 slots
+
   const leftChildren = (
     <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 gap-3">
+        {/* Reserved Slots */}
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-300">
+          <CardBody className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-yellow-700 uppercase tracking-wide">Sẵn sàng</p>
+                <p className="text-3xl font-bold text-yellow-900 mt-1">{reservedSlots}</p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-300 rounded-full flex items-center justify-center">
+                <CheckCircle className="text-yellow-700" size={24} />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Booked Slots */}
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300">
+          <CardBody className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Đã đặt</p>
+                <p className="text-3xl font-bold text-green-900 mt-1">{bookedSlots}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-300 rounded-full flex items-center justify-center">
+                <Calendar className="text-green-700" size={24} />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Empty Slots */}
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300">
+          <CardBody className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">Trống</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{totalWeekSlots - reservedSlots - bookedSlots}</p>
+              </div>
+              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                <Plus className="text-gray-700" size={24} />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Total Slots */}
+      <Card className="bg-gradient-to-br from-teal-500 to-teal-600 text-white">
+        <CardBody className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-teal-100 uppercase tracking-wide">Tổng ca trong tuần</p>
+              <p className="text-4xl font-bold mt-1">{totalWeekSlots}</p>
+            </div>
+            <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+              <Calendar className="text-white" size={28} />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
       {/* Instructions Card */}
       <Card>
         <CardHeader className="flex gap-3">
@@ -200,40 +280,45 @@ export default function DoctorSchedulePage() {
         </CardHeader>
         <Divider />
         <CardBody className="space-y-3 text-sm">
-          <div className="flex items-start gap-2">
-            <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-            <p>Click vào ô <strong>trống</strong> để mở lịch cho bệnh nhân đặt</p>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Plus className="text-blue-600" size={16} />
+            </div>
+            <p>Click ô <strong className="text-gray-900">trống</strong> để mở lịch cho bệnh nhân</p>
           </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-            <p>Click vào ô <strong>sẵn sàng</strong> để đóng lịch (không nhận đặt)</p>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Trash2 className="text-yellow-600" size={16} />
+            </div>
+            <p>Click ô <strong className="text-yellow-600">sẵn sàng</strong> để đóng lịch</p>
           </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-            <p>Ô <strong>có lịch hẹn</strong> không thể xóa</p>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="text-green-600" size={16} />
+            </div>
+            <p>Ô <strong className="text-green-600">có lịch hẹn</strong> không thể xóa</p>
           </div>
         </CardBody>
       </Card>
 
       {/* Legend Card */}
       <Card>
-        <CardHeader className="flex gap-3">
-          <Calendar className="text-teal-600" size={24} />
-          <h3 className="text-lg font-semibold">Chú thích</h3>
+        <CardHeader>
+          <h3 className="text-sm font-semibold text-gray-700">Chú thích</h3>
         </CardHeader>
         <Divider />
-        <CardBody className="space-y-3">
+        <CardBody className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <Chip size="sm" color="default">Trống</Chip>
-            <span className="text-sm text-gray-600">Chưa mở lịch</span>
+            <div className="w-4 h-4 rounded bg-gray-100 border-2 border-gray-300"></div>
+            <span>Trống - Chưa mở lịch</span>
           </div>
           <div className="flex items-center gap-2">
-            <Chip size="sm" color="warning">Sẵn sàng</Chip>
-            <span className="text-sm text-gray-600">Bệnh nhân có thể đặt lịch</span>
+            <div className="w-4 h-4 rounded bg-yellow-100 border-2 border-yellow-400"></div>
+            <span>Sẵn sàng - Có thể đặt</span>
           </div>
           <div className="flex items-center gap-2">
-            <Chip size="sm" color="success">Có lịch hẹn</Chip>
-            <span className="text-sm text-gray-600">Đã có bệnh nhân đặt</span>
+            <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-400"></div>
+            <span>Đã đặt - Có bệnh nhân</span>
           </div>
         </CardBody>
       </Card>
@@ -242,32 +327,35 @@ export default function DoctorSchedulePage() {
 
   const rightChildren = (
     <div className="space-y-6">
-      {/* Header Card */}
-      <Card>
+      {/* Header Card - Enhanced */}
+      <Card className="bg-gradient-to-r from-teal-500 to-teal-600 text-white">
         <CardBody className="p-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
-                <Calendar className="text-white" size={24} />
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                <Calendar className="text-white" size={32} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Lịch làm việc</h1>
-                <p className="text-gray-600 text-sm">Quản lý ca làm việc theo tuần</p>
+                <h1 className="text-3xl font-bold">Lịch làm việc</h1>
+                <p className="text-teal-100 text-sm mt-1">
+                  Quản lý ca làm việc • {reservedSlots} ca sẵn sàng • {bookedSlots} ca đã đặt
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
               <Button
                 size="sm"
                 variant="light"
                 isIconOnly
                 onClick={previousWeek}
+                className="text-white hover:bg-white/20"
               >
                 <ChevronLeft size={20} />
               </Button>
               <Button
                 size="sm"
-                color="primary"
+                className="bg-white text-teal-600 font-semibold hover:bg-white/90"
                 onClick={() => setCurrentWeekStart(getWeekStart(new Date()))}
               >
                 Tuần hiện tại
@@ -277,6 +365,7 @@ export default function DoctorSchedulePage() {
                 variant="light"
                 isIconOnly
                 onClick={nextWeek}
+                className="text-white hover:bg-white/20"
               >
                 <ChevronRight size={20} />
               </Button>
@@ -285,32 +374,51 @@ export default function DoctorSchedulePage() {
         </CardBody>
       </Card>
 
-      {/* Schedule Table Card */}
-      <Card>
+      {/* Schedule Table Card - Enhanced */}
+      <Card className="shadow-lg">
         <CardBody className="p-0">
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[75vh]">
             <table className="w-full text-sm border-collapse">
-              <thead className="sticky top-0 bg-gray-50 z-10">
+              <thead className="sticky top-0 bg-gradient-to-r from-gray-100 to-gray-50 z-10 shadow-sm">
                 <tr>
-                  <th className="border border-gray-200 p-3 text-left font-semibold text-gray-700 min-w-[100px]">
-                    Ca làm việc
+                  <th className="border-2 border-gray-300 p-4 text-left font-bold text-gray-800 min-w-[120px] bg-gray-100">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={18} className="text-teal-600" />
+                      Ca làm việc
+                    </div>
                   </th>
-                  {weekDays.map((day, index) => (
-                    <th key={index} className="border border-gray-200 p-3 text-center font-semibold text-gray-700 min-w-[120px]">
-                      <div className="text-sm text-teal-600">
-                        {day.toLocaleDateString("vi-VN", { weekday: "short" }).toUpperCase()}
-                      </div>
-                      <div className="text-lg">{day.getDate()}/{day.getMonth() + 1}</div>
-                    </th>
-                  ))}
+                  {weekDays.map((day, index) => {
+                    const isToday = day.toDateString() === new Date().toDateString();
+                    return (
+                      <th 
+                        key={index} 
+                        className={`border-2 border-gray-300 p-3 text-center font-bold min-w-[140px] ${
+                          isToday ? "bg-teal-100 border-teal-400" : "bg-gray-50"
+                        }`}
+                      >
+                        <div className={`text-xs uppercase tracking-wide ${isToday ? "text-teal-700" : "text-gray-600"}`}>
+                          {day.toLocaleDateString("vi-VN", { weekday: "short" })}
+                        </div>
+                        <div className={`text-xl font-bold mt-1 ${isToday ? "text-teal-700" : "text-gray-800"}`}>
+                          {day.getDate()}/{day.getMonth() + 1}
+                        </div>
+                        {isToday && (
+                          <div className="text-xs text-teal-600 font-semibold mt-1">Hôm nay</div>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
 
               <tbody>
-                {SLOTS.map((slot) => (
-                  <tr key={slot.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-200 p-3 text-gray-600 bg-gray-50 font-medium">
-                      {slot.time}
+                {SLOTS.map((slot, slotIdx) => (
+                  <tr key={slot.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="border-2 border-gray-300 p-4 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-500">Ca {slotIdx + 1}</span>
+                        <span className="text-sm">{slot.time}</span>
+                      </div>
                     </td>
                     {weekDays.map((day, dayIdx) => {
                       const slotData = getSlotData(day, slot);
@@ -318,13 +426,15 @@ export default function DoctorSchedulePage() {
                       const isBusy = status === "BUSY";
                       const isReserved = status === "RESERVED";
                       const isEmpty = status === "EMPTY";
+                      const isToday = day.toDateString() === new Date().toDateString();
 
                       return (
                         <td
                           key={dayIdx}
-                          className={`border border-gray-200 p-2 text-center cursor-pointer transition-colors ${
-                            isEmpty ? "hover:bg-blue-50" : ""
-                          } ${isReserved ? "hover:bg-red-50" : ""}`}
+                          className={`border-2 border-gray-300 p-3 text-center cursor-pointer transition-all duration-200 ${
+                            isEmpty ? "hover:bg-blue-50 hover:border-blue-300 hover:shadow-inner" : ""
+                          } ${isReserved ? "hover:bg-yellow-100 hover:border-yellow-400" : ""}
+                          ${isToday ? "bg-teal-50/30" : "bg-white"}`}
                           onClick={() => {
                             if (isEmpty) {
                               handleAddSlot(day, slot);
@@ -335,21 +445,33 @@ export default function DoctorSchedulePage() {
                           }}
                         >
                           {isEmpty && (
-                            <div className="flex items-center justify-center gap-1 text-gray-400">
-                              <Plus size={16} />
-                              <span className="text-xs">Thêm ca</span>
+                            <div className="flex flex-col items-center justify-center gap-2 py-4 text-gray-400 group-hover:text-blue-600">
+                              <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-all">
+                                <Plus size={20} />
+                              </div>
+                              <span className="text-xs font-medium">Thêm ca</span>
                             </div>
                           )}
                           {isReserved && (
-                            <Chip color="warning" size="sm" variant="flat">
-                              Sẵn sàng
-                            </Chip>
+                            <div className="py-4">
+                              <div className="w-10 h-10 rounded-full bg-yellow-100 border-2 border-yellow-400 flex items-center justify-center mx-auto mb-2">
+                                <CheckCircle className="text-yellow-600" size={20} />
+                              </div>
+                              <Chip color="warning" size="sm" variant="solid" className="font-semibold">
+                                Sẵn sàng
+                              </Chip>
+                            </div>
                           )}
                           {isBusy && slotData.appointment && (
-                            <div className="bg-green-50 border border-green-200 rounded p-2">
-                              <p className="font-semibold text-xs">{slotData.appointment.patient?.name || "Bệnh nhân"}</p>
-                              <Chip color="success" size="sm" variant="flat" className="mt-1">
-                                {slotData.appointment.status}
+                            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-3 shadow-sm">
+                              <div className="w-10 h-10 rounded-full bg-green-200 border-2 border-green-400 flex items-center justify-center mx-auto mb-2">
+                                <CheckCircle className="text-green-700" size={20} />
+                              </div>
+                              <p className="font-bold text-sm text-green-900 mb-1">
+                                {slotData.appointment.patient?.name || "Bệnh nhân"}
+                              </p>
+                              <Chip color="success" size="sm" variant="solid" className="font-semibold">
+                                Đã đặt
                               </Chip>
                             </div>
                           )}

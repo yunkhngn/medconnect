@@ -5,10 +5,13 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.CreateAppointmentRequest;
 import se1961.g1.medconnect.pojo.Appointment;
+import se1961.g1.medconnect.pojo.MedicalRecord;
 import se1961.g1.medconnect.service.AppointmentService;
+import se1961.g1.medconnect.service.MedicalRecordService;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -21,6 +24,47 @@ public class AppointmentController {
     
     @Autowired
     private AppointmentService appointmentService;
+    
+    @Autowired
+    private MedicalRecordService medicalRecordService;
+    
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    /**
+     * Helper method to build patient info with ID photo from EMR
+     */
+    private Map<String, Object> buildPatientInfo(se1961.g1.medconnect.pojo.Patient patient) {
+        Map<String, Object> patientInfo = new HashMap<>();
+        patientInfo.put("id", patient.getUserId());
+        patientInfo.put("firebaseUid", patient.getFirebaseUid());
+        patientInfo.put("name", patient.getName());
+        patientInfo.put("email", patient.getEmail());
+        patientInfo.put("phone", patient.getPhone());
+        patientInfo.put("dateOfBirth", patient.getDateOfBirth());
+        patientInfo.put("address", patient.getAddress());
+        patientInfo.put("avatar", patient.getAvatarUrl());
+        
+        // Fetch ID photo from EMR
+        try {
+            MedicalRecord record = medicalRecordService.getByPatientFirebaseUid(patient.getFirebaseUid());
+            if (record != null && record.getDetail() != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> emrData = objectMapper.readValue(record.getDetail(), Map.class);
+                if (emrData.containsKey("patient_profile")) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> profile = (Map<String, Object>) emrData.get("patient_profile");
+                    if (profile != null && profile.containsKey("id_photo_url")) {
+                        patientInfo.put("idPhotoUrl", profile.get("id_photo_url"));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Ignore EMR fetch errors, just don't include ID photo
+            System.err.println("Failed to fetch ID photo from EMR: " + e.getMessage());
+        }
+        
+        return patientInfo;
+    }
 
     /**
      * Get all appointments (Admin only)
@@ -52,6 +96,7 @@ public class AppointmentController {
             response.put("slot", appointment.getSlot().name());
             response.put("type", appointment.getType().name());
             response.put("createdAt", appointment.getCreatedAt());
+            response.put("reason", appointment.getReason());
             
             // Doctor details
             if (appointment.getDoctor() != null) {
@@ -60,20 +105,15 @@ public class AppointmentController {
                 doctorInfo.put("name", appointment.getDoctor().getName());
                 doctorInfo.put("email", appointment.getDoctor().getEmail());
                 doctorInfo.put("phone", appointment.getDoctor().getPhone());
-                doctorInfo.put("specialization", appointment.getDoctor().getSpecialization() != null 
-                    ? appointment.getDoctor().getSpecialization().name() : null);
+                doctorInfo.put("specialization", appointment.getDoctor().getSpeciality() != null 
+                    ? appointment.getDoctor().getSpeciality().getName() : null);
                 doctorInfo.put("avatar", appointment.getDoctor().getAvatarUrl());
                 response.put("doctor", doctorInfo);
             }
             
-            // Patient details
+            // Patient details (with ID photo from EMR)
             if (appointment.getPatient() != null) {
-                Map<String, Object> patientInfo = new HashMap<>();
-                patientInfo.put("id", appointment.getPatient().getUserId());
-                patientInfo.put("name", appointment.getPatient().getName());
-                patientInfo.put("email", appointment.getPatient().getEmail());
-                patientInfo.put("phone", appointment.getPatient().getPhone());
-                response.put("patient", patientInfo);
+                response.put("patient", buildPatientInfo(appointment.getPatient()));
             }
             
             return ResponseEntity.ok(response);
@@ -101,14 +141,18 @@ public class AppointmentController {
                     apt.put("slot", appointment.getSlot().name());
                     apt.put("type", appointment.getType().name());
                     apt.put("createdAt", appointment.getCreatedAt());
+                    apt.put("reason", appointment.getReason());
                     
                     // Doctor info
                     if (appointment.getDoctor() != null) {
                         Map<String, Object> doctor = new HashMap<>();
                         doctor.put("id", appointment.getDoctor().getUserId());
+                        doctor.put("firebaseUid", appointment.getDoctor().getFirebaseUid());
                         doctor.put("name", appointment.getDoctor().getName());
-                        doctor.put("specialization", appointment.getDoctor().getSpecialization() != null 
-                            ? appointment.getDoctor().getSpecialization().name() : null);
+                        doctor.put("email", appointment.getDoctor().getEmail());
+                        doctor.put("phone", appointment.getDoctor().getPhone());
+                        doctor.put("specialization", appointment.getDoctor().getSpeciality() != null 
+                            ? appointment.getDoctor().getSpeciality().getName() : null);
                         doctor.put("avatar", appointment.getDoctor().getAvatarUrl());
                         apt.put("doctor", doctor);
                     }
@@ -155,15 +199,11 @@ public class AppointmentController {
                     apt.put("slot", appointment.getSlot().name());
                     apt.put("type", appointment.getType().name());
                     apt.put("createdAt", appointment.getCreatedAt());
+                    apt.put("reason", appointment.getReason());
                     
-                    // Patient info
+                    // Patient info (with ID photo from EMR)
                     if (appointment.getPatient() != null) {
-                        Map<String, Object> patient = new HashMap<>();
-                        patient.put("id", appointment.getPatient().getUserId());
-                        patient.put("name", appointment.getPatient().getName());
-                        patient.put("email", appointment.getPatient().getEmail());
-                        patient.put("phone", appointment.getPatient().getPhone());
-                        apt.put("patient", patient);
+                        apt.put("patient", buildPatientInfo(appointment.getPatient()));
                     }
                     
                     return apt;
