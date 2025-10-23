@@ -323,9 +323,10 @@ export default function HoSoBenhAn() {
                   ${record.prescriptions && record.prescriptions.length > 0 ? `
                     <div class="info-row">
                       <div class="info-label">Đơn thuốc:</div>
-                      <div class="info-value">${record.prescriptions.map(rx => 
-                        `${rx.medication || rx.medicine_name}: ${rx.dosage} - ${rx.frequency} - ${rx.duration}`
-                      ).join('; ')}</div>
+                      <div class="info-value">${record.prescriptions.map(rx => {
+                        const medicineName = rx.medication || rx.medicine_name || rx.name || 'Thuốc không xác định';
+                        return `${medicineName}: ${rx.dosage || 'N/A'} - ${rx.frequency || 'N/A'} - ${rx.duration || 'N/A'}`;
+                      }).join('; ')}</div>
                     </div>
                   ` : ''}
                   ${record.notes ? `
@@ -347,21 +348,6 @@ export default function HoSoBenhAn() {
         </body>
       </html>
     `;
-  };
-
-  const printEMR = () => {
-    if (!emrData) return;
-    
-    const htmlContent = generatePDFContent();
-    const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.focus();
-    
-    // Wait for content to load then print
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
   };
 
   const downloadPDF = () => {
@@ -510,26 +496,15 @@ export default function HoSoBenhAn() {
             >
               Chỉnh sửa hồ sơ
             </Button>
-            <div className="flex gap-2">
               <Button
-                className="flex-1"
-                color="secondary"
-                variant="flat"
-                startContent={<Printer size={18} />}
-                onPress={printEMR}
-              >
-                In
-              </Button>
-              <Button
-                className="flex-1"
+              fullWidth
                 color="secondary"
                 variant="flat"
                 startContent={<Download size={18} />}
                 onPress={downloadPDF}
               >
-                Tải về
+                Xuất hồ sơ bệnh án
               </Button>
-            </div>
           </div>
         </CardBody>
       </Card>
@@ -739,17 +714,21 @@ export default function HoSoBenhAn() {
                         <div>
                           <p className="text-sm font-semibold text-gray-700 mb-2">Đơn thuốc:</p>
                           <div className="space-y-2">
-                            {record.prescriptions.map((rx, idx) => (
-                              <div key={idx} className="bg-blue-50 p-3 rounded text-sm">
-                                <p className="font-medium">{rx.medication || rx.medicine_name}</p>
-                                <p className="text-gray-600">
-                                  {rx.dosage} - {rx.frequency} - {rx.duration}
-                                </p>
-                                {rx.instructions && (
-                                  <p className="text-gray-500 text-xs mt-1">{rx.instructions}</p>
-                                )}
-                              </div>
-                            ))}
+                            {record.prescriptions.map((rx, idx) => {
+                              console.log('[Prescription Debug]', rx); // Debug prescription structure
+                              const medicineName = rx.medication || rx.medicine_name || rx.name || 'Thuốc không xác định';
+                              return (
+                                <div key={idx} className="bg-blue-50 p-3 rounded text-sm">
+                                  <p className="font-medium">{medicineName}</p>
+                                  <p className="text-gray-600">
+                                    {rx.dosage || 'N/A'} - {rx.frequency || 'N/A'} - {rx.duration || 'N/A'}
+                                  </p>
+                                  {rx.instructions && (
+                                    <p className="text-gray-500 text-xs mt-1">{rx.instructions}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
