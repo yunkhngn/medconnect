@@ -12,6 +12,7 @@ import { Home, FileText, Calendar, Clock } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import UserAvatar from "@/components/ui/UserAvatar";
+import menuItems from "@/config/Nav/patientNav";
 
 const PatientNav = () => {
   const router = useRouter();
@@ -78,71 +79,27 @@ const PatientNav = () => {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-2 py-6 space-y-4 flex flex-col items-center">
-        {/* Trang chủ */}
-        <Link href="/nguoi-dung/trang-chu">
-          <div
-            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
-              ${
-                isActive("/nguoi-dung/trang-chu")
-                  ? "bg-teal-50 text-teal-700"
-                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
-              }
-            `}
-          >
-            <Home className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs font-medium text-center">Trang chủ</span>
-          </div>
-        </Link>
-
-        {/* Hồ sơ bệnh án */}
-        <Link href="/nguoi-dung/ho-so-benh-an">
-          <div
-            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
-              ${
-                isActive("/nguoi-dung/ho-so-benh-an")
-                  ? "bg-teal-50 text-teal-700"
-                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
-              }
-            `}
-          >
-            <FileText className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs font-medium text-center">Hồ sơ</span>
-          </div>
-        </Link>
-
-        {/* Lịch hẹn */}
-        <Link href="/nguoi-dung/lich-hen">
-          <div
-            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
-              ${
-                isActive("/nguoi-dung/lich-hen")
-                  ? "bg-teal-50 text-teal-700"
-                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
-              }
-            `}
-          >
-            <Calendar className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs font-medium text-center">Lịch hẹn</span>
-          </div>
-        </Link>
-      
-
-      {/* Lịch sử */}
-        <Link href="/nguoi-dung/lich-su">
-          <div
-            className={`transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-xl
-              ${
-                isActive("/nguoi-dung/lich-su")
-                  ? "bg-teal-50 text-teal-700"
-                  : "text-gray-400 hover:bg-gray-50 hover:text-gray-700"
-              }
-            `}
-          >
-            <Clock className="w-6 h-6" strokeWidth={2} />
-            <span className="text-xs font-medium text-center">Lịch sử</span>
-          </div>
-        </Link>
+      <nav className="flex-1 px-2 py-6 space-y-2">
+        {menuItems.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <div
+              className={`
+                transition-all duration-200 cursor-pointer flex flex-col items-center gap-2 py-3 px-2 rounded-lg
+                ${isActive(item.href) 
+                  ? 'bg-teal-50 text-teal-700' 
+                  : 'text-gray-400 hover:bg-gray-50 hover:text-gray-700'
+                }
+              `}
+            >
+              <div className="w-6 h-6">
+                {item.icon}
+              </div>
+              <span className="text-xs font-medium text-center">
+                {item.label}
+              </span>
+            </div>
+          </Link>
+        ))}
       </nav>
 
 

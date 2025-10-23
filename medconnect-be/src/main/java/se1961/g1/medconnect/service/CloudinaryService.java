@@ -61,6 +61,50 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload medical ID photo to Cloudinary (3:4 ratio)
+     * @param file MultipartFile image
+     * @param userId User ID for organizing folders
+     * @return URL of uploaded image
+     */
+    public String uploadMedicalPhoto(MultipartFile file, String userId) throws IOException {
+        // Validate file
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        // Validate file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File must be an image");
+        }
+
+        // Validate file size (max 5MB)
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("File size must be less than 5MB");
+        }
+
+        // Generate unique filename for medical photos
+        String publicId = "medconnect/medical_photos/" + userId + "/" + UUID.randomUUID();
+
+        // Upload to Cloudinary with 3:4 aspect ratio
+        @SuppressWarnings("unchecked")
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "public_id", publicId,
+                "folder", "medconnect/medical_photos",
+                "transformation", new com.cloudinary.Transformation<>()
+                        .width(600)
+                        .height(800)
+                        .crop("fill")
+                        .gravity("auto")
+                        .quality("auto")
+                        .fetchFormat("auto")
+        ));
+
+        // Return secure URL
+        return (String) uploadResult.get("secure_url");
+    }
+
+    /**
      * Delete avatar from Cloudinary
      * @param imageUrl URL of image to delete
      */

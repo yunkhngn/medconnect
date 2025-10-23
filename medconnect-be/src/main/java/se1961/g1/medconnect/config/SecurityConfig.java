@@ -35,6 +35,9 @@ public class SecurityConfig {
                         // Avatar endpoints - authenticated users
                         .requestMatchers("/api/avatar/**").authenticated()
                         
+                        // Medical photo endpoints - authenticated users
+                        .requestMatchers("/api/medical-photo/**").authenticated()
+                        
                         // Patient endpoints - authenticated users
                         .requestMatchers("/api/patient/profile/**").authenticated()
                         .requestMatchers("/api/patient/{userId}").permitAll() // For admin lookup

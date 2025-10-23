@@ -1,26 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { Save, Upload, User, Mail, Phone, MapPin, Heart, Calendar, Users, IdCard, Shield, Droplet, Lock, Key } from "lucide-react";
-import { Input, Select, SelectItem } from "@heroui/react";
-import PatientFrame from "@/components/layouts/Patient/Frame";
+import {
+  Input,
+  Select,
+  SelectItem,
+  Card,
+  CardHeader,
+  CardBody,
+  Avatar,
+  Button,
+  Divider,
+} from "@heroui/react";
+import { PatientFrame, Grid } from "@/components/layouts/";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
 import BHYTInput from "@/components/ui/BHYTInput";
 import { isValidBHYT } from "@/utils/bhytHelper";
 
-import { auth, db, storage } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useAuth } from "@/contexts/AuthContext";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 export default function PatientProfileWithFrame() {
   const toast = useToast();
   const { getAvatarUrl, uploadAvatar, uploading } = useAvatar();
-  const [user, setUser] = useState(null);
-  const [avatarUrl, setAvatarUrl] = useState(null); // Avatar URL riêng
+  const { user, loading: authLoading } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [patient, setPatient] = useState({
     name: "",
     email: "",
@@ -33,13 +40,12 @@ export default function PatientProfileWithFrame() {
     emergencyContactRelationship: "",
     bloodType: "",
     allergies: "",
-    socialInsurance: "", // mã BHYT
-    citizenship: "", // căn cước công dân
-    emr_url: "", // hồ sơ y tế điện tử
+    socialInsurance: "",
+    insuranceValidTo: "",
+    citizenship: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingEmr, setUploadingEmr] = useState(false);
 
   // Security states
   const [security, setSecurity] = useState({
@@ -51,26 +57,44 @@ export default function PatientProfileWithFrame() {
 
   const maxDob = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  // Listen to Firebase auth
+  const genderOptions = [
+    { key: "Nam", label: "Nam" },
+    { key: "Nữ", label: "Nữ" },
+    { key: "Khác", label: "Khác" }
+  ];
+
+  const bloodTypeOptions = [
+    { key: "A", label: "A" },
+    { key: "B", label: "B" },
+    { key: "AB", label: "AB" },
+    { key: "O", label: "O" },
+    { key: "A+", label: "A+" },
+    { key: "A-", label: "A-" },
+    { key: "B+", label: "B+" },
+    { key: "B-", label: "B-" },
+    { key: "AB+", label: "AB+" },
+    { key: "AB-", label: "AB-" },
+    { key: "O+", label: "O+" },
+    { key: "O-", label: "O-" }
+  ];
+
+  // Load patient data when user is authenticated
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        fetchPatientData(firebaseUser);
-      } else {
-        setLoading(false);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    fetchPatientData(user);
+  }, [user, authLoading]);
 
   const fetchPatientData = async (firebaseUser) => {
-    console.log("🔵 Fetching patient data for:", firebaseUser.uid);
-    console.log("📧 Email:", firebaseUser.email);
-    
     try {
-      // Fetch patient profile từ Backend API
-      console.log("📖 Fetching from backend API...");
       const token = await firebaseUser.getIdToken();
       
       const response = await fetch("http://localhost:8080/api/patient/profile", {
@@ -81,12 +105,8 @@ export default function PatientProfileWithFrame() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Patient data loaded from backend:", data);
-        
-        // Backend đã trả về dateOfBirth dạng yyyy-MM-dd string rồi
         setPatient({ ...patient, ...data });
         
-        // Get user's avatar from database
         const avatarResponse = await fetch("http://localhost:8080/api/avatar", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -96,53 +116,52 @@ export default function PatientProfileWithFrame() {
           setAvatarUrl(finalAvatarUrl);
         }
       } else if (response.status === 404) {
-        // Patient chưa có trong DB - có thể là user mới
-        console.log("ℹ️ Patient not found in database, using Firebase Auth data");
         setPatient({
           ...patient,
           name: firebaseUser.displayName || "",
           email: firebaseUser.email || "",
-          phone: firebaseUser.phoneNumber || "",
         });
+        setAvatarUrl(getAvatarUrl(firebaseUser, null));
       } else {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        toast.error("Không thể tải thông tin hồ sơ");
       }
-    } catch (err) {
-      console.error("❌ Error fetching patient:", err);
-      console.error("❌ Error message:", err.message);
-      
-      // Fallback: Dùng thông tin từ Firebase Auth
-      console.log("⚠️ Using fallback data from Firebase Auth");
-      setPatient({
-        ...patient,
-        name: firebaseUser.displayName || "",
-        email: firebaseUser.email || "",
-        phone: firebaseUser.phoneNumber || "",
-      });
+    } catch (error) {
+      console.error("Error fetching patient data:", error);
+      toast.error("Lỗi kết nối máy chủ");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+      const newAvatarUrl = await uploadAvatar(file, user);
+      setAvatarUrl(newAvatarUrl);
+      toast.success("Cập nhật ảnh đại diện thành công!");
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error("Tải ảnh đại diện thất bại");
+    }
+  };
+
   const handleSave = async () => {
     if (!user) {
-      toast.warning("Bạn chưa đăng nhập");
+      toast.error("Vui lòng đăng nhập");
       return;
     }
 
-    // Validate mã BHYT nếu có nhập
-    if (patient.socialInsurance && patient.socialInsurance.length > 0) {
-      if (!isValidBHYT(patient.socialInsurance)) {
-        toast.error("Mã số BHYT không hợp lệ. Vui lòng kiểm tra lại!");
-        return;
-      }
+    // Validate BHYT if provided
+    if (patient.socialInsurance && !isValidBHYT(patient.socialInsurance)) {
+      toast.error("Mã số BHYT không hợp lệ");
+      return;
     }
 
     setSaving(true);
     try {
       const token = await user.getIdToken();
-      
-      console.log("💾 Saving patient data:", patient);
       
       const response = await fetch("http://localhost:8080/api/patient/profile", {
         method: "PATCH",
@@ -153,70 +172,26 @@ export default function PatientProfileWithFrame() {
         body: JSON.stringify(patient),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      if (response.ok) {
+        toast.success("Cập nhật hồ sơ thành công!");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Cập nhật thất bại");
       }
-
-      const result = await response.json();
-      console.log("✅ Patient data saved:", result);
-      
-      toast.success(result.message || "Cập nhật thông tin thành công!");
-    } catch (err) {
-      console.error("❌ Error saving profile:", err);
-      toast.error(`Có lỗi xảy ra: ${err.message}`);
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error(error.message || "Không thể cập nhật hồ sơ");
     } finally {
       setSaving(false);
     }
   };
 
-  // Upload avatar
-  const handlePickAvatar = () => document.getElementById("avatar-input")?.click();
-
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    
-    try {
-      const url = await uploadAvatar(file);
-      setAvatarUrl(url);
-      toast.success("Tải ảnh đại diện thành công!");
-    } catch (err) {
-      console.error("Upload avatar error:", err);
-      toast.error(err.message || "Tải ảnh thất bại");
-    }
-  };
-
-  // Upload hồ sơ y tế (EMR)
-  const handlePickEmr = () => document.getElementById("emr-input")?.click();
-
-  const handleEmrChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploadingEmr(true);
-    try {
-      const fileRef = ref(storage, `emr/${user.uid}/${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      setPatient((p) => ({ ...p, emr_url: url }));
-      await setDoc(doc(db, "patients", user.uid), { emr_url: url, updated_at: serverTimestamp() }, { merge: true });
-      toast.success("Tải hồ sơ y tế thành công!");
-    } catch (err) {
-      console.error("Upload EMR error:", err);
-      toast.error("Tải hồ sơ y tế thất bại");
-    } finally {
-      setUploadingEmr(false);
-    }
-  };
-
-  // Change Password
   const handleChangePassword = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
       return;
     }
 
-    // Validation
     if (!security.currentPassword || !security.newPassword || !security.confirmPassword) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
@@ -234,23 +209,18 @@ export default function PatientProfileWithFrame() {
 
     setChangingPassword(true);
     try {
-      // Re-authenticate user first
       const credential = EmailAuthProvider.credential(
         user.email,
         security.currentPassword
       );
       await reauthenticateWithCredential(user, credential);
-
-      // Update password
       await updatePassword(user, security.newPassword);
 
-      // Clear form
-      setSecurity(prev => ({
-        ...prev,
+      setSecurity({
         currentPassword: "",
         newPassword: "",
         confirmPassword: ""
-      }));
+      });
 
       toast.success("Đổi mật khẩu thành công!");
     } catch (err) {
@@ -267,6 +237,418 @@ export default function PatientProfileWithFrame() {
     }
   };
 
+  if (loading) {
+    return (
+      <PatientFrame title="Hồ sơ bệnh nhân">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Đang tải...</p>
+          </div>
+        </div>
+      </PatientFrame>
+    );
+  }
+
+  // Left Panel
+  const leftPanel = (
+    <div className="space-y-6">
+      <Card>
+        <CardBody className="p-6 text-center">
+          <div className="relative inline-block">
+            <Avatar
+              src={avatarUrl}
+              className="w-24 h-24 mx-auto mb-4 text-large"
+              name={patient.name?.charAt(0)?.toUpperCase() || "P"}
+            />
+            <label
+              htmlFor="avatar-input"
+              className="absolute bottom-4 right-0 bg-teal-600 text-white p-2 rounded-full cursor-pointer hover:bg-teal-700 transition-colors"
+            >
+              <Upload size={16} />
+            </label>
+            <input
+              id="avatar-input"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+              disabled={uploading}
+            />
+          </div>
+          <h3 className="text-lg font-semibold">{patient.name || "Bệnh nhân"}</h3>
+          <p className="text-sm text-gray-600">{patient.email}</p>
+          {patient.socialInsurance && (
+            <p className="text-xs text-gray-500 mt-2">BHYT: {patient.socialInsurance}</p>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="p-6">
+          <h4 className="font-semibold mb-3">Thông tin tài khoản</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Vai trò:</span>
+              <span className="font-medium text-teal-600">Bệnh nhân</span>
+            </div>
+            {patient.bloodType && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nhóm máu:</span>
+                <span className="font-medium text-red-600">{patient.bloodType}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Trạng thái:</span>
+              <span className="text-green-600 font-medium">Hoạt động</span>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="bg-blue-50 border-blue-100">
+        <CardBody className="p-4">
+          <p className="text-xs font-semibold text-blue-900 mb-1">💡 Lưu ý</p>
+          <p className="text-xs text-blue-700 leading-relaxed">
+            Vui lòng cập nhật đầy đủ thông tin để được phục vụ tốt nhất. Email không thể thay đổi.
+          </p>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  // Right Panel
+  const rightPanel = (
+    <div className="space-y-6">
+      {/* Basic Information */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <User size={24} className="text-teal-600" />
+            Thông tin cơ bản
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Họ và tên"
+              placeholder="Nguyễn Văn A"
+              value={patient.name || ""}
+              onValueChange={(v) => setPatient({ ...patient, name: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<User className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+            />
+            <Input
+              type="email"
+              label="Email"
+              value={patient.email || ""}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Mail className="text-default-400" size={20} />}
+              isReadOnly
+              description="Email không thể thay đổi"
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 bg-gray-50"
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              type="tel"
+              label="Số điện thoại"
+              placeholder="0912 345 678"
+              value={patient.phone || ""}
+              onValueChange={(v) => setPatient({ ...patient, phone: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Phone className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+            />
+            <Input
+              type="date"
+              label="Ngày sinh"
+              value={patient.dateOfBirth || ""}
+              onValueChange={(v) => setPatient({ ...patient, dateOfBirth: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              max={maxDob}
+              startContent={<Calendar className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              label="Giới tính"
+              placeholder="Chọn giới tính"
+              selectedKeys={patient.gender ? [patient.gender] : []}
+              onSelectionChange={(keys) => setPatient({ ...patient, gender: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Users className="text-default-400" size={20} />}
+              classNames={{
+                trigger: "border-default-200 hover:border-teal-500 data-[focus=true]:border-teal-500"
+              }}
+            >
+              {genderOptions.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </Select>
+            <Select
+              label="Nhóm máu"
+              placeholder="Chọn nhóm máu"
+              selectedKeys={patient.bloodType ? [patient.bloodType] : []}
+              onSelectionChange={(keys) => setPatient({ ...patient, bloodType: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Droplet className="text-default-400" size={20} />}
+              classNames={{
+                trigger: "border-default-200 hover:border-teal-500 data-[focus=true]:border-teal-500"
+              }}
+            >
+              {bloodTypeOptions.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </Select>
+          </div>
+
+          <Input
+            label="Địa chỉ"
+            placeholder="Số nhà, đường, phường, quận, thành phố"
+            value={patient.address || ""}
+            onValueChange={(v) => setPatient({ ...patient, address: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<MapPin className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+
+          <Input
+            label="Căn cước công dân"
+            placeholder="VD: 001234567890"
+            value={patient.citizenship || ""}
+            onValueChange={(v) => setPatient({ ...patient, citizenship: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<IdCard className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+        </CardBody>
+      </Card>
+
+      {/* Health Information */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Heart size={24} className="text-red-600" />
+            Thông tin sức khỏe
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <BHYTInput
+            value={patient.socialInsurance || ""}
+            onChange={(v) => setPatient({ ...patient, socialInsurance: v })}
+          />
+
+          <Input
+            type="date"
+            label="BHYT hết hạn"
+            value={patient.insuranceValidTo || ""}
+            onValueChange={(v) => setPatient({ ...patient, insuranceValidTo: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            description="Ngày hết hạn thẻ BHYT"
+            startContent={<Shield className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+
+          <Input
+            label="Dị ứng"
+            placeholder="VD: Không, hoặc liệt kê các dị ứng"
+            value={patient.allergies || ""}
+            onValueChange={(v) => setPatient({ ...patient, allergies: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            description="Các dị ứng thuốc hoặc thực phẩm"
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+        </CardBody>
+      </Card>
+
+      {/* Emergency Contact */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Phone size={24} className="text-orange-600" />
+            Liên hệ khẩn cấp
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <Input
+            label="Tên người liên hệ"
+            placeholder="Nguyễn Văn B"
+            value={patient.emergencyContactName || ""}
+            onValueChange={(v) => setPatient({ ...patient, emergencyContactName: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<User className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              type="tel"
+              label="Số điện thoại"
+              placeholder="0912 345 678"
+              value={patient.emergencyContactPhone || ""}
+              onValueChange={(v) => setPatient({ ...patient, emergencyContactPhone: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Phone className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+            />
+            <Input
+              label="Quan hệ"
+              placeholder="VD: Vợ/Chồng, Con, Anh/Chị/Em"
+              value={patient.emergencyContactRelationship || ""}
+              onValueChange={(v) => setPatient({ ...patient, emergencyContactRelationship: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Users className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+            />
+          </div>
+
+          <Button
+            color="primary"
+            onPress={handleSave}
+            isLoading={saving}
+            startContent={<Save size={18} />}
+            className="w-full md:w-auto"
+          >
+            Lưu thay đổi
+          </Button>
+        </CardBody>
+      </Card>
+
+      {/* Security */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Lock size={24} className="text-red-600" />
+            Bảo mật
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+            <p className="text-sm text-yellow-800">
+              ⚠️ <strong>Lưu ý:</strong> Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại.
+            </p>
+          </div>
+
+          <Input
+            type="password"
+            label="Mật khẩu hiện tại"
+            placeholder="Nhập mật khẩu hiện tại"
+            value={security.currentPassword}
+            onValueChange={(v) => setSecurity({ ...security, currentPassword: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<Lock className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+            }}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              type="password"
+              label="Mật khẩu mới"
+              placeholder="Tối thiểu 6 ký tự"
+              value={security.newPassword}
+              onValueChange={(v) => setSecurity({ ...security, newPassword: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Key className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+              }}
+            />
+            <Input
+              type="password"
+              label="Xác nhận mật khẩu mới"
+              placeholder="Nhập lại mật khẩu mới"
+              value={security.confirmPassword}
+              onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Key className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+              }}
+            />
+          </div>
+
+          <Button
+            color="danger"
+            onPress={handleChangePassword}
+            isLoading={changingPassword}
+            isDisabled={!security.currentPassword || !security.newPassword || !security.confirmPassword}
+            startContent={<Key size={18} />}
+            className="w-full md:w-auto"
+          >
+            Đổi mật khẩu
+          </Button>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
   return (
     <>
       <ToastNotification
@@ -277,405 +659,7 @@ export default function PatientProfileWithFrame() {
         duration={toast.toast.duration}
       />
       <PatientFrame title="Hồ sơ bệnh nhân">
-        <div className="w-full min-h-screen bg-gray-50">
-        <div className="p-6 md:p-8 max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center overflow-hidden">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="avatar" className="w-12 h-12 object-cover" />
-                ) : (
-                  <User className="text-white" size={24} />
-                )}
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900">Thông tin cá nhân</h1>
-            </div>
-            <p className="text-gray-600">Cập nhật thông tin cá nhân của bạn</p>
-          </div>
-
-          {/* Avatar uploader */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-6">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden ring-2 ring-white shadow-sm cursor-pointer hover:ring-teal-500 transition-all relative"
-                onClick={handlePickAvatar}
-                role="button"
-                title="Đổi ảnh đại diện"
-              >
-                {avatarUrl ? (
-                  <Image 
-                    src={avatarUrl} 
-                    alt="avatar" 
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                    quality={90}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <User size={28} />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">Ảnh đại diện</div>
-                <div className="text-sm text-gray-500">
-                  {user?.photoURL && !avatarUrl?.includes('cloudinary') 
-                    ? "Đang dùng ảnh Gmail. Upload ảnh mới để thay đổi." 
-                    : "JPG/PNG ≤ 5MB. Ảnh vuông hiển thị đẹp nhất."}
-                </div>
-                <button
-                  onClick={handlePickAvatar}
-                  className="mt-2 px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!user || uploading}
-                >
-                  {uploading ? "Đang tải..." : "Chọn ảnh"}
-                </button>
-              </div>
-              <input id="avatar-input" type="file" accept="image/*" hidden onChange={handleAvatarChange} />
-            </div>
-          </div>
-
-          {/* Main Form */}
-          {loading ? (
-            <div className="animate-pulse space-y-4 max-w-3xl">
-              <div className="h-8 bg-gray-200 rounded w-1/4" />
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-20 bg-gray-200 rounded" />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input 
-                    label="Họ và tên" 
-                    placeholder="Nhập họ và tên đầy đủ" 
-                    value={patient.name || ""} 
-                    onValueChange={(v) => setPatient({ ...patient, name: v })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<User className="text-default-400" size={20} />}
-                    classNames={{
-                      input: "text-base",
-                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
-                    }}
-                  />
-                  <Input 
-                    type="email" 
-                    label="Email" 
-                    placeholder="your.email@example.com" 
-                    value={patient.email || ""} 
-                    onValueChange={(v) => setPatient({ ...patient, email: v })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<Mail className="text-default-400" size={20} />}
-                    isReadOnly
-                    description="Email không thể thay đổi"
-                    classNames={{
-                      input: "text-base",
-                      inputWrapper: "border-default-200 bg-gray-50",
-                      description: "text-xs text-default-500"
-                    }}
-                  />
-                  <Input 
-                    type="tel" 
-                    label="Số điện thoại" 
-                    placeholder="0912 345 678" 
-                    value={patient.phone || ""} 
-                    onValueChange={(v) => setPatient({ ...patient, phone: v })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<Phone className="text-default-400" size={20} />}
-                    classNames={{
-                      input: "text-base",
-                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
-                    }}
-                  />
-                  <Input 
-                    type="date" 
-                    label="Ngày sinh" 
-                    value={patient.dateOfBirth || ""} 
-                    onValueChange={(v) => setPatient({ ...patient, dateOfBirth: v })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    max={maxDob}
-                    startContent={<Calendar className="text-default-400" size={20} />}
-                    classNames={{
-                      input: "text-base",
-                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
-                    }}
-                  />
-                  <Select 
-                    label="Giới tính" 
-                    placeholder="Chọn giới tính"
-                    selectedKeys={patient.gender ? [patient.gender] : []} 
-                    onSelectionChange={(keys) => setPatient({ ...patient, gender: Array.from(keys)[0] || "" })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<Users className="text-default-400" size={20} />}
-                    classNames={{
-                      trigger: "border-default-200 hover:border-primary data-[focus=true]:!border-primary"
-                    }}
-                  >
-                    <SelectItem key="Nam" value="Nam">Nam</SelectItem>
-                    <SelectItem key="Nữ" value="Nữ">Nữ</SelectItem>
-                    <SelectItem key="Khác" value="Khác">Khác</SelectItem>
-                  </Select>
-                  <Select 
-                    label="Nhóm máu" 
-                    placeholder="Chọn nhóm máu"
-                    selectedKeys={patient.bloodType ? [patient.bloodType] : []} 
-                    onSelectionChange={(keys) => setPatient({ ...patient, bloodType: Array.from(keys)[0] || "" })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<Droplet className="text-default-400" size={20} />}
-                    classNames={{
-                      trigger: "border-default-200 hover:border-primary data-[focus=true]:!border-primary"
-                    }}
-                  >
-                    <SelectItem key="A" value="A">A</SelectItem>
-                    <SelectItem key="B" value="B">B</SelectItem>
-                    <SelectItem key="AB" value="AB">AB</SelectItem>
-                    <SelectItem key="O" value="O">O</SelectItem>
-                  </Select>
-                </div>
-
-                {/* BHYT: Số thẻ & Hết hạn */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <BHYTInput 
-                    label="Mã số Bảo hiểm Y tế" 
-                    placeholder="VD: HS 4 01 0120878811" 
-                    value={patient.socialInsurance || ''} 
-                    onChange={(v) => setPatient({ ...patient, socialInsurance: v })} 
-                  />
-                  <Input 
-                    type="date"
-                    label="BHYT hết hạn" 
-                    placeholder="Chọn ngày hết hạn" 
-                    value={patient.insuranceValidTo || ""} 
-                    onValueChange={(v) => setPatient({ ...patient, insuranceValidTo: v })} 
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<Calendar className="text-default-400" size={20} />}
-                    classNames={{
-                      input: "text-base",
-                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
-                    }}
-                  />
-                </div>
-
-                {/* CCCD */}
-                <Input 
-                  label="Căn cước công dân" 
-                  placeholder="Nhập số CCCD/CMND" 
-                  value={patient.citizenship || ""} 
-                  onValueChange={(v) => setPatient({ ...patient, citizenship: v })} 
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<IdCard className="text-default-400" size={20} />}
-                  classNames={{
-                    input: "text-base",
-                    inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
-                  }}
-                />
-
-                <Input 
-                  label="Địa chỉ" 
-                  placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố" 
-                  value={patient.address || ""} 
-                  onValueChange={(v) => setPatient({ ...patient, address: v })} 
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<MapPin className="text-default-400" size={20} />}
-                  classNames={{
-                    input: "text-base",
-                    inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
-                  }}
-                />
-                
-                <Input 
-                  label="Dị ứng (nếu có)" 
-                  placeholder="Ví dụ: Penicillin, hải sản, phấn hoa, bụi, lông thú..." 
-                  value={patient.allergies || ""} 
-                  onValueChange={(v) => setPatient({ ...patient, allergies: v })} 
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<Heart className="text-default-400" size={20} />}
-                  description="Thông tin này giúp bác sĩ tư vấn và điều trị an toàn hơn"
-                  classNames={{
-                    input: "text-base",
-                    inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary",
-                    description: "text-xs text-default-500"
-                  }}
-                />
-
-                {/* Security Section */}
-                <div className="border-t border-gray-200 pt-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Lock className="text-red-500" size={24} />
-                    <h3 className="text-lg font-semibold text-gray-900">Bảo mật tài khoản</h3>
-                  </div>
-                  <p className="text-sm text-default-500 mb-6">
-                    Quản lý mật khẩu đăng nhập của bạn. Email không thể thay đổi.
-                  </p>
-
-                  {/* Change Password */}
-                  <div className="p-5 bg-red-50 rounded-lg border border-red-100">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Key className="text-red-600" size={20} />
-                      <h4 className="font-semibold text-gray-900">Đổi mật khẩu</h4>
-                    </div>
-                    <div className="space-y-4">
-                      <Input 
-                        type="password"
-                        label="Mật khẩu hiện tại" 
-                        placeholder="Nhập mật khẩu hiện tại" 
-                        value={security.currentPassword} 
-                        onValueChange={(v) => setSecurity({ ...security, currentPassword: v })} 
-                        variant="bordered"
-                        labelPlacement="outside"
-                        startContent={<Lock className="text-default-400" size={20} />}
-                        classNames={{
-                          input: "text-base",
-                          inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
-                        }}
-                      />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input 
-                          type="password"
-                          label="Mật khẩu mới" 
-                          placeholder="Ít nhất 6 ký tự" 
-                          value={security.newPassword} 
-                          onValueChange={(v) => setSecurity({ ...security, newPassword: v })} 
-                          variant="bordered"
-                          labelPlacement="outside"
-                          startContent={<Key className="text-default-400" size={20} />}
-                          classNames={{
-                            input: "text-base",
-                            inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
-                          }}
-                        />
-                        <Input 
-                          type="password"
-                          label="Xác nhận mật khẩu mới" 
-                          placeholder="Nhập lại mật khẩu mới" 
-                          value={security.confirmPassword} 
-                          onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })} 
-                          variant="bordered"
-                          labelPlacement="outside"
-                          startContent={<Key className="text-default-400" size={20} />}
-                          classNames={{
-                            input: "text-base",
-                            inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
-                          }}
-                        />
-                      </div>
-                      <button
-                        onClick={handleChangePassword}
-                        disabled={changingPassword || !security.currentPassword || !security.newPassword || !security.confirmPassword}
-                        className="bg-red-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Key size={18} />
-                        {changingPassword ? "Đang đổi..." : "Đổi mật khẩu"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Email Info - Read Only */}
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Mail className="text-blue-600" size={20} />
-                      <h4 className="font-semibold text-gray-900">Email đăng nhập</h4>
-                    </div>
-                    <p className="text-sm text-blue-800">
-                      <strong>Email hiện tại:</strong> {user?.email || patient.email}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-2">
-                      ℹ️ Email không thể thay đổi vì đây là định danh chính của tài khoản
-                    </p>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 pt-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Shield className="text-orange-500" size={24} />
-                    <h3 className="text-lg font-semibold text-gray-900">Liên hệ khẩn cấp</h3>
-                  </div>
-                  <p className="text-sm text-default-500 mb-4">
-                    Thông tin này sẽ được sử dụng để liên lạc trong trường hợp khẩn cấp
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Input 
-                      label="Tên người liên hệ" 
-                      placeholder="Họ và tên người thân" 
-                      value={patient.emergencyContactName || ""} 
-                      onValueChange={(v) => setPatient({ ...patient, emergencyContactName: v })} 
-                      variant="bordered"
-                      labelPlacement="outside"
-                      startContent={<User className="text-default-400" size={20} />}
-                      classNames={{
-                        input: "text-base",
-                        inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
-                      }}
-                    />
-                    <Input 
-                      type="tel" 
-                      label="Số điện thoại liên hệ" 
-                      placeholder="0912 345 678" 
-                      value={patient.emergencyContactPhone || ""} 
-                      onValueChange={(v) => setPatient({ ...patient, emergencyContactPhone: v })} 
-                      variant="bordered"
-                      labelPlacement="outside"
-                      startContent={<Phone className="text-default-400" size={20} />}
-                      classNames={{
-                        input: "text-base",
-                        inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
-                      }}
-                    />
-                    <Input 
-                      label="Quan hệ" 
-                      placeholder="Cha, mẹ, anh, chị..." 
-                      value={patient.emergencyContactRelationship || ""} 
-                      onValueChange={(v) => setPatient({ ...patient, emergencyContactRelationship: v })} 
-                      variant="bordered"
-                      labelPlacement="outside"
-                      startContent={<Users className="text-default-400" size={20} />}
-                      classNames={{
-                        input: "text-base",
-                        inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end items-center gap-3 pt-2">
-                  <button
-                    onClick={handlePickEmr}
-                    disabled={!user || uploadingEmr}
-                    className="bg-gray-100 text-gray-800 px-5 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Upload size={20} />
-                    {uploadingEmr ? "Đang tải..." : "Upload hồ sơ y tế"}
-                  </button>
-                  <input id="emr-input" type="file" hidden onChange={handleEmrChange} />
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || !user}
-                    className="bg-teal-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-teal-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Save size={20} />
-                    {saving ? "Đang lưu..." : "Lưu thông tin"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+        <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
       </PatientFrame>
     </>
   );
