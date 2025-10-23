@@ -29,6 +29,7 @@ export default function EditEMRPage() {
     insurance_valid_to: "",
     emergency_contact_name: "",
     emergency_contact_phone: "",
+    emergency_contact_relationship: "",
     citizenship: "",
     occupation: "",
     ethnicity: "Kinh",
@@ -89,6 +90,7 @@ export default function EditEMRPage() {
             insurance_valid_to: pp.insurance?.valid_to || "",
             emergency_contact_name: pp.emergency_contact?.name || "",
             emergency_contact_phone: pp.emergency_contact?.phone || "",
+            emergency_contact_relationship: pp.emergency_contact?.relation || "",
             citizenship: pp.identity?.national_id || "",
             occupation: pp.occupation || "",
             ethnicity: pp.ethnicity || "Kinh",
@@ -225,7 +227,7 @@ export default function EditEMRPage() {
           emergency_contact: profile.emergency_contact_name ? {
             name: profile.emergency_contact_name,
             phone: profile.emergency_contact_phone || "",
-            relation: ""
+            relation: profile.emergency_contact_relationship || ""
           } : null,
           occupation: profile.occupation || "",
           ethnicity: profile.ethnicity || "Kinh",

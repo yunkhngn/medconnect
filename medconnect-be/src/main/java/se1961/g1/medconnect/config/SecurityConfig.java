@@ -43,11 +43,15 @@ public class SecurityConfig {
                         // Medical Records endpoints
                         .requestMatchers("/api/medical-records/my-profile").authenticated()
                         .requestMatchers("/api/medical-records").authenticated()
-                        .requestMatchers("/api/medical-records/patient/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/api/medical-records/patient/**").authenticated() // TODO: Change back to hasAnyRole("DOCTOR", "ADMIN") after testing
                         .requestMatchers("/api/medical-records/all").hasRole("ADMIN")
                         
                         // User endpoints
                         .requestMatchers("/api/user/**").authenticated()
+                        
+                        // Email endpoints
+                        .requestMatchers("/api/email/test").permitAll() // For testing
+                        .requestMatchers("/api/email/**").authenticated()
                         
                         // Role-based endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

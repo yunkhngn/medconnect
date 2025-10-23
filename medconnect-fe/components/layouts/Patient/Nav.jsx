@@ -66,7 +66,7 @@ const PatientNav = () => {
     <div className="fixed left-0 top-0 h-screen w-28 bg-white border-r border-gray-200 flex flex-col justify-between z-50">
       {/* Logo */}
       <div className="p-4 flex items-center justify-center border-b border-gray-100">
-        <Link href="/nguoi-dung/trang-chu">
+        <Link href="/">
           <Image
             src="/assets/logo.svg"
             alt="Logo"

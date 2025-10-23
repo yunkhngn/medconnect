@@ -113,6 +113,9 @@ public class MedicalRecordService {
                     if (patient.getEmergencyContactPhone() != null) {
                         emergencyContact.put("phone", patient.getEmergencyContactPhone());
                     }
+                    if (patient.getEmergencyContactRelationship() != null) {
+                        emergencyContact.put("relation", patient.getEmergencyContactRelationship());
+                    }
                 }
             }
             

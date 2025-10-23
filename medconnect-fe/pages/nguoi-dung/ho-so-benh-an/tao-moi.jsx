@@ -83,6 +83,7 @@ export default function CreateEMRPage() {
               insurance_valid_to: patientData.insuranceValidTo || "",
               emergency_contact_name: patientData.emergencyContactName || "",
               emergency_contact_phone: patientData.emergencyContactPhone || "",
+              emergency_contact_relationship: patientData.emergencyContactRelationship || "",
               citizenship: patientData.citizenship || ""
             }));
           }
@@ -202,7 +203,7 @@ export default function CreateEMRPage() {
           emergency_contact: profile.emergency_contact_name ? {
             name: profile.emergency_contact_name,
             phone: profile.emergency_contact_phone || "",
-            relation: ""
+            relation: profile.emergency_contact_relationship || ""
           } : null,
           
           // Additional EMR fields

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Input, Textarea, Button, Card, CardBody, CardHeader, Divider, Select, SelectItem, Chip } from "@heroui/react";
-import { Save, ArrowLeft, Plus, Trash2, Stethoscope, Pill, FlaskConical, Calendar } from "lucide-react";
+import { Save, ArrowLeft, Plus, Trash2, Stethoscope, Pill, Calendar } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
@@ -16,12 +16,13 @@ export default function TestDoctorAddRecord() {
   // Medical record data
   const [record, setRecord] = useState({
     visit_date: new Date().toISOString().split('T')[0],
+    visit_time: "",
+    visit_type: "offline", // online or offline
     chief_complaint: "",
     vital_signs: {
       temperature: "",
       blood_pressure: "",
       heart_rate: "",
-      respiratory_rate: "",
       oxygen_saturation: "",
       weight: "",
       height: ""
@@ -46,7 +47,6 @@ export default function TestDoctorAddRecord() {
       diet: ""
     },
     prescriptions: [],
-    lab_tests: [],
     follow_up: {
       required: false,
       date: "",
@@ -64,7 +64,6 @@ export default function TestDoctorAddRecord() {
     frequency: "",
     duration: ""
   });
-  const [labTestInput, setLabTestInput] = useState("");
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
@@ -126,27 +125,6 @@ export default function TestDoctorAddRecord() {
     }));
   };
 
-  const handleAddLabTest = () => {
-    if (labTestInput.trim()) {
-      setRecord(prev => ({
-        ...prev,
-        lab_tests: [...prev.lab_tests, {
-          test_name: labTestInput.trim(),
-          status: "ordered",
-          ordered_date: new Date().toISOString().split('T')[0]
-        }]
-      }));
-      setLabTestInput("");
-    }
-  };
-
-  const handleRemoveLabTest = (index) => {
-    setRecord(prev => ({
-      ...prev,
-      lab_tests: prev.lab_tests.filter((_, i) => i !== index)
-    }));
-  };
-
   const handleSave = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
@@ -171,13 +149,14 @@ export default function TestDoctorAddRecord() {
       const medicalEntry = {
         visit_id: `V${Date.now()}`,
         visit_date: record.visit_date,
+        visit_time: record.visit_time,
+        visit_type: record.visit_type,
         chief_complaint: record.chief_complaint,
         vital_signs: record.vital_signs,
         physical_exam: record.physical_exam,
         diagnosis: record.diagnosis,
         treatment_plan: record.treatment_plan,
         prescriptions: record.prescriptions,
-        lab_tests: record.lab_tests,
         follow_up: record.follow_up,
         notes: record.notes,
         doctor_notes: {
@@ -192,12 +171,19 @@ export default function TestDoctorAddRecord() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(medicalEntry)
+        body: JSON.stringify({ entry: medicalEntry })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add medical record");
+        let errorMessage = `Failed to add medical record (${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // Response không có JSON body, dùng status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       toast.success("Đã thêm bệnh án thành công!");
@@ -205,12 +191,13 @@ export default function TestDoctorAddRecord() {
       // Reset form
       setRecord({
         visit_date: new Date().toISOString().split('T')[0],
+        visit_time: "",
+        visit_type: "offline",
         chief_complaint: "",
         vital_signs: {
           temperature: "",
           blood_pressure: "",
           heart_rate: "",
-          respiratory_rate: "",
           oxygen_saturation: "",
           weight: "",
           height: ""
@@ -235,7 +222,6 @@ export default function TestDoctorAddRecord() {
           diet: ""
         },
         prescriptions: [],
-        lab_tests: [],
         follow_up: {
           required: false,
           date: "",
@@ -306,14 +292,35 @@ export default function TestDoctorAddRecord() {
               </h2>
             </CardHeader>
             <CardBody className="space-y-4">
-              <Input
-                type="date"
-                label="Ngày khám"
-                value={record.visit_date}
-                onValueChange={(v) => setRecord({...record, visit_date: v})}
-                variant="bordered"
-                labelPlacement="outside"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  type="date"
+                  label="Ngày khám"
+                  value={record.visit_date}
+                  onValueChange={(v) => setRecord({...record, visit_date: v})}
+                  variant="bordered"
+                  labelPlacement="outside"
+                />
+                <Input
+                  type="time"
+                  label="Giờ khám"
+                  placeholder="VD: 09:00"
+                  value={record.visit_time}
+                  onValueChange={(v) => setRecord({...record, visit_time: v})}
+                  variant="bordered"
+                  labelPlacement="outside"
+                />
+                <Select
+                  label="Loại khám"
+                  selectedKeys={[record.visit_type]}
+                  onSelectionChange={(keys) => setRecord({...record, visit_type: Array.from(keys)[0]})}
+                  variant="bordered"
+                  labelPlacement="outside"
+                >
+                  <SelectItem key="offline" value="offline">Offline (Trực tiếp)</SelectItem>
+                  <SelectItem key="online" value="online">Online (Từ xa)</SelectItem>
+                </Select>
+              </div>
               <Textarea
                 label="Lý do khám"
                 placeholder="VD: Đau đầu, sốt, ho..."
@@ -332,52 +339,59 @@ export default function TestDoctorAddRecord() {
             <CardHeader>
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Stethoscope className="text-rose-500" size={24} />
-                Sinh hiệu
+                Sinh hiệu tự đo (Tùy chọn)
               </h2>
             </CardHeader>
             <CardBody className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <p className="text-sm text-gray-600 -mt-2">Bệnh nhân có thể tự đo và cung cấp các chỉ số này trước khi đến khám</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
-                  label="Nhiệt độ (°C)"
-                  placeholder="37.5"
+                  label="Nhiệt độ tự đo (°C)"
+                  placeholder="VD: 37.5"
                   value={record.vital_signs.temperature}
                   onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, temperature: v}})}
                   variant="bordered"
+                  labelPlacement="outside"
                 />
                 <Input
-                  label="Huyết áp (mmHg)"
-                  placeholder="120/80"
+                  label="Huyết áp tự đo (mmHg)"
+                  placeholder="VD: 120/80"
                   value={record.vital_signs.blood_pressure}
                   onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, blood_pressure: v}})}
                   variant="bordered"
+                  labelPlacement="outside"
                 />
                 <Input
-                  label="Nhịp tim (bpm)"
-                  placeholder="72"
+                  label="Nhịp tim tự đo (bpm)"
+                  placeholder="VD: 72"
                   value={record.vital_signs.heart_rate}
                   onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, heart_rate: v}})}
                   variant="bordered"
+                  labelPlacement="outside"
                 />
                 <Input
-                  label="Nhịp thở (breaths/min)"
-                  placeholder="16"
-                  value={record.vital_signs.respiratory_rate}
-                  onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, respiratory_rate: v}})}
-                  variant="bordered"
-                />
-                <Input
-                  label="SpO2 (%)"
-                  placeholder="98"
+                  label="SpO2 tự đo (%)"
+                  placeholder="VD: 98"
                   value={record.vital_signs.oxygen_saturation}
                   onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, oxygen_saturation: v}})}
                   variant="bordered"
+                  labelPlacement="outside"
                 />
                 <Input
                   label="Cân nặng (kg)"
-                  placeholder="65"
+                  placeholder="VD: 65"
                   value={record.vital_signs.weight}
                   onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, weight: v}})}
                   variant="bordered"
+                  labelPlacement="outside"
+                />
+                <Input
+                  label="Chiều cao (cm)"
+                  placeholder="VD: 170"
+                  value={record.vital_signs.height}
+                  onValueChange={(v) => setRecord({...record, vital_signs: {...record.vital_signs, height: v}})}
+                  variant="bordered"
+                  labelPlacement="outside"
                 />
               </div>
             </CardBody>
@@ -533,46 +547,6 @@ export default function TestDoctorAddRecord() {
                   ))}
                 </div>
               )}
-            </CardBody>
-          </Card>
-
-          {/* Lab Tests */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <FlaskConical className="text-purple-500" size={24} />
-                Xét nghiệm
-              </h2>
-            </CardHeader>
-            <CardBody className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="VD: Xét nghiệm máu tổng quát"
-                  value={labTestInput}
-                  onValueChange={setLabTestInput}
-                  variant="bordered"
-                />
-                <Button
-                  color="primary"
-                  variant="flat"
-                  startContent={<Plus size={18} />}
-                  onClick={handleAddLabTest}
-                >
-                  Thêm
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {record.lab_tests.map((test, idx) => (
-                  <Chip
-                    key={idx}
-                    onClose={() => handleRemoveLabTest(idx)}
-                    variant="flat"
-                    color="secondary"
-                  >
-                    {test.test_name}
-                  </Chip>
-                ))}
-              </div>
             </CardBody>
           </Card>
 

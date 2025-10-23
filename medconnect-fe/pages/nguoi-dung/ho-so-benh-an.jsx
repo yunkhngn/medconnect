@@ -292,9 +292,11 @@ export default function MedicalRecordPage() {
                         title={
                           <div className="flex items-center justify-between w-full">
                             <div>
-                              <p className="font-semibold">{record.reason_for_visit}</p>
+                              <p className="font-semibold">{record.chief_complaint || record.reason_for_visit || "Khám bệnh"}</p>
                               <p className="text-sm text-gray-600">
-                                BS. {record.provider?.full_name} • {record.provider?.specialization}
+                                {record.provider?.full_name && `BS. ${record.provider.full_name}`}
+                                {record.provider?.specialization && ` • ${record.provider.specialization}`}
+                                {record.visit_type && ` • ${record.visit_type === 'online' ? 'Online' : 'Trực tiếp'}`}
                               </p>
                             </div>
                             <Chip
@@ -302,14 +304,72 @@ export default function MedicalRecordPage() {
                               color={record.encounter?.status === 'completed' ? 'success' : 'warning'}
                               variant="flat"
                             >
-                              {record.encounter?.status}
+                              {record.encounter?.status || 'completed'}
                             </Chip>
                           </div>
                         }
-                        subtitle={new Date(record.encounter?.started_at).toLocaleString('vi-VN')}
+                        subtitle={(() => {
+                          try {
+                            // Try new format first (visit_date + visit_time)
+                            if (record.visit_date) {
+                              const dateStr = record.visit_time 
+                                ? `${record.visit_date}T${record.visit_time}`
+                                : record.visit_date;
+                              return new Date(dateStr).toLocaleString('vi-VN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: record.visit_time ? '2-digit' : undefined,
+                                minute: record.visit_time ? '2-digit' : undefined
+                              });
+                            }
+                            // Fallback to old format
+                            if (record.encounter?.started_at) {
+                              return new Date(record.encounter.started_at).toLocaleString('vi-VN');
+                            }
+                            return "Chưa có thông tin";
+                          } catch (e) {
+                            return "Chưa có thông tin";
+                          }
+                        })()}
                       >
                         <div className="space-y-4 pl-4">
-                          {/* Diagnosis */}
+                          {/* Vital Signs */}
+                          {record.vital_signs && Object.values(record.vital_signs).some(v => v) && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2">Sinh hiệu tự đo:</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                                {record.vital_signs.temperature && <p>🌡️ Nhiệt độ: {record.vital_signs.temperature}°C</p>}
+                                {record.vital_signs.blood_pressure && <p>💉 Huyết áp: {record.vital_signs.blood_pressure}</p>}
+                                {record.vital_signs.heart_rate && <p>❤️ Nhịp tim: {record.vital_signs.heart_rate} bpm</p>}
+                                {record.vital_signs.oxygen_saturation && <p>🫁 SpO2: {record.vital_signs.oxygen_saturation}%</p>}
+                                {record.vital_signs.weight && <p>⚖️ Cân nặng: {record.vital_signs.weight} kg</p>}
+                                {record.vital_signs.height && <p>📏 Chiều cao: {record.vital_signs.height} cm</p>}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Diagnosis - New format */}
+                          {record.diagnosis?.primary && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2">Chẩn đoán:</h4>
+                              <Chip color="primary" variant="flat" className="mr-2 mb-2">
+                                {record.diagnosis.primary}
+                              </Chip>
+                              {record.diagnosis.secondary?.map((diag, i) => (
+                                <Chip key={i} color="secondary" variant="flat" className="mr-2 mb-2">
+                                  {diag}
+                                </Chip>
+                              ))}
+                              {record.diagnosis.icd_codes?.map((code, i) => (
+                                <Chip key={i} color="default" variant="bordered" size="sm" className="mr-2 mb-2">
+                                  ICD: {code}
+                                </Chip>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Diagnosis - Old format */}
                           {record.assessment_plan?.final_diagnosis && (
                             <div>
                               <h4 className="font-semibold text-sm mb-2">Chẩn đoán:</h4>
@@ -321,7 +381,7 @@ export default function MedicalRecordPage() {
                             </div>
                           )}
 
-                          {/* Plan */}
+                          {/* Plan - Old format */}
                           {record.assessment_plan?.plan && (
                             <div>
                               <h4 className="font-semibold text-sm mb-2">Kế hoạch điều trị:</h4>
@@ -333,7 +393,24 @@ export default function MedicalRecordPage() {
                             </div>
                           )}
 
-                          {/* Prescription */}
+                          {/* Prescription - New format */}
+                          {record.prescriptions && record.prescriptions.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                <Pill size={16} /> Đơn thuốc:
+                              </h4>
+                              <div className="space-y-2">
+                                {record.prescriptions.map((item, i) => (
+                                  <div key={i} className="bg-gray-50 p-3 rounded-lg text-sm">
+                                    <p className="font-medium">{item.name} {item.dosage}</p>
+                                    <p className="text-gray-600">{item.frequency} • {item.duration}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Prescription - Old format */}
                           {record.e_prescription && (
                             <div>
                               <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
@@ -347,6 +424,14 @@ export default function MedicalRecordPage() {
                                   </div>
                                 ))}
                               </div>
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          {record.notes && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2">Ghi chú:</h4>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{record.notes}</p>
                             </div>
                           )}
                         </div>
