@@ -1,250 +1,364 @@
-import { useEffect, useState } from "react";
-import { FileText, Calendar, User, Pill, Stethoscope } from "lucide-react";
-import PatientFrame from "@/components/layouts/Patient/Frame"; 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { Card, CardBody, CardHeader, Button, Chip, Divider, Accordion, AccordionItem } from "@heroui/react";
+import { FileText, Calendar, User, Heart, Pill, Shield, Phone, AlertCircle, Plus, Eye } from "lucide-react";
+import PatientFrame from "@/components/layouts/Patient/Frame";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/useToast";
+import ToastNotification from "@/components/ui/ToastNotification";
 
-export default function MedicalRecordsPage() {
-  const [records, setRecords] = useState([]);
+export default function MedicalRecordPage() {
+  const router = useRouter();
+  const toast = useToast();
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [emrData, setEmrData] = useState(null);
+  const [patientProfile, setPatientProfile] = useState(null);
+  const [medicalRecords, setMedicalRecords] = useState([]);
 
   useEffect(() => {
-    // ---- Mock dữ liệu để hiển thị UI ----
-    const today = new Date().toISOString().split("T")[0];
-
-    const mock = [
-      {
-        id: "rec1",
-        visit_date: addDaysISO(today, -2),
-        diagnosis: "Viêm dạ dày cấp.\nĐề nghị điều chỉnh chế độ ăn.",
-        treatment: "PPI 20mg sáng/chiều trong 14 ngày.",
-        prescription: "- Omeprazole 20mg x 2 viên/ngày\n- Alusal 10ml khi đau",
-        notes: "Tái khám sau 2 tuần.",
-        created_at: addDaysISO(today, -2),
-        doctor: {
-          full_name: "BS. Phạm Mỹ Dung",
-          specialty: "Tiêu hóa",
-          email: "dung.pm@hospital.vn",
-        },
-      },
-      {
-        id: "rec2",
-        visit_date: addDaysISO(today, -7),
-        diagnosis: "Viêm họng do virus.",
-        treatment: "Uống nhiều nước, nghỉ ngơi, giảm đau khi cần.",
-        prescription: "Paracetamol 500mg khi sốt/đau, không quá 3g/ngày.",
-        notes: "",
-        created_at: addDaysISO(today, -7),
-        doctor: {
-          full_name: "BS. Vũ Anh Tuấn",
-          specialty: "Tai Mũi Họng",
-          email: "tuan.va@hospital.vn",
-        },
-      },
-      {
-        id: "rec3",
-        visit_date: addDaysISO(today, -10),
-        diagnosis: "",
-        treatment: "",
-        prescription: "",
-        notes: "Khuyên tập kéo giãn cột sống 10 phút/ngày.",
-        created_at: addDaysISO(today, -10),
-        doctor: {
-          full_name: "BS. Trần Quỳnh Mai",
-          specialty: "Cơ Xương Khớp",
-          email: "mai.tq@hospital.vn",
-        },
-      },
-    ];
-
-    const t = setTimeout(() => {
-      setRecords(mock);
-      setSelectedRecord(mock[0] || null);
-      setLoading(false);
-    }, 300);
-
-    return () => clearTimeout(t);
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        fetchEMR(firebaseUser);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
+
+  const fetchEMR = async (firebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Raw EMR data:', data);
+        setEmrData(data);
+        
+        // Parse JSON detail if needed
+        if (data.detail) {
+          try {
+            console.log('Detail string:', data.detail);
+            console.log('Detail type:', typeof data.detail);
+            
+            const parsed = typeof data.detail === 'string' ? JSON.parse(data.detail) : data.detail;
+            console.log('Parsed EMR:', parsed);
+            
+            setPatientProfile(parsed.patient_profile || null);
+            setMedicalRecords(parsed.medical_records || []);
+          } catch (parseError) {
+            console.error('JSON Parse Error:', parseError);
+            console.error('Invalid JSON string:', data.detail);
+            toast.error('Dữ liệu hồ sơ bệnh án không hợp lệ');
+            setEmrData(null);
+          }
+        }
+      } else if (response.status === 404) {
+        // No EMR yet
+        setEmrData(null);
+      } else {
+        throw new Error('Failed to fetch EMR');
+      }
+    } catch (error) {
+      console.error('Error fetching EMR:', error);
+      toast.error('Không thể tải hồ sơ bệnh án');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProfile = () => {
+    router.push('/nguoi-dung/ho-so-benh-an/tao-moi');
+  };
 
   if (loading) {
     return (
-      <PatientFrame title="Hồ sơ bệnh án">
-        <div className="p-6 md:p-8 max-w-7xl mx-auto md:pl-28 lg:pl-32 xl:pl-36">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="h-96 bg-gray-200 rounded" />
-              <div className="lg:col-span-2 h-96 bg-gray-200 rounded" />
-            </div>
-          </div>
+      <PatientFrame>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </PatientFrame>
+    );
+  }
+
+  if (!user) {
+    return (
+      <PatientFrame>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <AlertCircle className="text-warning" size={48} />
+          <p className="mt-4 text-lg">Vui lòng đăng nhập để xem hồ sơ bệnh án</p>
         </div>
       </PatientFrame>
     );
   }
 
   return (
-    <PatientFrame title="Hồ sơ bệnh án">
-      <div className="p-6 md:p-8 max-w-7xl mx-auto md:pl-28 lg:pl-32 xl:pl-36">
+    <PatientFrame>
+      <ToastNotification toast={toast} />
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
-              <FileText className="text-white" size={24} />
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <FileText className="text-primary" size={32} />
+                Hồ sơ bệnh án
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Quản lý thông tin sức khỏe và lịch sử khám bệnh của bạn
+              </p>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Hồ sơ bệnh án</h1>
+            {!patientProfile && (
+              <Button
+                color="primary"
+                startContent={<Plus size={20} />}
+                onClick={handleCreateProfile}
+              >
+                Tạo hồ sơ
+              </Button>
+            )}
           </div>
-          <p className="text-gray-600">Xem lịch sử khám bệnh và điều trị của bạn</p>
         </div>
 
-        {records.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-            <FileText className="mx-auto text-gray-400 mb-4" size={64} />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Chưa có hồ sơ bệnh án</h3>
-            <p className="text-gray-600">
-              Hồ sơ bệnh án của bạn sẽ được hiển thị ở đây sau các lần khám bệnh
-            </p>
-          </div>
+        {/* No Profile State */}
+        {!patientProfile ? (
+          <Card className="p-8">
+            <div className="text-center">
+              <FileText className="mx-auto text-gray-300" size={80} />
+              <h2 className="text-2xl font-semibold text-gray-800 mt-4">
+                Chưa có hồ sơ bệnh án
+              </h2>
+              <p className="text-gray-600 mt-2 mb-6">
+                Tạo hồ sơ bệnh án để lưu trữ thông tin sức khỏe và lịch sử khám bệnh của bạn
+              </p>
+              <Button
+                color="primary"
+                size="lg"
+                startContent={<Plus size={20} />}
+                onClick={handleCreateProfile}
+              >
+                Tạo hồ sơ bệnh án
+              </Button>
+            </div>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Danh sách hồ sơ */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Danh sách hồ sơ</h2>
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {records.map((record) => (
-                    <button
-                      key={record.id}
-                      type="button"
-                      onClick={() => setSelectedRecord(record)}
-                      className={`w-full text-left p-4 border rounded-lg transition-colors ${
-                        selectedRecord?.id === record.id
-                          ? "border-teal-500 bg-teal-50"
-                          : "border-gray-200 hover:border-teal-300"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <p className="font-medium text-gray-900">{toViDate(record.visit_date)}</p>
-                        <Calendar size={16} className="text-gray-400" />
-                      </div>
-                      <p className="text-sm text-gray-600 mb-1">{record.doctor?.full_name}</p>
-                      <p className="text-xs text-gray-500">{record.doctor?.specialty}</p>
-                      {record.diagnosis ? (
-                        <p className="text-sm text-gray-700 mt-2 line-clamp-2">{record.diagnosis}</p>
-                      ) : null}
-                    </button>
-                  ))}
+          <>
+            {/* Patient Profile Section */}
+            <Card className="mb-6">
+              <CardHeader className="flex justify-between items-center pb-2">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <User className="text-primary" size={24} />
+                  Thông tin cá nhân
+                </h2>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="default"
+                    onClick={() => router.push('/nguoi-dung/cai-dat')}
+                  >
+                    Cài đặt hồ sơ
+                  </Button>
+            <Button
+              size="sm"
+              variant="flat"
+              color="primary"
+              startContent={<Eye size={16} />}
+              onClick={() => router.push('/nguoi-dung/ho-so-benh-an/chinh-sua')}
+            >
+              Chỉnh sửa hồ sơ
+            </Button>
                 </div>
-              </div>
-            </div>
+              </CardHeader>
+              <Divider />
+              <CardBody>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Info */}
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-3">Thông tin cơ bản</h3>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="text-gray-600">Họ tên:</span> <span className="font-medium">{patientProfile.full_name}</span></p>
+                      <p><span className="text-gray-600">Ngày sinh:</span> <span className="font-medium">{patientProfile.dob}</span></p>
+                      <p><span className="text-gray-600">Giới tính:</span> <span className="font-medium">{patientProfile.gender}</span></p>
+                      <p><span className="text-gray-600">SĐT:</span> <span className="font-medium">{patientProfile.contact?.phone}</span></p>
+                      <p><span className="text-gray-600">Email:</span> <span className="font-medium">{patientProfile.contact?.email}</span></p>
+                      <p><span className="text-gray-600">Địa chỉ:</span> <span className="font-medium">{patientProfile.address}</span></p>
+                    </div>
+                  </div>
 
-            {/* Chi tiết hồ sơ */}
-            <div className="lg:col-span-2">
-              {selectedRecord ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-                  <div className="border-b border-gray-200 pb-6 mb-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Hồ sơ khám bệnh</h2>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Calendar size={16} />
-                          <span>
-                            {new Date(selectedRecord.visit_date).toLocaleDateString("vi-VN", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
+                  {/* Insurance */}
+                  {patientProfile.insurance && (
+                    <div>
+                      <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Shield className="text-blue-500" size={18} />
+                        Bảo hiểm Y tế
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-gray-600">Loại:</span> <span className="font-medium">{patientProfile.insurance.type}</span></p>
+                        <p><span className="text-gray-600">Mã số:</span> <span className="font-medium font-mono">{patientProfile.insurance.number}</span></p>
+                        <p><span className="text-gray-600">Hiệu lực đến:</span> <span className="font-medium">{patientProfile.insurance.valid_to}</span></p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Medical History */}
+                  <div>
+                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Heart className="text-red-500" size={18} />
+                      Tiền sử bệnh
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      {patientProfile.allergies && patientProfile.allergies.length > 0 && (
+                        <div>
+                          <span className="text-gray-600">Dị ứng:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {patientProfile.allergies.map((allergy, idx) => (
+                              <Chip key={idx} size="sm" color="danger" variant="flat">{allergy}</Chip>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {patientProfile.chronic_conditions && patientProfile.chronic_conditions.length > 0 && (
+                        <div>
+                          <span className="text-gray-600">Bệnh mãn tính:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {patientProfile.chronic_conditions.map((condition, idx) => (
+                              <Chip key={idx} size="sm" color="warning" variant="flat">{condition}</Chip>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {patientProfile.medications && patientProfile.medications.length > 0 && (
+                        <div>
+                          <span className="text-gray-600 flex items-center gap-1">
+                            <Pill size={14} /> Thuốc đang dùng:
                           </span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {patientProfile.medications.map((med, idx) => (
+                              <Chip key={idx} size="sm" color="primary" variant="flat">{med}</Chip>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <User size={20} className="text-teal-600" />
-                        <h3 className="font-semibold text-gray-900">Bác sĩ điều trị</h3>
-                      </div>
-                      <p className="text-lg font-medium text-gray-900 ml-8">
-                        {selectedRecord.doctor?.full_name}
-                      </p>
-                      <p className="text-sm text-gray-600 ml-8">{selectedRecord.doctor?.specialty}</p>
-                      <p className="text-sm text-gray-500 ml-8 mt-1">{selectedRecord.doctor?.email}</p>
+                      )}
                     </div>
                   </div>
 
-                  <div className="space-y-6">
+                  {/* Emergency Contact */}
+                  {patientProfile.emergency_contact && (
                     <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <Stethoscope size={20} className="text-blue-600" />
-                        <h3 className="font-semibold text-gray-900 text-lg">Chẩn đoán</h3>
-                      </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 ml-8">
-                        <p className="text-gray-800 whitespace-pre-line">
-                          {selectedRecord.diagnosis || "Không có thông tin chẩn đoán"}
-                        </p>
+                      <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Phone className="text-orange-500" size={18} />
+                        Liên hệ khẩn cấp
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-gray-600">Họ tên:</span> <span className="font-medium">{patientProfile.emergency_contact.name}</span></p>
+                        <p><span className="text-gray-600">SĐT:</span> <span className="font-medium">{patientProfile.emergency_contact.phone}</span></p>
+                        <p><span className="text-gray-600">Quan hệ:</span> <span className="font-medium">{patientProfile.emergency_contact.relation}</span></p>
                       </div>
                     </div>
-
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <FileText size={20} className="text-green-600" />
-                        <h3 className="font-semibold text-gray-900 text-lg">Phương pháp điều trị</h3>
-                      </div>
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 ml-8">
-                        <p className="text-gray-800 whitespace-pre-line">
-                          {selectedRecord.treatment || "Không có thông tin điều trị"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <Pill size={20} className="text-orange-600" />
-                        <h3 className="font-semibold text-gray-900 text-lg">Đơn thuốc</h3>
-                      </div>
-                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 ml-8">
-                        <p className="text-gray-800 whitespace-pre-line">
-                          {selectedRecord.prescription || "Không có đơn thuốc"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedRecord.notes ? (
-                      <div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <FileText size={20} className="text-gray-600" />
-                          <h3 className="font-semibold text-gray-900 text-lg">Ghi chú thêm</h3>
-                        </div>
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 ml-8">
-                          <p className="text-gray-800 whitespace-pre-line">{selectedRecord.notes}</p>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <p className="text-sm text-gray-500">
-                      Hồ sơ được tạo ngày: {toViDate(selectedRecord.created_at)}
-                    </p>
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                  <p className="text-gray-600">Chọn một hồ sơ để xem chi tiết</p>
-                </div>
-              )}
-            </div>
-          </div>
+              </CardBody>
+            </Card>
+
+            {/* Medical Records Section */}
+            <Card>
+              <CardHeader className="pb-2">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Calendar className="text-primary" size={24} />
+                  Lịch sử khám bệnh
+                  {medicalRecords.length > 0 && (
+                    <Chip size="sm" variant="flat">{medicalRecords.length} lần khám</Chip>
+                  )}
+                </h2>
+              </CardHeader>
+              <Divider />
+              <CardBody>
+                {medicalRecords.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calendar className="mx-auto text-gray-300" size={48} />
+                    <p className="mt-4">Chưa có lịch sử khám bệnh</p>
+                  </div>
+                ) : (
+                  <Accordion variant="splitted">
+                    {medicalRecords.map((record, idx) => (
+                      <AccordionItem
+                        key={idx}
+                        title={
+                          <div className="flex items-center justify-between w-full">
+                            <div>
+                              <p className="font-semibold">{record.reason_for_visit}</p>
+                              <p className="text-sm text-gray-600">
+                                BS. {record.provider?.full_name} • {record.provider?.specialization}
+                              </p>
+                            </div>
+                            <Chip
+                              size="sm"
+                              color={record.encounter?.status === 'completed' ? 'success' : 'warning'}
+                              variant="flat"
+                            >
+                              {record.encounter?.status}
+                            </Chip>
+                          </div>
+                        }
+                        subtitle={new Date(record.encounter?.started_at).toLocaleString('vi-VN')}
+                      >
+                        <div className="space-y-4 pl-4">
+                          {/* Diagnosis */}
+                          {record.assessment_plan?.final_diagnosis && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2">Chẩn đoán:</h4>
+                              {record.assessment_plan.final_diagnosis.map((diag, i) => (
+                                <Chip key={i} color="primary" variant="flat" className="mr-2">
+                                  {diag.text} ({diag.icd10})
+                                </Chip>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Plan */}
+                          {record.assessment_plan?.plan && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2">Kế hoạch điều trị:</h4>
+                              <ul className="list-disc list-inside text-sm text-gray-700">
+                                {record.assessment_plan.plan.map((item, i) => (
+                                  <li key={i}>{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Prescription */}
+                          {record.e_prescription && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                <Pill size={16} /> Đơn thuốc:
+                              </h4>
+                              <div className="space-y-2">
+                                {record.e_prescription.items.map((item, i) => (
+                                  <div key={i} className="bg-gray-50 p-3 rounded-lg text-sm">
+                                    <p className="font-medium">{item.drug} {item.dose}</p>
+                                    <p className="text-gray-600">{item.route} • {item.freq} • {item.days} ngày</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
+              </CardBody>
+            </Card>
+          </>
         )}
       </div>
     </PatientFrame>
   );
-}
-
-/* ---------- helpers ---------- */
-function addDaysISO(iso, days) {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
-}
-function toViDate(iso) {
-  return new Date(iso).toLocaleDateString("vi-VN");
 }

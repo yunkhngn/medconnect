@@ -12,10 +12,23 @@ public class PatientService {
     @Autowired
     private PatientRepository patientRepository;
 
+    /**
+     * Get patient by Firebase UID
+     */
+    public Optional<Patient> getPatientByFirebaseUid(String firebaseUid) {
+        return patientRepository.findByFirebaseUid(firebaseUid);
+    }
+
+    /**
+     * Get patient by user ID
+     */
     public Optional<Patient> getPatientByUserId(Long userId) {
         return patientRepository.findByUserId(userId);
     }
 
+    /**
+     * Save patient
+     */
     public Patient savePatient(Patient patient) {
         return patientRepository.save(patient);
     }

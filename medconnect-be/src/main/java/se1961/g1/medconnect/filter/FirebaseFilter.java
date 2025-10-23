@@ -43,6 +43,7 @@ public class FirebaseFilter extends OncePerRequestFilter {
 
                 Optional<User> userOpt = userService.getUser(uid);
                 if(userOpt.isPresent()) {
+                    // User exists in database - set role
                     Role role = userOpt.get().getRole();
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(uid, null,
@@ -51,8 +52,14 @@ public class FirebaseFilter extends OncePerRequestFilter {
                     authentication.setDetails(email);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
+                    // User authenticated with Firebase but not in DB yet
+                    // Set as authenticated user without specific role
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(uid, null,
+                                    Collections.singletonList(
+                                            new SimpleGrantedAuthority("ROLE_PATIENT"))); // Default role
+                    authentication.setDetails(email);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
