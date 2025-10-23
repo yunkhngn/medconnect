@@ -11,6 +11,7 @@ import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.service.AppointmentService;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +43,40 @@ public class AppointmentController {
         try {
             Appointment appointment = appointmentService.getAppointmentById(id)
                     .orElseThrow(() -> new Exception("Appointment not found"));
-            return ResponseEntity.ok(appointment);
+            
+            // Build response with doctor and patient details
+            Map<String, Object> response = new HashMap<>();
+            response.put("appointmentId", appointment.getAppointmentId());
+            response.put("status", appointment.getStatus().name());
+            response.put("date", appointment.getDate().toString());
+            response.put("slot", appointment.getSlot().name());
+            response.put("type", appointment.getType().name());
+            response.put("createdAt", appointment.getCreatedAt());
+            
+            // Doctor details
+            if (appointment.getDoctor() != null) {
+                Map<String, Object> doctorInfo = new HashMap<>();
+                doctorInfo.put("id", appointment.getDoctor().getUserId());
+                doctorInfo.put("name", appointment.getDoctor().getName());
+                doctorInfo.put("email", appointment.getDoctor().getEmail());
+                doctorInfo.put("phone", appointment.getDoctor().getPhone());
+                doctorInfo.put("specialization", appointment.getDoctor().getSpecialization() != null 
+                    ? appointment.getDoctor().getSpecialization().name() : null);
+                doctorInfo.put("avatar", appointment.getDoctor().getAvatarUrl());
+                response.put("doctor", doctorInfo);
+            }
+            
+            // Patient details
+            if (appointment.getPatient() != null) {
+                Map<String, Object> patientInfo = new HashMap<>();
+                patientInfo.put("id", appointment.getPatient().getUserId());
+                patientInfo.put("name", appointment.getPatient().getName());
+                patientInfo.put("email", appointment.getPatient().getEmail());
+                patientInfo.put("phone", appointment.getPatient().getPhone());
+                response.put("patient", patientInfo);
+            }
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
@@ -56,7 +90,34 @@ public class AppointmentController {
         try {
             String firebaseUid = (String) authentication.getPrincipal();
             List<Appointment> appointments = appointmentService.getAppointmentsByPatientFirebaseUid(firebaseUid);
-            return ResponseEntity.ok(appointments);
+            
+            // Convert to safe response format
+            List<Map<String, Object>> response = appointments.stream()
+                .map(appointment -> {
+                    Map<String, Object> apt = new HashMap<>();
+                    apt.put("appointmentId", appointment.getAppointmentId());
+                    apt.put("status", appointment.getStatus().name());
+                    apt.put("date", appointment.getDate().toString());
+                    apt.put("slot", appointment.getSlot().name());
+                    apt.put("type", appointment.getType().name());
+                    apt.put("createdAt", appointment.getCreatedAt());
+                    
+                    // Doctor info
+                    if (appointment.getDoctor() != null) {
+                        Map<String, Object> doctor = new HashMap<>();
+                        doctor.put("id", appointment.getDoctor().getUserId());
+                        doctor.put("name", appointment.getDoctor().getName());
+                        doctor.put("specialization", appointment.getDoctor().getSpecialization() != null 
+                            ? appointment.getDoctor().getSpecialization().name() : null);
+                        doctor.put("avatar", appointment.getDoctor().getAvatarUrl());
+                        apt.put("doctor", doctor);
+                    }
+                    
+                    return apt;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -83,7 +144,33 @@ public class AppointmentController {
             
             List<Appointment> appointments = appointmentService.getAppointmentsByDoctorFirebaseUid(
                     firebaseUid, startDate, endDate);
-            return ResponseEntity.ok(appointments);
+            
+            // Convert to safe response format
+            List<Map<String, Object>> response = appointments.stream()
+                .map(appointment -> {
+                    Map<String, Object> apt = new HashMap<>();
+                    apt.put("appointmentId", appointment.getAppointmentId());
+                    apt.put("status", appointment.getStatus().name());
+                    apt.put("date", appointment.getDate().toString());
+                    apt.put("slot", appointment.getSlot().name());
+                    apt.put("type", appointment.getType().name());
+                    apt.put("createdAt", appointment.getCreatedAt());
+                    
+                    // Patient info
+                    if (appointment.getPatient() != null) {
+                        Map<String, Object> patient = new HashMap<>();
+                        patient.put("id", appointment.getPatient().getUserId());
+                        patient.put("name", appointment.getPatient().getName());
+                        patient.put("email", appointment.getPatient().getEmail());
+                        patient.put("phone", appointment.getPatient().getPhone());
+                        apt.put("patient", patient);
+                    }
+                    
+                    return apt;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

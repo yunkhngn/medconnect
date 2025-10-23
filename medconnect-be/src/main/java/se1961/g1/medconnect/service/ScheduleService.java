@@ -52,12 +52,20 @@ public class ScheduleService {
                             empty.setStatus(ScheduleStatus.EMPTY);
                             return empty;
                         });
-                if (scheduleDTO.getStatus() == ScheduleStatus.BUSY) {
-                    appointmentList.stream()
-                            .filter(a -> a.getDate().equals(date) && a.getSlot() == slot)
-                            .findFirst()
-                            .ifPresent(a -> scheduleDTO.setAppointment(new AppointmentDTO(a)));
-                }
+                
+                // Check if there's an active appointment for this slot
+                appointmentList.stream()
+                        .filter(a -> a.getDate().equals(date) && a.getSlot() == slot)
+                        .filter(a -> {
+                            // Only consider non-cancelled and non-denied appointments
+                            String status = a.getStatus().name();
+                            return !status.equals("CANCELLED") && !status.equals("DENIED");
+                        })
+                        .findFirst()
+                        .ifPresent(a -> {
+                            scheduleDTO.setStatus(ScheduleStatus.BUSY);
+                            scheduleDTO.setAppointment(new AppointmentDTO(a));
+                        });
 
                 fullWeek.add(scheduleDTO);
             }

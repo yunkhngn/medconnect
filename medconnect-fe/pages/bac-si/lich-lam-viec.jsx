@@ -172,7 +172,7 @@ export default function DoctorSchedulePage() {
   const getStatusLabel = (status) => {
     const labels = {
       EMPTY: "Trống",
-      RESERVED: "Đã chặn",
+      RESERVED: "Sẵn sàng",
       BUSY: "Có lịch hẹn"
     };
     return labels[status] || status;
