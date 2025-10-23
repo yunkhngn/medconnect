@@ -56,6 +56,24 @@ public class SecurityConfig {
                         .requestMatchers("/api/email/test").permitAll() // For testing
                         .requestMatchers("/api/email/**").authenticated()
                         
+                        // Appointment endpoints
+                        .requestMatchers("/api/appointments/my").authenticated() // Patient's appointments
+                        .requestMatchers("/api/appointments/doctor").authenticated() // Doctor's appointments
+                        .requestMatchers("/api/appointments/doctor/*/available-slots").permitAll() // Public - for booking
+                        .requestMatchers("/api/appointments").authenticated() // Create/list appointments
+                        .requestMatchers("/api/appointments/**").authenticated() // Other appointment operations
+                        
+                        // Payment endpoints
+                        .requestMatchers("/api/payment/ipn").permitAll() // IPN webhook from SePay
+                        .requestMatchers("/api/payment/init").authenticated() // Initialize payment
+                        .requestMatchers("/api/payment/**").authenticated() // Other payment operations
+                        
+                        // Schedule endpoints (Doctor only)
+                        .requestMatchers("/api/schedule/**").authenticated()
+                        
+                        // Doctor endpoints
+                        .requestMatchers("/doctor/dashboard/all").permitAll() // Public - for patient booking
+                        
                         // Role-based endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/doctor/**").hasRole("DOCTOR")

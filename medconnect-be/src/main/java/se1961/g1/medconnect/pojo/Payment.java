@@ -20,11 +20,24 @@ public class Payment {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+    
+    private LocalDateTime paidAt;
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
     private Double amount;
+    
+    // Payment gateway fields
+    private String transactionId; // ID from payment gateway (SePay, VNPay, etc.)
+    private String paymentMethod; // CARD, BANK_TRANSFER, WALLET, QR_CODE
+    private String gatewayName; // SEPAY, VNPAY, MOMO, etc.
+    
+    @Column(length = 1000)
+    private String gatewayResponse; // Raw response from gateway for debugging
+    
+    @Column(length = 500)
+    private String description; // Payment description
 
     @ManyToOne
     @JoinColumn(name = "patient_id")
