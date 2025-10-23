@@ -164,15 +164,15 @@ export default function MedicalRecordPage() {
                   >
                     Cài đặt hồ sơ
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="flat"
-                    color="primary"
-                    startContent={<Eye size={16} />}
-                    onClick={() => router.push('/nguoi-dung/ho-so-benh-an/chinh-sua')}
-                  >
-                    Chỉnh sửa tiền sử
-                  </Button>
+            <Button
+              size="sm"
+              variant="flat"
+              color="primary"
+              startContent={<Eye size={16} />}
+              onClick={() => router.push('/nguoi-dung/ho-so-benh-an/chinh-sua')}
+            >
+              Chỉnh sửa hồ sơ
+            </Button>
                 </div>
               </CardHeader>
               <Divider />
@@ -184,7 +184,7 @@ export default function MedicalRecordPage() {
                     <div className="space-y-2 text-sm">
                       <p><span className="text-gray-600">Họ tên:</span> <span className="font-medium">{patientProfile.full_name}</span></p>
                       <p><span className="text-gray-600">Ngày sinh:</span> <span className="font-medium">{patientProfile.dob}</span></p>
-                      <p><span className="text-gray-600">Giới tính:</span> <span className="font-medium">{patientProfile.gender === 'male' ? 'Nam' : 'Nữ'}</span></p>
+                      <p><span className="text-gray-600">Giới tính:</span> <span className="font-medium">{patientProfile.gender}</span></p>
                       <p><span className="text-gray-600">SĐT:</span> <span className="font-medium">{patientProfile.contact?.phone}</span></p>
                       <p><span className="text-gray-600">Email:</span> <span className="font-medium">{patientProfile.contact?.email}</span></p>
                       <p><span className="text-gray-600">Địa chỉ:</span> <span className="font-medium">{patientProfile.address}</span></p>

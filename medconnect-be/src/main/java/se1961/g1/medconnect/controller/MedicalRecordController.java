@@ -163,6 +163,32 @@ public class MedicalRecordController {
     }
 
     /**
+     * Delete my EMR (patient)
+     */
+    @DeleteMapping("/my-profile")
+    public ResponseEntity<?> deleteMyProfile(Authentication authentication) {
+        try {
+            String firebaseUid = authentication.getName();
+            medicalRecordService.deleteByPatientFirebaseUid(firebaseUid);
+            
+            System.out.println("=== DELETE EMR ===");
+            System.out.println("Firebase UID: " + firebaseUid);
+            System.out.println("EMR deleted successfully");
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Medical record deleted successfully"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
      * Get all medical records (Admin only)
      */
     @GetMapping("/all")

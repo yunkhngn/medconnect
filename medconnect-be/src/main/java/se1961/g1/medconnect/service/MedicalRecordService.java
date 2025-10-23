@@ -191,5 +191,21 @@ public class MedicalRecordService {
     public void deleteRecord(Long recordId) {
         medicalRecordRepository.deleteById(recordId);
     }
+
+    /**
+     * Delete EMR by patient Firebase UID
+     */
+    public void deleteByPatientFirebaseUid(String firebaseUid) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Patient patient = patientRepository.findById(user.getUserId())
+            .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+
+        MedicalRecord mr = medicalRecordRepository.findByPatient(patient)
+            .orElseThrow(() -> new IllegalArgumentException("Medical record not found"));
+
+        medicalRecordRepository.delete(mr);
+    }
 }
 
