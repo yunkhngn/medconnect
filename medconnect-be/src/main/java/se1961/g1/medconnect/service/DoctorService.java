@@ -35,4 +35,8 @@ public class DoctorService {
     public Doctor saveDoctor(Doctor doctor) throws Exception {
         return doctorRepository.save(doctor);
     }
+
+    public List<Doctor> getAllDoctors() {
+        return doctorRepository.findAll();
+    }
 }

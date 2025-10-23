@@ -26,6 +26,29 @@ public class DoctorController {
     @Autowired
     private ScheduleService scheduleService;
 
+    /**
+     * Get all doctors (Public - for patient booking)
+     */
+    @GetMapping("/all")
+    public ResponseEntity<List<Map<String, Object>>> getAllDoctors() {
+        List<Doctor> doctors = doctorService.getAllDoctors();
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Doctor doctor : doctors) {
+            Map<String, Object> doctorData = new HashMap<>();
+            doctorData.put("id", doctor.getUserId());
+            doctorData.put("name", doctor.getName());
+            doctorData.put("email", doctor.getEmail());
+            doctorData.put("phone", doctor.getPhone());
+            doctorData.put("specialty", doctor.getSpecialization() != null ? doctor.getSpecialization().name() : "GENERAL");
+            doctorData.put("avatar", doctor.getAvatarUrl());
+            doctorData.put("licenseId", doctor.getLicenseId());
+            response.add(doctorData);
+        }
+        
+        return ResponseEntity.ok(response);
+    }
+
 
 //    @GetMapping("/")
 //    public ResponseEntity<Doctor> getMe(@RequestHeader("Authorization") String token)  throws Exception {
