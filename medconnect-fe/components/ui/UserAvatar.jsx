@@ -8,8 +8,7 @@ import { useAvatar } from '@/hooks/useAvatar';
  * UserAvatar Component - Hiển thị avatar với priority:
  * 1. Custom uploaded avatar (Cloudinary)
  * 2. Gmail profile photo (Firebase)
- * 3. Generated avatar from email
- * 4. Default placeholder
+ * 3. Default mockup avatar
  */
 const UserAvatar = forwardRef(({ 
   size = 40,
@@ -69,15 +68,8 @@ const UserAvatar = forwardRef(({
     };
   }, [getAvatarUrl]);
 
-  // Generate avatar from email if no custom avatar
-  const getGeneratedAvatar = (email) => {
-    if (!email) return '/assets/homepage/mockup-avatar.jpg';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      email
-    )}&size=128&bold=true&rounded=true&background=random&color=ffffff`;
-  };
-
-  const finalAvatarUrl = avatarUrl || getGeneratedAvatar(user?.email);
+  // Use mockup avatar as fallback (no generated avatar)
+  const finalAvatarUrl = avatarUrl || '/assets/homepage/mockup-avatar.jpg';
   
   const baseClasses = `relative rounded-full overflow-hidden ${showBorder ? 'ring-2 ring-cyan-100' : ''} ${className}`;
   const buttonClasses = asButton ? 'cursor-pointer transition-transform hover:scale-105' : '';
