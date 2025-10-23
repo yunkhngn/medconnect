@@ -131,10 +131,21 @@ export default function HoSoBenhAn() {
     <div className="space-y-6">
       <Card>
         <CardBody className="p-6 text-center">
-          <Avatar
-            name={patientProfile.full_name?.charAt(0)?.toUpperCase()}
-            className="w-20 h-20 mx-auto mb-4 text-large"
-          />
+          {/* ID Photo 3:4 */}
+          {patientProfile.id_photo_url ? (
+            <div className="w-32 h-[170px] mx-auto mb-4 rounded-lg overflow-hidden border-2 border-teal-500">
+              <img 
+                src={patientProfile.id_photo_url} 
+                alt="ID Photo" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <Avatar
+              name={patientProfile.full_name?.charAt(0)?.toUpperCase()}
+              className="w-20 h-20 mx-auto mb-4 text-large"
+            />
+          )}
           <h3 className="text-lg font-semibold">{patientProfile.full_name || "N/A"}</h3>
           <p className="text-sm text-gray-600">{patientProfile.email || "N/A"}</p>
           {patientProfile.insurance_number && (
@@ -285,14 +296,6 @@ export default function HoSoBenhAn() {
           <InfoItem 
             label="Thuốc đang dùng" 
             value={detail?.medical_history?.current_medications || "Không"} 
-          />
-          <InfoItem 
-            label="Tiền sử phẫu thuật" 
-            value={detail?.medical_history?.surgeries || "Không"} 
-          />
-          <InfoItem 
-            label="Tiền sử gia đình" 
-            value={detail?.medical_history?.family_history || "Không"} 
           />
         </CardBody>
       </Card>

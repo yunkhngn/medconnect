@@ -33,6 +33,7 @@ import {
   AlertCircle,
   Briefcase,
   FileText,
+  Upload,
 } from "lucide-react";
 import { PatientFrame, Grid } from "@/components/layouts/";
 import { auth } from "@/lib/firebase";
@@ -50,6 +51,7 @@ export default function CreateEMRPage() {
     full_name: "",
     dob: "",
     gender: "Nam",
+    blood_type: "",
     address: "",
     phone: "",
     email: "",
@@ -78,6 +80,9 @@ export default function CreateEMRPage() {
   const [allergyInput, setAllergyInput] = useState("");
   const [conditionInput, setConditionInput] = useState("");
   const [medicationInput, setMedicationInput] = useState("");
+  const [idPhotoUrl, setIdPhotoUrl] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
@@ -96,6 +101,7 @@ export default function CreateEMRPage() {
               full_name: patientData.name || "",
               dob: patientData.dateOfBirth || "",
               gender: patientData.gender || "Nam",
+              blood_type: patientData.bloodType || "",
               address: patientData.address || "",
               phone: patientData.phone || "",
               email: patientData.email || "",
@@ -150,6 +156,67 @@ export default function CreateEMRPage() {
     }));
   };
 
+  // Upload ID Photo with 3:4 ratio validation
+  const handleIdPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh");
+      return;
+    }
+
+    // Validate aspect ratio 3:4
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = async () => {
+      const aspectRatio = img.width / img.height;
+      const expectedRatio = 3 / 4;
+      const tolerance = 0.05; // 5% tolerance
+
+      if (Math.abs(aspectRatio - expectedRatio) > tolerance) {
+        toast.error("Ảnh phải có tỷ lệ 3:4 (ví dụ: 300x400, 600x800)");
+        URL.revokeObjectURL(img.src);
+        return;
+      }
+
+      URL.revokeObjectURL(img.src);
+
+      // Upload to Cloudinary
+      setUploadingPhoto(true);
+      try {
+        const token = await user.getIdToken();
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("http://localhost:8080/api/medical-photo/upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIdPhotoUrl(data.photoUrl);
+          toast.success("Tải ảnh thẻ thành công!");
+        } else {
+          const errorText = await response.text();
+          console.error("Upload failed:", response.status, errorText);
+          throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        toast.error(error.message || "Không thể tải ảnh lên");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
@@ -170,12 +237,14 @@ export default function CreateEMRPage() {
           full_name: profile.full_name,
           date_of_birth: profile.dob,
           gender: profile.gender,
+          blood_type: profile.blood_type,
           address: profile.address,
           phone: profile.phone,
           email: profile.email,
           citizenship: profile.citizenship,
           insurance_number: profile.insurance_number,
           insurance_valid_to: profile.insurance_valid_to,
+          id_photo_url: idPhotoUrl,
           emergency_contact: {
             name: profile.emergency_contact_name,
             phone: profile.emergency_contact_phone,
@@ -235,6 +304,21 @@ export default function CreateEMRPage() {
     { key: "Khác", label: "Khác" },
   ];
 
+  const bloodTypeOptions = [
+    { key: "A", label: "A" },
+    { key: "B", label: "B" },
+    { key: "AB", label: "AB" },
+    { key: "O", label: "O" },
+    { key: "A+", label: "A+" },
+    { key: "A-", label: "A-" },
+    { key: "B+", label: "B+" },
+    { key: "B-", label: "B-" },
+    { key: "AB+", label: "AB+" },
+    { key: "AB-", label: "AB-" },
+    { key: "O+", label: "O+" },
+    { key: "O-", label: "O-" },
+  ];
+
   const patientTypeOptions = [
     { key: "BHYT", label: "BHYT" },
     { key: "Thu phí", label: "Thu phí" },
@@ -280,20 +364,56 @@ export default function CreateEMRPage() {
         <CardBody className="p-4">
           <h4 className="font-semibold text-sm mb-2">Tiến trình</h4>
           <div className="space-y-2 text-xs">
-            <div className="flex items-center gap-2 text-teal-600">
-              <div className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center">✓</div>
+            <div 
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                currentStep >= 1 ? "text-teal-600" : "text-gray-400"
+              }`}
+              onClick={() => setCurrentStep(1)}
+            >
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                currentStep >= 1 ? "bg-teal-600 text-white" : "bg-gray-200"
+              }`}>
+                {currentStep > 1 ? "✓" : "1"}
+              </div>
               <span>Thông tin cơ bản</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">2</div>
+            <div 
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                currentStep >= 2 ? "text-teal-600" : "text-gray-400"
+              }`}
+              onClick={() => setCurrentStep(2)}
+            >
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                currentStep >= 2 ? "bg-teal-600 text-white" : "bg-gray-200"
+              }`}>
+                {currentStep > 2 ? "✓" : "2"}
+              </div>
               <span>Bảo hiểm & Liên hệ</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">3</div>
+            <div 
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                currentStep >= 3 ? "text-teal-600" : "text-gray-400"
+              }`}
+              onClick={() => setCurrentStep(3)}
+            >
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                currentStep >= 3 ? "bg-teal-600 text-white" : "bg-gray-200"
+              }`}>
+                {currentStep > 3 ? "✓" : "3"}
+              </div>
               <span>Tiền sử y tế</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">4</div>
+            <div 
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                currentStep >= 4 ? "text-teal-600" : "text-gray-400"
+              }`}
+              onClick={() => setCurrentStep(4)}
+            >
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                currentStep >= 4 ? "bg-teal-600 text-white" : "bg-gray-200"
+              }`}>
+                {currentStep > 4 ? "✓" : "4"}
+              </div>
               <span>Xác nhận & Tạo</span>
             </div>
           </div>
@@ -305,16 +425,54 @@ export default function CreateEMRPage() {
   // Right Panel - Form
   const rightPanel = (
     <div className="space-y-6">
-      {/* Basic Information */}
-      <Card>
-        <CardHeader>
-          <h3 className="text-xl font-semibold flex items-center gap-2">
-            <User size={24} className="text-teal-600" />
-            Thông tin cơ bản *
-          </h3>
-        </CardHeader>
-        <Divider />
-        <CardBody className="space-y-4">
+      {/* Step 1: Basic Information */}
+      {currentStep === 1 && (
+        <>
+          <Card>
+            <CardHeader>
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <User size={24} className="text-teal-600" />
+                Thông tin cơ bản *
+              </h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-4">
+              {/* ID Photo Upload */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    {idPhotoUrl ? (
+                      <div className="w-24 h-32 rounded-lg overflow-hidden border-2 border-teal-500">
+                        <img src={idPhotoUrl} alt="ID Photo" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-24 h-32 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-400">
+                        <IdCard className="text-gray-400" size={32} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm mb-1">Ảnh thẻ (3:4)</h4>
+                    <p className="text-xs text-gray-600 mb-3">
+                      Tải lên ảnh thẻ với tỷ lệ 3:4 (VD: 300x400px, 600x800px)
+                    </p>
+                    <label htmlFor="id-photo-input">
+                      <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-sm">
+                        <Upload size={16} />
+                        {uploadingPhoto ? "Đang tải..." : idPhotoUrl ? "Thay ảnh" : "Tải ảnh lên"}
+                      </div>
+                    </label>
+                    <input
+                      id="id-photo-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleIdPhotoUpload}
+                      className="hidden"
+                      disabled={uploadingPhoto}
+                    />
+                  </div>
+                </div>
+              </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Họ và tên *"
@@ -351,6 +509,21 @@ export default function CreateEMRPage() {
                 <SelectItem key={opt.key}>{opt.label}</SelectItem>
               ))}
             </Select>
+            <Select
+              label="Nhóm máu"
+              placeholder="Chọn nhóm máu"
+              selectedKeys={profile.blood_type ? [profile.blood_type] : []}
+              onSelectionChange={(keys) => setProfile({ ...profile, blood_type: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+            >
+              {bloodTypeOptions.map((opt) => (
+                <SelectItem key={opt.key}>{opt.label}</SelectItem>
+              ))}
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="CCCD"
               placeholder="001234567890"
@@ -360,17 +533,16 @@ export default function CreateEMRPage() {
               labelPlacement="outside"
               startContent={<IdCard className="text-default-400" size={20} />}
             />
+            <Input
+              type="email"
+              label="Email"
+              value={profile.email}
+              onValueChange={(v) => setProfile({ ...profile, email: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Mail className="text-default-400" size={20} />}
+            />
           </div>
-
-          <Input
-            label="Địa chỉ"
-            placeholder="Số nhà, đường, phường, quận, thành phố"
-            value={profile.address}
-            onValueChange={(v) => setProfile({ ...profile, address: v })}
-            variant="bordered"
-            labelPlacement="outside"
-            startContent={<MapPin className="text-default-400" size={20} />}
-          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
@@ -383,13 +555,13 @@ export default function CreateEMRPage() {
               startContent={<Phone className="text-default-400" size={20} />}
             />
             <Input
-              type="email"
-              label="Email"
-              value={profile.email}
-              onValueChange={(v) => setProfile({ ...profile, email: v })}
+              label="Địa chỉ"
+              placeholder="Số nhà, đường, phường, quận"
+              value={profile.address}
+              onValueChange={(v) => setProfile({ ...profile, address: v })}
               variant="bordered"
               labelPlacement="outside"
-              startContent={<Mail className="text-default-400" size={20} />}
+              startContent={<MapPin className="text-default-400" size={20} />}
             />
           </div>
 
@@ -422,7 +594,28 @@ export default function CreateEMRPage() {
         </CardBody>
       </Card>
 
-      {/* Insurance & Emergency Contact */}
+      {/* Navigation */}
+      <div className="flex gap-4 justify-end">
+        <Button 
+          variant="light" 
+          startContent={<ArrowLeft size={18} />} 
+          onPress={() => router.back()}
+        >
+          Quay lại
+        </Button>
+        <Button 
+          color="primary" 
+          onPress={() => setCurrentStep(2)}
+        >
+          Tiếp theo
+        </Button>
+      </div>
+        </>
+      )}
+
+      {/* Step 2: Insurance & Emergency Contact */}
+      {currentStep === 2 && (
+        <>
       <Card>
         <CardHeader>
           <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -520,7 +713,28 @@ export default function CreateEMRPage() {
         </CardBody>
       </Card>
 
-      {/* Medical History */}
+      {/* Navigation */}
+      <div className="flex gap-4 justify-between">
+        <Button 
+          variant="light" 
+          startContent={<ArrowLeft size={18} />} 
+          onPress={() => setCurrentStep(1)}
+        >
+          Quay lại
+        </Button>
+        <Button 
+          color="primary" 
+          onPress={() => setCurrentStep(3)}
+        >
+          Tiếp theo
+        </Button>
+      </div>
+        </>
+      )}
+
+      {/* Step 3: Medical History */}
+      {currentStep === 3 && (
+        <>
       <Card>
         <CardHeader>
           <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -619,7 +833,28 @@ export default function CreateEMRPage() {
         </CardBody>
       </Card>
 
-      {/* Consents */}
+      {/* Navigation */}
+      <div className="flex gap-4 justify-between">
+        <Button 
+          variant="light" 
+          startContent={<ArrowLeft size={18} />} 
+          onPress={() => setCurrentStep(2)}
+        >
+          Quay lại
+        </Button>
+        <Button 
+          color="primary" 
+          onPress={() => setCurrentStep(4)}
+        >
+          Tiếp theo
+        </Button>
+      </div>
+        </>
+      )}
+
+      {/* Step 4: Consents & Submit */}
+      {currentStep === 4 && (
+        <>
       <Card>
         <CardHeader>
           <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -664,8 +899,12 @@ export default function CreateEMRPage() {
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 justify-end">
-        <Button variant="light" startContent={<ArrowLeft size={18} />} onPress={() => router.back()}>
+      <div className="flex gap-4 justify-between">
+        <Button 
+          variant="light" 
+          startContent={<ArrowLeft size={18} />} 
+          onPress={() => setCurrentStep(3)}
+        >
           Quay lại
         </Button>
         <Button
@@ -677,6 +916,8 @@ export default function CreateEMRPage() {
           Tạo hồ sơ bệnh án
         </Button>
       </div>
+        </>
+      )}
     </div>
   );
 

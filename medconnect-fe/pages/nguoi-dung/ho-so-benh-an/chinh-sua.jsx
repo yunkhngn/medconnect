@@ -38,6 +38,7 @@ import {
   Briefcase,
   FileText,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 import { PatientFrame, Grid } from "@/components/layouts/";
 import { auth } from "@/lib/firebase";
@@ -58,6 +59,7 @@ export default function EditEMRPage() {
     full_name: "",
     dob: "",
     gender: "Nam",
+    blood_type: "",
     address: "",
     phone: "",
     email: "",
@@ -86,6 +88,8 @@ export default function EditEMRPage() {
   const [allergyInput, setAllergyInput] = useState("");
   const [conditionInput, setConditionInput] = useState("");
   const [medicationInput, setMedicationInput] = useState("");
+  const [idPhotoUrl, setIdPhotoUrl] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
@@ -119,6 +123,7 @@ export default function EditEMRPage() {
             full_name: pp.full_name || "",
             dob: pp.date_of_birth || "",
             gender: pp.gender || "Nam",
+            blood_type: pp.blood_type || "",
             address: pp.address || "",
             phone: pp.phone || "",
             email: pp.email || "",
@@ -140,6 +145,7 @@ export default function EditEMRPage() {
             medications: mh.current_medications ? mh.current_medications.split(", ").filter((x) => x && x !== "Không") : [],
             consents: parsed.consents || { privacy: true, telemedicine: true },
           });
+          setIdPhotoUrl(pp.id_photo_url || "");
         }
       } else {
         toast.error("Không tìm thấy hồ sơ bệnh án");
@@ -188,6 +194,67 @@ export default function EditEMRPage() {
     }));
   };
 
+  // Upload ID Photo with 3:4 ratio validation
+  const handleIdPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh");
+      return;
+    }
+
+    // Validate aspect ratio 3:4
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = async () => {
+      const aspectRatio = img.width / img.height;
+      const expectedRatio = 3 / 4;
+      const tolerance = 0.05; // 5% tolerance
+
+      if (Math.abs(aspectRatio - expectedRatio) > tolerance) {
+        toast.error("Ảnh phải có tỷ lệ 3:4 (ví dụ: 300x400, 600x800)");
+        URL.revokeObjectURL(img.src);
+        return;
+      }
+
+      URL.revokeObjectURL(img.src);
+
+      // Upload to Cloudinary
+      setUploadingPhoto(true);
+      try {
+        const token = await user.getIdToken();
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("http://localhost:8080/api/medical-photo/upload", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIdPhotoUrl(data.photoUrl);
+          toast.success("Tải ảnh thẻ thành công!");
+        } else {
+          const errorText = await response.text();
+          console.error("Upload failed:", response.status, errorText);
+          throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        toast.error(error.message || "Không thể tải ảnh lên");
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
@@ -203,12 +270,14 @@ export default function EditEMRPage() {
           full_name: profile.full_name,
           date_of_birth: profile.dob,
           gender: profile.gender,
+          blood_type: profile.blood_type,
           address: profile.address,
           phone: profile.phone,
           email: profile.email,
           citizenship: profile.citizenship,
           insurance_number: profile.insurance_number,
           insurance_valid_to: profile.insurance_valid_to,
+          id_photo_url: idPhotoUrl,
           emergency_contact: {
             name: profile.emergency_contact_name,
             phone: profile.emergency_contact_phone,
@@ -308,6 +377,21 @@ export default function EditEMRPage() {
     { key: "Khác", label: "Khác" },
   ];
 
+  const bloodTypeOptions = [
+    { key: "A", label: "A" },
+    { key: "B", label: "B" },
+    { key: "AB", label: "AB" },
+    { key: "O", label: "O" },
+    { key: "A+", label: "A+" },
+    { key: "A-", label: "A-" },
+    { key: "B+", label: "B+" },
+    { key: "B-", label: "B-" },
+    { key: "AB+", label: "AB+" },
+    { key: "AB-", label: "AB-" },
+    { key: "O+", label: "O+" },
+    { key: "O-", label: "O-" },
+  ];
+
   const patientTypeOptions = [
     { key: "BHYT", label: "BHYT" },
     { key: "Thu phí", label: "Thu phí" },
@@ -378,6 +462,43 @@ export default function EditEMRPage() {
         </CardHeader>
         <Divider />
         <CardBody className="space-y-4">
+          {/* ID Photo Upload */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                {idPhotoUrl ? (
+                  <div className="w-24 h-32 rounded-lg overflow-hidden border-2 border-teal-500">
+                    <img src={idPhotoUrl} alt="ID Photo" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-24 h-32 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-400">
+                    <IdCard className="text-gray-400" size={32} />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm mb-1">Ảnh thẻ (3:4)</h4>
+                <p className="text-xs text-gray-600 mb-3">
+                  Tải lên ảnh thẻ với tỷ lệ 3:4 (VD: 300x400px, 600x800px)
+                </p>
+                <label htmlFor="id-photo-input-edit">
+                  <div className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-sm">
+                    <Upload size={16} />
+                    {uploadingPhoto ? "Đang tải..." : idPhotoUrl ? "Thay ảnh" : "Tải ảnh lên"}
+                  </div>
+                </label>
+                <input
+                  id="id-photo-input-edit"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleIdPhotoUpload}
+                  className="hidden"
+                  disabled={uploadingPhoto}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Họ và tên"
@@ -410,6 +531,21 @@ export default function EditEMRPage() {
                 <SelectItem key={opt.key}>{opt.label}</SelectItem>
               ))}
             </Select>
+            <Select
+              label="Nhóm máu"
+              placeholder="Chọn nhóm máu"
+              selectedKeys={profile.blood_type ? [profile.blood_type] : []}
+              onSelectionChange={(keys) => setProfile({ ...profile, blood_type: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+            >
+              {bloodTypeOptions.map((opt) => (
+                <SelectItem key={opt.key}>{opt.label}</SelectItem>
+              ))}
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="CCCD"
               value={profile.citizenship}
@@ -418,16 +554,16 @@ export default function EditEMRPage() {
               labelPlacement="outside"
               startContent={<IdCard className="text-default-400" size={20} />}
             />
+            <Input
+              type="email"
+              label="Email"
+              value={profile.email}
+              onValueChange={(v) => setProfile({ ...profile, email: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Mail className="text-default-400" size={20} />}
+            />
           </div>
-
-          <Input
-            label="Địa chỉ"
-            value={profile.address}
-            onValueChange={(v) => setProfile({ ...profile, address: v })}
-            variant="bordered"
-            labelPlacement="outside"
-            startContent={<MapPin className="text-default-400" size={20} />}
-          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
@@ -439,13 +575,12 @@ export default function EditEMRPage() {
               startContent={<Phone className="text-default-400" size={20} />}
             />
             <Input
-              type="email"
-              label="Email"
-              value={profile.email}
-              onValueChange={(v) => setProfile({ ...profile, email: v })}
+              label="Địa chỉ"
+              value={profile.address}
+              onValueChange={(v) => setProfile({ ...profile, address: v })}
               variant="bordered"
               labelPlacement="outside"
-              startContent={<Mail className="text-default-400" size={20} />}
+              startContent={<MapPin className="text-default-400" size={20} />}
             />
           </div>
 
