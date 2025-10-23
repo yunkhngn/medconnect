@@ -24,6 +24,7 @@ import { Home, FileText, Calendar } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import getUserRole from "../../config/Auth/GetUserRole";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const Nav = () => {
   const router = useRouter();
@@ -149,18 +150,10 @@ const Nav = () => {
             <NavbarItem className="hidden sm:flex">
               <Dropdown placement="bottom-end">
                 <DropdownTrigger>
-                  <Avatar
-                    src={
-                      userPhoto
-                        ? userPhoto
-                        : userEmail
-                        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-                        : "/assets/homepage/mockup-avatar.jpg"
-                    }
-                    alt={userEmail ? userEmail : "User Avatar"}
-                    className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
-                    as="button"
-                  />
+                <UserAvatar 
+                  size={40}
+                  asButton
+                />
                 </DropdownTrigger>
                 <DropdownMenu aria-label="User Actions" variant="flat">
                   <DropdownItem
@@ -293,13 +286,7 @@ const Nav = () => {
                   <div className="space-y-4">
                     <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <Avatar
-                        src={
-                          userPhoto
-                            ? userPhoto
-                            : userEmail
-                            ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userEmail)}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-                            : "/assets/homepage/mockup-avatar.jpg"
-                        }
+                        src={userPhoto || "/assets/homepage/mockup-avatar.jpg"}
                         size="md"
                       />
                       <div>
