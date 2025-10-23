@@ -76,6 +76,12 @@ public class SecurityConfig {
                         // Schedule endpoints (Doctor only)
                         .requestMatchers("/api/schedule/**").authenticated()
                         
+                        // Speciality endpoints (Public - for dropdown)
+                        .requestMatchers("/api/specialities/**").permitAll()
+                        
+                        // License endpoints (Doctor only)
+                        .requestMatchers("/api/licenses/**").authenticated()
+                        
                         // Doctor endpoints
                         .requestMatchers("/doctor/dashboard/all").permitAll() // Public - for patient booking
                         

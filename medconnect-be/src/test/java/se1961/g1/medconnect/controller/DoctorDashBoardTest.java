@@ -44,7 +44,7 @@ public class DoctorDashBoardTest {
         doctor.setEmail("dr.strange@example.com");
         doctor.setPhone("123456789");
         doctor.setSpeciality(speciality);
-        doctor.setLicenseId("LIC12345");
+        // Note: licenseId is now managed through License entity
 
         // Mock the service to return the doctor
         when(doctorService.getDoctor(uid)).thenReturn(Optional.of(doctor));
@@ -61,7 +61,8 @@ public class DoctorDashBoardTest {
         assertEquals("dr.strange@example.com", profile.get("email"));
         assertEquals("123456789", profile.get("phone"));
         assertEquals("Tim mạch", profile.get("specialization"));
-        assertEquals("LIC12345", profile.get("license_id"));
+        // Note: license info is now in "active_license" object (can be null if no license)
+        // assertEquals("LIC12345", profile.get("license_id")); // Old field removed
     }
 
     @Test

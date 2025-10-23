@@ -22,10 +22,10 @@ public class Speciality {
     @Column(name = "speciality_id")
     private Integer specialityId;
     
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 100, columnDefinition = "NVARCHAR(100)")
     private String name;
     
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
     private String description;
     
     @CreationTimestamp

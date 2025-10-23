@@ -45,7 +45,11 @@ public class DoctorController {
             doctorData.put("phone", doctor.getPhone());
             doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
             doctorData.put("avatar", doctor.getAvatarUrl());
-            doctorData.put("licenseId", doctor.getLicenseId());
+            
+            // Get license number from active license
+            se1961.g1.medconnect.pojo.License activeLicense = doctor.getActiveLicense();
+            doctorData.put("licenseId", activeLicense != null ? activeLicense.getLicenseNumber() : null);
+            
             response.add(doctorData);
         }
         
@@ -131,7 +135,23 @@ public class DoctorController {
             profile.put("phone", doctor.getPhone());
             profile.put("specialization", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : null);
             profile.put("speciality_id", doctor.getSpeciality() != null ? doctor.getSpeciality().getSpecialityId() : null);
-            profile.put("license_id",  doctor.getLicenseId());
+            profile.put("experience_years", doctor.getExperienceYears());
+            
+            // Get active license info
+            se1961.g1.medconnect.pojo.License activeLicense = doctor.getActiveLicense();
+            if (activeLicense != null) {
+                Map<String, Object> licenseInfo = new HashMap<>();
+                licenseInfo.put("license_id", activeLicense.getLicenseId());
+                licenseInfo.put("license_number", activeLicense.getLicenseNumber());
+                licenseInfo.put("issued_date", activeLicense.getIssuedDate());
+                licenseInfo.put("expiry_date", activeLicense.getExpiryDate());
+                licenseInfo.put("is_expired", activeLicense.isExpired());
+                licenseInfo.put("days_until_expiry", activeLicense.getDaysUntilExpiry());
+                profile.put("active_license", licenseInfo);
+            } else {
+                profile.put("active_license", null);
+            }
+            
             return ResponseEntity.ok(profile);
     }
 
@@ -158,6 +178,11 @@ public class DoctorController {
                     .orElseThrow(() -> new Exception("Speciality not found: " + specialityName));
             currDoc.setSpeciality(speciality);
         }
+        
+        if(request.containsKey("experience_years")) {
+            // Update experience years (manual input)
+            currDoc.setExperienceYears((Integer) request.get("experience_years"));
+        }
 
         doctorService.saveDoctor(currDoc);
 
@@ -166,6 +191,7 @@ public class DoctorController {
         updatedProfile.put("phone", currDoc.getPhone());
         updatedProfile.put("specialization", currDoc.getSpeciality() != null ? currDoc.getSpeciality().getName() : null);
         updatedProfile.put("speciality_id", currDoc.getSpeciality() != null ? currDoc.getSpeciality().getSpecialityId() : null);
+        updatedProfile.put("experience_years", currDoc.getExperienceYears());
 
         return  ResponseEntity.ok(updatedProfile);
     }
