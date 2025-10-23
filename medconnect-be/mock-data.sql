@@ -45,34 +45,34 @@ GO
 SET IDENTITY_INSERT Users ON;
 
 INSERT INTO Users (user_id, name, email, phone, avatar_url, firebase_uid, role) VALUES
-(1, N'Admin System', 'admin.system@medconnect.vn', '0901000001', 'https://i.pravatar.cc/150?img=1', 'QOw1Uf8Vr0a8JGMMBNzjr7CSXFa2', 'ADMIN'),
-(2, N'Admin Manager', 'admin.manager@medconnect.vn', '0901000002', 'https://i.pravatar.cc/150?img=2', 'firebase_uid_admin_2', 'ADMIN');
+(1, N'Admin System', 'admin.system@medconnect.vn', '0901000001', NULL, 'QOw1Uf8Vr0a8JGMMBNzjr7CSXFa2', 'ADMIN'),
+(2, N'Admin Manager', 'admin.manager@medconnect.vn', '0901000002', NULL, 'firebase_uid_admin_2', 'ADMIN');
 
 -- Insert 10 Doctors
 INSERT INTO Users (user_id, name, email, phone, avatar_url, firebase_uid, role) VALUES
-(3, N'BS. Nguyễn Văn An', 'doctor.an@medconnect.vn', '0902000001', 'https://i.pravatar.cc/150?img=11', '1e094cFqC1XLnblL7Lrd1W4QxLu1', 'DOCTOR'),
-(4, N'BS. Trần Thị Bình', 'doctor.binh@medconnect.vn', '0902000002', 'https://i.pravatar.cc/150?img=12', 'firebase_uid_doctor_2', 'DOCTOR'),
-(5, N'BS. Lê Hoàng Cường', 'doctor.cuong@medconnect.vn', '0902000003', 'https://i.pravatar.cc/150?img=13', 'firebase_uid_doctor_3', 'DOCTOR'),
-(6, N'BS. Phạm Thị Dung', 'doctor.dung@medconnect.vn', '0902000004', 'https://i.pravatar.cc/150?img=14', 'firebase_uid_doctor_4', 'DOCTOR'),
-(7, N'BS. Hoàng Văn Em', 'doctor.em@medconnect.vn', '0902000005', 'https://i.pravatar.cc/150?img=15', 'firebase_uid_doctor_5', 'DOCTOR'),
-(8, N'BS. Vũ Thị Phương', 'doctor.phuong@medconnect.vn', '0902000006', 'https://i.pravatar.cc/150?img=16', 'firebase_uid_doctor_6', 'DOCTOR'),
-(9, N'BS. Đặng Minh Giang', 'doctor.giang@medconnect.vn', '0902000007', 'https://i.pravatar.cc/150?img=17', 'firebase_uid_doctor_7', 'DOCTOR'),
-(10, N'BS. Bùi Thị Hà', 'doctor.ha@medconnect.vn', '0902000008', 'https://i.pravatar.cc/150?img=18', 'firebase_uid_doctor_8', 'DOCTOR'),
-(11, N'BS. Ngô Văn Hùng', 'doctor.hung@medconnect.vn', '0902000009', 'https://i.pravatar.cc/150?img=19', 'firebase_uid_doctor_9', 'DOCTOR'),
-(12, N'BS. Mai Thị Lan', 'doctor.lan@medconnect.vn', '0902000010', 'https://i.pravatar.cc/150?img=20', 'firebase_uid_doctor_10', 'DOCTOR');
+(3, N'BS. Nguyễn Văn An', 'doctor.an@medconnect.vn', '0902000001', NULL, '1e094cFqC1XLnblL7Lrd1W4QxLu1', 'DOCTOR'),
+(4, N'BS. Trần Thị Bình', 'doctor.binh@medconnect.vn', '0902000002', NULL, 'firebase_uid_doctor_2', 'DOCTOR'),
+(5, N'BS. Lê Hoàng Cường', 'doctor.cuong@medconnect.vn', '0902000003', NULL, 'firebase_uid_doctor_3', 'DOCTOR'),
+(6, N'BS. Phạm Thị Dung', 'doctor.dung@medconnect.vn', '0902000004', NULL, 'firebase_uid_doctor_4', 'DOCTOR'),
+(7, N'BS. Hoàng Văn Em', 'doctor.em@medconnect.vn', '0902000005', NULL, 'firebase_uid_doctor_5', 'DOCTOR'),
+(8, N'BS. Vũ Thị Phương', 'doctor.phuong@medconnect.vn', '0902000006', NULL, 'firebase_uid_doctor_6', 'DOCTOR'),
+(9, N'BS. Đặng Minh Giang', 'doctor.giang@medconnect.vn', '0902000007', NULL, 'firebase_uid_doctor_7', 'DOCTOR'),
+(10, N'BS. Bùi Thị Hà', 'doctor.ha@medconnect.vn', '0902000008', NULL, 'firebase_uid_doctor_8', 'DOCTOR'),
+(11, N'BS. Ngô Văn Hùng', 'doctor.hung@medconnect.vn', '0902000009', NULL, 'firebase_uid_doctor_9', 'DOCTOR'),
+(12, N'BS. Mai Thị Lan', 'doctor.lan@medconnect.vn', '0902000010', NULL, 'firebase_uid_doctor_10', 'DOCTOR');
 
 -- Insert 10 Patients
 INSERT INTO Users (user_id, name, email, phone, avatar_url, firebase_uid, role) VALUES
-(13, N'Nguyễn Thị Mai', 'patient.mai@gmail.com', '0903000001', 'https://i.pravatar.cc/150?img=21', 'cOOC9hjI9pYoyZd2pCPKsjxgZmd2', 'PATIENT'),
-(14, N'Trần Văn Nam', 'patient.nam@gmail.com', '0903000002', 'https://i.pravatar.cc/150?img=22', 'firebase_uid_patient_2', 'PATIENT'),
-(15, N'Lê Thị Oanh', 'patient.oanh@gmail.com', '0903000003', 'https://i.pravatar.cc/150?img=23', 'firebase_uid_patient_3', 'PATIENT'),
-(16, N'Phạm Văn Phúc', 'patient.phuc@gmail.com', '0903000004', 'https://i.pravatar.cc/150?img=24', 'firebase_uid_patient_4', 'PATIENT'),
-(17, N'Hoàng Thị Quỳnh', 'patient.quynh@gmail.com', '0903000005', 'https://i.pravatar.cc/150?img=25', 'firebase_uid_patient_5', 'PATIENT'),
-(18, N'Vũ Văn Sơn', 'patient.son@gmail.com', '0903000006', 'https://i.pravatar.cc/150?img=26', 'firebase_uid_patient_6', 'PATIENT'),
-(19, N'Đặng Thị Thảo', 'patient.thao@gmail.com', '0903000007', 'https://i.pravatar.cc/150?img=27', 'firebase_uid_patient_7', 'PATIENT'),
-(20, N'Bùi Văn Tùng', 'patient.tung@gmail.com', '0903000008', 'https://i.pravatar.cc/150?img=28', 'firebase_uid_patient_8', 'PATIENT'),
-(21, N'Ngô Thị Uyên', 'patient.uyen@gmail.com', '0903000009', 'https://i.pravatar.cc/150?img=29', 'firebase_uid_patient_9', 'PATIENT'),
-(22, N'Mai Văn Vũ', 'patient.vu@gmail.com', '0903000010', 'https://i.pravatar.cc/150?img=30', 'firebase_uid_patient_10', 'PATIENT');
+(13, N'Nguyễn Thị Mai', 'patient.mai@gmail.com', '0903000001', NULL, 'cOOC9hjI9pYoyZd2pCPKsjxgZmd2', 'PATIENT'),
+(14, N'Trần Văn Nam', 'patient.nam@gmail.com', '0903000002', NULL, 'firebase_uid_patient_2', 'PATIENT'),
+(15, N'Lê Thị Oanh', 'patient.oanh@gmail.com', '0903000003', NULL, 'firebase_uid_patient_3', 'PATIENT'),
+(16, N'Phạm Văn Phúc', 'patient.phuc@gmail.com', '0903000004', NULL, 'firebase_uid_patient_4', 'PATIENT'),
+(17, N'Hoàng Thị Quỳnh', 'patient.quynh@gmail.com', '0903000005', NULL, 'firebase_uid_patient_5', 'PATIENT'),
+(18, N'Vũ Văn Sơn', 'patient.son@gmail.com', '0903000006', NULL, 'firebase_uid_patient_6', 'PATIENT'),
+(19, N'Đặng Thị Thảo', 'patient.thao@gmail.com', '0903000007', NULL, 'firebase_uid_patient_7', 'PATIENT'),
+(20, N'Bùi Văn Tùng', 'patient.tung@gmail.com', '0903000008', NULL, 'firebase_uid_patient_8', 'PATIENT'),
+(21, N'Ngô Thị Uyên', 'patient.uyen@gmail.com', '0903000009', NULL, 'firebase_uid_patient_9', 'PATIENT'),
+(22, N'Mai Văn Vũ', 'patient.vu@gmail.com', '0903000010', NULL, 'firebase_uid_patient_10', 'PATIENT');
 
 SET IDENTITY_INSERT Users OFF;
 

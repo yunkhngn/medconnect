@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Avatar, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import menuItems from "@/config/Nav/doctorNav";
 import { getAuth, signOut } from "firebase/auth";
 import { useTheme } from 'next-themes';
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const Nav = () => {
   const router = useRouter();
@@ -100,23 +101,12 @@ const Nav = () => {
       {/* User Avatar */}
       <div className="p-4 border-t border-gray-100">
         <div className="flex items-center justify-center">
-          <Dropdown placement="top">
+          <Dropdown placement="right-start">
             <DropdownTrigger>
-              {userEmail ? (
-                <Avatar
-                  className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer flex items-center justify-center"
-                  as="button"
-                  style={getAvatarStyle(userEmail)}
-                >
-                  {getInitials(userEmail)}
-                </Avatar>
-              ) : (
-                <Avatar
-                  src="/assets/homepage/mockup-avatar.jpg"
-                  alt="User Avatar"
-                  className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer"
-                />
-              )}
+              <UserAvatar 
+                size={40}
+                asButton
+              />
             </DropdownTrigger>
             <DropdownMenu aria-label="User Actions">
               <DropdownItem key="settings" textValue="Settings">

@@ -39,4 +39,8 @@ public class UserService {
     public String getEmail(String firebaseUid) {
         return getEmail(firebaseUid);
     }
+
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
 }

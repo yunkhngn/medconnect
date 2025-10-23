@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { Save, Upload, User } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useToast } from "@/hooks/useToast";
+import { useAvatar } from "@/hooks/useAvatar";
 
 import { auth, db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -12,7 +14,9 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function PatientProfileWithFrame() {
   const toast = useToast();
+  const { getAvatarUrl, uploadAvatar, uploading } = useAvatar();
   const [user, setUser] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null); // Avatar URL riêng
   const [patient, setPatient] = useState({
     name: "",
     email: "",
@@ -24,14 +28,12 @@ export default function PatientProfileWithFrame() {
     emergencyContactPhone: "",
     bloodType: "",
     allergies: "",
-    avatar_url: "",
     socialInsurance: "", // mã BHYT
     citizenship: "", // căn cước công dân
     emr_url: "", // hồ sơ y tế điện tử
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [uploadingEmr, setUploadingEmr] = useState(false);
 
   const maxDob = useMemo(() => new Date().toISOString().split("T")[0], []);
@@ -70,6 +72,16 @@ export default function PatientProfileWithFrame() {
         
         // Backend đã trả về dateOfBirth dạng yyyy-MM-dd string rồi
         setPatient({ ...patient, ...data });
+        
+        // Get user's avatar from database
+        const avatarResponse = await fetch("http://localhost:8080/api/avatar", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (avatarResponse.ok) {
+          const avatarData = await avatarResponse.json();
+          const finalAvatarUrl = getAvatarUrl(firebaseUser, avatarData.avatarUrl);
+          setAvatarUrl(finalAvatarUrl);
+        }
       } else if (response.status === 404) {
         // Patient chưa có trong DB - có thể là user mới
         console.log("ℹ️ Patient not found in database, using Firebase Auth data");
@@ -142,19 +154,14 @@ export default function PatientProfileWithFrame() {
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    setUploading(true);
+    
     try {
-      const fileRef = ref(storage, `avatars/${user.uid}/${file.name}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      setPatient((p) => ({ ...p, avatar_url: url }));
-      await setDoc(doc(db, "patients", user.uid), { avatar_url: url, updated_at: serverTimestamp() }, { merge: true });
+      const url = await uploadAvatar(file);
+      setAvatarUrl(url);
       toast.success("Tải ảnh đại diện thành công!");
     } catch (err) {
       console.error("Upload avatar error:", err);
-      toast.error("Tải ảnh thất bại");
-    } finally {
-      setUploading(false);
+      toast.error(err.message || "Tải ảnh thất bại");
     }
   };
 
@@ -196,8 +203,8 @@ export default function PatientProfileWithFrame() {
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center overflow-hidden">
-                {patient.avatar_url ? (
-                  <img src={patient.avatar_url} alt="avatar" className="w-12 h-12 object-cover" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="w-12 h-12 object-cover" />
                 ) : (
                   <User className="text-white" size={24} />
                 )}
@@ -211,25 +218,36 @@ export default function PatientProfileWithFrame() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 mb-6">
             <div className="flex items-center gap-4">
               <div
-                className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden ring-2 ring-white shadow-sm"
+                className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden ring-2 ring-white shadow-sm cursor-pointer hover:ring-teal-500 transition-all relative"
                 onClick={handlePickAvatar}
                 role="button"
                 title="Đổi ảnh đại diện"
               >
-                {patient.avatar_url ? (
-                  <img src={patient.avatar_url} className="w-full h-full object-cover" alt="avatar" />
+                {avatarUrl ? (
+                  <Image 
+                    src={avatarUrl} 
+                    alt="avatar" 
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                    quality={90}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">
                     <User size={28} />
                   </div>
                 )}
               </div>
-              <div>
+              <div className="flex-1">
                 <div className="font-medium text-gray-900">Ảnh đại diện</div>
-                <div className="text-sm text-gray-500">JPG/PNG ≤ 5MB. Ảnh vuông hiển thị đẹp nhất.</div>
+                <div className="text-sm text-gray-500">
+                  {user?.photoURL && !avatarUrl?.includes('cloudinary') 
+                    ? "Đang dùng ảnh Gmail. Upload ảnh mới để thay đổi." 
+                    : "JPG/PNG ≤ 5MB. Ảnh vuông hiển thị đẹp nhất."}
+                </div>
                 <button
                   onClick={handlePickAvatar}
-                  className="mt-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm"
+                  className="mt-2 px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!user || uploading}
                 >
                   {uploading ? "Đang tải..." : "Chọn ảnh"}

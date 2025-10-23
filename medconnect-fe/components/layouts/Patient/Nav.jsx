@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Avatar,
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
@@ -12,6 +11,7 @@ import Image from "next/image";
 import { Home, FileText, Calendar, Clock } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const PatientNav = () => {
   const router = useRouter();
@@ -146,42 +146,34 @@ const PatientNav = () => {
       </nav>
 
 
-      {/* User Avatar */} 
-      {isLoggedIn && (
-        <div className="p-4 border-t border-gray-100 flex items-center justify-center">
+        {/* User Avatar */} 
+        {isLoggedIn && (
+          <div className="p-4 border-t border-gray-100 flex items-center justify-center">
           <Dropdown placement="top">
             <DropdownTrigger>
-              <Avatar
-                src={
-                  userPhoto
-                    ? userPhoto
-                    : userEmail
-                    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        userEmail
-                      )}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-                    : "/assets/homepage/mockup-avatar.jpg"
-                }
-                alt={userEmail ? userEmail : "User Avatar"}
-                className="w-10 h-10 ring-2 ring-cyan-100 cursor-pointer transition-transform hover:scale-105"
-              />
+            <UserAvatar 
+               size={40}
+               asButton
+             />
             </DropdownTrigger>
-            <DropdownMenu aria-label="User Actions">
-              <DropdownItem key="settings">
-                <Link href="/nguoi-dung/cai-dat" className="w-full block">
-                  Cài đặt
-                </Link>
-              </DropdownItem>
-              <DropdownItem
-                key="logout"
-                color="danger"
-                className="text-red-600"
-                onClick={handleLogout}
-              >
-                Đăng xuất
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        </div>
+           <DropdownMenu aria-label="User Actions">
+             <DropdownItem key="settings">
+               <Link href="/nguoi-dung/cai-dat" className="w-full block">
+                 Cài đặt
+               </Link>
+             </DropdownItem>
+             <DropdownItem
+               key="logout"
+               color="danger"
+               className="text-red-600"
+               onClick={handleLogout}
+             >
+               Đăng xuất
+             </DropdownItem>
+           </DropdownMenu>
+         </Dropdown>
+       </div>
+
       )}
     </div>
   );
