@@ -10,7 +10,6 @@ import se1961.g1.medconnect.enums.AppointmentType;
 import se1961.g1.medconnect.enums.Slot;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Appointment")
@@ -34,6 +33,9 @@ public class Appointment {
 
     @Enumerated(EnumType.STRING)
     private AppointmentType type;
+
+    @Column(columnDefinition = "TEXT")
+    private String reason; // Lý do khám bệnh
 
     @ManyToOne
     @JoinColumn(name = "doctor_id")

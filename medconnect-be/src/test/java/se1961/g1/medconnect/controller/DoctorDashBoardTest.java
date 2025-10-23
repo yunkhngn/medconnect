@@ -6,8 +6,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
-import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Doctor;
+import se1961.g1.medconnect.pojo.Speciality;
 import se1961.g1.medconnect.service.DoctorService;
 
 import java.util.Map;
@@ -32,12 +32,18 @@ public class DoctorDashBoardTest {
     public void testGetProfileDoctorFound() throws Exception {
         String uid = "doctor123";
 
+        // Create mock speciality
+        Speciality speciality = new Speciality();
+        speciality.setSpecialityId(1);
+        speciality.setName("Tim mạch");
+        speciality.setDescription("Chuyên khoa tim mạch");
+        
         Doctor doctor = new Doctor();
         doctor.setFirebaseUid(uid);
         doctor.setName("Stephen Strange");
         doctor.setEmail("dr.strange@example.com");
         doctor.setPhone("123456789");
-        doctor.setSpecialization(Speciality.CARDIOLOGY);
+        doctor.setSpeciality(speciality);
         doctor.setLicenseId("LIC12345");
 
         // Mock the service to return the doctor
@@ -54,7 +60,7 @@ public class DoctorDashBoardTest {
         assertEquals("Stephen Strange", profile.get("name"));
         assertEquals("dr.strange@example.com", profile.get("email"));
         assertEquals("123456789", profile.get("phone"));
-        assertEquals(Speciality.CARDIOLOGY, profile.get("specialization"));
+        assertEquals("Tim mạch", profile.get("specialization"));
         assertEquals("LIC12345", profile.get("license_id"));
     }
 

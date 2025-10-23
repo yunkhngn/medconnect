@@ -11,10 +11,18 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 
 const SLOT_TIMES = {
-  SLOT_1: "07:30 - 09:50",
-  SLOT_2: "10:00 - 12:20",
-  SLOT_3: "12:50 - 15:10",
-  SLOT_4: "15:20 - 17:40"
+  SLOT_1: "07:30 - 08:00",
+  SLOT_2: "08:15 - 08:45",
+  SLOT_3: "09:00 - 09:30",
+  SLOT_4: "09:45 - 10:15",
+  SLOT_5: "10:30 - 11:00",
+  SLOT_6: "11:15 - 11:45",
+  SLOT_7: "13:00 - 13:30",
+  SLOT_8: "13:45 - 14:15",
+  SLOT_9: "14:30 - 15:00",
+  SLOT_10: "15:15 - 15:45",
+  SLOT_11: "16:00 - 16:30",
+  SLOT_12: "16:45 - 17:15"
 };
 
 const SPECIALTY_MAP = {

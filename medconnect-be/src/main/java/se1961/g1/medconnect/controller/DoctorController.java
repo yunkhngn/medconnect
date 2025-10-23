@@ -8,9 +8,10 @@ import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.ScheduleDTO;
 import se1961.g1.medconnect.enums.ScheduleStatus;
-import se1961.g1.medconnect.enums.Speciality;
 import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
+import se1961.g1.medconnect.pojo.Speciality;
+import se1961.g1.medconnect.repository.SpecialityRepository;
 import se1961.g1.medconnect.service.*;
 
 import java.time.LocalDate;
@@ -25,6 +26,8 @@ public class DoctorController {
     private AppointmentService appointmentService;
     @Autowired
     private ScheduleService scheduleService;
+    @Autowired
+    private SpecialityRepository specialityRepository;
 
     /**
      * Get all doctors (Public - for patient booking)
@@ -40,7 +43,7 @@ public class DoctorController {
             doctorData.put("name", doctor.getName());
             doctorData.put("email", doctor.getEmail());
             doctorData.put("phone", doctor.getPhone());
-            doctorData.put("specialty", doctor.getSpecialization() != null ? doctor.getSpecialization().name() : "GENERAL");
+            doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
             doctorData.put("avatar", doctor.getAvatarUrl());
             doctorData.put("licenseId", doctor.getLicenseId());
             response.add(doctorData);
@@ -126,7 +129,8 @@ public class DoctorController {
             profile.put("name", doctor.getName());
             profile.put("email", doctor.getEmail());
             profile.put("phone", doctor.getPhone());
-            profile.put("specialization", doctor.getSpecialization());
+            profile.put("specialization", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : null);
+            profile.put("speciality_id", doctor.getSpeciality() != null ? doctor.getSpeciality().getSpecialityId() : null);
             profile.put("license_id",  doctor.getLicenseId());
             return ResponseEntity.ok(profile);
     }
@@ -141,22 +145,27 @@ public class DoctorController {
             currDoc.setPhone((String) request.get("phone"));
         }
 
-        if(request.containsKey("specialization")) {
-            try {
-                String specialization = ((String) request.get("specialization")).toUpperCase();
-                Speciality speciality = Speciality.valueOf(specialization);
-                currDoc.setSpecialization(speciality);
-            } catch (IllegalArgumentException e) {
-                throw new Exception("Invalid specialization: " +  request.get("specialization"));
-            }
-
-            doctorService.saveDoctor(currDoc);
+        if(request.containsKey("speciality_id")) {
+            // Update by speciality ID
+            Integer specialityId = (Integer) request.get("speciality_id");
+            Speciality speciality = specialityRepository.findById(specialityId)
+                    .orElseThrow(() -> new Exception("Speciality not found with ID: " + specialityId));
+            currDoc.setSpeciality(speciality);
+        } else if(request.containsKey("specialization")) {
+            // Update by speciality name (for backward compatibility)
+            String specialityName = (String) request.get("specialization");
+            Speciality speciality = specialityRepository.findByNameIgnoreCase(specialityName)
+                    .orElseThrow(() -> new Exception("Speciality not found: " + specialityName));
+            currDoc.setSpeciality(speciality);
         }
+
+        doctorService.saveDoctor(currDoc);
 
         Map<String, Object> updatedProfile = new HashMap<>();
         updatedProfile.put("message", "Profile updated successfully");
         updatedProfile.put("phone", currDoc.getPhone());
-        updatedProfile.put("specialization", currDoc.getSpecialization().name());
+        updatedProfile.put("specialization", currDoc.getSpeciality() != null ? currDoc.getSpeciality().getName() : null);
+        updatedProfile.put("speciality_id", currDoc.getSpeciality() != null ? currDoc.getSpeciality().getSpecialityId() : null);
 
         return  ResponseEntity.ok(updatedProfile);
     }

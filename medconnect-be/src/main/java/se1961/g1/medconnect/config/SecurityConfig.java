@@ -49,6 +49,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/medical-records/patient/**").authenticated() // TODO: Change back to hasAnyRole("DOCTOR", "ADMIN") after testing
                         .requestMatchers("/api/medical-records/all").hasRole("ADMIN")
                         
+                        // EMR endpoints
+                        .requestMatchers("/api/emr/my").authenticated() // Patient's own EMR
+                        .requestMatchers("/api/emr/firebase/**").authenticated() // Doctor/Admin access patient EMR
+                        .requestMatchers("/api/emr/**").authenticated() // Other EMR operations
+                        
                         // User endpoints
                         .requestMatchers("/api/user/**").authenticated()
                         
