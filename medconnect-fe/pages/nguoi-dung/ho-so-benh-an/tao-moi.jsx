@@ -1,8 +1,40 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Input, Textarea, Button, Card, CardBody, CardHeader, Divider, Select, SelectItem, Chip, Checkbox } from "@heroui/react";
-import { Save, ArrowLeft, Plus, X, User, Mail, Phone, Calendar, MapPin, IdCard, Shield, Heart, Pill, Users as UsersIcon, AlertCircle } from "lucide-react";
-import PatientFrame from "@/components/layouts/Patient/Frame";
+import {
+  Input,
+  Textarea,
+  Button,
+  Card,
+  CardHeader,
+  CardBody,
+  Divider,
+  Select,
+  SelectItem,
+  Chip,
+  Checkbox,
+} from "@heroui/react";
+import {
+  Save,
+  ArrowLeft,
+  Plus,
+  X,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  IdCard,
+  Shield,
+  Heart,
+  Pill,
+  Users as UsersIcon,
+  AlertCircle,
+  Briefcase,
+  FileText,
+} from "lucide-react";
+import { PatientFrame, Grid } from "@/components/layouts/";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
@@ -14,9 +46,7 @@ export default function CreateEMRPage() {
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Form state - complete medical record form
   const [profile, setProfile] = useState({
-    // Fields from Patient entity (will be pre-filled)
     full_name: "",
     dob: "",
     gender: "Nam",
@@ -27,30 +57,24 @@ export default function CreateEMRPage() {
     insurance_valid_to: "",
     emergency_contact_name: "",
     emergency_contact_phone: "",
+    emergency_contact_relationship: "",
     citizenship: "",
-    
-    // Additional EMR fields (user fills)
-    occupation: "",           // Nghề nghiệp
-    ethnicity: "Kinh",       // Dân tộc
-    foreign_national: false,  // Ngoại kiều
-    workplace: "",           // Nơi làm việc
-    patient_type: "BHYT",    // Đối tượng: BHYT/Thu phí/Miễn/Khác
-    referral_source: "self", // Giới thiệu: self/medical
-    referral_diagnosis: "",  // Chẩn đoán nơi giới thiệu
-    
-    // Medical history
+    occupation: "",
+    ethnicity: "Kinh",
+    foreign_national: false,
+    workplace: "",
+    patient_type: "BHYT",
+    referral_source: "self",
+    referral_diagnosis: "",
     allergies: [],
     chronic_conditions: [],
     medications: [],
-    
-    // Consents
     consents: {
       privacy: false,
-      telemedicine: false
-    }
+      telemedicine: false,
+    },
   });
 
-  // Temp input states
   const [allergyInput, setAllergyInput] = useState("");
   const [conditionInput, setConditionInput] = useState("");
   const [medicationInput, setMedicationInput] = useState("");
@@ -59,19 +83,15 @@ export default function CreateEMRPage() {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Fetch patient profile to pre-fill form
         try {
           const token = await firebaseUser.getIdToken();
           const response = await fetch("http://localhost:8080/api/patient/profile", {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
-          
+
           if (response.ok) {
             const patientData = await response.json();
-            console.log("Patient data loaded:", patientData);
-            
-            // Pre-fill from Patient profile
-            setProfile(prev => ({
+            setProfile((prev) => ({
               ...prev,
               full_name: patientData.name || "",
               dob: patientData.dateOfBirth || "",
@@ -84,7 +104,7 @@ export default function CreateEMRPage() {
               emergency_contact_name: patientData.emergencyContactName || "",
               emergency_contact_phone: patientData.emergencyContactPhone || "",
               emergency_contact_relationship: patientData.emergencyContactRelationship || "",
-              citizenship: patientData.citizenship || ""
+              citizenship: patientData.citizenship || "",
             }));
           }
         } catch (error) {
@@ -97,72 +117,47 @@ export default function CreateEMRPage() {
 
   const handleAddItem = (type) => {
     let input, value;
-    switch(type) {
-      case 'allergy':
-        input = allergyInput.trim();
-        if (input && !profile.allergies.includes(input)) {
-          setProfile(prev => ({
-            ...prev,
-            allergies: [...prev.allergies, input]
-          }));
-          setAllergyInput("");
-        }
+    switch (type) {
+      case "allergy":
+        input = allergyInput;
+        value = "allergies";
+        setAllergyInput("");
         break;
-      case 'condition':
-        input = conditionInput.trim();
-        if (input && !profile.chronic_conditions.includes(input)) {
-          setProfile(prev => ({
-            ...prev,
-            chronic_conditions: [...prev.chronic_conditions, input]
-          }));
-          setConditionInput("");
-        }
+      case "condition":
+        input = conditionInput;
+        value = "chronic_conditions";
+        setConditionInput("");
         break;
-      case 'medication':
-        input = medicationInput.trim();
-        if (input && !profile.medications.includes(input)) {
-          setProfile(prev => ({
-            ...prev,
-            medications: [...prev.medications, input]
-          }));
-          setMedicationInput("");
-        }
+      case "medication":
+        input = medicationInput;
+        value = "medications";
+        setMedicationInput("");
         break;
+    }
+
+    if (input.trim()) {
+      setProfile((prev) => ({
+        ...prev,
+        [value]: [...prev[value], input.trim()],
+      }));
     }
   };
 
   const handleRemoveItem = (type, index) => {
-    switch(type) {
-      case 'allergy':
-        setProfile(prev => ({
-          ...prev,
-          allergies: prev.allergies.filter((_, i) => i !== index)
-        }));
-        break;
-      case 'condition':
-        setProfile(prev => ({
-          ...prev,
-          chronic_conditions: prev.chronic_conditions.filter((_, i) => i !== index)
-        }));
-        break;
-      case 'medication':
-        setProfile(prev => ({
-          ...prev,
-          medications: prev.medications.filter((_, i) => i !== index)
-        }));
-        break;
-    }
+    setProfile((prev) => ({
+      ...prev,
+      [type]: prev[type].filter((_, i) => i !== index),
+    }));
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
       return;
     }
 
-    // Validation
-    if (!profile.consents.privacy || !profile.consents.telemedicine) {
-      toast.error("Vui lòng đồng ý với các điều khoản để tiếp tục");
+    if (!profile.full_name || !profile.dob || !profile.gender) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
 
@@ -170,99 +165,62 @@ export default function CreateEMRPage() {
     try {
       const token = await user.getIdToken();
 
-      // Build complete EMR data
       const emrData = {
         patient_profile: {
-          patient_id: user.uid,
-          
-          // Basic info (from Patient profile)
           full_name: profile.full_name,
-          dob: profile.dob,
+          date_of_birth: profile.dob,
           gender: profile.gender,
-          
-          contact: {
-            phone: profile.phone,
-            email: profile.email
-          },
-          
           address: profile.address,
-          
-          identity: {
-            national_id: profile.citizenship,
-            verified: false,
-            verified_at: null,
-            method: null
-          },
-          
-          insurance: profile.insurance_number ? {
-            type: "BHYT",
-            number: profile.insurance_number,
-            valid_to: profile.insurance_valid_to || ""
-          } : null,
-          
-          emergency_contact: profile.emergency_contact_name ? {
+          phone: profile.phone,
+          email: profile.email,
+          citizenship: profile.citizenship,
+          insurance_number: profile.insurance_number,
+          insurance_valid_to: profile.insurance_valid_to,
+          emergency_contact: {
             name: profile.emergency_contact_name,
-            phone: profile.emergency_contact_phone || "",
-            relation: profile.emergency_contact_relationship || ""
-          } : null,
-          
-          // Additional EMR fields
-          occupation: profile.occupation || "",
-          ethnicity: profile.ethnicity || "Kinh",
-          foreign_national: profile.foreign_national || false,
-          workplace: profile.workplace || "",
-          patient_type: profile.patient_type || "BHYT",
-          
-          // Referral information
-          referral_source: profile.referral_source || "self",
-          referral_diagnosis: profile.referral_source === "medical" ? profile.referral_diagnosis : "",
-          
-          // Medical history
-          allergies: profile.allergies || [],
-          chronic_conditions: profile.chronic_conditions || [],
-          medications: profile.medications || [],
-          
-          // Consents
-          consents: {
-            privacy: profile.consents.privacy,
-            telemedicine: profile.consents.telemedicine,
-            consent_at: new Date().toISOString()
+            phone: profile.emergency_contact_phone,
+            relation: profile.emergency_contact_relationship,
           },
-          
-          // Metadata
-          meta: {
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            visit_time: new Date().toISOString() // Thời gian đến khám
-          }
+          occupation: profile.occupation,
+          ethnicity: profile.ethnicity,
+          foreign_national: profile.foreign_national,
+          workplace: profile.workplace,
         },
-        medical_records: []
+        administrative_info: {
+          admission_date: new Date().toISOString().split("T")[0],
+          admission_time: new Date().toTimeString().split(" ")[0],
+          patient_type: profile.patient_type,
+          referral_source: profile.referral_source,
+          referral_diagnosis: profile.referral_diagnosis,
+        },
+        medical_history: {
+          allergies: profile.allergies.join(", ") || "Không",
+          previous_conditions: profile.chronic_conditions.join(", ") || "Không",
+          current_medications: profile.medications.join(", ") || "Không",
+          surgeries: "",
+          family_history: "",
+        },
+        consents: profile.consents,
+        medical_records: [],
       };
-
-      // Debug log
-      console.log("EMR Data to send:", emrData);
 
       const response = await fetch("http://localhost:8080/api/medical-records", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           detail: JSON.stringify(emrData)
-        })
+        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Backend error:", errorData);
-        throw new Error(errorData.error || "Failed to create EMR");
+      if (response.ok) {
+        toast.success("Tạo hồ sơ bệnh án thành công!");
+        setTimeout(() => router.push("/nguoi-dung/ho-so-benh-an"), 1500);
+      } else {
+        throw new Error("Tạo hồ sơ thất bại");
       }
-
-      toast.success("Tạo hồ sơ bệnh án thành công!");
-      setTimeout(() => {
-        router.push("/nguoi-dung/ho-so-benh-an");
-      }, 1500);
     } catch (error) {
       console.error("Error creating EMR:", error);
       toast.error(error.message || "Không thể tạo hồ sơ bệnh án");
@@ -271,407 +229,469 @@ export default function CreateEMRPage() {
     }
   };
 
-  return (
-    <PatientFrame>
-      <ToastNotification toast={toast} />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="light"
-            startContent={<ArrowLeft size={20} />}
-            onClick={() => router.back()}
-            className="mb-4"
+  const genderOptions = [
+    { key: "Nam", label: "Nam" },
+    { key: "Nữ", label: "Nữ" },
+    { key: "Khác", label: "Khác" },
+  ];
+
+  const patientTypeOptions = [
+    { key: "BHYT", label: "BHYT" },
+    { key: "Thu phí", label: "Thu phí" },
+    { key: "Miễn", label: "Miễn phí" },
+    { key: "Khác", label: "Khác" },
+  ];
+
+  const referralOptions = [
+    { key: "self", label: "Tự đến" },
+    { key: "medical", label: "Từ cơ sở y tế khác" },
+  ];
+
+  // Left Panel - Guidelines
+  const leftPanel = (
+    <div className="space-y-6">
+      <Card>
+        <CardBody className="p-6">
+          <div className="flex items-start gap-3">
+            <FileText className="text-teal-600 mt-1" size={24} />
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-2">Tạo hồ sơ bệnh án</h3>
+              <p className="text-sm text-gray-600">
+                Điền đầy đủ thông tin để tạo hồ sơ bệnh án điện tử của bạn.
+              </p>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="bg-blue-50 border-blue-100">
+        <CardBody className="p-4">
+          <p className="text-xs font-semibold text-blue-900 mb-2">💡 Hướng dẫn</p>
+          <ul className="text-xs text-blue-700 space-y-1">
+            <li>• Các trường có dấu (*) là bắt buộc</li>
+            <li>• Thông tin cơ bản đã được điền tự động</li>
+            <li>• Vui lòng kiểm tra và bổ sung thông tin</li>
+            <li>• Khai báo đầy đủ tiền sử bệnh và dị ứng</li>
+          </ul>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardBody className="p-4">
+          <h4 className="font-semibold text-sm mb-2">Tiến trình</h4>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center gap-2 text-teal-600">
+              <div className="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center">✓</div>
+              <span>Thông tin cơ bản</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">2</div>
+              <span>Bảo hiểm & Liên hệ</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">3</div>
+              <span>Tiền sử y tế</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">4</div>
+              <span>Xác nhận & Tạo</span>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  // Right Panel - Form
+  const rightPanel = (
+    <div className="space-y-6">
+      {/* Basic Information */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <User size={24} className="text-teal-600" />
+            Thông tin cơ bản *
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Họ và tên *"
+              placeholder="Nguyễn Văn A"
+              value={profile.full_name}
+              onValueChange={(v) => setProfile({ ...profile, full_name: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<User className="text-default-400" size={20} />}
+              isRequired
+            />
+            <Input
+              type="date"
+              label="Ngày sinh *"
+              value={profile.dob}
+              onValueChange={(v) => setProfile({ ...profile, dob: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Calendar className="text-default-400" size={20} />}
+              isRequired
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              label="Giới tính *"
+              selectedKeys={[profile.gender]}
+              onSelectionChange={(keys) => setProfile({ ...profile, gender: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+              isRequired
+            >
+              {genderOptions.map((opt) => (
+                <SelectItem key={opt.key}>{opt.label}</SelectItem>
+              ))}
+            </Select>
+            <Input
+              label="CCCD"
+              placeholder="001234567890"
+              value={profile.citizenship}
+              onValueChange={(v) => setProfile({ ...profile, citizenship: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<IdCard className="text-default-400" size={20} />}
+            />
+          </div>
+
+          <Input
+            label="Địa chỉ"
+            placeholder="Số nhà, đường, phường, quận, thành phố"
+            value={profile.address}
+            onValueChange={(v) => setProfile({ ...profile, address: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<MapPin className="text-default-400" size={20} />}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Số điện thoại"
+              placeholder="0912 345 678"
+              value={profile.phone}
+              onValueChange={(v) => setProfile({ ...profile, phone: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Phone className="text-default-400" size={20} />}
+            />
+            <Input
+              type="email"
+              label="Email"
+              value={profile.email}
+              onValueChange={(v) => setProfile({ ...profile, email: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Mail className="text-default-400" size={20} />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              label="Nghề nghiệp"
+              placeholder="VD: Giáo viên"
+              value={profile.occupation}
+              onValueChange={(v) => setProfile({ ...profile, occupation: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Briefcase className="text-default-400" size={20} />}
+            />
+            <Input
+              label="Dân tộc"
+              value={profile.ethnicity}
+              onValueChange={(v) => setProfile({ ...profile, ethnicity: v })}
+              variant="bordered"
+              labelPlacement="outside"
+            />
+            <Input
+              label="Nơi làm việc"
+              placeholder="Công ty/Cơ quan"
+              value={profile.workplace}
+              onValueChange={(v) => setProfile({ ...profile, workplace: v })}
+              variant="bordered"
+              labelPlacement="outside"
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Insurance & Emergency Contact */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Shield size={24} className="text-blue-600" />
+            Bảo hiểm & Liên hệ khẩn cấp
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <BHYTInput
+            value={profile.insurance_number}
+            onChange={(v) => setProfile({ ...profile, insurance_number: v })}
+          />
+
+          <Input
+            type="date"
+            label="BHYT hết hạn"
+            value={profile.insurance_valid_to}
+            onValueChange={(v) => setProfile({ ...profile, insurance_valid_to: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            description="Ngày hết hạn thẻ BHYT"
+          />
+
+          <Divider className="my-4" />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input
+              label="Người liên hệ khẩn cấp"
+              placeholder="Nguyễn Văn B"
+              value={profile.emergency_contact_name}
+              onValueChange={(v) => setProfile({ ...profile, emergency_contact_name: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<User className="text-default-400" size={20} />}
+            />
+            <Input
+              type="tel"
+              label="Số điện thoại"
+              placeholder="0912 345 678"
+              value={profile.emergency_contact_phone}
+              onValueChange={(v) => setProfile({ ...profile, emergency_contact_phone: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Phone className="text-default-400" size={20} />}
+            />
+            <Input
+              label="Quan hệ"
+              placeholder="VD: Vợ/Chồng, Con"
+              value={profile.emergency_contact_relationship}
+              onValueChange={(v) => setProfile({ ...profile, emergency_contact_relationship: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<UsersIcon className="text-default-400" size={20} />}
+            />
+          </div>
+
+          <Divider className="my-4" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
+              label="Đối tượng"
+              selectedKeys={[profile.patient_type]}
+              onSelectionChange={(keys) => setProfile({ ...profile, patient_type: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+            >
+              {patientTypeOptions.map((opt) => (
+                <SelectItem key={opt.key}>{opt.label}</SelectItem>
+              ))}
+            </Select>
+            <Select
+              label="Nguồn giới thiệu"
+              selectedKeys={[profile.referral_source]}
+              onSelectionChange={(keys) => setProfile({ ...profile, referral_source: Array.from(keys)[0] })}
+              variant="bordered"
+              labelPlacement="outside"
+            >
+              {referralOptions.map((opt) => (
+                <SelectItem key={opt.key}>{opt.label}</SelectItem>
+              ))}
+            </Select>
+          </div>
+
+          {profile.referral_source === "medical" && (
+            <Input
+              label="Chẩn đoán nơi giới thiệu"
+              placeholder="Chẩn đoán từ cơ sở y tế trước"
+              value={profile.referral_diagnosis}
+              onValueChange={(v) => setProfile({ ...profile, referral_diagnosis: v })}
+              variant="bordered"
+              labelPlacement="outside"
+            />
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Medical History */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Heart size={24} className="text-red-600" />
+            Tiền sử y tế
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          {/* Allergies */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Dị ứng</label>
+            <div className="flex gap-2 mb-2">
+              <Input
+                placeholder="VD: Penicillin, Tôm, Sữa..."
+                value={allergyInput}
+                onValueChange={setAllergyInput}
+                onKeyPress={(e) => e.key === "Enter" && handleAddItem("allergy")}
+                variant="bordered"
+              />
+              <Button color="primary" onPress={() => handleAddItem("allergy")} isIconOnly>
+                <Plus size={18} />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profile.allergies.map((item, index) => (
+                <Chip
+                  key={index}
+                  onClose={() => handleRemoveItem("allergies", index)}
+                  variant="flat"
+                  color="danger"
+                >
+                  {item}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          {/* Chronic Conditions */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Bệnh mạn tính</label>
+            <div className="flex gap-2 mb-2">
+              <Input
+                placeholder="VD: Tiểu đường, Cao huyết áp..."
+                value={conditionInput}
+                onValueChange={setConditionInput}
+                onKeyPress={(e) => e.key === "Enter" && handleAddItem("condition")}
+                variant="bordered"
+              />
+              <Button color="primary" onPress={() => handleAddItem("condition")} isIconOnly>
+                <Plus size={18} />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profile.chronic_conditions.map((item, index) => (
+                <Chip
+                  key={index}
+                  onClose={() => handleRemoveItem("chronic_conditions", index)}
+                  variant="flat"
+                  color="warning"
+                >
+                  {item}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          {/* Current Medications */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Thuốc đang dùng</label>
+            <div className="flex gap-2 mb-2">
+              <Input
+                placeholder="VD: Aspirin 100mg hàng ngày..."
+                value={medicationInput}
+                onValueChange={setMedicationInput}
+                onKeyPress={(e) => e.key === "Enter" && handleAddItem("medication")}
+                variant="bordered"
+              />
+              <Button color="primary" onPress={() => handleAddItem("medication")} isIconOnly>
+                <Plus size={18} />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profile.medications.map((item, index) => (
+                <Chip
+                  key={index}
+                  onClose={() => handleRemoveItem("medications", index)}
+                  variant="flat"
+                  color="primary"
+                >
+                  {item}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Consents */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <AlertCircle size={24} className="text-orange-600" />
+            Đồng ý & Cam kết
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <Checkbox
+            isSelected={profile.consents.privacy}
+            onValueChange={(v) =>
+              setProfile({ ...profile, consents: { ...profile.consents, privacy: v } })
+            }
           >
-            Quay lại
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Tạo hồ sơ bệnh án</h1>
-          <p className="text-gray-600 mt-2">
-            Điền đầy đủ thông tin hành chính và y tế
-          </p>
-          <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>💡 Lưu ý:</strong> Một số thông tin đã được tự động điền từ hồ sơ cá nhân của bạn. 
-              Vui lòng kiểm tra và bổ sung thông tin còn thiếu.
+            <span className="text-sm">
+              Tôi đồng ý cho phép MedConnect lưu trữ và sử dụng thông tin y tế của tôi theo{" "}
+              <a href="#" className="text-blue-600 underline">
+                chính sách bảo mật
+              </a>
+            </span>
+          </Checkbox>
+
+          <Checkbox
+            isSelected={profile.consents.telemedicine}
+            onValueChange={(v) =>
+              setProfile({ ...profile, consents: { ...profile.consents, telemedicine: v } })
+            }
+          >
+            <span className="text-sm">
+              Tôi đồng ý tham gia dịch vụ khám bệnh từ xa (telemedicine) khi cần thiết
+            </span>
+          </Checkbox>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Lưu ý:</strong> Vui lòng kiểm tra kỹ thông tin trước khi tạo hồ sơ. Một số thông tin
+              không thể chỉnh sửa sau khi tạo.
             </p>
           </div>
-        </div>
+        </CardBody>
+      </Card>
 
-        <div className="space-y-6">
-          {/* I. HÀNH CHÍNH */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <IdCard className="text-primary" size={24} />
-                I. HÀNH CHÍNH
-              </h2>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-6">
-              {/* Row 1: Tên & Ngày sinh */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="1. Họ và tên (in hoa)"
-                  placeholder="NGUYỄN VĂN A"
-                  value={profile.full_name}
-                  onValueChange={(v) => setProfile({...profile, full_name: v.toUpperCase()})}
-                  isRequired
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<User className="text-default-400" size={20} />}
-                  description="Tự động lấy từ hồ sơ cá nhân"
-                  isReadOnly
-                  classNames={{
-                    input: "uppercase font-semibold"
-                  }}
-                />
-                <Input
-                  type="date"
-                  label="2. Sinh ngày"
-                  value={profile.dob}
-                  onValueChange={(v) => setProfile({...profile, dob: v})}
-                  isRequired
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<Calendar className="text-default-400" size={20} />}
-                  description="Tự động lấy từ hồ sơ cá nhân"
-                  isReadOnly
-                />
-              </div>
-
-              {/* Row 2: Giới tính & Nghề nghiệp */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Select
-                  label="3. Giới tính"
-                  selectedKeys={[profile.gender]}
-                  onSelectionChange={(keys) => setProfile({...profile, gender: Array.from(keys)[0]})}
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<UsersIcon className="text-default-400" size={20} />}
-                  description="Tự động lấy từ hồ sơ cá nhân"
-                  isDisabled
-                >
-                  <SelectItem key="Nam" value="Nam">Nam</SelectItem>
-                  <SelectItem key="Nữ" value="Nữ">Nữ</SelectItem>
-                </Select>
-                <Input
-                  label="4. Nghề nghiệp"
-                  placeholder="VD: Giáo viên, Kỹ sư, Sinh viên..."
-                  value={profile.occupation}
-                  onValueChange={(v) => setProfile({...profile, occupation: v})}
-                  variant="bordered"
-                  labelPlacement="outside"
-                />
-              </div>
-
-              {/* Row 3: Dân tộc & Ngoại kiều */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="5. Dân tộc"
-                  placeholder="VD: Kinh, Tày, Mường..."
-                  value={profile.ethnicity}
-                  onValueChange={(v) => setProfile({...profile, ethnicity: v})}
-                  variant="bordered"
-                  labelPlacement="outside"
-                />
-                <Checkbox
-                  isSelected={profile.foreign_national}
-                  onValueChange={(v) => setProfile({...profile, foreign_national: v})}
-                >
-                  6. Ngoại kiều
-                </Checkbox>
-              </div>
-
-              {/* Row 4: Địa chỉ */}
-              <Input
-                label="7. Địa chỉ đầy đủ"
-                placeholder="Số nhà, Thôn/Phố, Xã/Phường, Huyện/Quận, Tỉnh/Thành phố"
-                value={profile.address}
-                onValueChange={(v) => setProfile({...profile, address: v})}
-                variant="bordered"
-                labelPlacement="outside"
-                startContent={<MapPin className="text-default-400" size={20} />}
-                description="Tự động lấy từ hồ sơ cá nhân"
-                isReadOnly
-              />
-
-              {/* Row 5: Nơi làm việc */}
-              <Input
-                label="8. Nơi làm việc"
-                placeholder="Tên công ty, trường học, cơ quan..."
-                value={profile.workplace}
-                onValueChange={(v) => setProfile({...profile, workplace: v})}
-                variant="bordered"
-                labelPlacement="outside"
-              />
-
-              {/* Row 6: Đối tượng */}
-              <Select
-                label="9. Đối tượng"
-                selectedKeys={[profile.patient_type]}
-                onSelectionChange={(keys) => setProfile({...profile, patient_type: Array.from(keys)[0]})}
-                variant="bordered"
-                labelPlacement="outside"
-                description="Loại hình thanh toán"
-              >
-                <SelectItem key="BHYT" value="BHYT">1. BHYT (Bảo hiểm y tế)</SelectItem>
-                <SelectItem key="Thu phí" value="Thu phí">2. Thu phí (Tự túc)</SelectItem>
-                <SelectItem key="Miễn" value="Miễn">3. Miễn (Miễn phí)</SelectItem>
-                <SelectItem key="Khác" value="Khác">4. Khác</SelectItem>
-              </Select>
-
-              {/* Row 7: BHYT (only if patient_type is BHYT) */}
-              {profile.patient_type === "BHYT" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <BHYTInput
-                    label="10. Số thẻ BHYT"
-                    placeholder="VD: HS 4 01 0120878811"
-                    value={profile.insurance_number}
-                    onChange={(v) => setProfile({...profile, insurance_number: v})}
-                  />
-                  <Input
-                    type="date"
-                    label="BHYT giá trị đến ngày"
-                    value={profile.insurance_valid_to}
-                    onValueChange={(v) => setProfile({...profile, insurance_valid_to: v})}
-                    variant="bordered"
-                    labelPlacement="outside"
-                    startContent={<Calendar className="text-default-400" size={20} />}
-                  />
-                </div>
-              )}
-
-              {/* Row 8: Người liên hệ khẩn cấp */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="11. Họ tên người nhà khi cần báo tin"
-                  placeholder="Tên người thân"
-                  value={profile.emergency_contact_name}
-                  onValueChange={(v) => setProfile({...profile, emergency_contact_name: v})}
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<User className="text-default-400" size={20} />}
-                  description="Tự động lấy từ hồ sơ cá nhân"
-                  isReadOnly
-                />
-                <Input
-                  type="tel"
-                  label="Điện thoại số"
-                  placeholder="0912 345 678"
-                  value={profile.emergency_contact_phone}
-                  onValueChange={(v) => setProfile({...profile, emergency_contact_phone: v})}
-                  variant="bordered"
-                  labelPlacement="outside"
-                  startContent={<Phone className="text-default-400" size={20} />}
-                  description="Tự động lấy từ hồ sơ cá nhân"
-                  isReadOnly
-                />
-              </div>
-
-              {/* Row 9: Đến khám bệnh lúc */}
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">12. Đến khám bệnh lúc</p>
-                <p className="text-sm font-medium">
-                  Thời gian tạo hồ sơ này sẽ được ghi nhận tự động khi lưu
-                </p>
-              </div>
-
-              {/* Row 10: Chẩn đoán của nơi giới thiệu */}
-              <div className="space-y-3">
-                <Select
-                  label="13. Chẩn đoán của nơi giới thiệu"
-                  selectedKeys={[profile.referral_source]}
-                  onSelectionChange={(keys) => setProfile({...profile, referral_source: Array.from(keys)[0]})}
-                  variant="bordered"
-                  labelPlacement="outside"
-                >
-                  <SelectItem key="self" value="self">2. Tự đến</SelectItem>
-                  <SelectItem key="medical" value="medical">1. Y tế (Có giới thiệu)</SelectItem>
-                </Select>
-                
-                {profile.referral_source === "medical" && (
-                  <Textarea
-                    label="Chẩn đoán từ nơi giới thiệu"
-                    placeholder="Nhập chẩn đoán ban đầu từ cơ sở y tế giới thiệu..."
-                    value={profile.referral_diagnosis}
-                    onValueChange={(v) => setProfile({...profile, referral_diagnosis: v})}
-                    variant="bordered"
-                    labelPlacement="outside"
-                    minRows={2}
-                  />
-                )}
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Medical History */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Heart className="text-red-500" size={24} />
-                Tiền sử bệnh
-              </h2>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-6">
-              {/* Allergies */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Dị ứng</label>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    placeholder="VD: Penicillin, hải sản, phấn hoa..."
-                    value={allergyInput}
-                    onValueChange={setAllergyInput}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddItem('allergy')}
-                    variant="bordered"
-                  />
-                  <Button
-                    color="primary"
-                    variant="flat"
-                    startContent={<Plus size={18} />}
-                    onClick={() => handleAddItem('allergy')}
-                  >
-                    Thêm
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.allergies.map((allergy, idx) => (
-                    <Chip
-                      key={idx}
-                      onClose={() => handleRemoveItem('allergy', idx)}
-                      variant="flat"
-                      color="danger"
-                    >
-                      {allergy}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-
-              {/* Chronic Conditions */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Bệnh mãn tính</label>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    placeholder="VD: Tăng huyết áp, Tiểu đường..."
-                    value={conditionInput}
-                    onValueChange={setConditionInput}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddItem('condition')}
-                    variant="bordered"
-                  />
-                  <Button
-                    color="primary"
-                    variant="flat"
-                    startContent={<Plus size={18} />}
-                    onClick={() => handleAddItem('condition')}
-                  >
-                    Thêm
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.chronic_conditions.map((condition, idx) => (
-                    <Chip
-                      key={idx}
-                      onClose={() => handleRemoveItem('condition', idx)}
-                      variant="flat"
-                      color="warning"
-                    >
-                      {condition}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-
-              {/* Medications */}
-              <div>
-                <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                  <Pill size={16} /> Thuốc đang sử dụng
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    placeholder="VD: Amlodipine 5mg, Metformin 500mg..."
-                    value={medicationInput}
-                    onValueChange={setMedicationInput}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddItem('medication')}
-                    variant="bordered"
-                  />
-                  <Button
-                    color="primary"
-                    variant="flat"
-                    startContent={<Plus size={18} />}
-                    onClick={() => handleAddItem('medication')}
-                  >
-                    Thêm
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.medications.map((med, idx) => (
-                    <Chip
-                      key={idx}
-                      onClose={() => handleRemoveItem('medication', idx)}
-                      variant="flat"
-                      color="primary"
-                    >
-                      {med}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Consents */}
-          <Card>
-            <CardHeader>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <AlertCircle className="text-warning" size={24} />
-                Đồng ý điều khoản
-              </h2>
-            </CardHeader>
-            <Divider />
-            <CardBody className="space-y-3">
-              <Checkbox
-                isSelected={profile.consents.privacy}
-                onValueChange={(v) => setProfile({...profile, consents: {...profile.consents, privacy: v}})}
-              >
-                <span className="text-sm">
-                  Tôi đồng ý cho MedConnect lưu trữ và xử lý thông tin sức khỏe của tôi theo{" "}
-                  <a href="/chinh-sach/chinh-sach-bao-mat" className="text-primary underline">
-                    Chính sách bảo mật
-                  </a>
-                </span>
-              </Checkbox>
-              <Checkbox
-                isSelected={profile.consents.telemedicine}
-                onValueChange={(v) => setProfile({...profile, consents: {...profile.consents, telemedicine: v}})}
-              >
-                <span className="text-sm">
-                  Tôi đồng ý sử dụng dịch vụ khám bệnh từ xa và hiểu rằng đây không thay thế cho khám trực tiếp
-                </span>
-              </Checkbox>
-            </CardBody>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="bordered"
-              onClick={() => router.back()}
-            >
-              Hủy
-            </Button>
-            <Button
-              color="primary"
-              startContent={<Save size={20} />}
-              onClick={handleSave}
-              isLoading={saving}
-            >
-              {saving ? "Đang lưu..." : "Lưu hồ sơ"}
-            </Button>
-          </div>
-        </div>
+      {/* Action Buttons */}
+      <div className="flex gap-4 justify-end">
+        <Button variant="light" startContent={<ArrowLeft size={18} />} onPress={() => router.back()}>
+          Quay lại
+        </Button>
+        <Button
+          color="primary"
+          startContent={<Save size={18} />}
+          onPress={handleSubmit}
+          isLoading={saving}
+        >
+          Tạo hồ sơ bệnh án
+        </Button>
       </div>
-    </PatientFrame>
+    </div>
+  );
+
+  return (
+    <>
+      <ToastNotification
+        message={toast.toast.message}
+        type={toast.toast.type}
+        isVisible={toast.toast.isVisible}
+        onClose={toast.hideToast}
+        duration={toast.toast.duration}
+      />
+      <PatientFrame title="Tạo hồ sơ bệnh án mới">
+        <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
+      </PatientFrame>
+    </>
   );
 }
-

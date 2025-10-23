@@ -75,33 +75,13 @@ public class MedicalRecordService {
                 patientProfile.put("dob", patient.getDateOfBirth() != null ? patient.getDateOfBirth().toString() : patientProfile.get("dob"));
                 patientProfile.put("gender", patient.getGender() != null ? patient.getGender() : patientProfile.get("gender"));
                 patientProfile.put("address", patient.getAddress() != null ? patient.getAddress() : patientProfile.get("address"));
-                
-                // Contact
-                @SuppressWarnings("unchecked")
-                Map<String, Object> contact = (Map<String, Object>) patientProfile.get("contact");
-                if (contact != null) {
-                    contact.put("phone", patient.getPhone() != null ? patient.getPhone() : contact.get("phone"));
-                    contact.put("email", patient.getEmail() != null ? patient.getEmail() : contact.get("email"));
-                }
-                
-                // Identity
-                @SuppressWarnings("unchecked")
-                Map<String, Object> identity = (Map<String, Object>) patientProfile.get("identity");
-                if (identity != null) {
-                    identity.put("national_id", patient.getCitizenship() != null ? patient.getCitizenship() : identity.get("national_id"));
-                }
-                
-                // Insurance
-                @SuppressWarnings("unchecked")
-                Map<String, Object> insurance = (Map<String, Object>) patientProfile.get("insurance");
-                if (insurance != null) {
-                    if (patient.getSocialInsurance() != null) {
-                        insurance.put("number", patient.getSocialInsurance());
-                    }
-                    if (patient.getInsuranceValidTo() != null) {
-                        insurance.put("valid_to", patient.getInsuranceValidTo().toString());
-                    }
-                }
+                patientProfile.put("blood_type", patient.getBloodType() != null ? patient.getBloodType() : patientProfile.get("blood_type"));
+                patientProfile.put("phone", patient.getPhone() != null ? patient.getPhone() : patientProfile.get("phone"));
+                patientProfile.put("email", patient.getEmail() != null ? patient.getEmail() : patientProfile.get("email"));
+                patientProfile.put("citizenship", patient.getCitizenship() != null ? patient.getCitizenship() : patientProfile.get("citizenship"));
+                patientProfile.put("allergies", patient.getAllergies() != null ? patient.getAllergies() : patientProfile.get("allergies"));
+                patientProfile.put("insurance_number", patient.getSocialInsurance() != null ? patient.getSocialInsurance() : patientProfile.get("insurance_number"));
+                patientProfile.put("insurance_valid_to", patient.getInsuranceValidTo() != null ? patient.getInsuranceValidTo().toString() : patientProfile.get("insurance_valid_to"));
                 
                 // Emergency contact
                 @SuppressWarnings("unchecked")

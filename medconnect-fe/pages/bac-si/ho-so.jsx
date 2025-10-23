@@ -1,37 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import DoctorFrame from '@/components/layouts/Doctor/Frame';
-import { auth } from '@/lib/firebase';
-import {
+"use client";
+
+import { useEffect, useState } from "react";
+import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, Lock, Key } from "lucide-react";
+import { 
+  Input, 
+  Select, 
+  SelectItem,
   Card,
   CardHeader,
   CardBody,
-  CardFooter,
-  Button,
-  Input,
-  Select,
-  SelectItem,
   Avatar,
+  Button,
   Divider,
-  Chip,
-  Spinner
-} from "@nextui-org/react";
+  Switch
+} from "@heroui/react";
+import { DoctorFrame, Grid } from "@/components/layouts/";
+import ToastNotification from "@/components/ui/ToastNotification";
+import { useToast } from "@/hooks/useToast";
+import { useAvatar } from "@/hooks/useAvatar";
 
-const DoctorProfile = () => {
-  const [profile, setProfile] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    specialization: '',
-    license_id: ''
+import { auth } from "@/lib/firebase";
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+
+export default function DoctorProfileWithFrame() {
+  const toast = useToast();
+  const { getAvatarUrl, uploadAvatar, uploading } = useAvatar();
+  const [user, setUser] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [doctor, setDoctor] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    specialization: "",
+    license_id: ""
   });
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editedData, setEditedData] = useState({
-    phone: '',
-    specialization: ''
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Security states
+  const [security, setSecurity] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
   });
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const specializations = [
     { key: "CARDIOLOGY", label: "Tim mạch" },
@@ -41,335 +53,444 @@ const DoctorProfile = () => {
     { key: "ORTHOPEDICS", label: "Chỉnh hình" },
     { key: "NEUROLOGY", label: "Thần kinh" },
     { key: "PSYCHIATRY", label: "Tâm thần" },
-    { key: "GENERAL_SURGERY", label: "Phẫu thuật tổng quát" }
+    { key: "GENERAL_SURGERY", label: "Phẫu thuật tổng quát" },
+    { key: "OBSTETRICS_GYNECOLOGY", label: "Sản phụ khoa" },
+    { key: "OPHTHALMOLOGY", label: "Nhãn khoa" },
+    { key: "ENT", label: "Tai mũi họng" },
+    { key: "UROLOGY", label: "Tiết niệu" }
   ];
 
+  // Listen to Firebase auth
   useEffect(() => {
-    fetchProfile();
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        fetchDoctorData(firebaseUser);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
-  const fetchProfile = async () => {
-    setIsLoading(true);
+  const fetchDoctorData = async (firebaseUser) => {
     try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
+      const token = await firebaseUser.getIdToken();
+      
+      // Fetch doctor profile
+      const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setProfile(data);
-        setEditedData({
-          phone: data.phone || '',
-          specialization: data.specialization || ''
+        setDoctor({ ...doctor, ...data });
+        
+        // Get user's avatar
+        const avatarResponse = await fetch("http://localhost:8080/api/avatar", {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        if (avatarResponse.ok) {
+          const avatarData = await avatarResponse.json();
+          const finalAvatarUrl = getAvatarUrl(firebaseUser, avatarData.avatarUrl);
+          setAvatarUrl(finalAvatarUrl);
+        }
       } else {
-        showMessage('Không thể tải thông tin hồ sơ', 'error');
+        toast.error("Không thể tải thông tin hồ sơ");
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      showMessage('Lỗi kết nối máy chủ', 'error');
+      console.error("Error fetching doctor data:", error);
+      toast.error("Lỗi kết nối máy chủ");
+    } finally {
+      setLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 5000);
-  };
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedData({
-      phone: profile.phone || '',
-      specialization: profile.specialization || ''
-    });
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedData({
-      phone: profile.phone || '',
-      specialization: profile.specialization || ''
-    });
+    try {
+      const newAvatarUrl = await uploadAvatar(file, user);
+      setAvatarUrl(newAvatarUrl);
+      toast.success("Cập nhật ảnh đại diện thành công!");
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error("Tải ảnh đại diện thất bại");
+    }
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      return;
+    }
+
+    if (!doctor.phone || !doctor.specialization) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    setSaving(true);
     try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
-        method: 'PATCH',
+      const token = await user.getIdToken();
+      
+      const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
+        method: "PATCH",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(editedData)
+        body: JSON.stringify({
+          phone: doctor.phone,
+          specialization: doctor.specialization
+        }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setProfile(prev => ({
-          ...prev,
-          phone: data.phone,
-          specialization: data.specialization
-        }));
-        setIsEditing(false);
-        showMessage('Cập nhật thông tin thành công', 'success');
+        toast.success("Cập nhật hồ sơ thành công!");
       } else {
-        const error = await response.json();
-        showMessage(error.message || 'Cập nhật thất bại', 'error');
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Cập nhật thất bại");
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      showMessage('Lỗi kết nối máy chủ', 'error');
+      console.error("Update error:", error);
+      toast.error(error.message || "Không thể cập nhật hồ sơ");
+    } finally {
+      setSaving(false);
     }
-    setIsSaving(false);
   };
 
-  const getSpecializationLabel = (key) => {
-    const spec = specializations.find(s => s.key === key);
-    return spec ? spec.label : key;
+  // Change Password
+  const handleChangePassword = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      return;
+    }
+
+    // Validation
+    if (!security.currentPassword || !security.newPassword || !security.confirmPassword) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    if (security.newPassword.length < 6) {
+      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+
+    if (security.newPassword !== security.confirmPassword) {
+      toast.error("Mật khẩu mới không khớp");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        security.currentPassword
+      );
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, security.newPassword);
+
+      // Clear form
+      setSecurity({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+
+      toast.success("Đổi mật khẩu thành công!");
+    } catch (err) {
+      console.error("Change password error:", err);
+      if (err.code === "auth/wrong-password") {
+        toast.error("Mật khẩu hiện tại không đúng");
+      } else if (err.code === "auth/weak-password") {
+        toast.error("Mật khẩu quá yếu");
+      } else {
+        toast.error(err.message || "Đổi mật khẩu thất bại");
+      }
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <DoctorFrame title="Hồ sơ">
-        <div className="flex justify-center items-center h-96">
-          <Spinner size="lg" color="primary" />
+      <DoctorFrame title="Hồ sơ bác sĩ">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Đang tải...</p>
+          </div>
         </div>
       </DoctorFrame>
     );
   }
 
-  return (
-    <DoctorFrame title="Hồ sơ">
-      <div className="max-w-4xl mx-auto">
-        {/* Message Alert */}
-        {message.text && (
-          <Card className={`mb-6 ${message.type === 'error' ? 'border-l-4 border-danger' : 'border-l-4 border-success'}`}>
-            <CardBody>
-              <p className={message.type === 'error' ? 'text-danger' : 'text-success'}>
-                {message.text}
-              </p>
-            </CardBody>
-          </Card>
-        )}
+  // Left Panel - Avatar & Info
+  const leftPanel = (
+    <div className="space-y-6">
+      <Card>
+        <CardBody className="p-6 text-center">
+          <div className="relative inline-block">
+            <Avatar
+              src={avatarUrl}
+              className="w-24 h-24 mx-auto mb-4 text-large"
+              name={doctor.name?.charAt(0)?.toUpperCase() || "B"}
+            />
+            <label
+              htmlFor="avatar-input"
+              className="absolute bottom-4 right-0 bg-teal-600 text-white p-2 rounded-full cursor-pointer hover:bg-teal-700 transition-colors"
+            >
+              <Upload size={16} />
+            </label>
+            <input
+              id="avatar-input"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+              disabled={uploading}
+            />
+          </div>
+          <h3 className="text-lg font-semibold">{doctor.name || "Bác sĩ"}</h3>
+          <p className="text-sm text-gray-600">{doctor.email}</p>
+          <p className="text-xs text-gray-500 mt-2">
+            {specializations.find(s => s.key === doctor.specialization)?.label || doctor.specialization}
+          </p>
+        </CardBody>
+      </Card>
 
-        {/* Profile Header Card */}
-        <Card className="mb-6 shadow-lg">
-          <CardBody className="p-8">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              <Avatar
-                name={profile.name?.[0] || 'D'}
-                className="w-28 h-28 text-3xl bg-gradient-to-br from-teal-400 to-teal-600 text-white"
-              />
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">{profile.name}</h2>
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  <Chip
-                    startContent={
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                    }
-                    variant="flat"
-                    color="primary"
-                  >
-                    {getSpecializationLabel(profile.specialization)}
-                  </Chip>
-                  <Chip
-                    startContent={
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    }
-                    variant="flat"
-                    color="secondary"
-                  >
-                    License: {profile.license_id}
-                  </Chip>
-                </div>
-              </div>
-              {!isEditing && (
-                <Button
-                  color="primary"
-                  variant="flat"
-                  startContent={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  }
-                  onPress={handleEdit}
-                >
-                  Chỉnh sửa
-                </Button>
-              )}
+      <Card>
+        <CardBody className="p-6">
+          <h4 className="font-semibold mb-3">Thông tin tài khoản</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Vai trò:</span>
+              <span className="font-medium text-teal-600">Bác sĩ</span>
             </div>
-          </CardBody>
-        </Card>
-
-        {/* Profile Details Card */}
-        <Card className="shadow-lg">
-          <CardHeader className="flex justify-between items-center px-8 pt-6">
-            <h3 className="text-xl font-semibold text-gray-800">Thông tin chi tiết</h3>
-            {isEditing && (
-              <div className="flex gap-2">
-                <Button
-                  color="default"
-                  variant="flat"
-                  onPress={handleCancel}
-                  isDisabled={isSaving}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  color="primary"
-                  onPress={handleSave}
-                  isLoading={isSaving}
-                >
-                  Lưu thay đổi
-                </Button>
-              </div>
-            )}
-          </CardHeader>
-          <Divider />
-          <CardBody className="p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Full Name - Read Only */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Họ và tên
-                </label>
-                <Input
-                  value={profile.name}
-                  isReadOnly
-                  variant="bordered"
-                  startContent={
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  }
-                  classNames={{
-                    input: "text-gray-600",
-                    inputWrapper: "bg-gray-50"
-                  }}
-                />
-              </div>
-
-              {/* Email - Read Only */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <Input
-                  value={profile.email}
-                  isReadOnly
-                  variant="bordered"
-                  startContent={
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  }
-                  classNames={{
-                    input: "text-gray-600",
-                    inputWrapper: "bg-gray-50"
-                  }}
-                />
-              </div>
-
-              {/* Phone - Editable */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Số điện thoại
-                </label>
-                <Input
-                  value={isEditing ? editedData.phone : profile.phone}
-                  onChange={(e) => setEditedData({ ...editedData, phone: e.target.value })}
-                  isReadOnly={!isEditing}
-                  variant="bordered"
-                  placeholder="Nhập số điện thoại"
-                  startContent={
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  }
-                  classNames={{
-                    input: isEditing ? "" : "text-gray-600",
-                    inputWrapper: isEditing ? "" : "bg-gray-50"
-                  }}
-                />
-              </div>
-
-              {/* Specialization - Editable */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chuyên khoa
-                </label>
-                {isEditing ? (
-                  <Select
-                    selectedKeys={[editedData.specialization]}
-                    onChange={(e) => setEditedData({ ...editedData, specialization: e.target.value })}
-                    variant="bordered"
-                    placeholder="Chọn chuyên khoa"
-                    startContent={
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                      </svg>
-                    }
-                  >
-                    {specializations.map((spec) => (
-                      <SelectItem key={spec.key} value={spec.key}>
-                        {spec.label}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                ) : (
-                  <Input
-                    value={getSpecializationLabel(profile.specialization)}
-                    isReadOnly
-                    variant="bordered"
-                    startContent={
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                      </svg>
-                    }
-                    classNames={{
-                      input: "text-gray-600",
-                      inputWrapper: "bg-gray-50"
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* License ID - Read Only */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Số giấy phép hành nghề
-                </label>
-                <Input
-                  value={profile.license_id}
-                  isReadOnly
-                  variant="bordered"
-                  startContent={
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  }
-                  classNames={{
-                    input: "text-gray-600",
-                    inputWrapper: "bg-gray-50"
-                  }}
-                />
-              </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Giấy phép:</span>
+              <span className="font-medium">{doctor.license_id || "N/A"}</span>
             </div>
-          </CardBody>
-        </Card>
-      </div>
-    </DoctorFrame>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Trạng thái:</span>
+              <span className="text-green-600 font-medium">Hoạt động</span>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card className="bg-teal-50 border-teal-100">
+        <CardBody className="p-4">
+          <p className="text-xs font-semibold text-teal-900 mb-1">💡 Thông tin</p>
+          <p className="text-xs text-teal-700 leading-relaxed">
+            Email và giấy phép hành nghề không thể thay đổi. Liên hệ quản trị viên nếu cần hỗ trợ.
+          </p>
+        </CardBody>
+      </Card>
+    </div>
   );
-};
 
-export default DoctorProfile;
+  // Right Panel - Settings Forms
+  const rightPanel = (
+    <div className="space-y-6">
+      {/* Profile Settings */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <User size={24} className="text-teal-600" />
+            Thông tin cá nhân
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Họ và tên"
+              value={doctor.name || ""}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<User className="text-default-400" size={20} />}
+              isReadOnly
+              description="Không thể thay đổi"
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 bg-gray-50"
+              }}
+            />
+            <Input
+              type="email"
+              label="Email"
+              value={doctor.email || ""}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Mail className="text-default-400" size={20} />}
+              isReadOnly
+              description="Không thể thay đổi"
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 bg-gray-50"
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              type="tel"
+              label="Số điện thoại"
+              placeholder="VD: 0912 345 678"
+              value={doctor.phone || ""}
+              onValueChange={(v) => setDoctor({ ...doctor, phone: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Phone className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+            />
+            <Input
+              label="Số giấy phép hành nghề"
+              value={doctor.license_id || ""}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<IdCard className="text-default-400" size={20} />}
+              isReadOnly
+              description="Không thể thay đổi"
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 bg-gray-50"
+              }}
+            />
+          </div>
+
+          <Select
+            label="Chuyên khoa"
+            placeholder="Chọn chuyên khoa"
+            selectedKeys={doctor.specialization ? [doctor.specialization] : []}
+            onSelectionChange={(keys) => setDoctor({ ...doctor, specialization: Array.from(keys)[0] })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<Stethoscope className="text-default-400" size={20} />}
+            classNames={{
+              trigger: "border-default-200 hover:border-teal-500 data-[focus=true]:border-teal-500"
+            }}
+          >
+            {specializations.map((spec) => (
+              <SelectItem key={spec.key} value={spec.key}>
+                {spec.label}
+              </SelectItem>
+            ))}
+          </Select>
+
+          <Button 
+            color="primary" 
+            onPress={handleSave} 
+            isLoading={saving}
+            startContent={<Save size={18} />}
+            className="w-full md:w-auto"
+          >
+            Lưu thay đổi
+          </Button>
+        </CardBody>
+      </Card>
+
+      {/* Change Password */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-xl font-semibold flex items-center gap-2">
+            <Lock size={24} className="text-red-600" />
+            Đổi mật khẩu
+          </h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
+            <p className="text-sm text-yellow-800">
+              ⚠️ <strong>Lưu ý:</strong> Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại.
+            </p>
+          </div>
+
+          <Input
+            type="password"
+            label="Mật khẩu hiện tại"
+            placeholder="Nhập mật khẩu hiện tại"
+            value={security.currentPassword}
+            onValueChange={(v) => setSecurity({ ...security, currentPassword: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<Lock className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+            }}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              type="password"
+              label="Mật khẩu mới"
+              placeholder="Tối thiểu 6 ký tự"
+              value={security.newPassword}
+              onValueChange={(v) => setSecurity({ ...security, newPassword: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Key className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+              }}
+            />
+            <Input
+              type="password"
+              label="Xác nhận mật khẩu mới"
+              placeholder="Nhập lại mật khẩu mới"
+              value={security.confirmPassword}
+              onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })}
+              variant="bordered"
+              labelPlacement="outside"
+              startContent={<Key className="text-default-400" size={20} />}
+              classNames={{
+                input: "text-base",
+                inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+              }}
+            />
+          </div>
+
+          <Button 
+            color="danger" 
+            onPress={handleChangePassword} 
+            isLoading={changingPassword}
+            isDisabled={!security.currentPassword || !security.newPassword || !security.confirmPassword}
+            startContent={<Key size={18} />}
+            className="w-full md:w-auto"
+          >
+            Đổi mật khẩu
+          </Button>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  return (
+    <>
+      <ToastNotification
+        message={toast.toast.message}
+        type={toast.toast.type}
+        isVisible={toast.toast.isVisible}
+        onClose={toast.hideToast}
+        duration={toast.toast.duration}
+      />
+      <DoctorFrame title="Hồ sơ bác sĩ">
+        <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
+      </DoctorFrame>
+    </>
+  );
+}
