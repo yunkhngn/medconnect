@@ -6,6 +6,7 @@ import Head from "next/head";
 import { useEffect, useState } from "react";
 import AuthGuard from '@/config/Auth/AuthGuard';
 import Chatbot from "@/components/ui/Chatbot";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 
 export default function App({ Component, pageProps }) {
@@ -48,23 +49,25 @@ export default function App({ Component, pageProps }) {
       
       <HeroUIProvider>
         <NextThemesProvider attribute="class" defaultTheme="light">
-          <NextTopLoader
-            //color blue 
-            color="linear-gradient(to right, #62cff4, #62cff4)"
-            initialPosition={0.08}
-            crawlSpeed={200}
-            height={5}
-            crawl={true}
-            showSpinner={false}
-            easing="ease"
-            speed={200}
-            shadow="0 0 16px #10B981, 0 0 8px #10B981"
-            showAtBottom={false}
-          />
-          <AuthGuard>
-            <Chatbot />
-            <Component {...pageProps} />
-          </AuthGuard>
+          <AuthProvider>
+            <NextTopLoader
+              //color blue 
+              color="linear-gradient(to right, #62cff4, #62cff4)"
+              initialPosition={0.08}
+              crawlSpeed={200}
+              height={5}
+              crawl={true}
+              showSpinner={false}
+              easing="ease"
+              speed={200}
+              shadow="0 0 16px #10B981, 0 0 8px #10B981"
+              showAtBottom={false}
+            />
+            <AuthGuard>
+              <Chatbot />
+              <Component {...pageProps} />
+            </AuthGuard>
+          </AuthProvider>
         </NextThemesProvider>
       </HeroUIProvider>
     </>

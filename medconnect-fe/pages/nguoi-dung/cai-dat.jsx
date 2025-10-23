@@ -20,13 +20,13 @@ import { useAvatar } from "@/hooks/useAvatar";
 import BHYTInput from "@/components/ui/BHYTInput";
 import { isValidBHYT } from "@/utils/bhytHelper";
 
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 export default function PatientProfileWithFrame() {
   const toast = useToast();
   const { getAvatarUrl, uploadAvatar, uploading } = useAvatar();
-  const [user, setUser] = useState(null);
+  const { user, loading: authLoading } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [patient, setPatient] = useState({
     name: "",
@@ -78,18 +78,20 @@ export default function PatientProfileWithFrame() {
     { key: "O-", label: "O-" }
   ];
 
-  // Listen to Firebase auth
+  // Load patient data when user is authenticated
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        fetchPatientData(firebaseUser);
-      } else {
-        setLoading(false);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    fetchPatientData(user);
+  }, [user, authLoading]);
 
   const fetchPatientData = async (firebaseUser) => {
     try {

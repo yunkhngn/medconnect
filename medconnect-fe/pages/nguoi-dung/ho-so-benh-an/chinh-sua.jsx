@@ -41,7 +41,7 @@ import {
   Upload,
 } from "lucide-react";
 import { PatientFrame, Grid } from "@/components/layouts/";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import BHYTInput from "@/components/ui/BHYTInput";
@@ -50,7 +50,7 @@ export default function EditEMRPage() {
   const router = useRouter();
   const toast = useToast();
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const [user, setUser] = useState(null);
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -92,16 +92,19 @@ export default function EditEMRPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        fetchEMR(firebaseUser);
-      } else {
-        setLoading(false);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      router.push("/dang-nhap");
+      return;
+    }
+
+    fetchEMR(user);
+  }, [user, authLoading]);
 
   const fetchEMR = async (firebaseUser) => {
     try {

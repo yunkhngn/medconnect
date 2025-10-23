@@ -28,41 +28,57 @@ import {
   Plus,
   Edit,
   Settings,
+  Download,
+  Printer,
 } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function HoSoBenhAn() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [emrData, setEmrData] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchEMR = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          setError("Vui lòng đăng nhập");
-          setLoading(false);
-          return;
-        }
+    console.log('[HoSoBenhAn] Auth state:', { authLoading, hasUser: !!user });
+    
+    if (authLoading) {
+      return; // Wait for auth to complete
+    }
+    
+    if (!user) {
+      console.log('[HoSoBenhAn] No user, redirecting...');
+      setError("Vui lòng đăng nhập");
+      setLoading(false);
+      return;
+    }
 
+    const fetchEMR = async () => {
+      console.log('[HoSoBenhAn] Fetching EMR...');
+      setLoading(true);
+      setError(null);
+      
+      try {
         const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (response.ok) {
           const data = await response.json();
-          console.log("EMR data:", data);
+          console.log('[HoSoBenhAn] EMR data loaded:', data);
           setEmrData(data);
+          setError(null);
         } else if (response.status === 404) {
+          console.log('[HoSoBenhAn] No EMR found (404)');
           setError("Chưa có hồ sơ bệnh án");
         } else {
+          console.log('[HoSoBenhAn] Failed to load EMR:', response.status);
           setError("Không thể tải hồ sơ bệnh án");
         }
       } catch (err) {
-        console.error("Error fetching EMR:", err);
+        console.error('[HoSoBenhAn] Error fetching EMR:', err);
         setError("Lỗi kết nối máy chủ");
       } finally {
         setLoading(false);
@@ -70,7 +86,7 @@ export default function HoSoBenhAn() {
     };
 
     fetchEMR();
-  }, []);
+  }, [user, authLoading]);
 
   const parseDetail = (detail) => {
     if (!detail) return null;
@@ -82,7 +98,294 @@ export default function HoSoBenhAn() {
     }
   };
 
-  if (loading) {
+  const formatDiagnosis = (diagnosis) => {
+    if (!diagnosis) return 'N/A';
+    if (typeof diagnosis === 'string') return diagnosis;
+    
+    const parts = [];
+    if (diagnosis.primary) parts.push(`Chính: ${diagnosis.primary}`);
+    if (diagnosis.secondary) parts.push(`Phụ: ${diagnosis.secondary}`);
+    if (diagnosis.icd_codes) parts.push(`Mã ICD: ${diagnosis.icd_codes}`);
+    return parts.join(' | ') || 'N/A';
+  };
+
+  const generatePDFContent = () => {
+    const detail = parseDetail(emrData.detail);
+    const patientProfile = detail?.patient_profile || {};
+    const medicalHistory = detail?.medical_history || {};
+    const medicalRecords = detail?.medical_records || [];
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Hồ sơ bệnh án - ${patientProfile.full_name}</title>
+          <style>
+            @media print {
+              @page { margin: 2cm; }
+              body { margin: 0; }
+            }
+            body {
+              font-family: 'Arial', sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 3px solid #0d9488;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .header h1 {
+              color: #0d9488;
+              margin: 0;
+              font-size: 28px;
+            }
+            .header p {
+              color: #666;
+              margin: 5px 0;
+            }
+            .section {
+              margin-bottom: 25px;
+              page-break-inside: avoid;
+            }
+            .section-title {
+              background: #0d9488;
+              color: white;
+              padding: 10px 15px;
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 15px;
+            }
+            .info-row {
+              display: flex;
+              padding: 8px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .info-label {
+              font-weight: bold;
+              width: 200px;
+              color: #666;
+            }
+            .info-value {
+              flex: 1;
+              color: #333;
+            }
+            .record-item {
+              border: 1px solid #ddd;
+              padding: 15px;
+              margin-bottom: 15px;
+              border-radius: 5px;
+              background: #f9f9f9;
+            }
+            .record-header {
+              font-weight: bold;
+              color: #0d9488;
+              margin-bottom: 10px;
+              font-size: 16px;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 2px solid #ddd;
+              text-align: center;
+              color: #666;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>HỒ SƠ BỆNH ÁN</h1>
+            <p>MedConnect - Hệ thống quản lý y tế</p>
+            <p>Xuất ngày: ${new Date().toLocaleDateString('vi-VN', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</p>
+          </div>
+
+          <div class="section">
+            <div class="section-title">THÔNG TIN BỆNH NHÂN</div>
+            <div class="info-row">
+              <div class="info-label">Họ và tên:</div>
+              <div class="info-value">${patientProfile.full_name || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Ngày sinh:</div>
+              <div class="info-value">${patientProfile.date_of_birth ? new Date(patientProfile.date_of_birth).toLocaleDateString('vi-VN') : 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Giới tính:</div>
+              <div class="info-value">${patientProfile.gender || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Nhóm máu:</div>
+              <div class="info-value">${patientProfile.blood_type || 'Chưa cập nhật'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Số điện thoại:</div>
+              <div class="info-value">${patientProfile.phone || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Email:</div>
+              <div class="info-value">${patientProfile.email || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Địa chỉ:</div>
+              <div class="info-value">${patientProfile.address || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Số BHYT:</div>
+              <div class="info-value">${patientProfile.insurance_number || 'Chưa cập nhật'}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">LIÊN HỆ KHẨN CẤP</div>
+            <div class="info-row">
+              <div class="info-label">Người liên hệ:</div>
+              <div class="info-value">${patientProfile.emergency_contact?.name || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Số điện thoại:</div>
+              <div class="info-value">${patientProfile.emergency_contact?.phone || 'N/A'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Quan hệ:</div>
+              <div class="info-value">${patientProfile.emergency_contact?.relation || 'N/A'}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">TIỀN SỬ BỆNH & DỊ ỨNG</div>
+            <div class="info-row">
+              <div class="info-label">Dị ứng:</div>
+              <div class="info-value">${medicalHistory.allergies || 'Không'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Bệnh tiền sử:</div>
+              <div class="info-value">${medicalHistory.previous_conditions || 'Không'}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">Thuốc đang dùng:</div>
+              <div class="info-value">${medicalHistory.current_medications || 'Không'}</div>
+            </div>
+          </div>
+
+          ${medicalRecords && medicalRecords.length > 0 ? `
+            <div class="section">
+              <div class="section-title">LỊCH SỬ KHÁM BỆNH (${medicalRecords.length} lần khám)</div>
+              ${medicalRecords.map((record, index) => {
+                const visitDate = record.visit_date || record.encounter?.started_at;
+                const visitDateStr = visitDate ? new Date(visitDate).toLocaleDateString('vi-VN') : 'N/A';
+                const visitTimeStr = record.visit_time ? ` ${record.visit_time}` : '';
+                
+                return `
+                <div class="record-item">
+                  <div class="record-header">Lần khám ${medicalRecords.length - index} - ${record.visit_type === 'online' ? 'Online' : 'Tại phòng khám'}</div>
+                  <div class="info-row">
+                    <div class="info-label">Ngày khám:</div>
+                    <div class="info-value">${visitDateStr}${visitTimeStr}</div>
+                  </div>
+                  <div class="info-row">
+                    <div class="info-label">Bác sĩ:</div>
+                    <div class="info-value">${record.doctor_name || 'N/A'}</div>
+                  </div>
+                  ${record.chief_complaint ? `
+                    <div class="info-row">
+                      <div class="info-label">Lý do khám:</div>
+                      <div class="info-value">${record.chief_complaint}</div>
+                    </div>
+                  ` : ''}
+                  ${record.vital_signs ? `
+                    <div class="info-row">
+                      <div class="info-label">Sinh hiệu:</div>
+                      <div class="info-value">
+                        ${record.vital_signs.temperature ? `Nhiệt độ: ${record.vital_signs.temperature}°C` : ''}
+                        ${record.vital_signs.blood_pressure ? ` | Huyết áp: ${record.vital_signs.blood_pressure}` : ''}
+                        ${record.vital_signs.heart_rate ? ` | Nhịp tim: ${record.vital_signs.heart_rate} bpm` : ''}
+                        ${record.vital_signs.spo2 ? ` | SpO2: ${record.vital_signs.spo2}%` : ''}
+                        ${record.vital_signs.weight ? ` | Cân nặng: ${record.vital_signs.weight} kg` : ''}
+                        ${record.vital_signs.height ? ` | Chiều cao: ${record.vital_signs.height} cm` : ''}
+                      </div>
+                    </div>
+                  ` : ''}
+                  <div class="info-row">
+                    <div class="info-label">Chẩn đoán:</div>
+                    <div class="info-value">${formatDiagnosis(record.diagnosis)}</div>
+                  </div>
+                  ${record.prescriptions && record.prescriptions.length > 0 ? `
+                    <div class="info-row">
+                      <div class="info-label">Đơn thuốc:</div>
+                      <div class="info-value">${record.prescriptions.map(rx => 
+                        `${rx.medication || rx.medicine_name}: ${rx.dosage} - ${rx.frequency} - ${rx.duration}`
+                      ).join('; ')}</div>
+                    </div>
+                  ` : ''}
+                  ${record.notes ? `
+                    <div class="info-row">
+                      <div class="info-label">Ghi chú:</div>
+                      <div class="info-value">${record.notes}</div>
+                    </div>
+                  ` : ''}
+                </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+
+          <div class="footer">
+            <p>Hồ sơ bệnh án này được tạo tự động từ hệ thống MedConnect</p>
+            <p>Tài liệu này chỉ mang tính chất tham khảo</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const printEMR = () => {
+    if (!emrData) return;
+    
+    const htmlContent = generatePDFContent();
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
+  const downloadPDF = () => {
+    if (!emrData) return;
+    
+    const detail = parseDetail(emrData.detail);
+    const patientProfile = detail?.patient_profile || {};
+    const fileName = `ho-so-benh-an-${patientProfile.full_name?.replace(/\s+/g, '-') || 'patient'}-${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    const htmlContent = generatePDFContent();
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.document.title = fileName;
+    printWindow.focus();
+    
+    // Wait for content to load then trigger print dialog (user can save as PDF)
+    setTimeout(() => {
+      printWindow.print();
+      // Note: Browser will show print dialog, user can choose "Save as PDF"
+    }, 250);
+  };
+
+  if (authLoading || loading) {
     return (
       <PatientFrame title="Hồ sơ bệnh án">
         <div className="flex items-center justify-center min-h-screen">
@@ -207,6 +510,26 @@ export default function HoSoBenhAn() {
             >
               Chỉnh sửa hồ sơ
             </Button>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                color="secondary"
+                variant="flat"
+                startContent={<Printer size={18} />}
+                onPress={printEMR}
+              >
+                In
+              </Button>
+              <Button
+                className="flex-1"
+                color="secondary"
+                variant="flat"
+                startContent={<Download size={18} />}
+                onPress={downloadPDF}
+              >
+                Tải về
+              </Button>
+            </div>
           </div>
         </CardBody>
       </Card>
@@ -385,7 +708,30 @@ export default function HoSoBenhAn() {
                       {record.diagnosis && (
                         <div>
                           <p className="text-sm font-semibold text-gray-700">Chẩn đoán:</p>
-                          <p className="text-sm text-gray-600">{record.diagnosis}</p>
+                          {typeof record.diagnosis === 'string' ? (
+                            <p className="text-sm text-gray-600">{record.diagnosis}</p>
+                          ) : (
+                            <div className="space-y-1 text-sm">
+                              {record.diagnosis.primary && (
+                                <div className="bg-red-50 p-2 rounded">
+                                  <span className="font-medium text-red-700">Chính:</span>{' '}
+                                  <span className="text-gray-700">{record.diagnosis.primary}</span>
+                                </div>
+                              )}
+                              {record.diagnosis.secondary && (
+                                <div className="bg-orange-50 p-2 rounded">
+                                  <span className="font-medium text-orange-700">Phụ:</span>{' '}
+                                  <span className="text-gray-700">{record.diagnosis.secondary}</span>
+                                </div>
+                              )}
+                              {record.diagnosis.icd_codes && (
+                                <div className="bg-blue-50 p-2 rounded">
+                                  <span className="font-medium text-blue-700">Mã ICD:</span>{' '}
+                                  <span className="text-gray-700">{record.diagnosis.icd_codes}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 

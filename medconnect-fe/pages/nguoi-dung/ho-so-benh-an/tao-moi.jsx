@@ -36,7 +36,7 @@ import {
   Upload,
 } from "lucide-react";
 import { PatientFrame, Grid } from "@/components/layouts/";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import BHYTInput from "@/components/ui/BHYTInput";
@@ -44,7 +44,7 @@ import BHYTInput from "@/components/ui/BHYTInput";
 export default function CreateEMRPage() {
   const router = useRouter();
   const toast = useToast();
-  const [user, setUser] = useState(null);
+  const { user, loading: authLoading } = useAuth();
   const [saving, setSaving] = useState(false);
 
   const [profile, setProfile] = useState({
@@ -85,41 +85,47 @@ export default function CreateEMRPage() {
   const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        try {
-          const token = await firebaseUser.getIdToken();
-          const response = await fetch("http://localhost:8080/api/patient/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+    if (authLoading) return;
+    
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      router.push("/dang-nhap");
+      return;
+    }
 
-          if (response.ok) {
-            const patientData = await response.json();
-            setProfile((prev) => ({
-              ...prev,
-              full_name: patientData.name || "",
-              dob: patientData.dateOfBirth || "",
-              gender: patientData.gender || "Nam",
-              blood_type: patientData.bloodType || "",
-              address: patientData.address || "",
-              phone: patientData.phone || "",
-              email: patientData.email || "",
-              insurance_number: patientData.socialInsurance || "",
-              insurance_valid_to: patientData.insuranceValidTo || "",
-              emergency_contact_name: patientData.emergencyContactName || "",
-              emergency_contact_phone: patientData.emergencyContactPhone || "",
-              emergency_contact_relationship: patientData.emergencyContactRelationship || "",
-              citizenship: patientData.citizenship || "",
-            }));
-          }
-        } catch (error) {
-          console.error("Error loading patient profile:", error);
+    const loadPatientProfile = async () => {
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch("http://localhost:8080/api/patient/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const patientData = await response.json();
+          setProfile((prev) => ({
+            ...prev,
+            full_name: patientData.name || "",
+            dob: patientData.dateOfBirth || "",
+            gender: patientData.gender || "Nam",
+            blood_type: patientData.bloodType || "",
+            address: patientData.address || "",
+            phone: patientData.phone || "",
+            email: patientData.email || "",
+            insurance_number: patientData.socialInsurance || "",
+            insurance_valid_to: patientData.insuranceValidTo || "",
+            emergency_contact_name: patientData.emergencyContactName || "",
+            emergency_contact_phone: patientData.emergencyContactPhone || "",
+            emergency_contact_relationship: patientData.emergencyContactRelationship || "",
+            citizenship: patientData.citizenship || "",
+          }));
         }
+      } catch (error) {
+        console.error("Error loading patient profile:", error);
       }
-    });
-    return () => unsubscribe();
-  }, []);
+    };
+
+    loadPatientProfile();
+  }, [user, authLoading]);
 
   const handleAddItem = (type) => {
     let input, value;
