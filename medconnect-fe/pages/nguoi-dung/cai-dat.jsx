@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Save, Upload, User, Mail, Phone, MapPin, Heart, Calendar, Users, IdCard, Shield, Droplet } from "lucide-react";
+import { Save, Upload, User, Mail, Phone, MapPin, Heart, Calendar, Users, IdCard, Shield, Droplet, Lock, Key } from "lucide-react";
 import { Input, Select, SelectItem } from "@heroui/react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import ToastNotification from "@/components/ui/ToastNotification";
@@ -14,6 +14,7 @@ import { isValidBHYT } from "@/utils/bhytHelper";
 import { auth, db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 export default function PatientProfileWithFrame() {
   const toast = useToast();
@@ -38,6 +39,14 @@ export default function PatientProfileWithFrame() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingEmr, setUploadingEmr] = useState(false);
+
+  // Security states
+  const [security, setSecurity] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const maxDob = useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -199,6 +208,64 @@ export default function PatientProfileWithFrame() {
     }
   };
 
+  // Change Password
+  const handleChangePassword = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      return;
+    }
+
+    // Validation
+    if (!security.currentPassword || !security.newPassword || !security.confirmPassword) {
+      toast.error("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    if (security.newPassword.length < 6) {
+      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+
+    if (security.newPassword !== security.confirmPassword) {
+      toast.error("Mật khẩu mới không khớp");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        security.currentPassword
+      );
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, security.newPassword);
+
+      // Clear form
+      setSecurity(prev => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      }));
+
+      toast.success("Đổi mật khẩu thành công!");
+    } catch (err) {
+      console.error("Change password error:", err);
+      if (err.code === "auth/wrong-password") {
+        toast.error("Mật khẩu hiện tại không đúng");
+      } else if (err.code === "auth/weak-password") {
+        toast.error("Mật khẩu quá yếu");
+      } else {
+        toast.error(err.message || "Đổi mật khẩu thất bại");
+      }
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
     <>
       <ToastNotification
@@ -305,9 +372,12 @@ export default function PatientProfileWithFrame() {
                     variant="bordered"
                     labelPlacement="outside"
                     startContent={<Mail className="text-default-400" size={20} />}
+                    isReadOnly
+                    description="Email không thể thay đổi"
                     classNames={{
                       input: "text-base",
-                      inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                      inputWrapper: "border-default-200 bg-gray-50",
+                      description: "text-xs text-default-500"
                     }}
                   />
                   <Input 
@@ -373,7 +443,7 @@ export default function PatientProfileWithFrame() {
                   </Select>
                 </div>
 
-                {/* Mã BHYT & CCCD */}
+                {/* BHYT: Số thẻ & Hết hạn */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <BHYTInput 
                     label="Mã số Bảo hiểm Y tế" 
@@ -382,19 +452,35 @@ export default function PatientProfileWithFrame() {
                     onChange={(v) => setPatient({ ...patient, socialInsurance: v })} 
                   />
                   <Input 
-                    label="Căn cước công dân" 
-                    placeholder="Nhập số CCCD/CMND" 
-                    value={patient.citizenship || ""} 
-                    onValueChange={(v) => setPatient({ ...patient, citizenship: v })} 
+                    type="date"
+                    label="BHYT hết hạn" 
+                    placeholder="Chọn ngày hết hạn" 
+                    value={patient.insuranceValidTo || ""} 
+                    onValueChange={(v) => setPatient({ ...patient, insuranceValidTo: v })} 
                     variant="bordered"
                     labelPlacement="outside"
-                    startContent={<IdCard className="text-default-400" size={20} />}
+                    startContent={<Calendar className="text-default-400" size={20} />}
                     classNames={{
                       input: "text-base",
                       inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
                     }}
                   />
                 </div>
+
+                {/* CCCD */}
+                <Input 
+                  label="Căn cước công dân" 
+                  placeholder="Nhập số CCCD/CMND" 
+                  value={patient.citizenship || ""} 
+                  onValueChange={(v) => setPatient({ ...patient, citizenship: v })} 
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<IdCard className="text-default-400" size={20} />}
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-default-200 hover:border-primary focus-within:!border-primary"
+                  }}
+                />
 
                 <Input 
                   label="Địa chỉ" 
@@ -425,6 +511,93 @@ export default function PatientProfileWithFrame() {
                     description: "text-xs text-default-500"
                   }}
                 />
+
+                {/* Security Section */}
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Lock className="text-red-500" size={24} />
+                    <h3 className="text-lg font-semibold text-gray-900">Bảo mật tài khoản</h3>
+                  </div>
+                  <p className="text-sm text-default-500 mb-6">
+                    Quản lý mật khẩu đăng nhập của bạn. Email không thể thay đổi.
+                  </p>
+
+                  {/* Change Password */}
+                  <div className="p-5 bg-red-50 rounded-lg border border-red-100">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Key className="text-red-600" size={20} />
+                      <h4 className="font-semibold text-gray-900">Đổi mật khẩu</h4>
+                    </div>
+                    <div className="space-y-4">
+                      <Input 
+                        type="password"
+                        label="Mật khẩu hiện tại" 
+                        placeholder="Nhập mật khẩu hiện tại" 
+                        value={security.currentPassword} 
+                        onValueChange={(v) => setSecurity({ ...security, currentPassword: v })} 
+                        variant="bordered"
+                        labelPlacement="outside"
+                        startContent={<Lock className="text-default-400" size={20} />}
+                        classNames={{
+                          input: "text-base",
+                          inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+                        }}
+                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input 
+                          type="password"
+                          label="Mật khẩu mới" 
+                          placeholder="Ít nhất 6 ký tự" 
+                          value={security.newPassword} 
+                          onValueChange={(v) => setSecurity({ ...security, newPassword: v })} 
+                          variant="bordered"
+                          labelPlacement="outside"
+                          startContent={<Key className="text-default-400" size={20} />}
+                          classNames={{
+                            input: "text-base",
+                            inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+                          }}
+                        />
+                        <Input 
+                          type="password"
+                          label="Xác nhận mật khẩu mới" 
+                          placeholder="Nhập lại mật khẩu mới" 
+                          value={security.confirmPassword} 
+                          onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })} 
+                          variant="bordered"
+                          labelPlacement="outside"
+                          startContent={<Key className="text-default-400" size={20} />}
+                          classNames={{
+                            input: "text-base",
+                            inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={changingPassword || !security.currentPassword || !security.newPassword || !security.confirmPassword}
+                        className="bg-red-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Key size={18} />
+                        {changingPassword ? "Đang đổi..." : "Đổi mật khẩu"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Email Info - Read Only */}
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Mail className="text-blue-600" size={20} />
+                      <h4 className="font-semibold text-gray-900">Email đăng nhập</h4>
+                    </div>
+                    <p className="text-sm text-blue-800">
+                      <strong>Email hiện tại:</strong> {user?.email || patient.email}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-2">
+                      ℹ️ Email không thể thay đổi vì đây là định danh chính của tài khoản
+                    </p>
+                  </div>
+                </div>
 
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center gap-2 mb-4">

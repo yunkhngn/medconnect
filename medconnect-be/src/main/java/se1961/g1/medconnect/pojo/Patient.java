@@ -19,6 +19,9 @@ public class Patient extends User {
     private String socialInsurance;
 
     @Temporal(TemporalType.DATE)
+    private Date insuranceValidTo;
+
+    @Temporal(TemporalType.DATE)
     private Date dateOfBirth;
 
     private String gender;

@@ -94,8 +94,13 @@ public class MedicalRecordService {
                 // Insurance
                 @SuppressWarnings("unchecked")
                 Map<String, Object> insurance = (Map<String, Object>) patientProfile.get("insurance");
-                if (insurance != null && patient.getSocialInsurance() != null) {
-                    insurance.put("number", patient.getSocialInsurance());
+                if (insurance != null) {
+                    if (patient.getSocialInsurance() != null) {
+                        insurance.put("number", patient.getSocialInsurance());
+                    }
+                    if (patient.getInsuranceValidTo() != null) {
+                        insurance.put("valid_to", patient.getInsuranceValidTo().toString());
+                    }
                 }
                 
                 // Emergency contact

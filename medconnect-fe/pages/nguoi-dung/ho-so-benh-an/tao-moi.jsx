@@ -80,6 +80,7 @@ export default function CreateEMRPage() {
               phone: patientData.phone || "",
               email: patientData.email || "",
               insurance_number: patientData.socialInsurance || "",
+              insurance_valid_to: patientData.insuranceValidTo || "",
               emergency_contact_name: patientData.emergencyContactName || "",
               emergency_contact_phone: patientData.emergencyContactPhone || "",
               citizenship: patientData.citizenship || ""

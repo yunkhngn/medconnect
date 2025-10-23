@@ -42,10 +42,13 @@ public class PatientController {
             profile.put("socialInsurance", patient.getSocialInsurance());
             profile.put("citizenship", patient.getCitizenship());
             
-            // Format date
+            // Format dates
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             if (patient.getDateOfBirth() != null) {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 profile.put("dateOfBirth", sdf.format(patient.getDateOfBirth()));
+            }
+            if (patient.getInsuranceValidTo() != null) {
+                profile.put("insuranceValidTo", sdf.format(patient.getInsuranceValidTo()));
             }
             
             return ResponseEntity.ok(profile);
@@ -108,7 +111,19 @@ public class PatientController {
                         sdf.setLenient(false);
                         patient.setDateOfBirth(sdf.parse(dateStr));
                     } catch (Exception e) {
-                        throw new Exception("Invalid date format. Use yyyy-MM-dd. Error: " + e.getMessage());
+                        throw new Exception("Invalid date format for dateOfBirth. Use yyyy-MM-dd. Error: " + e.getMessage());
+                    }
+                }
+            }
+            if (request.containsKey("insuranceValidTo") && request.get("insuranceValidTo") != null) {
+                String dateStr = String.valueOf(request.get("insuranceValidTo"));
+                if (!dateStr.isEmpty() && !dateStr.equals("null")) {
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                        sdf.setLenient(false);
+                        patient.setInsuranceValidTo(sdf.parse(dateStr));
+                    } catch (Exception e) {
+                        throw new Exception("Invalid date format for insuranceValidTo. Use yyyy-MM-dd. Error: " + e.getMessage());
                     }
                 }
             }
