@@ -24,6 +24,7 @@ public class Doctor extends User{
     private DoctorStatus status;
 
     @OneToMany(mappedBy = "doctor")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Appointment> appointments;
 
     public Doctor() {}

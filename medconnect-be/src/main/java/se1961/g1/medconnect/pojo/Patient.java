@@ -29,14 +29,18 @@ public class Patient extends User {
     private String allergies;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Appointment> appointments;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Payment> payments;
 
     @OneToMany(mappedBy = "patient")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Feedback> feedbacks;
 
     @OneToOne(mappedBy = "patient", cascade = CascadeType.ALL)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private MR mr;
 }
