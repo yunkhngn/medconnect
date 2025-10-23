@@ -158,6 +158,10 @@ public class DoctorController {
     @PatchMapping("/profile")
     public ResponseEntity<Map<String, Object>> updateProfile(Authentication authentication, @RequestBody Map<String, Object> request) throws Exception {
         String uid = (String) authentication.getPrincipal();
+        System.out.println("[DoctorController] Update profile request from UID: " + uid);
+        System.out.println("[DoctorController] Authorities: " + authentication.getAuthorities());
+        System.out.println("[DoctorController] Request body: " + request);
+        
         Doctor currDoc = doctorService.getDoctor(uid).orElseThrow(
                 () -> new Exception("Doctor not found"));
 
