@@ -29,14 +29,23 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {}) // bật CORS
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép FE truy cập mà không cần login
-                        .requestMatchers("/api/patient/**").permitAll()
+                        // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        
+                        // Patient endpoints - authenticated users
+                        .requestMatchers("/api/patient/profile/**").authenticated()
+                        .requestMatchers("/api/patient/{userId}").permitAll() // For admin lookup
+                        .requestMatchers("/api/patient/update").permitAll() // For admin update
+                        
+                        // User endpoints
                         .requestMatchers("/api/user/**").authenticated()
+                        
+                        // Role-based endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/doctor/**").hasRole("DOCTOR")
                         .requestMatchers("/patient/**").hasRole("PATIENT")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(firebaseFilter, UsernamePasswordAuthenticationFilter.class);
@@ -48,7 +57,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:3000")); // FE port 3000
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 

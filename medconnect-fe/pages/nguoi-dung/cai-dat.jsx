@@ -3,26 +3,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { Save, Upload, User } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
+import ToastNotification from "@/components/ui/ToastNotification";
+import { useToast } from "@/hooks/useToast";
 
 import { auth, db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function PatientProfileWithFrame() {
+  const toast = useToast();
   const [user, setUser] = useState(null);
   const [patient, setPatient] = useState({
-    full_name: "",
+    name: "",
     email: "",
     phone: "",
-    date_of_birth: "",
+    dateOfBirth: "",
     gender: "",
     address: "",
-    emergency_contact_name: "",
-    emergency_contact_phone: "",
-    blood_type: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    bloodType: "",
     allergies: "",
     avatar_url: "",
-    social_insurance: "", // mã BHYT
+    socialInsurance: "", // mã BHYT
     citizenship: "", // căn cước công dân
     emr_url: "", // hồ sơ y tế điện tử
   });
@@ -33,29 +36,101 @@ export default function PatientProfileWithFrame() {
 
   const maxDob = useMemo(() => new Date().toISOString().split("T")[0], []);
 
+  // Listen to Firebase auth
   useEffect(() => {
-    const userId = 1; // ID bệnh nhân đang đăng nhập
-    fetch(`http://localhost:3000/api/patient/${userId}`)
-      .then((res) => res.json())
-      .then((data) => setPatient(data))
-      .catch((err) => console.error("Error fetching patient:", err))
-      .finally(() => setLoading(false));
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        fetchPatientData(firebaseUser);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
+  const fetchPatientData = async (firebaseUser) => {
+    console.log("🔵 Fetching patient data for:", firebaseUser.uid);
+    console.log("📧 Email:", firebaseUser.email);
+    
+    try {
+      // Fetch patient profile từ Backend API
+      console.log("📖 Fetching from backend API...");
+      const token = await firebaseUser.getIdToken();
+      
+      const response = await fetch("http://localhost:8080/api/patient/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Patient data loaded from backend:", data);
+        
+        // Backend đã trả về dateOfBirth dạng yyyy-MM-dd string rồi
+        setPatient({ ...patient, ...data });
+      } else if (response.status === 404) {
+        // Patient chưa có trong DB - có thể là user mới
+        console.log("ℹ️ Patient not found in database, using Firebase Auth data");
+        setPatient({
+          ...patient,
+          name: firebaseUser.displayName || "",
+          email: firebaseUser.email || "",
+          phone: firebaseUser.phoneNumber || "",
+        });
+      } else {
+        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching patient:", err);
+      console.error("❌ Error message:", err.message);
+      
+      // Fallback: Dùng thông tin từ Firebase Auth
+      console.log("⚠️ Using fallback data from Firebase Auth");
+      setPatient({
+        ...patient,
+        name: firebaseUser.displayName || "",
+        email: firebaseUser.email || "",
+        phone: firebaseUser.phoneNumber || "",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!user) return alert("Bạn chưa đăng nhập.");
+    if (!user) {
+      toast.warning("Bạn chưa đăng nhập");
+      return;
+    }
     setSaving(true);
     try {
-      const response = await fetch("http://localhost:3000/api/patient/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const token = await user.getIdToken();
+      
+      console.log("💾 Saving patient data:", patient);
+      
+      const response = await fetch("http://localhost:8080/api/patient/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(patient),
       });
-      if (!response.ok) throw new Error("Lỗi khi lưu thông tin");
-      alert("Cập nhật thông tin thành công!");
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Patient data saved:", result);
+      
+      toast.success(result.message || "Cập nhật thông tin thành công!");
     } catch (err) {
-      console.error("Error saving profile:", err);
-      alert("Có lỗi xảy ra khi lưu thông tin");
+      console.error("❌ Error saving profile:", err);
+      toast.error(`Có lỗi xảy ra: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -74,9 +149,10 @@ export default function PatientProfileWithFrame() {
       const url = await getDownloadURL(fileRef);
       setPatient((p) => ({ ...p, avatar_url: url }));
       await setDoc(doc(db, "patients", user.uid), { avatar_url: url, updated_at: serverTimestamp() }, { merge: true });
+      toast.success("Tải ảnh đại diện thành công!");
     } catch (err) {
       console.error("Upload avatar error:", err);
-      alert("Tải ảnh thất bại");
+      toast.error("Tải ảnh thất bại");
     } finally {
       setUploading(false);
     }
@@ -95,18 +171,26 @@ export default function PatientProfileWithFrame() {
       const url = await getDownloadURL(fileRef);
       setPatient((p) => ({ ...p, emr_url: url }));
       await setDoc(doc(db, "patients", user.uid), { emr_url: url, updated_at: serverTimestamp() }, { merge: true });
-      alert("Tải hồ sơ y tế thành công!");
+      toast.success("Tải hồ sơ y tế thành công!");
     } catch (err) {
       console.error("Upload EMR error:", err);
-      alert("Tải hồ sơ y tế thất bại");
+      toast.error("Tải hồ sơ y tế thất bại");
     } finally {
       setUploadingEmr(false);
     }
   };
 
   return (
-    <PatientFrame title="Hồ sơ bệnh nhân">
-      <div className="w-full min-h-screen bg-gray-50">
+    <>
+      <ToastNotification
+        message={toast.toast.message}
+        type={toast.toast.type}
+        isVisible={toast.toast.isVisible}
+        onClose={toast.hideToast}
+        duration={toast.toast.duration}
+      />
+      <PatientFrame title="Hồ sơ bệnh nhân">
+        <div className="w-full min-h-screen bg-gray-50">
         <div className="p-6 md:p-8 max-w-5xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -169,24 +253,31 @@ export default function PatientProfileWithFrame() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <LabeledInput label="Họ và tên" placeholder="Nhập họ và tên" value={patient.full_name} onChange={(v) => setPatient({ ...patient, full_name: v })} />
+                  <LabeledInput label="Họ và tên" placeholder="Nhập họ và tên" value={patient.name} onChange={(v) => setPatient({ ...patient, name: v })} />
                   <LabeledInput type="email" label="Email" placeholder="example@email.com" value={patient.email} onChange={(v) => setPatient({ ...patient, email: v })} />
                   <LabeledInput type="tel" label="Số điện thoại" placeholder="0123456789" value={patient.phone} onChange={(v) => setPatient({ ...patient, phone: v })} />
-                  <LabeledInput type="date" label="Ngày sinh" value={patient.date_of_birth} onChange={(v) => setPatient({ ...patient, date_of_birth: v })} inputProps={{ max: maxDob }} />
+                  <LabeledInput type="date" label="Ngày sinh" value={patient.dateOfBirth} onChange={(v) => setPatient({ ...patient, dateOfBirth: v })} inputProps={{ max: maxDob }} />
                   <LabeledSelect label="Giới tính" value={patient.gender} onChange={(v) => setPatient({ ...patient, gender: v })} options={[{ value: "", label: "Chọn giới tính" }, { value: "Nam", label: "Nam" }, { value: "Nữ", label: "Nữ" }, { value: "Khác", label: "Khác" }]} />
-                  <LabeledSelect label="Nhóm máu" value={patient.blood_type} onChange={(v) => setPatient({ ...patient, blood_type: v })} options={[{ value: "", label: "Chọn nhóm máu" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" }]} />
+                  <LabeledSelect label="Nhóm máu" value={patient.bloodType} onChange={(v) => setPatient({ ...patient, bloodType: v })} options={[{ value: "", label: "Chọn nhóm máu" }, { value: "A", label: "A" }, { value: "B", label: "B" }, { value: "AB", label: "AB" }, { value: "O", label: "O" }]} />
                   {/* Mã BHYT & CCCD */}
-                  <LabeledInput label="Mã BHYT" placeholder="Nhập mã BHYT" value={patient.social_insurance} onChange={(v) => setPatient({ ...patient, social_insurance: v })} />
+                  <LabeledInput label="Mã BHYT" placeholder="Nhập mã BHYT" value={patient.socialInsurance} onChange={(v) => setPatient({ ...patient, socialInsurance: v })} />
                   <LabeledInput label="Căn cước công dân" placeholder="Nhập CCCD" value={patient.citizenship} onChange={(v) => setPatient({ ...patient, citizenship: v })} />
                 </div>
 
                 <LabeledInput label="Địa chỉ" placeholder="Nhập địa chỉ" value={patient.address} onChange={(v) => setPatient({ ...patient, address: v })} />
+                
+                <LabeledInput 
+                  label="Dị ứng (nếu có)" 
+                  placeholder="Ví dụ: Penicillin, hải sản, phấn hoa..." 
+                  value={patient.allergies} 
+                  onChange={(v) => setPatient({ ...patient, allergies: v })} 
+                />
 
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Liên hệ khẩn cấp</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <LabeledInput label="Tên người liên hệ" placeholder="Nhập tên người liên hệ" value={patient.emergency_contact_name} onChange={(v) => setPatient({ ...patient, emergency_contact_name: v })} />
-                    <LabeledInput type="tel" label="Số điện thoại liên hệ" placeholder="0123456789" value={patient.emergency_contact_phone} onChange={(v) => setPatient({ ...patient, emergency_contact_phone: v })} />
+                    <LabeledInput label="Tên người liên hệ" placeholder="Nhập tên người liên hệ" value={patient.emergencyContactName} onChange={(v) => setPatient({ ...patient, emergencyContactName: v })} />
+                    <LabeledInput type="tel" label="Số điện thoại liên hệ" placeholder="0123456789" value={patient.emergencyContactPhone} onChange={(v) => setPatient({ ...patient, emergencyContactPhone: v })} />
                   </div>
                 </div>
 
@@ -214,7 +305,8 @@ export default function PatientProfileWithFrame() {
           )}
         </div>
       </div>
-    </PatientFrame>
+      </PatientFrame>
+    </>
   );
 }
 
