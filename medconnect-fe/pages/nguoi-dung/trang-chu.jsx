@@ -1,230 +1,414 @@
 import { useEffect, useState } from "react";
-import { Calendar, FileText, Heart, Activity, Clock, TrendingUp } from "lucide-react";
-import PatientFrame from "@/components/layouts/Patient/Frame"; // sửa path nếu khác
+import { useRouter } from "next/router";
+import { 
+  Calendar, FileText, Heart, Activity, Clock, TrendingUp, 
+  User, Phone, Mail, AlertCircle, CheckCircle, XCircle,
+  Plus, ArrowRight, Stethoscope, ClipboardList, Settings
+} from "lucide-react";
+import { Card, CardBody, CardHeader, Button, Chip, Avatar, Divider } from "@heroui/react";
+import PatientFrame from "@/components/layouts/Patient/Frame";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/useToast";
+import ToastNotification from "@/components/ui/ToastNotification";
 
-export default function HomePage() {
-  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
-  const [recentRecords, setRecentRecords] = useState([]);
+export default function PatientDashboard() {
+  const router = useRouter();
+  const toast = useToast();
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [emr, setEMR] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [stats, setStats] = useState({
+    totalAppointments: 0,
+    upcomingAppointments: 0,
+    completedAppointments: 0,
+    hasEMR: false
+  });
 
   useEffect(() => {
-    // Mock dữ liệu để hiển thị UI (không backend)
-    const todayISO = new Date().toISOString().split("T")[0];
-
-    const mockAppointments = [
-      {
-        id: "apt1",
-        appointment_date: todayISO,
-        appointment_time: "09:00:00",
-        reason: "Khám tổng quát",
-        status: "scheduled",
-        doctor: { full_name: "BS. Trần Minh Khoa", specialty: "Nội tổng quát" },
-      },
-      {
-        id: "apt2",
-        appointment_date: todayISO,
-        appointment_time: "10:30:00",
-        reason: "Tái khám định kỳ",
-        status: "scheduled",
-        doctor: { full_name: "BS. Nguyễn Thu Hà", specialty: "Da liễu" },
-      },
-      {
-        id: "apt3",
-        appointment_date: addDaysISO(todayISO, 1),
-        appointment_time: "14:00:00",
-        reason: "Tư vấn tim mạch",
-        status: "scheduled",
-        doctor: { full_name: "BS. Lê Hoàng Nam", specialty: "Tim mạch" },
-      },
-    ];
-
-    const mockRecords = [
-      {
-        id: "rec1",
-        visit_date: addDaysISO(todayISO, -2),
-        diagnosis: "Viêm dạ dày",
-        treatment: "Thuốc kháng acid, điều chỉnh ăn uống",
-        doctor: { full_name: "BS. Phạm Mỹ Dung" },
-      },
-      {
-        id: "rec2",
-        visit_date: addDaysISO(todayISO, -7),
-        diagnosis: "Viêm họng cấp",
-        treatment: "Kháng sinh theo toa, súc họng",
-        doctor: { full_name: "BS. Vũ Anh Tuấn" },
-      },
-      {
-        id: "rec3",
-        visit_date: addDaysISO(todayISO, -10),
-        diagnosis: "Đau cơ do vận động",
-        treatment: "Giãn cơ, vật lý trị liệu nhẹ",
-        doctor: { full_name: "BS. Trần Quỳnh Mai" },
-      },
-    ];
-
-    const t = setTimeout(() => {
-      setUpcomingAppointments(mockAppointments);
-      setRecentRecords(mockRecords);
-      setLoading(false);
-    }, 300);
-
-    return () => clearTimeout(t);
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        fetchDashboardData(firebaseUser);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
-  const stats = [
-    { label: "Lịch hẹn sắp tới", value: upcomingAppointments.length, icon: Calendar, color: "bg-blue-500" },
-    { label: "Hồ sơ bệnh án", value: recentRecords.length, icon: FileText, color: "bg-teal-500" },
-    { label: "Sức khỏe tổng quan", value: "Tốt", icon: Heart, color: "bg-rose-500" },
-    { label: "Chỉ số hoạt động", value: "85%", icon: Activity, color: "bg-orange-500" },
-  ];
+  const fetchDashboardData = async (firebaseUser) => {
+    try {
+      const token = await firebaseUser.getIdToken();
+
+      // Fetch patient profile
+      const profileRes = await fetch("http://localhost:8080/api/patient/profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setProfile(profileData);
+      }
+
+      // Fetch EMR
+      try {
+        const emrRes = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (emrRes.ok) {
+          const emrData = await emrRes.json();
+          setEMR(emrData);
+          setStats(prev => ({ ...prev, hasEMR: true }));
+        }
+      } catch (error) {
+        // EMR not found is OK
+        console.log("No EMR found");
+      }
+
+      // TODO: Fetch appointments when API is ready
+      // const aptRes = await fetch("http://localhost:8080/api/appointments/my", {...});
+      // setAppointments(aptData);
+
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      toast.error("Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Chào buổi sáng";
+    if (hour < 18) return "Chào buổi chiều";
+    return "Chào buổi tối";
+  };
 
   if (loading) {
     return (
-      <PatientFrame title="Trang chủ">
-        <div className="p-6 md:p-8 max-w-7xl mx-auto md:pl-28 lg:pl-32 xl:pl-36">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded-xl" />
-              ))}
-            </div>
-          </div>
+      <PatientFrame>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </PatientFrame>
     );
   }
 
   return (
-    <PatientFrame title="Trang chủ">
-      {/* pl để tránh đè sidebar; chỉnh lại con số nếu sidebar khác rộng */}
-      <div className="p-6 md:p-8 max-w-7xl mx-auto md:pl-28 lg:pl-32 xl:pl-36">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Xin chào, Bệnh nhân</h1>
-          <p className="text-gray-600">Chào mừng bạn đến với trang quản lý sức khỏe của mình</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+    <PatientFrame>
+      <ToastNotification toast={toast} />
+      <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-r from-teal-500 to-cyan-600 rounded-2xl shadow-lg p-8 text-white">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                {getGreeting()}, {profile?.name || "Bệnh nhân"}!
+              </h1>
+              <p className="text-teal-100 text-lg">
+                Chúc bạn một ngày tràn đầy sức khỏe và năng lượng
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                color="default"
+                variant="flat"
+                className="bg-white/20 hover:bg-white/30 text-white"
+                startContent={<Calendar size={18} />}
+                onClick={() => router.push("/nguoi-dung/lich-hen")}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`${stat.color} w-12 h-12 rounded-lg flex items-center justify-center`}>
-                    <Icon className="text-white" size={24} />
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Upcoming appointments + Recent records */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Upcoming */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Lịch hẹn sắp tới</h2>
-              <Calendar className="text-blue-500" size={24} />
+                Lịch hẹn
+              </Button>
+              <Button
+                color="default"
+                variant="flat"
+                className="bg-white/20 hover:bg-white/30 text-white"
+                startContent={<Plus size={18} />}
+                onClick={() => router.push("/tim-bac-si")}
+              >
+                Đặt khám
+              </Button>
             </div>
-
-            {upcomingAppointments.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Không có lịch hẹn sắp tới</p>
-            ) : (
-              <div className="space-y-4">
-                {upcomingAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{appointment.doctor?.full_name}</p>
-                        <p className="text-sm text-gray-600">{appointment.doctor?.specialty}</p>
-                        <p className="text-sm text-gray-500 mt-2">{appointment.reason}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          {toViDate(appointment.appointment_date)}
-                        </p>
-                        <p className="text-sm text-gray-600 flex items-center gap-1 justify-end mt-1">
-                          <Clock size={14} />
-                          {appointment.appointment_time.slice(0, 5)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Recent records */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Hồ sơ bệnh án gần đây</h2>
-              <FileText className="text-teal-500" size={24} />
-            </div>
-
-            {recentRecords.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Chưa có hồ sơ bệnh án</p>
-            ) : (
-              <div className="space-y-4">
-                {recentRecords.map((record) => (
-                  <div
-                    key={record.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-teal-300 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-semibold text-gray-900">{record.doctor?.full_name}</p>
-                      <p className="text-sm text-gray-600">{toViDate(record.visit_date)}</p>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      <span className="font-medium">Chẩn đoán:</span> {record.diagnosis || "Không có"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Điều trị:</span> {record.treatment || "Không có"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Promo blocks */}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardBody className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <Calendar className="text-blue-500" size={28} />
+                <Chip size="sm" variant="flat" color="primary">
+                  Sắp tới
+                </Chip>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">Lịch hẹn</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.upcomingAppointments}
+              </p>
+            </CardBody>
+          </Card>
+
+          <Card className="border-l-4 border-l-green-500">
+            <CardBody className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <CheckCircle className="text-green-500" size={28} />
+                <Chip size="sm" variant="flat" color="success">
+                  Hoàn thành
+                </Chip>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">Đã khám</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.completedAppointments}
+              </p>
+            </CardBody>
+          </Card>
+
+          <Card className="border-l-4 border-l-teal-500">
+            <CardBody className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <FileText className="text-teal-500" size={28} />
+                {stats.hasEMR ? (
+                  <Chip size="sm" variant="flat" color="success">
+                    Có sẵn
+                  </Chip>
+                ) : (
+                  <Chip size="sm" variant="flat" color="warning">
+                    Chưa có
+                  </Chip>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mb-1">Hồ sơ bệnh án</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.hasEMR ? "1" : "0"}
+              </p>
+            </CardBody>
+          </Card>
+
+          <Card className="border-l-4 border-l-rose-500">
+            <CardBody className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <Heart className="text-rose-500" size={28} />
+                <Chip size="sm" variant="flat" color="danger">
+                  Live
+                </Chip>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">Sức khỏe</p>
+              <p className="text-3xl font-bold text-gray-900">Tốt</p>
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm p-6 text-white">
-            <TrendingUp size={32} className="mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Theo dõi sức khỏe</h3>
-            <p className="text-blue-100 text-sm mb-4">Cập nhật thông tin sức khỏe định kỳ</p>
-            <button className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors">
-              Xem chi tiết
-            </button>
+          {/* Left Column - Profile & Quick Actions */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Profile Card */}
+            <Card>
+              <CardHeader className="flex flex-col items-center pb-2">
+                <Avatar
+                  src="/assets/homepage/mockup-avatar.jpg"
+                  className="w-24 h-24 text-large mb-3"
+                />
+                <h3 className="text-xl font-semibold">{profile?.name}</h3>
+                <p className="text-sm text-gray-500">{profile?.email}</p>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-3 pt-4">
+                {profile?.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone size={16} className="text-gray-400" />
+                    <span>{profile.phone}</span>
+                  </div>
+                )}
+                {profile?.dateOfBirth && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Calendar size={16} className="text-gray-400" />
+                    <span>{new Date(profile.dateOfBirth).toLocaleDateString("vi-VN")}</span>
+                  </div>
+                )}
+                {profile?.address && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <MapPin size={16} className="text-gray-400" />
+                    <span className="line-clamp-2">{profile.address}</span>
+                  </div>
+                )}
+                <Button
+                  fullWidth
+                  variant="flat"
+                  color="primary"
+                  startContent={<Settings size={18} />}
+                  onClick={() => router.push("/nguoi-dung/cai-dat")}
+                  className="mt-4"
+                >
+                  Chỉnh sửa hồ sơ
+                </Button>
+              </CardBody>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Thao tác nhanh</h3>
+              </CardHeader>
+              <CardBody className="space-y-2">
+                <Button
+                  fullWidth
+                  variant="flat"
+                  color="primary"
+                  startContent={<Stethoscope size={18} />}
+                  onClick={() => router.push("/tim-bac-si")}
+                >
+                  Tìm bác sĩ
+                </Button>
+                <Button
+                  fullWidth
+                  variant="flat"
+                  color="success"
+                  startContent={<FileText size={18} />}
+                  onClick={() => router.push("/nguoi-dung/ho-so-benh-an")}
+                >
+                  Hồ sơ bệnh án
+                </Button>
+                <Button
+                  fullWidth
+                  variant="flat"
+                  color="secondary"
+                  startContent={<ClipboardList size={18} />}
+                  onClick={() => router.push("/nguoi-dung/lich-hen")}
+                >
+                  Xem lịch hẹn
+                </Button>
+              </CardBody>
+            </Card>
           </div>
 
-          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-sm p-6 text-white">
-            <Heart size={32} className="mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Chăm sóc sức khỏe</h3>
-            <p className="text-teal-100 text-sm mb-4">Lời khuyên và hướng dẫn chăm sóc</p>
-            <button className="bg-white text-teal-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-teal-50 transition-colors">
-              Tìm hiểu thêm
-            </button>
-          </div>
+          {/* Right Column - Activities & Health */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* EMR Status */}
+            {!stats.hasEMR && (
+              <Card className="border-2 border-warning">
+                <CardBody className="p-6">
+                  <div className="flex items-start gap-4">
+                    <AlertCircle className="text-warning flex-shrink-0" size={32} />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-2 text-warning">
+                        Bạn chưa có hồ sơ bệnh án
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Hồ sơ bệnh án giúp bác sĩ hiểu rõ hơn về tình trạng sức khỏe của bạn và đưa ra chẩn đoán chính xác hơn.
+                      </p>
+                      <Button
+                        color="warning"
+                        variant="flat"
+                        startContent={<Plus size={18} />}
+                        onClick={() => router.push("/nguoi-dung/ho-so-benh-an/tao-moi")}
+                      >
+                        Tạo hồ sơ bệnh án ngay
+                      </Button>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
 
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-sm p-6 text-white">
-            <Activity size={32} className="mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Hoạt động thể chất</h3>
-            <p className="text-orange-100 text-sm mb-4">Theo dõi hoạt động hàng ngày</p>
-            <button className="bg-white text-orange-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors">
-              Bắt đầu
-            </button>
+            {/* Upcoming Appointments */}
+            <Card>
+              <CardHeader className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Calendar className="text-primary" size={24} />
+                  <h3 className="text-lg font-semibold">Lịch hẹn sắp tới</h3>
+                </div>
+                <Button
+                  size="sm"
+                  variant="light"
+                  color="primary"
+                  endContent={<ArrowRight size={16} />}
+                  onClick={() => router.push("/nguoi-dung/lich-hen")}
+                >
+                  Xem tất cả
+                </Button>
+              </CardHeader>
+              <Divider />
+              <CardBody>
+                {appointments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="mx-auto text-gray-300 mb-4" size={48} />
+                    <p className="text-gray-500 mb-4">Bạn chưa có lịch hẹn nào</p>
+                    <Button
+                      color="primary"
+                      variant="flat"
+                      startContent={<Plus size={18} />}
+                      onClick={() => router.push("/tim-bac-si")}
+                    >
+                      Đặt lịch khám
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {appointments.map((apt) => (
+                      <Card key={apt.id} shadow="none" className="border">
+                        <CardBody className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex gap-3">
+                              <Avatar
+                                src="/assets/homepage/mockup-avatar.jpg"
+                                size="lg"
+                              />
+                              <div>
+                                <p className="font-semibold">{apt.doctor?.name}</p>
+                                <p className="text-sm text-gray-600">{apt.specialty}</p>
+                                <p className="text-sm text-gray-500 mt-1">{apt.reason}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Chip size="sm" color="primary" variant="flat">
+                                {apt.status}
+                              </Chip>
+                              <p className="text-sm mt-2 flex items-center gap-1">
+                                <Clock size={14} />
+                                {apt.time}
+                              </p>
+                            </div>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Health Tips */}
+            <Card className="bg-gradient-to-br from-teal-50 to-cyan-50">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Heart className="text-teal-600" size={24} />
+                  <h3 className="text-lg font-semibold">Lời khuyên sức khỏe</h3>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="text-teal-600 flex-shrink-0 mt-0.5" size={20} />
+                    <span className="text-sm">Uống đủ 2 lít nước mỗi ngày</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="text-teal-600 flex-shrink-0 mt-0.5" size={20} />
+                    <span className="text-sm">Tập thể dục ít nhất 30 phút mỗi ngày</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="text-teal-600 flex-shrink-0 mt-0.5" size={20} />
+                    <span className="text-sm">Ngủ đủ 7-8 tiếng mỗi đêm</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="text-teal-600 flex-shrink-0 mt-0.5" size={20} />
+                    <span className="text-sm">Ăn nhiều rau xanh và trái cây</span>
+                  </li>
+                </ul>
+              </CardBody>
+            </Card>
           </div>
         </div>
       </div>
@@ -232,12 +416,5 @@ export default function HomePage() {
   );
 }
 
-/* ---------- helpers ---------- */
-function addDaysISO(iso, days) {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
-}
-function toViDate(iso) {
-  return new Date(iso).toLocaleDateString("vi-VN");
-}
+// Missing import
+import { MapPin } from "lucide-react";
