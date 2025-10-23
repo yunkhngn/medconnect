@@ -202,11 +202,11 @@ export default function DoctorSchedulePage() {
         <CardBody className="space-y-3 text-sm">
           <div className="flex items-start gap-2">
             <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-            <p>Click vào ô <strong>trống</strong> để thêm ca làm việc</p>
+            <p>Click vào ô <strong>trống</strong> để mở lịch cho bệnh nhân đặt</p>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
-            <p>Click vào ô <strong>đã chặn</strong> để xóa ca</p>
+            <p>Click vào ô <strong>sẵn sàng</strong> để đóng lịch (không nhận đặt)</p>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
@@ -225,11 +225,11 @@ export default function DoctorSchedulePage() {
         <CardBody className="space-y-3">
           <div className="flex items-center gap-2">
             <Chip size="sm" color="default">Trống</Chip>
-            <span className="text-sm text-gray-600">Chưa có lịch</span>
+            <span className="text-sm text-gray-600">Chưa mở lịch</span>
           </div>
           <div className="flex items-center gap-2">
-            <Chip size="sm" color="warning">Đã chặn</Chip>
-            <span className="text-sm text-gray-600">Không nhận lịch hẹn</span>
+            <Chip size="sm" color="warning">Sẵn sàng</Chip>
+            <span className="text-sm text-gray-600">Bệnh nhân có thể đặt lịch</span>
           </div>
           <div className="flex items-center gap-2">
             <Chip size="sm" color="success">Có lịch hẹn</Chip>
@@ -342,7 +342,7 @@ export default function DoctorSchedulePage() {
                           )}
                           {isReserved && (
                             <Chip color="warning" size="sm" variant="flat">
-                              Đã chặn
+                              Sẵn sàng
                             </Chip>
                           )}
                           {isBusy && slotData.appointment && (
@@ -374,11 +374,11 @@ export default function DoctorSchedulePage() {
       {/* Delete Confirmation Modal */}
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalContent>
-          <ModalHeader>Xóa ca làm việc</ModalHeader>
+          <ModalHeader>Đóng lịch làm việc</ModalHeader>
           <ModalBody>
-            <p>Bạn có chắc muốn xóa ca làm việc này không?</p>
+            <p>Bạn có chắc muốn đóng ca làm việc này không?</p>
             <p className="text-sm text-gray-500 mt-2">
-              Ca này sẽ mở lại cho bệnh nhân đặt lịch.
+              Ca này sẽ không còn cho phép bệnh nhân đặt lịch.
             </p>
           </ModalBody>
           <ModalFooter>
@@ -389,7 +389,7 @@ export default function DoctorSchedulePage() {
               color="danger"
               onPress={() => selectedSlot && handleDeleteSlot(selectedSlot.id)}
             >
-              Xóa ca
+              Đóng lịch
             </Button>
           </ModalFooter>
         </ModalContent>
