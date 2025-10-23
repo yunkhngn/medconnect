@@ -10,6 +10,8 @@ import PatientFrame from "@/components/layouts/Patient/Frame";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
+import UserAvatar from "@/components/ui/UserAvatar";
+
 
 export default function PatientDashboard() {
   const router = useRouter();
@@ -207,9 +209,9 @@ export default function PatientDashboard() {
             {/* Profile Card */}
             <Card>
               <CardHeader className="flex flex-col items-center pb-2">
-                <Avatar
-                  src="/assets/homepage/mockup-avatar.jpg"
-                  className="w-24 h-24 text-large mb-3"
+                  <UserAvatar 
+                  size={40}
+                  asButton
                 />
                 <h3 className="text-xl font-semibold">{profile?.name}</h3>
                 <p className="text-sm text-gray-500">{profile?.email}</p>
