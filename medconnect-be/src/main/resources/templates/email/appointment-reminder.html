@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #fffbeb;
+            padding: 30px;
+            border: 1px solid #fef3c7;
+        }
+        .reminder-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #f59e0b;
+        }
+        .footer {
+            background: #f3f4f6;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 10px 10px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 style="margin: 0;">⏰ Nhắc nhở lịch khám</h1>
+    </div>
+    
+    <div class="content">
+        <p>Xin chào <strong>{{patientName}}</strong>,</p>
+        <p>Đây là lời nhắc về lịch khám sắp tới của bạn tại <strong>MedConnect</strong>:</p>
+        
+        <div class="reminder-card">
+            <p><strong>👨‍⚕️ Bác sĩ:</strong> BS. {{doctorName}}</p>
+            <p><strong>📅 Ngày khám:</strong> {{appointmentDate}}</p>
+            <p><strong>🕐 Giờ khám:</strong> {{appointmentTime}}</p>
+        </div>
+        
+        <p>Chúng tôi mong được gặp bạn!</p>
+    </div>
+    
+    <div class="footer">
+        <p>Email này được gửi tự động từ <strong>MedConnect</strong></p>
+    </div>
+</body>
+</html>
+

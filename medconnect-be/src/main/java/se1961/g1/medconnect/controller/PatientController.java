@@ -39,6 +39,7 @@ public class PatientController {
             profile.put("allergies", patient.getAllergies());
             profile.put("emergencyContactName", patient.getEmergencyContactName());
             profile.put("emergencyContactPhone", patient.getEmergencyContactPhone());
+            profile.put("emergencyContactRelationship", patient.getEmergencyContactRelationship());
             profile.put("socialInsurance", patient.getSocialInsurance());
             profile.put("citizenship", patient.getCitizenship());
             
@@ -96,6 +97,9 @@ public class PatientController {
             }
             if (request.containsKey("emergencyContactPhone")) {
                 patient.setEmergencyContactPhone((String) request.get("emergencyContactPhone"));
+            }
+            if (request.containsKey("emergencyContactRelationship")) {
+                patient.setEmergencyContactRelationship((String) request.get("emergencyContactRelationship"));
             }
             if (request.containsKey("socialInsurance")) {
                 patient.setSocialInsurance((String) request.get("socialInsurance"));

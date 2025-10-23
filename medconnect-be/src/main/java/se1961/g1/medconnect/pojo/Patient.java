@@ -28,6 +28,7 @@ public class Patient extends User {
     private String address;
     private String emergencyContactName;
     private String emergencyContactPhone;
+    private String emergencyContactRelationship;
     private String bloodType;
     private String allergies;
 

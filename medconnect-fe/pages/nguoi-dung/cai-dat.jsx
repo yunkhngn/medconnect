@@ -30,6 +30,7 @@ export default function PatientProfileWithFrame() {
     address: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
+    emergencyContactRelationship: "",
     bloodType: "",
     allergies: "",
     socialInsurance: "", // mã BHYT
@@ -607,7 +608,7 @@ export default function PatientProfileWithFrame() {
                   <p className="text-sm text-default-500 mb-4">
                     Thông tin này sẽ được sử dụng để liên lạc trong trường hợp khẩn cấp
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Input 
                       label="Tên người liên hệ" 
                       placeholder="Họ và tên người thân" 
@@ -630,6 +631,19 @@ export default function PatientProfileWithFrame() {
                       variant="bordered"
                       labelPlacement="outside"
                       startContent={<Phone className="text-default-400" size={20} />}
+                      classNames={{
+                        input: "text-base",
+                        inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
+                      }}
+                    />
+                    <Input 
+                      label="Quan hệ" 
+                      placeholder="Cha, mẹ, anh, chị..." 
+                      value={patient.emergencyContactRelationship || ""} 
+                      onValueChange={(v) => setPatient({ ...patient, emergencyContactRelationship: v })} 
+                      variant="bordered"
+                      labelPlacement="outside"
+                      startContent={<Users className="text-default-400" size={20} />}
                       classNames={{
                         input: "text-base",
                         inputWrapper: "border-default-200 hover:border-orange-500 focus-within:!border-orange-500"
