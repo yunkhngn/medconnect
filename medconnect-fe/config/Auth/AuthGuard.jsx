@@ -29,6 +29,38 @@ const AuthGuard = ({ children }) => {
 
         console.log('[AuthGuard] Route rule:', rule);
 
+        // If user is logged in and route has redirectIfAuth, redirect them
+        if (user && rule?.redirectIfAuth) {
+          console.log('[AuthGuard] User logged in, checking role for redirect...');
+          try {
+            const token = await user.getIdToken();
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/user/role`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error("Failed to fetch role");
+            }
+
+            const data = await response.json();
+            const userRole = data.role?.toLowerCase();
+            const dashboardPath = getRoleDashboard(userRole);
+
+            console.log('[AuthGuard] Redirecting logged-in user to:', dashboardPath);
+            if (router.pathname !== dashboardPath) {
+              router.replace(dashboardPath);
+              return;
+            }
+          } catch (error) {
+            console.error("[AuthGuard] Error fetching role for redirect:", error);
+          }
+        }
+
         // Public route - always allow
         if (!rule || !rule.authRequired) {
           console.log('[AuthGuard] Public route, allowing...');

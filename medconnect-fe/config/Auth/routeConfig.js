@@ -1,9 +1,12 @@
 export const routeConfig = {
   "/": {
     authRequired: false,
-    redirectIfAuth: "/redirectByRole",
   },
   "/dang-nhap": {
+    authRequired: false,
+    redirectIfAuth: "/redirectByRole",
+  },
+  "/dang-ky": {
     authRequired: false,
     redirectIfAuth: "/redirectByRole",
   },
