@@ -1,36 +1,43 @@
 # Environment variables
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.production
+.env.development
 
-# Dependencies
+# Node modules
 node_modules/
-target/
 
-# Next.js
+# Next.js build output
 .next/
 out/
-build/
 
-# Docker
-docker-compose.override.yml
+# Maven build output
+target/
+*.class
 
 # IDE
-.idea/
 .vscode/
-*.swp
-*.swo
-*~
-
-# SSL / Cloudflare Origin certs
-certs/
-*.pem
-*.key
+.idea/
+*.iml
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Docker volumes
+**/data/
+**/logs/
 
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Sensitive files
+*.pem
+*.key
+!*.example
+
+# Database files
+*.mdf
+*.ldf
