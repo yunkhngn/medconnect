@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, FileText, Calendar, AlertCircle, Plus, Edit2, Award, Building2, Briefcase, CheckCircle } from "lucide-react";
+import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, FileText, Calendar, AlertCircle, Plus, Edit2, Award, Building2, Briefcase, CheckCircle, Trash2, GraduationCap, MapPin } from "lucide-react";
 import { 
   Input, 
   Select, 
@@ -23,6 +23,7 @@ import {
 } from "@heroui/react";
 import { DoctorFrame, Grid } from "@/components/layouts/";
 import ToastNotification from "@/components/ui/ToastNotification";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
 import { auth } from "@/lib/firebase";
@@ -39,6 +40,9 @@ export default function DoctorProfile() {
     specialization: "",
     speciality_id: null,
     experience_years: 0,
+    education_level: "",
+    bio: "",
+    clinic_address: "",
     active_license: null
   });
   const [loading, setLoading] = useState(true);
@@ -65,6 +69,11 @@ export default function DoctorProfile() {
     notes: ""
   });
   const [savingLicense, setSavingLicense] = useState(false);
+  
+  // Delete License Modal
+  const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onClose: onDeleteModalClose } = useDisclosure();
+  const [deletingLicense, setDeletingLicense] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Listen to Firebase auth
   useEffect(() => {
@@ -136,7 +145,7 @@ export default function DoctorProfile() {
         
         // Fetch avatar from backend API
         try {
-          const avatarResponse = await fetch(`http://localhost:8080/api/avatar/${firebaseUser.uid}`, {
+          const avatarResponse = await fetch(`http://localhost:8080/api/avatar`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
@@ -223,7 +232,10 @@ export default function DoctorProfile() {
       const payload = {
         phone: doctor.phone,
         speciality_id: doctor.speciality_id,
-        experience_years: doctor.experience_years || 0
+        experience_years: doctor.experience_years || 0,
+        education_level: doctor.education_level || "",
+        bio: doctor.bio || "",
+        clinic_address: doctor.clinic_address || ""
       };
 
       console.log("[Update Profile] Payload:", payload);
@@ -346,6 +358,49 @@ export default function DoctorProfile() {
     }
   };
 
+  const handleDeleteLicense = (license) => {
+    // Kiểm tra số lượng license
+    if (licenses.length <= 1) {
+      toast.error("Không thể xóa! Bác sĩ phải có ít nhất 1 giấy phép hành nghề");
+      return;
+    }
+
+    // Mở modal confirm
+    setDeletingLicense(license);
+    onDeleteModalOpen();
+  };
+
+  const confirmDeleteLicense = async () => {
+    if (!user || !deletingLicense) return;
+
+    setIsDeleting(true);
+    try {
+      const token = await user.getIdToken();
+      const licenseId = deletingLicense.licenseId || deletingLicense.license_id;
+
+      const response = await fetch(`http://localhost:8080/api/licenses/my/${licenseId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        toast.success("Đã xóa giấy phép thành công!");
+        onDeleteModalClose();
+        setDeletingLicense(null);
+        await fetchLicenses(user); // Refresh danh sách
+        await fetchDoctorData(user); // Refresh active license
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || "Không thể xóa giấy phép");
+      }
+    } catch (error) {
+      console.error("License delete error:", error);
+      toast.error(error.message || "Không thể xóa giấy phép");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -398,9 +453,8 @@ export default function DoctorProfile() {
             {doctor.specialization || "Chưa có chuyên khoa"}
           </p>
           {doctor.experience_years > 0 && (
-            <Chip size="sm" color="primary" variant="flat" className="mb-2">
-              <Award size={14} className="mr-1" />
-              {doctor.experience_years} năm kinh nghiệm
+            <Chip size="sm" color="primary" variant="flat" className="mb-2 flex">
+              <span>{doctor.experience_years} năm kinh nghiệm</span>
             </Chip>
           )}
         </CardBody>
@@ -420,7 +474,7 @@ export default function DoctorProfile() {
 
       {/* Active License Card */}
       {doctor.active_license && (
-        <Card className="shadow-md bg-gradient-to-br from-purple-50 to-pink-50">
+        <Card className="shadow-md">
           <CardBody className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <FileText size={16} className="text-purple-700" />
@@ -550,6 +604,51 @@ export default function DoctorProfile() {
             ))}
           </Select>
 
+          <Input
+            label="Trình độ học vấn"
+            placeholder="VD: Tiến sĩ Y khoa, Thạc sĩ, Bác sĩ chuyên khoa II..."
+            value={doctor.education_level || ""}
+            onValueChange={(v) => setDoctor(prev => ({ ...prev, education_level: v }))}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<GraduationCap className="text-default-400" size={20} />}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+
+          <Textarea
+            label="Giới thiệu bản thân"
+            placeholder="Giới thiệu ngắn gọn về bản thân, kinh nghiệm làm việc, chuyên môn..."
+            value={doctor.bio || ""}
+            onValueChange={(v) => setDoctor(prev => ({ ...prev, bio: v }))}
+            variant="bordered"
+            labelPlacement="outside"
+            minRows={4}
+            maxRows={6}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+
+          <Textarea
+            label="Địa chỉ phòng khám"
+            placeholder="VD: Số 123, Đường ABC, Phường XYZ, Quận/Huyện, Thành phố"
+            value={doctor.clinic_address || ""}
+            onValueChange={(v) => setDoctor(prev => ({ ...prev, clinic_address: v }))}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<MapPin className="text-default-400" size={20} />}
+            minRows={2}
+            maxRows={3}
+            classNames={{
+              input: "text-base",
+              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+            }}
+          />
+
           <div className="flex justify-end pt-4">
             <Button
               color="primary"
@@ -567,13 +666,13 @@ export default function DoctorProfile() {
 
       {/* License Management Card */}
       <Card className="shadow-md">
-        <CardHeader className="flex justify-between items-center bg-gradient-to-r from-purple-50 to-pink-50">
+        <CardHeader className="flex justify-between items-center bg-gradient-to-r from-teal-50 to-green-50">
           <h3 className="text-xl font-semibold flex items-center gap-2">
-            <FileText size={24} className="text-purple-600" />
+            <FileText size={24} className="text-teal-600" />
             Giấy phép hành nghề
           </h3>
           <Button
-            color="secondary"
+            color="success"
             startContent={<Plus size={18} />}
             onPress={() => handleOpenLicenseModal()}
             className="font-semibold"
@@ -585,7 +684,7 @@ export default function DoctorProfile() {
         <CardBody className="p-6">
           {loadingLicenses ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600 mx-auto"></div>
               <p className="text-gray-500 mt-4">Đang tải...</p>
             </div>
           ) : licenses.length === 0 ? (
@@ -608,64 +707,144 @@ export default function DoctorProfile() {
                 const daysUntilExpiry = license.daysUntilExpiry !== undefined ? license.daysUntilExpiry : license.days_until_expiry;
 
                 return (
-                  <Card key={licenseId} className="border-2 hover:border-purple-300 transition-colors">
-                    <CardBody className="p-5">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Chip size="sm" color={isActive ? "success" : "default"} variant="flat">
-                            {isActive ? "Hiệu lực" : "Không hoạt động"}
-                          </Chip>
-                          {isExpired && (
-                            <Chip size="sm" color="danger" variant="flat">Đã hết hạn</Chip>
-                          )}
+                  <div 
+                    key={licenseId} 
+                    className="relative bg-gradient-to-br from-white rounded-xl p-8 border-4 border-double border-teal-200 shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {/* Status Badge - Top Left */}
+                    <div className="absolute top-4 left-4">
+                      <Chip 
+                        size="md" 
+                        color={isActive && !isExpired ? "success" : isExpired ? "danger" : "default"} 
+                        variant="shadow"
+                        className="font-semibold"
+                      >
+                        {isExpired ? "Đã hết hạn" : isActive ? "Hiệu lực" : "Không hoạt động"}
+                      </Chip>
+                    </div>
+
+                    {/* Action Buttons - Top Right */}
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        isIconOnly
+                        onPress={() => handleOpenLicenseModal(license)}
+                        className="text-teal-600 hover:bg-teal-100"
+                      >
+                        <Edit2 size={18} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        isIconOnly
+                        onPress={() => handleDeleteLicense(license)}
+                        isDisabled={licenses.length <= 1}
+                        className={licenses.length <= 1 ? "text-gray-400" : "text-red-600 hover:bg-red-100"}
+                      >
+                        <Trash2 size={18} />
+                      </Button>
+                    </div>
+
+                    {/* Header */}
+                    <div className="text-center mb-6 mt-6">
+                      <div className="flex justify-center mb-3">
+                        <div className="bg-gradient-to-br from-teal-500 to-green-500 p-3 rounded-full">
+                          <FileText size={32} className="text-white" />
                         </div>
-                        <Button
-                          size="sm"
-                          variant="light"
-                          isIconOnly
-                          onPress={() => handleOpenLicenseModal(license)}
-                          className="text-purple-600"
-                        >
-                          <Edit2 size={18} />
-                        </Button>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <p className="font-bold text-lg text-purple-600">{licenseNumber}</p>
-                        <div className="text-sm space-y-1 text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} />
-                            <span><strong>Ngày cấp:</strong> {formatDate(issuedDate)}</span>
+                      <h4 className="text-sm uppercase tracking-wider text-gray-600 font-semibold mb-1">
+                        Giấy phép hành nghề
+                      </h4>
+                      <p className="text-2xl font-bold text-teal-700 tracking-wide">
+                        {licenseNumber}
+                      </p>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-300 to-transparent"></div>
+                      <div className="w-2 h-2 bg-teal-400 rounded-full"></div>
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-300 to-transparent"></div>
+                    </div>
+
+                    {/* Information Grid */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Ngày cấp</p>
+                          <div className="flex items-center gap-2 text-gray-800">
+                            <Calendar size={16} className="text-teal-500" />
+                            <span className="font-medium">{formatDate(issuedDate)}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} />
-                            <span><strong>Hết hạn:</strong> {formatDate(expiryDate) || "Vô thời hạn"}</span>
-                          </div>
-                          {issuedBy && (
-                            <div className="flex items-start gap-2">
-                              <Building2 size={14} className="mt-0.5" />
-                              <span className="flex-1"><strong>Nơi cấp:</strong> {issuedBy}</span>
-                            </div>
-                          )}
-                          {scopeOfPractice && (
-                            <div className="flex items-start gap-2">
-                              <Briefcase size={14} className="mt-0.5" />
-                              <span className="flex-1"><strong>Phạm vi:</strong> {scopeOfPractice}</span>
-                            </div>
-                          )}
                         </div>
-                        
-                        {daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry < 365 && (
-                          <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-2">
-                            <p className="text-orange-700 text-sm font-medium flex items-center gap-1">
-                              <AlertCircle size={14} />
-                              Còn {daysUntilExpiry} ngày hết hạn
-                            </p>
+                        {issuedBy && (
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Nơi cấp</p>
+                            <div className="flex items-start gap-2 text-gray-800">
+                              <Building2 size={16} className="text-teal-500 mt-0.5 flex-shrink-0" />
+                              <span className="font-medium text-sm leading-tight">{issuedBy}</span>
+                            </div>
                           </div>
                         )}
                       </div>
-                    </CardBody>
-                  </Card>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Hết hạn</p>
+                          <div className="flex items-center gap-2 text-gray-800">
+                            <Calendar size={16} className="text-teal-500" />
+                            <span className="font-medium">{formatDate(expiryDate) || "Vô thời hạn"}</span>
+                          </div>
+                        </div>
+                        {scopeOfPractice && (
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Phạm vi</p>
+                            <div className="flex items-start gap-2 text-gray-800">
+                              <Briefcase size={16} className="text-teal-500 mt-0.5 flex-shrink-0" />
+                              <span className="font-medium text-sm leading-tight">{scopeOfPractice}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Warnings */}
+                    <div className="space-y-3">
+                      {/* Expiry Warning */}
+                      {daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry < 365 && (
+                        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-3 flex items-center gap-3">
+                          <div className="bg-orange-500 p-2 rounded-full">
+                            <AlertCircle size={18} className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-orange-800 font-semibold text-sm">Sắp hết hạn</p>
+                            <p className="text-orange-600 text-xs">Còn {daysUntilExpiry} ngày</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Last License Warning */}
+                      {licenses.length === 1 && (
+                        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg p-3 flex items-center gap-3">
+                          <div className="bg-blue-500 p-2 rounded-full">
+                            <CheckCircle size={18} className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-blue-800 font-semibold text-sm">Giấy phép duy nhất</p>
+                            <p className="text-blue-600 text-xs">Không thể xóa giấy phép này</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Decorative Seal/Stamp */}
+                    <div className="absolute bottom-6 right-6 opacity-10">
+                      <div className="w-20 h-20 rounded-full border-4 border-teal-500 flex items-center justify-center">
+                        <FileText size={40} className="text-teal-500" />
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -786,6 +965,19 @@ export default function DoctorProfile() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Confirm Delete License Modal */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={onDeleteModalClose}
+        onConfirm={confirmDeleteLicense}
+        variant="danger"
+        title="Xóa giấy phép hành nghề"
+        message="Bạn có chắc chắn muốn xóa giấy phép hành nghề này không? Thông tin giấy phép sẽ bị xóa vĩnh viễn khỏi hệ thống."
+        itemName={deletingLicense ? (deletingLicense.licenseNumber || deletingLicense.license_number) : ""}
+        confirmText="Xác nhận xóa"
+        isLoading={isDeleting}
+      />
     </DoctorFrame>
   );
 }
