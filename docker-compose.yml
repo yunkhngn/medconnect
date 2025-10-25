@@ -8,8 +8,8 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
     # Không public ra ngoài nếu không cần quản trị từ máy local
-    ports:
-      - "1433:1433"
+    # ports:
+    #   - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -76,6 +76,9 @@ services:
       FIREBASE_TOKEN_URI: ${FIREBASE_TOKEN_URI:-https://oauth2.googleapis.com/token}
       FIREBASE_AUTH_PROVIDER_X509_CERT_URL: ${FIREBASE_AUTH_PROVIDER_X509_CERT_URL:-https://www.googleapis.com/oauth2/v1/certs}
       FIREBASE_CLIENT_X509_CERT_URL: ${FIREBASE_CLIENT_X509_CERT_URL}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     expose:
       - "8080"
     depends_on:
@@ -131,6 +134,7 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # - ./certs:/certs:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

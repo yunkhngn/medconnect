@@ -32,6 +32,9 @@ public class FirebaseFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
         throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+        System.out.println("[FirebaseFilter] Processing request: " + requestURI);
+        
         String authHeader = request.getHeader("Authorization");
 
         if(authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -72,6 +75,10 @@ public class FirebaseFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
-        return path.startsWith("/api/auth");
+        // Skip filter for public endpoints that don't need authentication
+        return path.startsWith("/api/auth") || 
+               path.startsWith("/actuator") ||
+               path.startsWith("/api/specialities") ||
+               path.startsWith("/api/payment/ipn");
     }
 }

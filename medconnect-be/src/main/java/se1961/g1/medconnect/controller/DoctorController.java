@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.ScheduleDTO;
 import se1961.g1.medconnect.enums.ScheduleStatus;
-import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Speciality;
 import se1961.g1.medconnect.repository.SpecialityRepository;
@@ -133,9 +132,13 @@ public class DoctorController {
             profile.put("name", doctor.getName());
             profile.put("email", doctor.getEmail());
             profile.put("phone", doctor.getPhone());
+            profile.put("avatar", doctor.getAvatarUrl());
             profile.put("specialization", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : null);
             profile.put("speciality_id", doctor.getSpeciality() != null ? doctor.getSpeciality().getSpecialityId() : null);
             profile.put("experience_years", doctor.getExperienceYears());
+            profile.put("education_level", doctor.getEducationLevel());
+            profile.put("bio", doctor.getBio());
+            profile.put("clinic_address", doctor.getClinicAddress());
             
             // Get active license info
             se1961.g1.medconnect.pojo.License activeLicense = doctor.getActiveLicense();
@@ -187,6 +190,18 @@ public class DoctorController {
             // Update experience years (manual input)
             currDoc.setExperienceYears((Integer) request.get("experience_years"));
         }
+        
+        if(request.containsKey("education_level")) {
+            currDoc.setEducationLevel((String) request.get("education_level"));
+        }
+        
+        if(request.containsKey("bio")) {
+            currDoc.setBio((String) request.get("bio"));
+        }
+        
+        if(request.containsKey("clinic_address")) {
+            currDoc.setClinicAddress((String) request.get("clinic_address"));
+        }
 
         doctorService.saveDoctor(currDoc);
 
@@ -196,6 +211,9 @@ public class DoctorController {
         updatedProfile.put("specialization", currDoc.getSpeciality() != null ? currDoc.getSpeciality().getName() : null);
         updatedProfile.put("speciality_id", currDoc.getSpeciality() != null ? currDoc.getSpeciality().getSpecialityId() : null);
         updatedProfile.put("experience_years", currDoc.getExperienceYears());
+        updatedProfile.put("education_level", currDoc.getEducationLevel());
+        updatedProfile.put("bio", currDoc.getBio());
+        updatedProfile.put("clinic_address", currDoc.getClinicAddress());
 
         return  ResponseEntity.ok(updatedProfile);
     }

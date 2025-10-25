@@ -23,6 +23,15 @@ public class Doctor extends User{
     
     @Column(name = "experience_years")
     private Integer experienceYears; // Số năm kinh nghiệm (nhập thủ công)
+    
+    @Column(name = "education_level", columnDefinition = "NVARCHAR(255)")
+    private String educationLevel; // Trình độ học vấn (VD: Tiến sĩ, Thạc sĩ, Bác sĩ...)
+    
+    @Column(name = "bio", columnDefinition = "NVARCHAR(MAX)")
+    private String bio; // Giới thiệu bản thân
+    
+    @Column(name = "clinic_address", columnDefinition = "NVARCHAR(500)")
+    private String clinicAddress; // Địa chỉ phòng khám
 
     // Relationships
     @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY)

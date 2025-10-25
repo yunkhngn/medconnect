@@ -91,6 +91,11 @@ public class ScheduleService {
         User user = userService.findById(userId)
                 .orElseThrow(() -> new Exception("User not found"));
 
+        // Validate: không cho phép đặt lịch cho ngày đã qua
+        if (dto.getDate().isBefore(LocalDate.now())) {
+            throw new Exception("Không thể đặt lịch cho ngày đã qua");
+        }
+
         if (scheduleRepository.findByUserUserIdAndDateAndSlot(userId, dto.getDate(), dto.getSlot()).isPresent()) {
             throw new Exception("Schedule already exists");
         }

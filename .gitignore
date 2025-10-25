@@ -24,7 +24,13 @@ docker-compose.override.yml
 *.swo
 *~
 
+# SSL / Cloudflare Origin certs
+certs/
+*.pem
+*.key
+
 # OS
 .DS_Store
 Thumbs.db
+
 
