@@ -203,6 +203,7 @@ export default function DoctorProfile() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    toast.loading("Đang tải ảnh lên...");
     try {
       console.log("[Avatar Upload] Starting upload...");
       const avatarUrl = await uploadAvatar(file);
