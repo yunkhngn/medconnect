@@ -77,8 +77,8 @@ export default function DoctorSchedulePage() {
     setCurrentWeekStart(newStart);
   }
 
-  const fetchSchedule = async () => {
-    setLoading(true);
+  const fetchSchedule = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const token = await user.getIdToken();
       const weekDays = getWeekDays(currentWeekStart);
@@ -96,22 +96,39 @@ export default function DoctorSchedulePage() {
         const data = await response.json();
         setScheduleData(data);
       } else {
-        toast.error("Không thể tải lịch làm việc");
+        if (!silent) toast.error("Không thể tải lịch làm việc");
       }
     } catch (error) {
       console.error("Error fetching schedule:", error);
-      toast.error("Lỗi kết nối server");
+      if (!silent) toast.error("Lỗi kết nối server");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const handleAddSlot = async (date, slot) => {
+    // Optimistic Update: Thêm vào UI ngay lập tức
+    const optimisticSlot = {
+      id: `temp-${Date.now()}`,
+      date: formatDate(date),
+      slot: slot.id,
+      status: "RESERVED",
+      appointment: null,
+      isOptimistic: true
+    };
+
+    console.log("[ADD SLOT] Optimistic slot:", optimisticSlot);
+    setScheduleData(prev => {
+      const newData = [...prev, optimisticSlot];
+      console.log("[ADD SLOT] Updated scheduleData:", newData);
+      return newData;
+    });
+
     try {
       const token = await user.getIdToken();
       const response = await fetch("http://localhost:8080/api/schedule", {
         method: "POST",
-        headers: {
+          headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -123,19 +140,51 @@ export default function DoctorSchedulePage() {
       });
 
       if (response.ok) {
+        const newSlot = await response.json();
+        console.log("[ADD SLOT] Server response:", newSlot);
+        // Replace optimistic slot với real data từ server
+        setScheduleData(prev => {
+          const updated = prev.map(s => 
+            s.id === optimisticSlot.id ? newSlot : s
+          );
+          console.log("[ADD SLOT] Replaced with real data:", updated);
+          return updated;
+        });
+        
+        // Backup: Silent refresh sau 100ms để đảm bảo sync
+        setTimeout(() => {
+          console.log("[ADD SLOT] Silent refresh to ensure sync");
+          fetchSchedule(true); // Silent mode - không show loading
+        }, 100);
+        
         toast.success("Đã thêm ca làm việc");
-        fetchSchedule();
       } else {
+        // Rollback nếu thất bại
+        setScheduleData(prev => prev.filter(s => s.id !== optimisticSlot.id));
         const error = await response.json();
         toast.error(error.error || "Không thể thêm ca làm việc");
       }
     } catch (error) {
+      // Rollback nếu có lỗi
+      setScheduleData(prev => prev.filter(s => s.id !== optimisticSlot.id));
       console.error("Error adding slot:", error);
       toast.error("Lỗi kết nối server");
     }
   };
 
   const handleDeleteSlot = async (scheduleId) => {
+    // Lưu lại slot để rollback nếu cần
+    const deletedSlot = scheduleData.find(s => s.id === scheduleId);
+    
+    console.log("[DELETE SLOT] Deleting slot:", scheduleId);
+    // Optimistic Update: Xóa khỏi UI ngay lập tức
+    setScheduleData(prev => {
+      const filtered = prev.filter(s => s.id !== scheduleId);
+      console.log("[DELETE SLOT] Updated scheduleData:", filtered);
+      return filtered;
+    });
+    onClose(); // Đóng modal ngay
+
     try {
       const token = await user.getIdToken();
       const response = await fetch(`http://localhost:8080/api/schedule/${scheduleId}`, {
@@ -144,14 +193,28 @@ export default function DoctorSchedulePage() {
       });
 
       if (response.ok) {
+        console.log("[DELETE SLOT] Successfully deleted");
+        
+        // Backup: Silent refresh sau 100ms để đảm bảo sync
+        setTimeout(() => {
+          console.log("[DELETE SLOT] Silent refresh to ensure sync");
+          fetchSchedule(true);
+        }, 100);
+        
         toast.success("Đã xóa ca làm việc");
-        fetchSchedule();
-        onClose();
       } else {
+        // Rollback nếu thất bại
+        if (deletedSlot) {
+          setScheduleData(prev => [...prev, deletedSlot]);
+        }
         const error = await response.json();
         toast.error(error.error || "Không thể xóa ca làm việc");
       }
     } catch (error) {
+      // Rollback nếu có lỗi
+      if (deletedSlot) {
+        setScheduleData(prev => [...prev, deletedSlot]);
+      }
       console.error("Error deleting slot:", error);
       toast.error("Lỗi kết nối server");
     }
@@ -166,9 +229,14 @@ export default function DoctorSchedulePage() {
 
   const getSlotData = (date, slot) => {
     const dateStr = formatDate(date);
-    return scheduleData.find(
+    const found = scheduleData.find(
       (s) => s.date === dateStr && s.slot === slot.id
     );
+    // Debug logging (comment out in production)
+    if (found) {
+      console.log(`[GET SLOT] Found slot for ${dateStr} ${slot.id}:`, found);
+    }
+    return found;
   };
 
   const getStatusColor = (status) => {
@@ -230,7 +298,7 @@ export default function DoctorSchedulePage() {
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300">
           <CardBody className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+                <div>
                 <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Đã đặt</p>
                 <p className="text-3xl font-bold text-green-900 mt-1">{bookedSlots}</p>
               </div>
@@ -376,17 +444,17 @@ export default function DoctorSchedulePage() {
 
       {/* Schedule Table Card - Enhanced */}
       <Card className="shadow-lg">
-        <CardBody className="p-0">
+          <CardBody className="p-0">
           <div className="overflow-auto max-h-[75vh]">
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 bg-gradient-to-r from-gray-100 to-gray-50 z-10 shadow-sm">
                 <tr>
                   <th className="border-2 border-gray-300 p-4 text-left font-bold text-gray-800 min-w-[120px] bg-gray-100">
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                       <Calendar size={18} className="text-teal-600" />
                       Ca làm việc
-                    </div>
-                  </th>
+                      </div>
+                    </th>
                   {weekDays.map((day, index) => {
                     const isToday = day.toDateString() === new Date().toDateString();
                     return (
@@ -408,18 +476,18 @@ export default function DoctorSchedulePage() {
                       </th>
                     );
                   })}
-                </tr>
-              </thead>
-
-              <tbody>
+                  </tr>
+                </thead>
+                
+                <tbody>
                 {SLOTS.map((slot, slotIdx) => (
                   <tr key={slot.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="border-2 border-gray-300 p-4 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700">
                       <div className="flex flex-col">
                         <span className="text-xs text-gray-500">Ca {slotIdx + 1}</span>
                         <span className="text-sm">{slot.time}</span>
-                      </div>
-                    </td>
+                        </div>
+                      </td>
                     {weekDays.map((day, dayIdx) => {
                       const slotData = getSlotData(day, slot);
                       const status = slotData?.status || "EMPTY";
@@ -427,14 +495,15 @@ export default function DoctorSchedulePage() {
                       const isReserved = status === "RESERVED";
                       const isEmpty = status === "EMPTY";
                       const isToday = day.toDateString() === new Date().toDateString();
-
-                      return (
-                        <td
+                        
+                        return (
+                          <td
                           key={dayIdx}
-                          className={`border-2 border-gray-300 p-3 text-center cursor-pointer transition-all duration-200 ${
+                          className={`border-2 border-gray-300 p-3 text-center cursor-pointer transition-all duration-300 ease-in-out ${
                             isEmpty ? "hover:bg-blue-50 hover:border-blue-300 hover:shadow-inner" : ""
                           } ${isReserved ? "hover:bg-yellow-100 hover:border-yellow-400" : ""}
-                          ${isToday ? "bg-teal-50/30" : "bg-white"}`}
+                          ${isToday ? "bg-teal-50/30" : "bg-white"}
+                          ${slotData?.isOptimistic ? "animate-pulse" : ""}`}
                           onClick={() => {
                             if (isEmpty) {
                               handleAddSlot(day, slot);
@@ -445,28 +514,28 @@ export default function DoctorSchedulePage() {
                           }}
                         >
                           {isEmpty && (
-                            <div className="flex flex-col items-center justify-center gap-2 py-4 text-gray-400 group-hover:text-blue-600">
-                              <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-all">
+                            <div className="flex flex-col items-center justify-center gap-2 py-4 text-gray-400 group-hover:text-blue-600 animate-fade-in">
+                              <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-all duration-300">
                                 <Plus size={20} />
-                              </div>
+                                      </div>
                               <span className="text-xs font-medium">Thêm ca</span>
-                            </div>
-                          )}
+                                        </div>
+                                      )}
                           {isReserved && (
-                            <div className="py-4">
-                              <div className="w-10 h-10 rounded-full bg-yellow-100 border-2 border-yellow-400 flex items-center justify-center mx-auto mb-2">
+                            <div className="py-4 animate-fade-in">
+                              <div className="w-10 h-10 rounded-full bg-yellow-100 border-2 border-yellow-400 flex items-center justify-center mx-auto mb-2 transition-transform duration-300 hover:scale-110">
                                 <CheckCircle className="text-yellow-600" size={20} />
-                              </div>
+                                </div>
                               <Chip color="warning" size="sm" variant="solid" className="font-semibold">
                                 Sẵn sàng
                               </Chip>
-                            </div>
+                                </div>
                           )}
                           {isBusy && slotData.appointment && (
-                            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-3 shadow-sm">
-                              <div className="w-10 h-10 rounded-full bg-green-200 border-2 border-green-400 flex items-center justify-center mx-auto mb-2">
+                            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-3 shadow-sm animate-fade-in hover:shadow-md transition-shadow duration-300">
+                              <div className="w-10 h-10 rounded-full bg-green-200 border-2 border-green-400 flex items-center justify-center mx-auto mb-2 transition-transform duration-300 hover:scale-110">
                                 <CheckCircle className="text-green-700" size={20} />
-                              </div>
+                                  </div>
                               <p className="font-bold text-sm text-green-900 mb-1">
                                 {slotData.appointment.patient?.name || "Bệnh nhân"}
                               </p>
@@ -475,17 +544,17 @@ export default function DoctorSchedulePage() {
                               </Chip>
                             </div>
                           )}
-                        </td>
+                          </td>
                       );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardBody>
-      </Card>
-    </div>
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+                      </CardBody>
+                    </Card>
+                  </div>
   );
 
   return (
@@ -502,20 +571,20 @@ export default function DoctorSchedulePage() {
             <p className="text-sm text-gray-500 mt-2">
               Ca này sẽ không còn cho phép bệnh nhân đặt lịch.
             </p>
-          </ModalBody>
+                </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={onClose}>
               Hủy
             </Button>
-            <Button
-              color="danger"
+                    <Button
+                      color="danger"
               onPress={() => selectedSlot && handleDeleteSlot(selectedSlot.id)}
             >
               Đóng lịch
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+                    </Button>
+                </ModalFooter>
+          </ModalContent>
+        </Modal>
     </DoctorFrame>
   );
 }
