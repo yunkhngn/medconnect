@@ -385,8 +385,8 @@ export default function HoSoBenhAn() {
   }
 
   if (error || !emrData) {
-    return (
-      <PatientFrame title="Hồ sơ bệnh án">
+  return (
+    <PatientFrame title="Hồ sơ bệnh án">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Card className="max-w-md">
             <CardBody className="text-center p-8">
@@ -464,13 +464,13 @@ export default function HoSoBenhAn() {
             <div className="flex items-center gap-2">
               <Heart className="text-red-400" size={16} />
               <span className="text-gray-600">Nhóm máu: {patientProfile.blood_type || "Chưa cập nhật"}</span>
-            </div>
+          </div>
             <div className="flex items-center gap-2">
               <Activity className="text-gray-400" size={16} />
               <span className="text-gray-600">
                 {medicalRecords.length} lần khám
               </span>
-            </div>
+        </div>
           </div>
         </CardBody>
       </Card>
@@ -505,10 +505,10 @@ export default function HoSoBenhAn() {
               >
                 Xuất hồ sơ bệnh án
               </Button>
-          </div>
+                      </div>
         </CardBody>
       </Card>
-    </div>
+                </div>
   );
 
   // Right Panel - EMR Details
@@ -531,7 +531,7 @@ export default function HoSoBenhAn() {
             <InfoItem label="Nhóm máu" value={patientProfile.blood_type || detail?.patient_profile?.blood_type} />
             <InfoItem label="Số điện thoại" value={patientProfile.phone} />
             <InfoItem label="Email" value={patientProfile.email} />
-          </div>
+              </div>
           <InfoItem label="Địa chỉ" value={patientProfile.address} />
           <InfoItem label="Mã BHYT" value={patientProfile.insurance_number} />
           {patientProfile.insurance_valid_to && (
@@ -636,7 +636,7 @@ export default function HoSoBenhAn() {
                   >
                     <div className="space-y-4 pt-2">
                       {record.chief_complaint && (
-                        <div>
+                      <div>
                           <p className="text-sm font-semibold text-gray-700">Lý do khám:</p>
                           <p className="text-sm text-gray-600">{record.chief_complaint}</p>
                         </div>
@@ -649,39 +649,39 @@ export default function HoSoBenhAn() {
                             {record.vital_signs.temperature && (
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-gray-500">Nhiệt độ:</span> {record.vital_signs.temperature}°C
-                              </div>
+                      </div>
                             )}
                             {record.vital_signs.blood_pressure && (
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-gray-500">Huyết áp:</span> {record.vital_signs.blood_pressure}
-                              </div>
+                    </div>
                             )}
                             {record.vital_signs.heart_rate && (
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-gray-500">Nhịp tim:</span> {record.vital_signs.heart_rate} bpm
-                              </div>
+                      </div>
                             )}
                             {record.vital_signs.spo2 && (
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-gray-500">SpO2:</span> {record.vital_signs.spo2}%
-                              </div>
+                    </div>
                             )}
                             {record.vital_signs.weight && (
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-gray-500">Cân nặng:</span> {record.vital_signs.weight} kg
-                              </div>
+                  </div>
                             )}
                             {record.vital_signs.height && (
                               <div className="bg-gray-50 p-2 rounded">
                                 <span className="text-gray-500">Chiều cao:</span> {record.vital_signs.height} cm
-                              </div>
+                      </div>
                             )}
-                          </div>
-                        </div>
+                      </div>
+                    </div>
                       )}
 
                       {record.diagnosis && (
-                        <div>
+                    <div>
                           <p className="text-sm font-semibold text-gray-700">Chẩn đoán:</p>
                           {typeof record.diagnosis === 'string' ? (
                             <p className="text-sm text-gray-600">{record.diagnosis}</p>
@@ -703,15 +703,15 @@ export default function HoSoBenhAn() {
                                 <div className="bg-blue-50 p-2 rounded">
                                   <span className="font-medium text-blue-700">Mã ICD:</span>{' '}
                                   <span className="text-gray-700">{record.diagnosis.icd_codes}</span>
-                                </div>
+                      </div>
                               )}
-                            </div>
+                      </div>
                           )}
-                        </div>
+                    </div>
                       )}
 
                       {record.prescriptions && record.prescriptions.length > 0 && (
-                        <div>
+                    <div>
                           <p className="text-sm font-semibold text-gray-700 mb-2">Đơn thuốc:</p>
                           <div className="space-y-2">
                             {record.prescriptions.map((rx, idx) => {
@@ -726,10 +726,10 @@ export default function HoSoBenhAn() {
                                   {rx.instructions && (
                                     <p className="text-gray-500 text-xs mt-1">{rx.instructions}</p>
                                   )}
-                                </div>
+                      </div>
                               );
                             })}
-                          </div>
+                    </div>
                         </div>
                       )}
 
@@ -737,17 +737,17 @@ export default function HoSoBenhAn() {
                         <div>
                           <p className="text-sm font-semibold text-gray-700">Ghi chú:</p>
                           <p className="text-sm text-gray-600">{record.notes}</p>
-                        </div>
-                      )}
-                    </div>
+                </div>
+              )}
+            </div>
                   </AccordionItem>
                 );
               })}
             </Accordion>
-          )}
+        )}
         </CardBody>
       </Card>
-    </div>
+      </div>
   );
 
   return (

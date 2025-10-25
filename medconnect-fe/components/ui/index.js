@@ -6,3 +6,6 @@ export { default as ScrollUp} from './ScrollUp';
 
 //Modals
 export { default as ConfirmModal } from './ConfirmModal';
+
+//Notifications
+export { default as ToastNotification } from './ToastNotification';
