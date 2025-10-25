@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card, CardBody, CardHeader, Button, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure
 } from "@heroui/react";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle, Info } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle, Info, Loader2 } from "lucide-react";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,10 @@ export default function DoctorSchedulePage() {
   const [scheduleData, setScheduleData] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false); // For silent background refresh
+  
+  // Track if this is the initial load
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     if (authLoading) return;
@@ -43,7 +47,16 @@ export default function DoctorSchedulePage() {
       toast.error("Vui lòng đăng nhập");
       return;
     }
-    fetchSchedule();
+    
+    // First load: show loading spinner
+    // Subsequent loads (week changes): silent background fetch
+    const silent = !isInitialLoad.current;
+    fetchSchedule(silent);
+    
+    // Mark as no longer initial load after first fetch
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+    }
   }, [user, authLoading, currentWeekStart]);
 
   function getWeekStart(date) {
@@ -78,7 +91,12 @@ export default function DoctorSchedulePage() {
   }
 
   const fetchSchedule = async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true); // Show mini loading indicator
+    }
+    
     try {
       const token = await user.getIdToken();
       const weekDays = getWeekDays(currentWeekStart);
@@ -102,7 +120,11 @@ export default function DoctorSchedulePage() {
       console.error("Error fetching schedule:", error);
       if (!silent) toast.error("Lỗi kết nối server");
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -131,8 +153,8 @@ export default function DoctorSchedulePage() {
           headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
+          },
+          body: JSON.stringify({
           date: formatDate(date),
           slot: slot.id,
           status: "RESERVED"
@@ -417,14 +439,17 @@ export default function DoctorSchedulePage() {
                 variant="light"
                 isIconOnly
                 onClick={previousWeek}
+                isDisabled={isRefreshing}
                 className="text-white hover:bg-white/20"
               >
                 <ChevronLeft size={20} />
               </Button>
               <Button
                 size="sm"
-                className="bg-white text-teal-600 font-semibold hover:bg-white/90"
+                className="bg-white text-teal-600 font-semibold hover:bg-white/90 min-w-[140px]"
                 onClick={() => setCurrentWeekStart(getWeekStart(new Date()))}
+                isDisabled={isRefreshing}
+                startContent={isRefreshing ? <Loader2 size={16} className="animate-spin" /> : null}
               >
                 Tuần hiện tại
               </Button>
@@ -433,6 +458,7 @@ export default function DoctorSchedulePage() {
                 variant="light"
                 isIconOnly
                 onClick={nextWeek}
+                isDisabled={isRefreshing}
                 className="text-white hover:bg-white/20"
               >
                 <ChevronRight size={20} />
@@ -446,7 +472,7 @@ export default function DoctorSchedulePage() {
       <Card className="shadow-lg">
           <CardBody className="p-0">
           <div className="overflow-auto max-h-[75vh]">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm border-collapse transition-opacity duration-300 ease-in-out">
               <thead className="sticky top-0 bg-gradient-to-r from-gray-100 to-gray-50 z-10 shadow-sm">
                 <tr>
                   <th className="border-2 border-gray-300 p-4 text-left font-bold text-gray-800 min-w-[120px] bg-gray-100">
@@ -495,16 +521,31 @@ export default function DoctorSchedulePage() {
                       const isReserved = status === "RESERVED";
                       const isEmpty = status === "EMPTY";
                       const isToday = day.toDateString() === new Date().toDateString();
+                      
+                      // Check if date is in the past (before today)
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isPastDate = day < today;
                         
                         return (
                           <td
                           key={dayIdx}
-                          className={`border-2 border-gray-300 p-3 text-center cursor-pointer transition-all duration-300 ease-in-out ${
-                            isEmpty ? "hover:bg-blue-50 hover:border-blue-300 hover:shadow-inner" : ""
-                          } ${isReserved ? "hover:bg-yellow-100 hover:border-yellow-400" : ""}
-                          ${isToday ? "bg-teal-50/30" : "bg-white"}
+                          className={`border-2 border-gray-300 p-3 text-center transition-all duration-300 ease-in-out ${
+                            isPastDate ? "bg-gray-100 cursor-not-allowed opacity-60" : "cursor-pointer"
+                          } ${
+                            !isPastDate && isEmpty ? "hover:bg-blue-50 hover:border-blue-300 hover:shadow-inner" : ""
+                          } ${
+                            !isPastDate && isReserved ? "hover:bg-yellow-100 hover:border-yellow-400" : ""
+                          }
+                          ${isToday ? "bg-teal-50/30" : isPastDate ? "bg-gray-100" : "bg-white"}
                           ${slotData?.isOptimistic ? "animate-pulse" : ""}`}
                           onClick={() => {
+                            // Chặn click vào ngày đã qua
+                            if (isPastDate) {
+                              toast.warning("Không thể đặt lịch cho ngày đã qua");
+                              return;
+                            }
+                            
                             if (isEmpty) {
                               handleAddSlot(day, slot);
                             } else if (isReserved) {
@@ -513,13 +554,18 @@ export default function DoctorSchedulePage() {
                             }
                           }}
                         >
-                          {isEmpty && (
+                          {isEmpty && !isPastDate && (
                             <div className="flex flex-col items-center justify-center gap-2 py-4 text-gray-400 group-hover:text-blue-600 animate-fade-in">
                               <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-all duration-300">
                                 <Plus size={20} />
                                       </div>
                               <span className="text-xs font-medium">Thêm ca</span>
                                         </div>
+                                      )}
+                          {isEmpty && isPastDate && (
+                            <div className="flex flex-col items-center justify-center gap-2 py-4 text-gray-400">
+                              <span className="text-xs font-medium">Đã qua</span>
+                            </div>
                                       )}
                           {isReserved && (
                             <div className="py-4 animate-fade-in">
