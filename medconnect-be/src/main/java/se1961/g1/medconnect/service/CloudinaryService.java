@@ -105,6 +105,45 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload license proof document (PDF) to Cloudinary
+     * @param file MultipartFile PDF document
+     * @param userId User ID for organizing folders
+     * @return URL of uploaded PDF
+     */
+    public String uploadLicensePDF(MultipartFile file, String userId) throws IOException {
+        // Validate file
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        // Validate file type (PDF only)
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equals("application/pdf")) {
+            throw new IllegalArgumentException("File must be a PDF");
+        }
+
+        // Validate file size (max 10MB for PDF)
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("PDF file size must be less than 10MB");
+        }
+
+        // Generate unique filename
+        String publicId = "medconnect/licenses/" + userId + "/" + UUID.randomUUID();
+
+        // Upload to Cloudinary
+        @SuppressWarnings("unchecked")
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "public_id", publicId,
+                "folder", "medconnect/licenses",
+                "resource_type", "raw", // Important: "raw" for non-image files like PDF
+                "format", "pdf"
+        ));
+
+        // Return secure URL
+        return (String) uploadResult.get("secure_url");
+    }
+
+    /**
      * Delete avatar from Cloudinary
      * @param imageUrl URL of image to delete
      */

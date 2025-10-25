@@ -1,9 +1,11 @@
 medconnects.app, www.medconnects.app {
+    tls /certs/origin.pem /certs/origin.key
     encode zstd gzip
     reverse_proxy fe:3000
 }
 
 api.medconnects.app {
+    tls /certs/origin.pem /certs/origin.key
     encode zstd gzip
     reverse_proxy be:8080
 }

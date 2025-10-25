@@ -4,9 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.License;
 import se1961.g1.medconnect.repository.LicenseRepository;
+import se1961.g1.medconnect.service.CloudinaryService;
 import se1961.g1.medconnect.service.DoctorService;
 
 import java.time.LocalDate;
@@ -23,6 +25,9 @@ public class LicenseController {
 
     @Autowired
     private DoctorService doctorService;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     /**
      * Get all licenses of current doctor
@@ -61,6 +66,48 @@ public class LicenseController {
     }
 
     /**
+     * Validate license number format
+     * Format: XXXXXX/BYT-GPHN (6 digits / BYT-GPHN)
+     */
+    private boolean isValidLicenseNumber(String licenseNumber) {
+        if (licenseNumber == null || licenseNumber.trim().isEmpty()) {
+            return false;
+        }
+        // Regex: 6 digits followed by /BYT-GPHN
+        return licenseNumber.trim().matches("^\\d{6}\\/BYT-GPHN$");
+    }
+
+    /**
+     * Upload license proof document (PDF)
+     * POST /api/licenses/upload-proof
+     */
+    @PostMapping("/upload-proof")
+    public ResponseEntity<Map<String, Object>> uploadProofDocument(
+            Authentication authentication,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            String uid = (String) authentication.getPrincipal();
+            
+            // Upload PDF to Cloudinary
+            String proofUrl = cloudinaryService.uploadLicensePDF(file, uid);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "PDF uploaded successfully");
+            response.put("proof_document_url", proofUrl);
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to upload PDF: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    /**
      * Create new license for current doctor
      */
     @PostMapping("/my")
@@ -72,9 +119,18 @@ public class LicenseController {
         Doctor doctor = doctorService.getDoctor(uid)
                 .orElseThrow(() -> new Exception("Doctor not found"));
 
+        String licenseNumber = (String) request.get("license_number");
+        
+        // Validate license number format
+        if (!isValidLicenseNumber(licenseNumber)) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Số giấy phép không đúng định dạng. Định dạng chuẩn: XXXXXX/BYT-GPHN (VD: 000001/BYT-GPHN)");
+            return ResponseEntity.badRequest().body(error);
+        }
+
         License license = new License();
         license.setDoctor(doctor);
-        license.setLicenseNumber((String) request.get("license_number"));
+        license.setLicenseNumber(licenseNumber);
         license.setIssuedDate(LocalDate.parse((String) request.get("issued_date")));
         
         if (request.containsKey("expiry_date") && request.get("expiry_date") != null) {
@@ -88,6 +144,10 @@ public class LicenseController {
         
         if (request.containsKey("notes")) {
             license.setNotes((String) request.get("notes"));
+        }
+        
+        if (request.containsKey("proof_document_url")) {
+            license.setProofDocumentUrl((String) request.get("proof_document_url"));
         }
 
         License saved = licenseRepository.save(license);
@@ -118,7 +178,14 @@ public class LicenseController {
 
         // Update fields
         if (request.containsKey("license_number")) {
-            license.setLicenseNumber((String) request.get("license_number"));
+            String licenseNumber = (String) request.get("license_number");
+            // Validate license number format
+            if (!isValidLicenseNumber(licenseNumber)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Số giấy phép không đúng định dạng. Định dạng chuẩn: XXXXXX/BYT-GPHN (VD: 000001/BYT-GPHN)");
+                return ResponseEntity.badRequest().body(error);
+            }
+            license.setLicenseNumber(licenseNumber);
         }
         if (request.containsKey("issued_date")) {
             license.setIssuedDate(LocalDate.parse((String) request.get("issued_date")));
@@ -141,6 +208,9 @@ public class LicenseController {
         }
         if (request.containsKey("notes")) {
             license.setNotes((String) request.get("notes"));
+        }
+        if (request.containsKey("proof_document_url")) {
+            license.setProofDocumentUrl((String) request.get("proof_document_url"));
         }
 
         License updated = licenseRepository.save(license);
@@ -187,6 +257,7 @@ public class LicenseController {
         map.put("scope_of_practice", license.getScopeOfPractice());
         map.put("is_active", license.getIsActive());
         map.put("notes", license.getNotes());
+        map.put("proof_document_url", license.getProofDocumentUrl());
         map.put("is_expired", license.isExpired());
         map.put("is_valid", license.isValid());
         map.put("days_until_expiry", license.getDaysUntilExpiry());
