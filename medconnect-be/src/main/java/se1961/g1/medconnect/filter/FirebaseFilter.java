@@ -32,6 +32,9 @@ public class FirebaseFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
         throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+        System.out.println("[FirebaseFilter] Processing request: " + requestURI);
+        
         String authHeader = request.getHeader("Authorization");
 
         if(authHeader != null && authHeader.startsWith("Bearer ")) {

@@ -32,8 +32,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> {}) // bật CORS
             .authorizeHttpRequests(auth -> auth
-                // Health (public)
-                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                // Health (public) - MUST BE FIRST!
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // Public endpoints
