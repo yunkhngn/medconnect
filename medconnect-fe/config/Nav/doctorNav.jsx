@@ -45,6 +45,15 @@ const menuItems = [
       href: '/bac-si/kham-offline',
     },
     {
+      label: 'Thanh toán',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+        </svg>
+      ),
+      href: '/bac-si/thanh-toan',
+    },
+    {
       label: 'Hồ sơ',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
