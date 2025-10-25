@@ -140,6 +140,14 @@ public class DoctorController {
             profile.put("bio", doctor.getBio());
             profile.put("clinic_address", doctor.getClinicAddress());
             
+            // Address fields
+            profile.put("province_code", doctor.getProvinceCode());
+            profile.put("province_name", doctor.getProvinceName());
+            profile.put("district_code", doctor.getDistrictCode());
+            profile.put("district_name", doctor.getDistrictName());
+            profile.put("ward_code", doctor.getWardCode());
+            profile.put("ward_name", doctor.getWardName());
+            
             // Get active license info
             se1961.g1.medconnect.pojo.License activeLicense = doctor.getActiveLicense();
             if (activeLicense != null) {
@@ -202,6 +210,26 @@ public class DoctorController {
         if(request.containsKey("clinic_address")) {
             currDoc.setClinicAddress((String) request.get("clinic_address"));
         }
+        
+        // Address fields
+        if(request.containsKey("province_code")) {
+            currDoc.setProvinceCode((Integer) request.get("province_code"));
+        }
+        if(request.containsKey("province_name")) {
+            currDoc.setProvinceName((String) request.get("province_name"));
+        }
+        if(request.containsKey("district_code")) {
+            currDoc.setDistrictCode((Integer) request.get("district_code"));
+        }
+        if(request.containsKey("district_name")) {
+            currDoc.setDistrictName((String) request.get("district_name"));
+        }
+        if(request.containsKey("ward_code")) {
+            currDoc.setWardCode((Integer) request.get("ward_code"));
+        }
+        if(request.containsKey("ward_name")) {
+            currDoc.setWardName((String) request.get("ward_name"));
+        }
 
         doctorService.saveDoctor(currDoc);
 
@@ -214,6 +242,12 @@ public class DoctorController {
         updatedProfile.put("education_level", currDoc.getEducationLevel());
         updatedProfile.put("bio", currDoc.getBio());
         updatedProfile.put("clinic_address", currDoc.getClinicAddress());
+        updatedProfile.put("province_code", currDoc.getProvinceCode());
+        updatedProfile.put("province_name", currDoc.getProvinceName());
+        updatedProfile.put("district_code", currDoc.getDistrictCode());
+        updatedProfile.put("district_name", currDoc.getDistrictName());
+        updatedProfile.put("ward_code", currDoc.getWardCode());
+        updatedProfile.put("ward_name", currDoc.getWardName());
 
         return  ResponseEntity.ok(updatedProfile);
     }

@@ -15,8 +15,10 @@ import {
 } from "@heroui/react";
 import { PatientFrame, Grid } from "@/components/layouts/";
 import ToastNotification from "@/components/ui/ToastNotification";
+import AddressSelector from "@/components/ui/AddressSelector";
 import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useAddressData } from "@/hooks/useAddressData";
 import BHYTInput from "@/components/ui/BHYTInput";
 import { isValidBHYT } from "@/utils/bhytHelper";
 
@@ -26,6 +28,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 
 export default function PatientProfileWithFrame() {
   const toast = useToast();
   const { getAvatarUrl, uploadAvatar, uploading } = useAvatar();
+  const { getProvinceName, getDistrictName, getWardName } = useAddressData();
   const { user, loading: authLoading } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [patient, setPatient] = useState({
@@ -35,6 +38,12 @@ export default function PatientProfileWithFrame() {
     dateOfBirth: "",
     gender: "",
     address: "",
+    province_code: null,
+    province_name: "",
+    district_code: null,
+    district_name: "",
+    ward_code: null,
+    ward_name: "",
     emergencyContactName: "",
     emergencyContactPhone: "",
     emergencyContactRelationship: "",
@@ -431,9 +440,44 @@ export default function PatientProfileWithFrame() {
             </Select>
           </div>
 
+          {/* Address Selector */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-default-700">
+              Địa chỉ <span className="text-danger">*</span>
+            </label>
+            <AddressSelector
+              provinceCode={patient.province_code}
+              districtCode={patient.district_code}
+              wardCode={patient.ward_code}
+              onProvinceChange={(code) => {
+                setPatient(prev => ({
+                  ...prev,
+                  province_code: code ? parseInt(code) : null,
+                  province_name: code ? getProvinceName(code) : ""
+                }));
+              }}
+              onDistrictChange={(code) => {
+                setPatient(prev => ({
+                  ...prev,
+                  district_code: code ? parseInt(code) : null,
+                  district_name: code ? getDistrictName(code) : ""
+                }));
+              }}
+              onWardChange={(code) => {
+                setPatient(prev => ({
+                  ...prev,
+                  ward_code: code ? parseInt(code) : null,
+                  ward_name: code ? getWardName(code) : ""
+                }));
+              }}
+              disabled={saving}
+              required
+            />
+          </div>
+
           <Input
-            label="Địa chỉ"
-            placeholder="Số nhà, đường, phường, quận, thành phố"
+            label="Địa chỉ chi tiết (tùy chọn)"
+            placeholder="Số nhà, tên đường... (VD: Số 123, Đường ABC)"
             value={patient.address || ""}
             onValueChange={(v) => setPatient({ ...patient, address: v })}
             variant="bordered"

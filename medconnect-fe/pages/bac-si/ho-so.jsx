@@ -24,13 +24,16 @@ import {
 import { DoctorFrame, Grid } from "@/components/layouts/";
 import ToastNotification from "@/components/ui/ToastNotification";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import AddressSelector from "@/components/ui/AddressSelector";
 import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useAddressData } from "@/hooks/useAddressData";
 import { auth } from "@/lib/firebase";
 
 export default function DoctorProfile() {
   const toast = useToast();
   const { getAvatarUrl, uploadAvatar, uploading } = useAvatar();
+  const { getProvinceName, getDistrictName, getWardName } = useAddressData();
   const [user, setUser] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [doctor, setDoctor] = useState({
@@ -43,6 +46,12 @@ export default function DoctorProfile() {
     education_level: "",
     bio: "",
     clinic_address: "",
+    province_code: null,
+    province_name: "",
+    district_code: null,
+    district_name: "",
+    ward_code: null,
+    ward_name: "",
     active_license: null
   });
   const [loading, setLoading] = useState(true);
@@ -239,7 +248,13 @@ export default function DoctorProfile() {
         experience_years: doctor.experience_years || 0,
         education_level: doctor.education_level || "",
         bio: doctor.bio || "",
-        clinic_address: doctor.clinic_address || ""
+        clinic_address: doctor.clinic_address || "",
+        province_code: doctor.province_code,
+        province_name: doctor.province_name,
+        district_code: doctor.district_code,
+        district_name: doctor.district_name,
+        ward_code: doctor.ward_code,
+        ward_name: doctor.ward_name
       };
 
       console.log("[Update Profile] Payload:", payload);
@@ -714,9 +729,44 @@ export default function DoctorProfile() {
             }}
           />
 
+          {/* Address Selector */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-default-700 mb-2">
+              Địa chỉ phòng khám <span className="text-danger">*</span>
+            </label>
+            <AddressSelector
+              provinceCode={doctor.province_code}
+              districtCode={doctor.district_code}
+              wardCode={doctor.ward_code}
+              onProvinceChange={(code) => {
+                setDoctor(prev => ({
+                  ...prev,
+                  province_code: code ? parseInt(code) : null,
+                  province_name: code ? getProvinceName(code) : ""
+                }));
+              }}
+              onDistrictChange={(code) => {
+                setDoctor(prev => ({
+                  ...prev,
+                  district_code: code ? parseInt(code) : null,
+                  district_name: code ? getDistrictName(code) : ""
+                }));
+              }}
+              onWardChange={(code) => {
+                setDoctor(prev => ({
+                  ...prev,
+                  ward_code: code ? parseInt(code) : null,
+                  ward_name: code ? getWardName(code) : ""
+                }));
+              }}
+              disabled={saving}
+              required
+            />
+          </div>
+
           <Textarea
-            label="Địa chỉ phòng khám"
-            placeholder="VD: Số 123, Đường ABC, Phường XYZ, Quận/Huyện, Thành phố"
+            label="Địa chỉ chi tiết"
+            placeholder="Số nhà, tên đường... (VD: Số 123, Đường ABC)"
             value={doctor.clinic_address || ""}
             onValueChange={(v) => setDoctor(prev => ({ ...prev, clinic_address: v }))}
                     variant="bordered"
