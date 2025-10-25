@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, FileText, Calendar, AlertCircle, Plus, Edit2, Award, Building2, Briefcase, CheckCircle, Trash2, GraduationCap, MapPin } from "lucide-react";
-import { 
+import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, FileText, Calendar, AlertCircle, Plus, Edit2, Award, Building2, Briefcase, CheckCircle, Trash2, GraduationCap, MapPin, Eye, X } from "lucide-react";
+import {
   Input, 
   Select, 
   SelectItem,
@@ -66,9 +66,12 @@ export default function DoctorProfile() {
     issued_by: "Cục Quản lý Khám chữa bệnh - Bộ Y tế",
     issuer_title: "Cục trưởng",
     scope_of_practice: "",
-    notes: ""
+    notes: "",
+    proof_document_url: ""
   });
   const [savingLicense, setSavingLicense] = useState(false);
+  const [selectedPdfFile, setSelectedPdfFile] = useState(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   
   // Delete License Modal
   const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onClose: onDeleteModalClose } = useDisclosure();
@@ -296,7 +299,8 @@ export default function DoctorProfile() {
         issued_by: license.issuedBy || license.issued_by || "Cục Quản lý Khám chữa bệnh - Bộ Y tế",
         issuer_title: license.issuerTitle || license.issuer_title || "Cục trưởng",
         scope_of_practice: license.scopeOfPractice || license.scope_of_practice || "",
-        notes: license.notes || ""
+        notes: license.notes || "",
+        proof_document_url: license.proofDocumentUrl || license.proof_document_url || ""
       });
     } else {
       setEditingLicense(null);
@@ -307,10 +311,74 @@ export default function DoctorProfile() {
         issued_by: "Cục Quản lý Khám chữa bệnh - Bộ Y tế",
         issuer_title: "Cục trưởng",
         scope_of_practice: "",
-        notes: ""
+        notes: "",
+        proof_document_url: ""
       });
     }
+    setSelectedPdfFile(null); // Reset PDF file selection
     onLicenseModalOpen();
+  };
+
+  const validateLicenseNumber = (licenseNumber) => {
+    // Format chuẩn Bộ Y Tế: XXXXXX/BYT-GPHN (6 số / BYT-GPHN)
+    // VD: 000001/BYT-GPHN, 123456/BYT-GPHN
+    const licenseRegex = /^\d{6}\/BYT-GPHN$/;
+    return licenseRegex.test(licenseNumber.trim());
+  };
+
+  const handlePdfFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== "application/pdf") {
+      toast.error("Chỉ chấp nhận file PDF!");
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File PDF phải nhỏ hơn 10MB!");
+      return;
+    }
+
+    setSelectedPdfFile(file);
+    
+    // Auto-upload PDF
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      return;
+    }
+
+    setUploadingPdf(true);
+    try {
+      const token = await user.getIdToken();
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("http://localhost:8080/api/licenses/upload-proof", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLicenseForm({ ...licenseForm, proof_document_url: data.proof_document_url });
+        toast.success("Upload PDF thành công!");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Upload PDF thất bại");
+      }
+    } catch (error) {
+      console.error("PDF upload error:", error);
+      toast.error(error.message || "Không thể upload PDF");
+      setSelectedPdfFile(null);
+    } finally {
+      setUploadingPdf(false);
+    }
   };
 
   const handleSaveLicense = async () => {
@@ -321,6 +389,18 @@ export default function DoctorProfile() {
 
     if (!licenseForm.license_number || !licenseForm.issued_date) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+      return;
+    }
+
+    // Validate license number format
+    if (!validateLicenseNumber(licenseForm.license_number)) {
+      toast.error("Số giấy phép không đúng định dạng! Định dạng chuẩn: XXXXXX/BYT-GPHN (VD: 000001/BYT-GPHN)");
+      return;
+    }
+
+    // Validate PDF document for new license
+    if (!editingLicense && !licenseForm.proof_document_url) {
+      toast.error("Vui lòng upload file PDF minh chứng giấy phép!");
       return;
     }
 
@@ -457,8 +537,8 @@ export default function DoctorProfile() {
               <span>{doctor.experience_years} năm kinh nghiệm</span>
             </Chip>
           )}
-        </CardBody>
-      </Card>
+            </CardBody>
+          </Card>
 
       {/* Status Card */}
       <Card className="shadow-md bg-gradient-to-br from-teal-50 to-cyan-50">
@@ -467,8 +547,8 @@ export default function DoctorProfile() {
             <span className="text-sm text-gray-600">Trạng thái:</span>
             <Chip size="sm" color="success" variant="flat" startContent={<CheckCircle size={14} />}>
               Đang hoạt động
-            </Chip>
-          </div>
+                  </Chip>
+                </div>
         </CardBody>
       </Card>
 
@@ -507,7 +587,7 @@ export default function DoctorProfile() {
           </p>
         </CardBody>
       </Card>
-    </div>
+              </div>
   );
 
   // Right Main Panel
@@ -520,17 +600,17 @@ export default function DoctorProfile() {
             <User size={24} className="text-teal-600" />
             Thông tin cá nhân
           </h3>
-        </CardHeader>
-        <Divider />
+          </CardHeader>
+          <Divider />
         <CardBody className="p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Input
+                <Input
               label="Họ và tên"
               value={doctor.name || ""}
               variant="bordered"
               labelPlacement="outside"
               startContent={<User className="text-default-400" size={20} />}
-              isReadOnly
+                  isReadOnly
               classNames={{
                 input: "text-base",
                 inputWrapper: "border-default-200 bg-gray-50"
@@ -539,46 +619,46 @@ export default function DoctorProfile() {
             <Input
               label="Email"
               value={doctor.email || ""}
-              variant="bordered"
+                  variant="bordered"
               labelPlacement="outside"
               startContent={<Mail className="text-default-400" size={20} />}
               isReadOnly
               description="Email không thể thay đổi"
-              classNames={{
+                  classNames={{
                 input: "text-base",
                 inputWrapper: "border-default-200 bg-gray-50"
               }}
             />
-            <Input
+                <Input
               label="Số điện thoại"
               placeholder="VD: 0376971168"
               value={doctor.phone || ""}
               onValueChange={(v) => setDoctor(prev => ({ ...prev, phone: v }))}
-              variant="bordered"
+                  variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}
-              classNames={{
+                  classNames={{
                 input: "text-base",
                 inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
             />
-            <Input
+                <Input
               type="number"
               label="Số năm kinh nghiệm"
               placeholder="VD: 15"
               value={String(doctor.experience_years || 0)}
               onValueChange={(v) => setDoctor(prev => ({ ...prev, experience_years: parseInt(v) || 0 }))}
-              variant="bordered"
+                  variant="bordered"
               labelPlacement="outside"
               startContent={<Award className="text-default-400" size={20} />}
-              classNames={{
+                  classNames={{
                 input: "text-base",
                 inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
-              }}
-            />
-          </div>
+                  }}
+                />
+              </div>
 
-          <Select
+                  <Select
             label="Chuyên khoa"
             placeholder={loadingSpecialities ? "Đang tải..." : "Chọn chuyên khoa"}
             selectedKeys={doctor.speciality_id ? [String(doctor.speciality_id)] : []}
@@ -588,7 +668,7 @@ export default function DoctorProfile() {
               console.log("[Select] Selected:", selected, "→ ID:", id);
               setDoctor(prev => ({ ...prev, speciality_id: id }));
             }}
-            variant="bordered"
+                    variant="bordered"
             labelPlacement="outside"
             startContent={<Stethoscope className="text-default-400" size={20} />}
             classNames={{
@@ -600,11 +680,11 @@ export default function DoctorProfile() {
             {specialities.map((spec) => (
               <SelectItem key={String(spec.id)} textValue={spec.name}>
                 {spec.name}
-              </SelectItem>
-            ))}
-          </Select>
+                      </SelectItem>
+                    ))}
+                  </Select>
 
-          <Input
+                  <Input
             label="Trình độ học vấn"
             placeholder="VD: Tiến sĩ Y khoa, Thạc sĩ, Bác sĩ chuyên khoa II..."
             value={doctor.education_level || ""}
@@ -638,12 +718,12 @@ export default function DoctorProfile() {
             placeholder="VD: Số 123, Đường ABC, Phường XYZ, Quận/Huyện, Thành phố"
             value={doctor.clinic_address || ""}
             onValueChange={(v) => setDoctor(prev => ({ ...prev, clinic_address: v }))}
-            variant="bordered"
+                    variant="bordered"
             labelPlacement="outside"
             startContent={<MapPin className="text-default-400" size={20} />}
             minRows={2}
             maxRows={3}
-            classNames={{
+                    classNames={{
               input: "text-base",
               inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
             }}
@@ -705,6 +785,7 @@ export default function DoctorProfile() {
                 const isActive = license.isActive !== undefined ? license.isActive : license.is_active;
                 const isExpired = license.isExpired !== undefined ? license.isExpired : license.is_expired;
                 const daysUntilExpiry = license.daysUntilExpiry !== undefined ? license.daysUntilExpiry : license.days_until_expiry;
+                const proofDocumentUrl = license.proofDocumentUrl || license.proof_document_url;
 
                 return (
                   <div 
@@ -725,12 +806,25 @@ export default function DoctorProfile() {
 
                     {/* Action Buttons - Top Right */}
                     <div className="absolute top-4 right-4 flex gap-2">
+                      {proofDocumentUrl && (
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          isIconOnly
+                          onPress={() => window.open(proofDocumentUrl, '_blank')}
+                          className="text-blue-600 hover:bg-blue-100"
+                          title="Xem minh chứng PDF"
+                        >
+                          <Eye size={18} />
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="flat"
                         isIconOnly
                         onPress={() => handleOpenLicenseModal(license)}
                         className="text-teal-600 hover:bg-teal-100"
+                        title="Chỉnh sửa"
                       >
                         <Edit2 size={18} />
                       </Button>
@@ -835,8 +929,8 @@ export default function DoctorProfile() {
                             <p className="text-blue-600 text-xs">Không thể xóa giấy phép này</p>
                           </div>
                         </div>
-                      )}
-                    </div>
+                )}
+              </div>
 
                     {/* Decorative Seal/Stamp */}
                     <div className="absolute bottom-6 right-6 opacity-10">
@@ -844,14 +938,14 @@ export default function DoctorProfile() {
                         <FileText size={40} className="text-teal-500" />
                       </div>
                     </div>
-                  </div>
+              </div>
                 );
               })}
             </div>
           )}
-        </CardBody>
-      </Card>
-    </div>
+          </CardBody>
+        </Card>
+      </div>
   );
 
   return (
@@ -890,6 +984,10 @@ export default function DoctorProfile() {
                 variant="bordered"
                 labelPlacement="outside"
                 isRequired
+                description="Định dạng: 6 số / BYT-GPHN"
+                isInvalid={licenseForm.license_number && !validateLicenseNumber(licenseForm.license_number)}
+                errorMessage={licenseForm.license_number && !validateLicenseNumber(licenseForm.license_number) ? "Số giấy phép không đúng định dạng" : ""}
+                color={licenseForm.license_number && validateLicenseNumber(licenseForm.license_number) ? "success" : "default"}
               />
               <Input
                 type="date"
@@ -950,6 +1048,69 @@ export default function DoctorProfile() {
               labelPlacement="outside"
               minRows={2}
             />
+
+            {/* PDF Upload Section */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minh chứng giấy phép (PDF) {!editingLicense && <span className="text-red-500">*</span>}
+              </label>
+              
+              {licenseForm.proof_document_url ? (
+                <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <FileText size={20} className="text-green-600" />
+                    <span className="text-sm text-gray-700">
+                      {editingLicense ? "Đã có file PDF" : selectedPdfFile?.name || "PDF đã upload"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color="primary"
+                      onPress={() => window.open(licenseForm.proof_document_url, '_blank')}
+                      startContent={<Eye size={16} />}
+                    >
+                      Xem
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color="danger"
+                      onPress={() => {
+                        setLicenseForm({ ...licenseForm, proof_document_url: "" });
+                        setSelectedPdfFile(null);
+                      }}
+                      startContent={<X size={16} />}
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfFileSelect}
+                    disabled={uploadingPdf}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-purple-50 file:text-purple-700
+                      hover:file:bg-purple-100
+                      file:cursor-pointer cursor-pointer"
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    Chấp nhận file PDF, tối đa 10MB
+                  </p>
+                  {uploadingPdf && (
+                    <p className="mt-2 text-sm text-purple-600">Đang upload...</p>
+                  )}
+                </div>
+              )}
+            </div>
           </ModalBody>
           <ModalFooter>
             <Button variant="light" onPress={onLicenseModalClose}>
