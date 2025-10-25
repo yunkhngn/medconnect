@@ -76,9 +76,15 @@ services:
       FIREBASE_TOKEN_URI: ${FIREBASE_TOKEN_URI:-https://oauth2.googleapis.com/token}
       FIREBASE_AUTH_PROVIDER_X509_CERT_URL: ${FIREBASE_AUTH_PROVIDER_X509_CERT_URL:-https://www.googleapis.com/oauth2/v1/certs}
       FIREBASE_CLIENT_X509_CERT_URL: ${FIREBASE_CLIENT_X509_CERT_URL}
+      FIREBASE_UNIVERSE_DOMAIN: ${FIREBASE_UNIVERSE_DOMAIN:-googleapis.com}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY:-optional_dummy_key}
+      SEPAY_MERCHANT_ID: ${SEPAY_MERCHANT_ID:-dummy_merchant}
+      SEPAY_API_KEY: ${SEPAY_API_KEY:-dummy_api_key}
+      SEPAY_SECRET_KEY: ${SEPAY_SECRET_KEY:-dummy_secret}
+      APP_BASE_URL: ${APP_BASE_URL:-https://medconnects.app}
     expose:
       - "8080"
     depends_on:
