@@ -28,5 +28,6 @@ export const useToast = () => {
     error: (message, duration) => showToast(message, 'error', duration),
     warning: (message, duration) => showToast(message, 'warning', duration),
     info: (message, duration) => showToast(message, 'info', duration),
+    loading: (message, duration = 10000) => showToast(message, 'loading', duration),
   };
 };

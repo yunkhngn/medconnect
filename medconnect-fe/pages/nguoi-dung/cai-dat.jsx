@@ -137,6 +137,7 @@ export default function PatientProfileWithFrame() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    toast.loading("Đang tải ảnh lên...");
     try {
       const newAvatarUrl = await uploadAvatar(file, user);
       setAvatarUrl(newAvatarUrl);
