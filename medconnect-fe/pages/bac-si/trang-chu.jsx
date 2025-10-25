@@ -69,7 +69,7 @@ export default function DoctorDashboard() {
       const token = await firebaseUser.getIdToken();
       
       // Fetch doctor profile from backend
-      const response = await fetch("http://localhost:8080/api/doctor/profile", {
+      const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
