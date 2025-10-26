@@ -8,8 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.ScheduleDTO;
 import se1961.g1.medconnect.enums.ScheduleStatus;
-import se1961.g1.medconnect.pojo.Doctor;
-import se1961.g1.medconnect.pojo.Speciality;
+import se1961.g1.medconnect.pojo.*;
 import se1961.g1.medconnect.repository.SpecialityRepository;
 import se1961.g1.medconnect.service.*;
 
@@ -46,7 +45,7 @@ public class DoctorController {
             doctorData.put("avatar", doctor.getAvatarUrl());
             
             // Get license number from active license
-            se1961.g1.medconnect.pojo.License activeLicense = doctor.getActiveLicense();
+            License activeLicense = doctor.getActiveLicense();
             doctorData.put("licenseId", activeLicense != null ? activeLicense.getLicenseNumber() : null);
             
             response.add(doctorData);
@@ -54,17 +53,6 @@ public class DoctorController {
         
         return ResponseEntity.ok(response);
     }
-
-
-//    @GetMapping("/")
-//    public ResponseEntity<Doctor> getMe(@RequestHeader("Authorization") String token)  throws Exception {
-//        Optional<Doctor> doctor = doctorService.getDoctor(token);
-//        if (doctor.isPresent()) {
-//            return ResponseEntity.ok(doctor.get());
-//        } else {
-//            return ResponseEntity.notFound().build();
-//        }
-//    }
 
     @GetMapping("/appointments")
     public ResponseEntity<List<AppointmentDTO>> getAppointments(Authentication authentication) throws Exception {
@@ -231,7 +219,7 @@ public class DoctorController {
             currDoc.setWardName((String) request.get("ward_name"));
         }
 
-        doctorService.saveDoctor(currDoc);
+        doctorService.addDoctor(currDoc);
 
         Map<String, Object> updatedProfile = new HashMap<>();
         updatedProfile.put("message", "Profile updated successfully");
