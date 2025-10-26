@@ -8,32 +8,12 @@ import {
   Phone,
   FileText,
   Stethoscope,
-  MapPin,
-  Search,
   ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import PatientFrame from "@/components/layouts/Doctor/Frame";
 
-/**
- * @typedef {Object} Appointment
- * @property {string} id
- * @property {string} patient_name
- * @property {string} patient_id
- * @property {string} patient_phone
- * @property {number} patient_age
- * @property {string} patient_gender
- * @property {string} appointment_date
- * @property {string} appointment_time
- * @property {string} slot
- * @property {"waiting" | "in_progress" | "completed" | "cancelled"} status
- * @property {string} chief_complaint
- * @property {"offline"} visit_type
- * @property {number} appointment_number
- */
-
 export default function PatientSchedulePage() {
-  /** @type {[Appointment[], Function]} */
   const [appointments, setAppointments] = useState([
     {
       id: "1",
@@ -118,8 +98,6 @@ export default function PatientSchedulePage() {
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "completed":
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      case "cancelled":
-        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -133,8 +111,6 @@ export default function PatientSchedulePage() {
         return "Đang khám";
       case "completed":
         return "Hoàn thành";
-      case "cancelled":
-        return "Đã hủy";
       default:
         return status;
     }
@@ -143,67 +119,54 @@ export default function PatientSchedulePage() {
   const handleStartConsultation = (appointmentId) => {
     setAppointments((prev) =>
       prev.map((apt) =>
-        apt.id === appointmentId
-          ? { ...apt, status: "in_progress" }
-          : apt
+        apt.id === appointmentId ? { ...apt, status: "in_progress" } : apt
       )
     );
   };
 
   return (
-    <PatientFrame title="Lịch khám bệnh nhân">
-      <div className="grid grid-cols-12 gap-6 p-6">
-        {/* Bảng thống kê bên trái */}
-        <div className="col-span-12 xl:col-span-3 space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Thống kê ca khám
-              </h2>
+    <PatientFrame title="Khám offline">
+      <div className="grid grid-cols-12 gap-6 p-6 h-[calc(100vh-100px)] overflow-hidden">
+        {/* Sidebar thống kê giống hình 2 */}
+        <div className="col-span-12 xl:col-span-3 flex flex-col h-full overflow-y-auto rounded-2xl bg-white shadow-sm border border-gray-200 p-5">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            Thống kê ca khám
+          </h2>
 
-              <div className="space-y-4">
-                {[
-                  { key: "waiting", label: "Đang chờ", color: "amber" },
-                  { key: "in_progress", label: "Đang khám", color: "blue" },
-                  { key: "completed", label: "Hoàn thành", color: "emerald" },
-                  { key: "all", label: "Tổng ca", color: "teal" },
-                ].map((status) => (
-                  <button
-                    key={status.key}
-                    onClick={() => setFilterStatus(status.key)}
-                    className={`w-full rounded-xl p-4 border-2 transition-all duration-200 text-left ${
-                      filterStatus === status.key
-                        ? `bg-${status.color}-50 border-${status.color}-300 shadow-md`
-                        : "bg-white border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p
-                        className={`text-${status.color}-700 font-semibold`}
-                      >
-                        {status.label}
-                      </p>
-                      <span className="font-bold text-gray-900">
-                        {
-                          appointments.filter(
-                            (a) =>
-                              (status.key === "all" ||
-                                a.status === status.key) &&
-                              a.appointment_date === selectedDate
-                          ).length
-                        }
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            {[
+              { key: "waiting", label: "Đang chờ", color: "amber" },
+              { key: "in_progress", label: "Đang khám", color: "blue" },
+              { key: "completed", label: "Hoàn thành", color: "emerald" },
+              { key: "all", label: "Tổng ca", color: "teal" },
+            ].map((status) => (
+              <button
+                key={status.key}
+                onClick={() => setFilterStatus(status.key)}
+                className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 border-2 font-semibold transition-all duration-200 ${
+                  filterStatus === status.key
+                    ? `bg-${status.color}-100 border-${status.color}-300 text-${status.color}-800 shadow-sm`
+                    : "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <span>{status.label}</span>
+                <span className="text-gray-900">
+                  {
+                    appointments.filter(
+                      (a) =>
+                        (status.key === "all" || a.status === status.key) &&
+                        a.appointment_date === selectedDate
+                    ).length
+                  }
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Danh sách ca khám bên phải */}
-        <div className="col-span-12 xl:col-span-9 space-y-6">
-          <div className="flex justify-between items-center">
+        {/* Danh sách ca khám có thanh cuộn riêng */}
+        <div className="col-span-12 xl:col-span-9 flex flex-col h-full overflow-y-auto rounded-2xl">
+          <div className="flex justify-between items-center mb-5">
             <h2 className="text-2xl font-bold text-gray-900">
               Quản lý ca khám trực tiếp
             </h2>
@@ -227,7 +190,7 @@ export default function PatientSchedulePage() {
               className="w-full px-4 py-2.5 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
 
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-320px)] pr-2">
               {filteredAppointments.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Calendar className="mx-auto mb-3 text-gray-400" size={40} />
@@ -319,9 +282,7 @@ export default function PatientSchedulePage() {
                           <Stethoscope size={18} />
                           {appointment.status === "waiting" && "Bắt đầu khám"}
                           {appointment.status === "in_progress" && "Đang khám"}
-                          {appointment.status === "completed" &&
-                            "Đã hoàn thành"}
-                          {appointment.status === "cancelled" && "Đã hủy"}
+                          {appointment.status === "completed" && "Đã hoàn thành"}
                         </button>
 
                         <button className="py-3 px-6 border-2 border-teal-500 text-teal-600 rounded-lg font-semibold hover:bg-teal-50 transition-all duration-200 flex items-center gap-2">
