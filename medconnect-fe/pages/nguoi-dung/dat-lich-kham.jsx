@@ -92,9 +92,11 @@ export default function DatLichKham() {
       const response = await fetch("http://localhost:8080/doctor/dashboard/all");
       if (response.ok) {
         const data = await response.json();
+        console.log("Fetched doctors:", data.length, "doctors");
         setDoctors(data);
         setFilteredDoctors(data);
       } else {
+        console.error("Failed to fetch doctors:", response.status, response.statusText);
         toast.error("Không thể tải danh sách bác sĩ");
       }
     } catch (error) {
@@ -120,6 +122,7 @@ export default function DatLichKham() {
       );
       if (response.ok) {
         const data = await response.json();
+        console.log(`Available slots for ${selectedDate}:`, data.availableSlots);
         setAvailableSlots(data.availableSlots || []);
       } else {
         toast.error("Không thể tải lịch trống");
@@ -377,7 +380,14 @@ export default function DatLichKham() {
             {/* Slot Selection */}
             {selectedDate && (
               <div>
-                <label className="block text-sm font-medium mb-2">Chọn khung giờ</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Chọn khung giờ</label>
+                  {availableSlots.length > 0 && (
+                    <span className="text-xs text-gray-500">
+                      {availableSlots.length} khung giờ có sẵn
+                    </span>
+                  )}
+                </div>
                 {loadingSlots ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
@@ -390,7 +400,7 @@ export default function DatLichKham() {
                     <p className="text-sm text-gray-500">Vui lòng chọn ngày khác</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2">
                     {availableSlots.map((slot) => (
                       <Button
                         key={slot}
@@ -398,6 +408,7 @@ export default function DatLichKham() {
                         color={selectedSlot === slot ? "primary" : "default"}
                         onClick={() => setSelectedSlot(slot)}
                         startContent={<Clock size={18} />}
+                        className="w-full"
                       >
                         {SLOT_TIMES[slot]}
                       </Button>

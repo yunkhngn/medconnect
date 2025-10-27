@@ -79,6 +79,8 @@ public class FirebaseFilter extends OncePerRequestFilter {
         return path.startsWith("/api/auth") || 
                path.startsWith("/actuator") ||
                path.startsWith("/api/specialities") ||
-               path.startsWith("/api/payment/ipn");
+               path.startsWith("/api/payment/ipn") ||
+               path.startsWith("/doctor/dashboard/all") ||
+               path.matches("/api/appointments/doctor/\\d+/available-slots.*");
     }
 }

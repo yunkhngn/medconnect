@@ -57,6 +57,13 @@ public class DoctorService {
         doctorRepository.deleteById(id);
     }
 
+    /**
+     * Save or update a Doctor entity directly (for profile updates)
+     */
+    public Doctor saveDoctor(Doctor doctor) {
+        return doctorRepository.save(doctor);
+    }
+
     private void mapDtoToDoctor(DoctorDTO dto, Doctor doctor) {
         doctor.setStatus(dto.getStatus());
         doctor.setExperienceYears(dto.getExperienceYears());

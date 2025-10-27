@@ -219,7 +219,7 @@ public class DoctorController {
             currDoc.setWardName((String) request.get("ward_name"));
         }
 
-        doctorService.addDoctor(currDoc);
+        doctorService.saveDoctor(currDoc);
 
         Map<String, Object> updatedProfile = new HashMap<>();
         updatedProfile.put("message", "Profile updated successfully");

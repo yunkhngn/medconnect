@@ -178,6 +178,7 @@ public class AppointmentController {
     ) {
         try {
             String firebaseUid = (String) authentication.getPrincipal();
+            System.out.println("[AppointmentController] Get doctor appointments for firebaseUid: " + firebaseUid);
             
             if (startDate == null) {
                 startDate = LocalDate.now();
@@ -186,8 +187,12 @@ public class AppointmentController {
                 endDate = startDate.plusDays(30);
             }
             
+            System.out.println("[AppointmentController] Date range: " + startDate + " to " + endDate);
+            
             List<Appointment> appointments = appointmentService.getAppointmentsByDoctorFirebaseUid(
                     firebaseUid, startDate, endDate);
+            
+            System.out.println("[AppointmentController] Found " + appointments.size() + " appointments");
             
             // Convert to safe response format
             List<Map<String, Object>> response = appointments.stream()

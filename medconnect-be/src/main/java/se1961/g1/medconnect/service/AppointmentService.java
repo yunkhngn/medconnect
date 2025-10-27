@@ -91,9 +91,13 @@ public class AppointmentService {
     }
     
     public List<Appointment> getAppointmentsByDoctorFirebaseUid(String firebaseUid, LocalDate startDate, LocalDate endDate) throws Exception {
+        System.out.println("[AppointmentService] Looking for doctor with firebaseUid: " + firebaseUid);
         Doctor doctor = doctorRepository.findByFirebaseUid(firebaseUid)
-                .orElseThrow(() -> new Exception("Doctor not found"));
-        return appointmentRepository.findByDoctorAndDateBetween(doctor, startDate, endDate);
+                .orElseThrow(() -> new Exception("Doctor not found with firebaseUid: " + firebaseUid));
+        System.out.println("[AppointmentService] Found doctor: " + doctor.getName() + " (ID: " + doctor.getUserId() + ")");
+        List<Appointment> appointments = appointmentRepository.findByDoctorAndDateBetween(doctor, startDate, endDate);
+        System.out.println("[AppointmentService] Found " + appointments.size() + " appointments");
+        return appointments;
     }
     
     public List<String> getAvailableSlots(Long doctorId, LocalDate date) throws Exception {
