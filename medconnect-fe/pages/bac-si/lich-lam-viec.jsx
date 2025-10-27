@@ -94,7 +94,7 @@ export default function DoctorSchedulePage() {
     if (!silent) {
       setLoading(true);
     } else {
-      setIsRefreshing(true); // Show mini loading indicator
+      setIsRefreshing(true);
     }
     
     try {
@@ -102,14 +102,14 @@ export default function DoctorSchedulePage() {
       const weekDays = getWeekDays(currentWeekStart);
       const startDate = formatDate(weekDays[0]);
       const endDate = formatDate(weekDays[6]);
-
+      
       const response = await fetch(
         `http://localhost:8080/api/schedule/weekly?startDate=${startDate}&endDate=${endDate}`,
         {
           headers: { "Authorization": `Bearer ${token}` }
         }
       );
-
+      
       if (response.ok) {
         const data = await response.json();
         setScheduleData(data);
@@ -129,74 +129,91 @@ export default function DoctorSchedulePage() {
   };
 
   const handleAddSlot = async (date, slot) => {
-    console.log("[ADD SLOT] === START ===");
-    console.log("[ADD SLOT] Date:", date);
-    console.log("[ADD SLOT] Slot:", slot);
-    console.log("[ADD SLOT] Current scheduleData count:", scheduleData.length);
-    console.log("[ADD SLOT] Reserved slots:", scheduleData.filter(s => s.status === "RESERVED").length);
+    const dateStr = formatDate(date);
+    const existingSlot = scheduleData.find(s => s.date === dateStr && s.slot === slot.id);
     
-    // Optimistic Update: Thêm vào UI ngay lập tức
+    if (existingSlot && existingSlot.status !== "EMPTY") {
+      toast.error("Ca làm việc này đã được mở");
+      return;
+    }
+    
+    const isUpdate = existingSlot && existingSlot.id;
+    
+    // Optimistic Update
     const optimisticSlot = {
       id: `temp-${Date.now()}`,
-      date: formatDate(date),
+      date: dateStr,
       slot: slot.id,
       status: "RESERVED",
       appointment: null,
       isOptimistic: true
     };
 
-    console.log("[ADD SLOT] Optimistic slot:", optimisticSlot);
     setScheduleData(prev => {
       const newData = [...prev, optimisticSlot];
-      console.log("[ADD SLOT] Updated scheduleData count:", newData.length);
-      console.log("[ADD SLOT] Updated reserved count:", newData.filter(s => s.status === "RESERVED").length);
       return newData;
     });
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/schedule", {
-        method: "POST",
+      
+      try {
+      const token = await user.getIdToken();
+      
+      let response;
+      if (isUpdate) {
+        // Update existing slot status from EMPTY to RESERVED
+        response = await fetch(`http://localhost:8080/api/schedule/${existingSlot.id}`, {
+          method: "PATCH",
           headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
           },
           body: JSON.stringify({
-          date: formatDate(date),
-          slot: slot.id,
-          status: "RESERVED"
-        })
-      });
+            status: "RESERVED"
+          })
+        });
+      } else {
+        // Create new schedule
+        response = await fetch("http://localhost:8080/api/schedule", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            date: dateStr,
+            slot: slot.id,
+            status: "RESERVED"
+          })
+        });
+      }
 
       if (response.ok) {
         const newSlot = await response.json();
-        console.log("[ADD SLOT] Server response:", newSlot);
-        // Replace optimistic slot với real data từ server
+        // Replace optimistic slot with real data
         setScheduleData(prev => {
           const updated = prev.map(s => 
             s.id === optimisticSlot.id ? newSlot : s
           );
-          console.log("[ADD SLOT] Replaced with real data:", updated);
           return updated;
         });
         
-        // Backup: Silent refresh sau 100ms để đảm bảo sync
+        // Backup: Silent refresh to ensure sync
         setTimeout(() => {
-          console.log("[ADD SLOT] Silent refresh to ensure sync");
-          fetchSchedule(true); // Silent mode - không show loading
+          fetchSchedule(true);
         }, 100);
         
         toast.success("Đã thêm ca làm việc");
       } else {
-        // Rollback nếu thất bại
+        // Rollback on failure
         setScheduleData(prev => prev.filter(s => s.id !== optimisticSlot.id));
         const error = await response.json();
-        console.error("[ADD SLOT] Server error:", error);
-        console.error("[ADD SLOT] Response status:", response.status);
-        toast.error(error.error || error.message || "Không thể thêm ca làm việc");
+        const errorMessage = error.error || error.message || JSON.stringify(error);
+        toast.error(errorMessage);
       }
     } catch (error) {
-      // Rollback nếu có lỗi
+      // Rollback on error
       setScheduleData(prev => prev.filter(s => s.id !== optimisticSlot.id));
       console.error("Error adding slot:", error);
       toast.error("Lỗi kết nối server");
@@ -204,17 +221,11 @@ export default function DoctorSchedulePage() {
   };
 
   const handleDeleteSlot = async (scheduleId) => {
-    // Lưu lại slot để rollback nếu cần
     const deletedSlot = scheduleData.find(s => s.id === scheduleId);
     
-    console.log("[DELETE SLOT] Deleting slot:", scheduleId);
-    // Optimistic Update: Xóa khỏi UI ngay lập tức
-    setScheduleData(prev => {
-      const filtered = prev.filter(s => s.id !== scheduleId);
-      console.log("[DELETE SLOT] Updated scheduleData:", filtered);
-      return filtered;
-    });
-    onClose(); // Đóng modal ngay
+    // Optimistic Update: Remove from UI immediately
+    setScheduleData(prev => prev.filter(s => s.id !== scheduleId));
+    onClose();
 
     try {
       const token = await user.getIdToken();
@@ -224,17 +235,14 @@ export default function DoctorSchedulePage() {
       });
 
       if (response.ok) {
-        console.log("[DELETE SLOT] Successfully deleted");
-        
-        // Backup: Silent refresh sau 100ms để đảm bảo sync
+        // Backup: Silent refresh to ensure sync
         setTimeout(() => {
-          console.log("[DELETE SLOT] Silent refresh to ensure sync");
           fetchSchedule(true);
         }, 100);
         
         toast.success("Đã xóa ca làm việc");
       } else {
-        // Rollback nếu thất bại
+        // Rollback on failure
         if (deletedSlot) {
           setScheduleData(prev => [...prev, deletedSlot]);
         }
@@ -242,7 +250,7 @@ export default function DoctorSchedulePage() {
         toast.error(error.error || "Không thể xóa ca làm việc");
       }
     } catch (error) {
-      // Rollback nếu có lỗi
+      // Rollback on error
       if (deletedSlot) {
         setScheduleData(prev => [...prev, deletedSlot]);
       }
@@ -263,10 +271,6 @@ export default function DoctorSchedulePage() {
     const found = scheduleData.find(
       (s) => s.date === dateStr && s.slot === slot.id
     );
-    // Debug logging (comment out in production)
-    if (found) {
-      console.log(`[GET SLOT] Found slot for ${dateStr} ${slot.id}:`, found);
-    }
     return found;
   };
 
