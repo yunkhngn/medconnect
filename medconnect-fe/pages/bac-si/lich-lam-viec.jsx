@@ -129,6 +129,12 @@ export default function DoctorSchedulePage() {
   };
 
   const handleAddSlot = async (date, slot) => {
+    console.log("[ADD SLOT] === START ===");
+    console.log("[ADD SLOT] Date:", date);
+    console.log("[ADD SLOT] Slot:", slot);
+    console.log("[ADD SLOT] Current scheduleData count:", scheduleData.length);
+    console.log("[ADD SLOT] Reserved slots:", scheduleData.filter(s => s.status === "RESERVED").length);
+    
     // Optimistic Update: Thêm vào UI ngay lập tức
     const optimisticSlot = {
       id: `temp-${Date.now()}`,
@@ -142,7 +148,8 @@ export default function DoctorSchedulePage() {
     console.log("[ADD SLOT] Optimistic slot:", optimisticSlot);
     setScheduleData(prev => {
       const newData = [...prev, optimisticSlot];
-      console.log("[ADD SLOT] Updated scheduleData:", newData);
+      console.log("[ADD SLOT] Updated scheduleData count:", newData.length);
+      console.log("[ADD SLOT] Updated reserved count:", newData.filter(s => s.status === "RESERVED").length);
       return newData;
     });
 
@@ -184,7 +191,9 @@ export default function DoctorSchedulePage() {
         // Rollback nếu thất bại
         setScheduleData(prev => prev.filter(s => s.id !== optimisticSlot.id));
         const error = await response.json();
-        toast.error(error.error || "Không thể thêm ca làm việc");
+        console.error("[ADD SLOT] Server error:", error);
+        console.error("[ADD SLOT] Response status:", response.status);
+        toast.error(error.error || error.message || "Không thể thêm ca làm việc");
       }
     } catch (error) {
       // Rollback nếu có lỗi
