@@ -88,6 +88,12 @@ public class ScheduleService {
     }
 
     public ScheduleDTO addSchedule(ScheduleDTO dto, Long userId) throws Exception {
+        System.out.println("[ScheduleService.addSchedule] Called with:");
+        System.out.println("  - userId: " + userId);
+        System.out.println("  - dto.date: " + dto.getDate());
+        System.out.println("  - dto.slot: " + dto.getSlot());
+        System.out.println("  - dto.status: " + dto.getStatus());
+        
         User user = userService.findById(userId)
                 .orElseThrow(() -> new Exception("User not found"));
 
@@ -96,16 +102,20 @@ public class ScheduleService {
             throw new Exception("Không thể đặt lịch cho ngày đã qua");
         }
 
+        System.out.println("[ScheduleService.addSchedule] Checking if schedule exists...");
         if (scheduleRepository.findByUserUserIdAndDateAndSlot(userId, dto.getDate(), dto.getSlot()).isPresent()) {
             throw new Exception("Schedule already exists");
         }
 
+        System.out.println("[ScheduleService.addSchedule] Creating new schedule...");
         Schedule schedule = new Schedule();
         schedule.setDate(dto.getDate());
         schedule.setSlot(dto.getSlot());
         schedule.setStatus(dto.getStatus());
         schedule.setUser(user);
         scheduleRepository.save(schedule);
+        
+        System.out.println("[ScheduleService.addSchedule] Saved with ID: " + schedule.getScheduleId());
 
         return new ScheduleDTO(schedule);
     }

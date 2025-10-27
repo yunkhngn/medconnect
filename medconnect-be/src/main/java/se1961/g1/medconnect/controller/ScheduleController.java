@@ -59,13 +59,29 @@ public class ScheduleController {
             @RequestBody ScheduleDTO scheduleDTO
     ) {
         try {
+            System.out.println("[ADD SCHEDULE] ========== START ==========");
+            System.out.println("[ADD SCHEDULE] Received ScheduleDTO:");
+            System.out.println("[ADD SCHEDULE] - Date: " + scheduleDTO.getDate());
+            System.out.println("[ADD SCHEDULE] - Slot: " + scheduleDTO.getSlot());
+            System.out.println("[ADD SCHEDULE] - Status: " + scheduleDTO.getStatus());
+            
             String firebaseUid = (String) authentication.getPrincipal();
             Doctor doctor = doctorRepository.findByFirebaseUid(firebaseUid)
                     .orElseThrow(() -> new Exception("Doctor not found"));
             
+            System.out.println("[ADD SCHEDULE] Doctor ID: " + doctor.getUserId());
+            
             ScheduleDTO created = scheduleService.addSchedule(scheduleDTO, doctor.getUserId());
+            System.out.println("[ADD SCHEDULE] Created successfully: " + created.getId());
+            System.out.println("[ADD SCHEDULE] ========== END ==========");
             return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            System.err.println("[ADD SCHEDULE] IllegalArgumentException: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid slot or status: " + e.getMessage()));
         } catch (Exception e) {
+            System.err.println("[ADD SCHEDULE] Exception: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
