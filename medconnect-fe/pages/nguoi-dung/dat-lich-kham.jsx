@@ -5,6 +5,7 @@ import {
 } from "@heroui/react";
 import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
+import RouteMap from "@/components/ui/RouteMap";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
@@ -97,6 +98,9 @@ export default function DatLichKham() {
   // Map (Geoapify) for preview doctor
   const [mapUrl, setMapUrl] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
+  const [routeUrl, setRouteUrl] = useState("");
+  const [originAddr, setOriginAddr] = useState("");
+  const [destAddr, setDestAddr] = useState("");
   const [loadingMap, setLoadingMap] = useState(false);
   const [mapError, setMapError] = useState(false);
 
@@ -369,6 +373,63 @@ export default function DatLichKham() {
     return () => controller.abort();
   }, [previewDoctor]);
 
+  // Build patient -> clinic route link (Google Maps) using patient profile
+  useEffect(() => {
+    const buildRoute = async () => {
+      try {
+        if (!previewDoctor || !user) { setRouteUrl(""); return; }
+        const token = await user.getIdToken();
+        const res = await fetch('http://localhost:8080/api/patient/profile', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { setRouteUrl(""); return; }
+        const profile = await res.json();
+        const addrParts = [];
+        const detail = profile.address_detail || profile.addressDetail || profile.address;
+        if (detail) addrParts.push(detail);
+        const wardName = profile.ward_name || (profile.ward_code ? getWardName(profile.ward_code) : "");
+        const districtName = profile.district_name || (profile.district_code ? getDistrictName(profile.district_code) : "");
+        const provinceName = profile.province_name || (profile.province_code ? getProvinceName(profile.province_code) : "");
+        if (wardName) addrParts.push(wardName);
+        if (districtName) addrParts.push(districtName);
+        if (provinceName) addrParts.push(provinceName);
+        const origin = addrParts.filter(Boolean).join(', ');
+        const destination = previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || '';
+        setOriginAddr(origin);
+        setDestAddr(destination);
+        if (!origin || !destination) { setRouteUrl(""); return; }
+
+        // Prefer coordinates to avoid ambiguous Google geocoding
+        const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
+        const geocode = async (text) => {
+          try {
+            const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text)}&limit=1&apiKey=${apiKey}`;
+            const r = await fetch(url);
+            if (!r.ok) return null;
+            const j = await r.json();
+            const f = j?.features?.[0];
+            if (f?.geometry?.coordinates) {
+              const [lon, lat] = f.geometry.coordinates;
+              return { lat, lon };
+            }
+          } catch {}
+          return null;
+        };
+
+        if (apiKey) {
+          const [from, to] = await Promise.all([geocode(origin), geocode(destination)]);
+          if (from && to) {
+            const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lon}&destination=${to.lat},${to.lon}&travelmode=driving`;
+            setRouteUrl(gmaps);
+            return;
+          }
+        }
+        // Fallback to address strings
+        setRouteUrl(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`);
+      } catch { setRouteUrl(""); }
+    };
+    buildRoute();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewDoctor, user]);
+
   const handleDateChange = (date) => {
     setSelectedDate(date);
     setSelectedSlot(""); // Reset slot when date changes
@@ -609,21 +670,38 @@ export default function DatLichKham() {
                       <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
                     </div>
                     <div className="rounded-xl overflow-hidden bg-gray-100">
-                      {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
-                      {!loadingMap && embedUrl && (
-                        <iframe
-                          src={embedUrl}
-                          className="w-full h-96 border-0"
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                          allowFullScreen
+                      {originAddr && destAddr && process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ? (
+                        <RouteMap
+                          originAddress={originAddr}
+                          destinationAddress={destAddr}
+                          apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}
                         />
+                      ) : (
+                        <>
+                          {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
+                          {!loadingMap && embedUrl && (
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-96 border-0"
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              allowFullScreen
+                            />
+                          )}
+                          {!loadingMap && !embedUrl && mapUrl && (
+                            <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                          )}
+                          {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                            <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                          )}
+                        </>
                       )}
-                      {!loadingMap && !embedUrl && mapUrl && (
-                        <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
-                      )}
-                      {!loadingMap && !embedUrl && !mapUrl && mapError && (
-                        <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                      {routeUrl && (
+                        <div className="p-3 bg-white/70 border-t flex justify-end">
+                          <Button as={"a"} href={routeUrl} target="_blank" rel="noopener" color="primary" size="sm">
+                            Mở trên Google Maps
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
