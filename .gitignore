@@ -7,6 +7,8 @@
 # Node modules
 node_modules/
 
+tmp
+
 # Next.js build output
 .next/
 out/
@@ -42,4 +44,3 @@ Thumbs.db
 *.mdf
 *.ldf
 
-tmp/
