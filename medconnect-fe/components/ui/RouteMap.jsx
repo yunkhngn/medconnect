@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 export default function RouteMap({ originAddress, destinationAddress, apiKey }) {
   const containerRef = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [fromOverride, setFromOverride] = useState(null); // {lat, lon} when using current location
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Defer load until map is near viewport
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
   }, []);
 
   useEffect(() => {
-    if (!originAddress || !destinationAddress || !apiKey || !visible) return;
+    if (!destinationAddress || !apiKey || !visible) return; // origin can be override
     let mapInstance;
     let aborted = false;
     let LRef = null;
@@ -65,7 +67,15 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
         link.crossOrigin = "";
         document.head.appendChild(link);
       }
-      const from = await geocode(originAddress);
+      // Fix default marker icon urls when using CDN ESM (avoid broken icon with 'Mar' text)
+      if (LRef?.Icon?.Default) {
+        LRef.Icon.Default.mergeOptions({
+          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        });
+      }
+      const from = fromOverride || (await geocode(originAddress));
       const to = await geocode(destinationAddress);
       if (aborted || !from || !to || !containerRef.current || !LRef) return;
 
@@ -75,8 +85,20 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
         { attribution: "© OpenStreetMap contributors" }
       ).addTo(mapInstance);
 
-      LRef.marker([from.lat, from.lon]).addTo(mapInstance);
-      LRef.marker([to.lat, to.lon]).addTo(mapInstance);
+      // Custom div icons for origin (home) and destination (clinic/office)
+      const makeDivIcon = (bg, emoji) =>
+        LRef.divIcon({
+          className: "",
+          html: `<div style="width:28px;height:28px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.9)">${emoji}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
+          popupAnchor: [0, -28],
+        });
+      const homeIcon = makeDivIcon('#22c55e', '🏠');
+      const officeIcon = makeDivIcon('#0ea5a9', '🏥');
+
+      LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
+      LRef.marker([to.lat, to.lon], { icon: officeIcon }).addTo(mapInstance);
 
       try {
         const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
@@ -122,9 +144,48 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
       aborted = true;
       if (mapInstance) mapInstance.remove();
     };
-  }, [originAddress, destinationAddress, apiKey, visible]);
+  }, [originAddress, fromOverride, destinationAddress, apiKey, visible]);
 
-  return <div ref={containerRef} className="w-full h-96 rounded-xl overflow-hidden" />;
+  const requestCurrentLocation = () => {
+    if (!('geolocation' in navigator)) return;
+    if (!confirm('Sử dụng vị trí hiện tại của bạn để tính đường đi?')) return;
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFromOverride({ lat: latitude, lon: longitude });
+        setIsGettingLocation(false);
+      },
+      () => setIsGettingLocation(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  return (
+    <div className="relative w-full h-96 rounded-xl overflow-hidden">
+      <div ref={containerRef} className="w-full h-full" />
+      <div className="absolute top-2 right-2 flex gap-2 z-[1000]">
+        {fromOverride ? (
+          <button
+            onClick={() => setFromOverride(null)}
+            className="px-3 py-1.5 rounded-lg bg-white/90 border text-sm hover:bg-white"
+            title="Quay lại dùng địa chỉ hồ sơ"
+          >
+            Dùng địa chỉ hồ sơ
+          </button>
+        ) : (
+          <button
+            onClick={requestCurrentLocation}
+            className="px-3 py-1.5 rounded-lg bg-white/90 border text-sm hover:bg-white"
+            disabled={isGettingLocation}
+            title="Sử dụng vị trí hiện tại"
+          >
+            {isGettingLocation ? 'Đang lấy vị trí...' : 'Dùng vị trí hiện tại'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 

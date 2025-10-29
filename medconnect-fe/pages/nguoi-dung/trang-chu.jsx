@@ -189,7 +189,7 @@ export default function PatientDashboard() {
           </Button>
         </CardBody>
       </Card>
-    </div>
+        </div>
   );
 
   const rightChildren = (
@@ -225,8 +225,8 @@ export default function PatientDashboard() {
               >
                 Đặt khám
               </Button>
-            </div>
-          </div>
+                  </div>
+                </div>
         </CardBody>
       </Card>
 
@@ -250,7 +250,7 @@ export default function PatientDashboard() {
               <p className="text-3xl font-bold text-gray-900">
                 {stats.upcomingAppointments}
               </p>
-            </div>
+        </div>
 
             <div className="p-4 bg-green-50 rounded-lg border-l-4 border-l-green-500">
               <div className="flex items-center justify-between mb-2">
@@ -277,12 +277,12 @@ export default function PatientDashboard() {
                     Chưa có
                   </Chip>
                 )}
-              </div>
+                      </div>
               <p className="text-sm text-gray-600 mb-1">Hồ sơ bệnh án</p>
               <p className="text-3xl font-bold text-gray-900">
                 {stats.hasEMR ? "1" : "0"}
-              </p>
-            </div>
+                        </p>
+                      </div>
 
             <div className="p-4 bg-rose-50 rounded-lg border-l-4 border-l-rose-500">
               <div className="flex items-center justify-between mb-2">
@@ -293,8 +293,8 @@ export default function PatientDashboard() {
               </div>
               <p className="text-sm text-gray-600 mb-1">Sức khỏe</p>
               <p className="text-3xl font-bold text-gray-900">Tốt</p>
-            </div>
-          </div>
+                    </div>
+                  </div>
         </CardBody>
       </Card>
 
@@ -320,7 +320,7 @@ export default function PatientDashboard() {
                   Tạo hồ sơ bệnh án ngay
                 </Button>
               </div>
-            </div>
+              </div>
           </CardBody>
         </Card>
       )}
@@ -357,8 +357,8 @@ export default function PatientDashboard() {
                 Đặt lịch khám
               </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
+            ) : (
+              <div className="space-y-4">
               {appointments.map((apt) => (
                 <Card key={apt.id} shadow="none" className="border">
                   <CardBody className="p-4">
@@ -373,7 +373,7 @@ export default function PatientDashboard() {
                           <p className="text-sm text-gray-600">{apt.specialty}</p>
                           <p className="text-sm text-gray-500 mt-1">{apt.reason}</p>
                         </div>
-                      </div>
+                    </div>
                       <div className="text-right">
                         <Chip size="sm" color="primary" variant="flat">
                           {apt.status}
@@ -381,14 +381,14 @@ export default function PatientDashboard() {
                         <p className="text-sm mt-2 flex items-center gap-1">
                           <Clock size={14} />
                           {apt.time}
-                        </p>
-                      </div>
+                    </p>
+                  </div>
                     </div>
                   </CardBody>
                 </Card>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </CardBody>
       </Card>
 
@@ -422,7 +422,7 @@ export default function PatientDashboard() {
           </ul>
         </CardBody>
       </Card>
-    </div>
+          </div>
   );
 
   return (
