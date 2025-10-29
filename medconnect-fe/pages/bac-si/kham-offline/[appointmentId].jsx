@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Button, Card, CardBody, CardHeader, Input, Textarea, Select, SelectItem, Chip, Divider } from "@heroui/react";
-import { Calendar, Save, ArrowLeft, Plus } from "lucide-react";
+import { Calendar, Save, ArrowLeft, Plus, Clock, FileText, Stethoscope, Pill, AlertCircle, X } from "lucide-react";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import Grid from "@/components/layouts/Grid";
 import ToastNotification from "@/components/ui/ToastNotification";
@@ -44,12 +44,31 @@ export default function OfflineExamDetailPage() {
     (async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`);
+        const res = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (!res.ok) throw new Error("Không tìm thấy lịch hẹn");
         const data = await res.json();
+        console.log("[Offline Exam] Appointment data:", data);
+        console.log("[Offline Exam] Patient avatar/idPhotoUrl:", data.patient?.idPhotoUrl, data.patient?.avatar);
         setAppointmentInfo(data);
         setPatientUserId(String(data.patient?.id || ""));
-        setRecord((prev) => ({ ...prev, visit_date: data.date || prev.visit_date, visit_type: (data.type||"OFFLINE").toString().toLowerCase() }));
+        // Prefill visit date, type and chief complaint from appointment.reason (JSON or plain text)
+        let reasonText = "";
+        try {
+          if (data?.reason) {
+            const parsed = JSON.parse(data.reason);
+            reasonText = parsed?.reason || parsed?.text || parsed?.detail || "";
+          }
+        } catch (_) {
+          reasonText = data?.reason || "";
+        }
+        setRecord((prev) => ({
+          ...prev,
+          visit_date: data.date || prev.visit_date,
+          visit_type: (data.type||"OFFLINE").toString().toLowerCase(),
+          chief_complaint: reasonText || prev.chief_complaint
+        }));
         await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
       } catch (e) { toast.error(e.message || "Không thể tải lịch hẹn"); }
     })();
@@ -86,27 +105,38 @@ export default function OfflineExamDetailPage() {
         <CardHeader><h3 className="font-semibold">Thông tin lịch hẹn</h3></CardHeader>
         <Divider />
         <CardBody className="space-y-2">
-          {!appointmentInfo ? (
+          {appointmentInfo?.patient ? (() => {
+            const patientName = appointmentInfo.patient.name || "Bệnh nhân";
+            // Priority: idPhotoUrl > avatar > ui-avatars fallback
+            const avatarUrl = appointmentInfo.patient.idPhotoUrl || appointmentInfo.patient.avatar;
+            const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(patientName)}&background=0D9488&color=fff&size=128`;
+            const avatarSrc = avatarUrl || fallbackUrl;
+            return (
+              <div className="flex items-start gap-3">
+                <img
+                  src={avatarSrc}
+                  className="w-[72px] h-[96px] rounded-lg object-cover border-2 border-teal-400"
+                  alt={`${patientName} avatar`}
+                  loading="eager"
+                  onError={(e) => {
+                    // Prevent infinite loop
+                    if (e.target.src !== fallbackUrl) {
+                      e.target.src = fallbackUrl;
+                    }
+                  }}
+                />
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900 text-base">{patientName}</p>
+                  <p className="text-xs text-gray-500 mt-1">Mã lịch hẹn #{appointmentId}</p>
+                </div>
+              </div>
+            );
+          })() : (
             <div className="flex items-start gap-3">
-              <div className="w-16 h-[85px] rounded-lg bg-gray-200 animate-pulse" />
-              <div className="space-y-2 flex-1">
+              <div className="w-[72px] h-[96px] rounded-lg bg-gray-200 animate-pulse border-2 border-teal-400" />
+              <div className="flex-1 space-y-2">
                 <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
                 <div className="h-3 w-20 bg-gray-100 rounded animate-pulse" />
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-3">
-              <img
-                src={appointmentInfo?.patient?.idPhotoUrl || appointmentInfo?.patient?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointmentInfo?.patient?.name||'BN')}&background=0D9488&color=fff`}
-                className="w-16 h-[85px] rounded-lg object-cover border-2 border-teal-400"
-                alt="avatar"
-                onError={(e) => {
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(appointmentInfo?.patient?.name||'BN')}&background=0D9488&color=fff`;
-                }}
-              />
-              <div className="flex-1">
-                <p className="font-bold text-gray-900 text-base">{appointmentInfo?.patient?.name || "Bệnh nhân"}</p>
-                <p className="text-xs text-gray-500 mt-1">Mã lịch hẹn #{appointmentId}</p>
               </div>
             </div>
           )}
@@ -129,52 +159,354 @@ export default function OfflineExamDetailPage() {
 
   const rightChildren = (
     <div className="space-y-6">
-      <Card>
-        <CardHeader><h2 className="text-xl font-semibold flex items-center gap-2"><Calendar className="text-primary" size={22}/>Thông tin khám</h2></CardHeader>
-        <CardBody className="space-y-4">
+      {/* Thông tin khám - Section 1 */}
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-blue-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Calendar className="text-blue-600" size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">Thông tin khám</h2>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="pt-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input type="date" label="Ngày khám" value={record.visit_date} onValueChange={(v)=>setRecord({...record, visit_date:v})} variant="bordered" labelPlacement="outside" />
-            <Input type="time" label="Giờ khám" value={record.visit_time} onValueChange={(v)=>setRecord({...record, visit_time:v})} variant="bordered" labelPlacement="outside" />
-            <Select label="Loại khám" selectedKeys={[record.visit_type]} onSelectionChange={(k)=>setRecord({...record, visit_type:Array.from(k)[0]})} variant="bordered" labelPlacement="outside"><SelectItem key="offline">Offline</SelectItem><SelectItem key="online">Online</SelectItem></Select>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Ngày khám</label>
+              <Input 
+                type="date" 
+                value={record.visit_date} 
+                onValueChange={(v)=>setRecord({...record, visit_date:v})} 
+                variant="bordered"
+                classNames={{
+                  input: "font-medium text-gray-900",
+                  inputWrapper: "border-gray-300 hover:border-blue-400 transition-colors"
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Giờ khám</label>
+              <Input 
+                type="time" 
+                value={record.visit_time} 
+                onValueChange={(v)=>setRecord({...record, visit_time:v})} 
+                variant="bordered"
+                classNames={{
+                  input: "font-medium text-gray-900",
+                  inputWrapper: "border-gray-300 hover:border-blue-400 transition-colors"
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Loại khám</label>
+              <Select 
+                selectedKeys={[record.visit_type]} 
+                isDisabled 
+                variant="bordered"
+                classNames={{
+                  trigger: "bg-gray-50",
+                  value: "font-medium"
+                }}
+              >
+                <SelectItem key="offline">Offline</SelectItem>
+                <SelectItem key="online">Online</SelectItem>
+              </Select>
+            </div>
           </div>
-          <Textarea label="Lý do khám" value={record.chief_complaint} onValueChange={(v)=>setRecord({...record, chief_complaint:v})} variant="bordered" labelPlacement="outside" minRows={2} isRequired />
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1">
+              Lý do khám <span className="text-red-500">*</span>
+            </label>
+            <Textarea 
+              value={record.chief_complaint} 
+              onValueChange={(v)=>setRecord({...record, chief_complaint:v})} 
+              variant="bordered"
+              placeholder="Nhập lý do khám của bệnh nhân..."
+              minRows={3}
+              classNames={{
+                input: "font-medium text-gray-900",
+                inputWrapper: "border-gray-300 hover:border-blue-400 transition-colors"
+              }}
+              isRequired 
+            />
+          </div>
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader><h2 className="text-xl font-semibold">Chẩn đoán</h2></CardHeader>
-        <CardBody className="space-y-4">
-          <Input label="Chẩn đoán chính" value={record.diagnosis.primary} onValueChange={(v)=>setRecord({...record, diagnosis:{...record.diagnosis, primary:v}})} variant="bordered" labelPlacement="outside" isRequired />
-          <div>
-            <label className="text-sm font-medium mb-2 block">Chẩn đoán phụ</label>
-            <div className="flex gap-2 mb-2"><Input placeholder="VD: Viêm amidan" value={secondaryDiagnosis} onValueChange={setSecondaryDiagnosis} variant="bordered"/><Button color="primary" variant="flat" onClick={addSecondary}><Plus size={16}/> Thêm</Button></div>
-            <div className="flex flex-wrap gap-2">{record.diagnosis.secondary.map((d,i)=>(<Chip key={i} onClose={()=>removeSecondary(i)} variant="flat" color="secondary">{d}</Chip>))}</div>
+      {/* Chẩn đoán - Section 2 */}
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-amber-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Stethoscope className="text-amber-600" size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">Chẩn đoán</h2>
           </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">Mã ICD-10</label>
-            <div className="flex gap-2 mb-2"><Input placeholder="VD: J03.9" value={icdCode} onValueChange={setIcdCode} variant="bordered"/><Button color="primary" variant="flat" onClick={addICD}><Plus size={16}/> Thêm</Button></div>
-            <div className="flex flex-wrap gap-2">{record.diagnosis.icd_codes.map((c,i)=>(<Chip key={i} variant="flat" color="primary">{c}</Chip>))}</div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="pt-6 space-y-5">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide flex items-center gap-1">
+              Chẩn đoán chính <span className="text-red-500">*</span>
+            </label>
+            <Input 
+              label="" 
+              value={record.diagnosis.primary} 
+              onValueChange={(v)=>setRecord({...record, diagnosis:{...record.diagnosis, primary:v}})} 
+              variant="bordered"
+              placeholder="Nhập chẩn đoán chính..."
+              classNames={{
+                input: "font-medium text-gray-400",
+                inputWrapper: "border-gray-300 hover:border-amber-400 transition-colors"
+              }}
+              isRequired 
+            />
+          </div>
+          
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block">Chẩn đoán phụ</label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="VD: Viêm amidan" 
+                value={secondaryDiagnosis} 
+                onValueChange={setSecondaryDiagnosis} 
+                variant="bordered"
+                classNames={{
+                  input: "text-gray-400",
+                  inputWrapper: "border-gray-300"
+                }}
+                onKeyPress={(e) => e.key === 'Enter' && addSecondary()}
+              />
+              <Button 
+                color="warning" 
+                variant="flat" 
+                onClick={addSecondary}
+                className="font-medium"
+                startContent={<Plus size={16} />}
+              >
+                Thêm
+              </Button>
+            </div>
+            {record.diagnosis.secondary.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {record.diagnosis.secondary.map((d,i)=>(
+                  <Chip 
+                    key={i} 
+                    onClose={()=>removeSecondary(i)} 
+                    variant="flat" 
+                    color="warning"
+                    className="font-medium"
+                  >
+                    {d}
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block">Mã ICD-10</label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="VD: J03.9" 
+                value={icdCode} 
+                onValueChange={setIcdCode} 
+                variant="bordered"
+                classNames={{
+                  input: "font-mono text-gray-400",
+                  inputWrapper: "border-gray-300"
+                }}
+                onKeyPress={(e) => e.key === 'Enter' && addICD()}
+              />
+              <Button 
+                color="primary" 
+                variant="flat" 
+                onClick={addICD}
+                className="font-medium"
+                startContent={<Plus size={16} />}
+              >
+                Thêm
+              </Button>
+            </div>
+            {record.diagnosis.icd_codes.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {record.diagnosis.icd_codes.map((c,i)=>(
+                  <Chip 
+                    key={i} 
+                    variant="flat" 
+                    color="primary"
+                    className="font-mono font-semibold"
+                  >
+                    {c}
+                  </Chip>
+                ))}
+              </div>
+            )}
           </div>
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader><h2 className="text-xl font-semibold">Đơn thuốc</h2></CardHeader>
-        <CardBody className="space-y-4">
+      {/* Đơn thuốc - Section 3 */}
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-green-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Pill className="text-green-600" size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">Đơn thuốc</h2>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="pt-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label="Tên thuốc" value={medicationInput.name} onValueChange={(v)=>setMedicationInput({...medicationInput,name:v})} variant="bordered" />
-            <Input label="Liều lượng" value={medicationInput.dosage} onValueChange={(v)=>setMedicationInput({...medicationInput,dosage:v})} variant="bordered" />
-            <Input label="Tần suất" value={medicationInput.frequency} onValueChange={(v)=>setMedicationInput({...medicationInput,frequency:v})} variant="bordered" />
-            <Input label="Thời gian" value={medicationInput.duration} onValueChange={(v)=>setMedicationInput({...medicationInput,duration:v})} variant="bordered" />
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Tên thuốc</label>
+              <Input 
+                value={medicationInput.name} 
+                onValueChange={(v)=>setMedicationInput({...medicationInput, name:v})} 
+                variant="bordered"
+                placeholder="Tên thuốc..."
+                classNames={{
+                  input: "font-medium text-gray-400",
+                  inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Liều lượng</label>
+              <Input 
+                value={medicationInput.dosage} 
+                onValueChange={(v)=>setMedicationInput({...medicationInput, dosage:v})} 
+                variant="bordered"
+                placeholder="VD: 500mg"
+                classNames={{
+                  input: "font-medium text-gray-400",
+                  inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Tần suất</label>
+              <Input 
+                value={medicationInput.frequency} 
+                onValueChange={(v)=>setMedicationInput({...medicationInput, frequency:v})} 
+                variant="bordered"
+                placeholder="VD: 2 lần/ngày"
+                classNames={{
+                  input: "font-medium text-gray-400",
+                  inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
+                }}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Thời gian</label>
+              <Input 
+                value={medicationInput.duration} 
+                onValueChange={(v)=>setMedicationInput({...medicationInput, duration:v})} 
+                variant="bordered"
+                placeholder="VD: 7 ngày"
+                classNames={{
+                  input: "font-medium text-gray-400",
+                  inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
+                }}
+              />
+            </div>
           </div>
-          <Button color="primary" variant="flat" onClick={addMedication}><Plus size={16}/> Thêm thuốc</Button>
-          {record.prescriptions.length>0 && (<div className="space-y-2 mt-3">{record.prescriptions.map((m,i)=>(<div key={i} className="p-3 bg-gray-50 rounded-lg flex items-start justify-between"><div><p className="font-semibold">{m.name}</p><p className="text-sm text-gray-600">{m.dosage} • {m.frequency} • {m.duration}</p></div><Button size="sm" variant="light" color="danger" isIconOnly onClick={()=>removeMedication(i)}>×</Button></div>))}</div>)}
+          <Button 
+            color="success" 
+            variant="flat" 
+            onClick={addMedication}
+            className="font-medium w-full md:w-auto"
+            startContent={<Plus size={18} />}
+          >
+            Thêm thuốc vào đơn
+          </Button>
+          
+          {record.prescriptions.length > 0 && (
+            <div className="space-y-3 mt-4">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block">Danh sách thuốc đã thêm</label>
+              <div className="space-y-2">
+                {record.prescriptions.map((m,i)=>(
+                  <div 
+                    key={i} 
+                    className="p-4 bg-white border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900 mb-1">{m.name}</p>
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                          {m.dosage && <span className="flex items-center gap-1"><Pill size={14} /> {m.dosage}</span>}
+                          {m.frequency && <span className="flex items-center gap-1"><Clock size={14} /> {m.frequency}</span>}
+                          {m.duration && <span className="flex items-center gap-1"><Calendar size={14} /> {m.duration}</span>}
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="light" 
+                        color="danger" 
+                        isIconOnly 
+                        onClick={()=>removeMedication(i)}
+                        className="ml-2"
+                      >
+                        <X size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardBody>
       </Card>
 
-      <Card><CardHeader><h2 className="text-xl font-semibold">Ghi chú</h2></CardHeader><CardBody><Textarea placeholder="Ghi chú thêm..." value={record.notes} onValueChange={(v)=>setRecord({...record, notes:v})} variant="bordered" minRows={4} /></CardBody></Card>
+      {/* Ghi chú - Section 4 */}
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-purple-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <FileText className="text-purple-600" size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">Ghi chú</h2>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="pt-6">
+          <Textarea 
+            placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám..." 
+            value={record.notes} 
+            onValueChange={(v)=>setRecord({...record, notes:v})} 
+            variant="bordered" 
+            minRows={4}
+            classNames={{
+              input: "font-medium text-gray-400",
+              inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
+            }}
+          />
+        </CardBody>
+      </Card>
 
-      <div className="flex justify-end gap-3"><Button variant="bordered" onClick={()=>router.push("/bac-si/kham-offline")}>Hủy</Button><Button color="primary" startContent={<Save size={18}/>} onClick={handleSave} isLoading={saving}>Lưu & Hoàn thành lịch hẹn</Button></div>
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+        <Button 
+          variant="bordered" 
+          onClick={()=>router.push("/bac-si/kham-offline")}
+          className="font-medium"
+          size="lg"
+        >
+          Hủy
+        </Button>
+        <Button 
+          color="primary" 
+          startContent={<Save size={18}/>} 
+          onClick={handleSave} 
+          isLoading={saving}
+          className="font-medium"
+          size="lg"
+        >
+          Lưu & Hoàn thành lịch hẹn
+        </Button>
+      </div>
     </div>
   );
 
