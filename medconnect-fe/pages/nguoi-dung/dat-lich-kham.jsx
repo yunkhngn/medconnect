@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
 } from "@heroui/react";
-import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle } from "lucide-react";
+import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,6 +60,24 @@ export default function DatLichKham() {
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
 
+  // Filters
+  const [specialityFilter, setSpecialityFilter] = useState("");
+  const [provinceFilter, setProvinceFilter] = useState({ code: "", name: "" });
+  const [districtFilter, setDistrictFilter] = useState({ code: "", name: "" });
+  const [wardFilter, setWardFilter] = useState({ code: "", name: "" });
+
+  // Weekly calendar state
+  const [weekStart, setWeekStart] = useState(() => {
+    const d = new Date();
+    const day = d.getDay(); // 0..6 (Sun..Sat)
+    const diff = (day === 0 ? -6 : 1) - day; // start Monday
+    const monday = new Date(d);
+    monday.setDate(d.getDate() + diff);
+    monday.setHours(0,0,0,0);
+    return monday;
+  });
+  const [weeklyAvailable, setWeeklyAvailable] = useState({}); // { 'YYYY-MM-DD': [slotIds] }
+
   // Fetch doctors from backend
   useEffect(() => {
     fetchDoctors();
@@ -75,16 +93,30 @@ export default function DatLichKham() {
 
   // Filter doctors based on search query
   useEffect(() => {
+    let filtered = doctors;
+    // Text search
     if (searchQuery) {
-      const filtered = doctors.filter(doc =>
+      filtered = filtered.filter(doc =>
         doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (SPECIALTY_MAP[doc.specialty] || doc.specialty).toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredDoctors(filtered);
-    } else {
-      setFilteredDoctors(doctors);
     }
-  }, [searchQuery, doctors]);
+    // Speciality filter
+    if (specialityFilter) {
+      filtered = filtered.filter(doc => (doc.specialty || "").toString() === specialityFilter);
+    }
+    // Address filters (match by name if available)
+    if (provinceFilter.name) {
+      filtered = filtered.filter(doc => (doc.province_name || doc.provinceName || "").includes(provinceFilter.name));
+    }
+    if (districtFilter.name) {
+      filtered = filtered.filter(doc => (doc.district_name || doc.districtName || "").includes(districtFilter.name));
+    }
+    if (wardFilter.name) {
+      filtered = filtered.filter(doc => (doc.ward_name || doc.wardName || "").includes(wardFilter.name));
+    }
+    setFilteredDoctors(filtered);
+  }, [searchQuery, doctors, specialityFilter, provinceFilter, districtFilter, wardFilter]);
 
   const fetchDoctors = async () => {
     setLoadingDoctors(true);
@@ -113,6 +145,35 @@ export default function DatLichKham() {
       fetchAvailableSlots();
     }
   }, [selectedDoctor, selectedDate]);
+
+  // Fetch weekly availability when doctor or week changes
+  useEffect(() => {
+    const loadWeek = async () => {
+      if (!selectedDoctor) return;
+      const dates = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        return d.toISOString().split('T')[0];
+      });
+      const results = {};
+      try {
+        const promises = dates.map(async (dateStr) => {
+          const resp = await fetch(`http://localhost:8080/api/appointments/doctor/${selectedDoctor.id}/available-slots?date=${dateStr}`);
+          if (resp.ok) {
+            const data = await resp.json();
+            results[dateStr] = data.availableSlots || [];
+          } else {
+            results[dateStr] = [];
+          }
+        });
+        await Promise.all(promises);
+        setWeeklyAvailable(results);
+      } catch (e) {
+        setWeeklyAvailable({});
+      }
+    };
+    loadWeek();
+  }, [selectedDoctor, weekStart]);
 
   const fetchAvailableSlots = async () => {
     setLoadingSlots(true);
@@ -309,12 +370,46 @@ export default function DatLichKham() {
           </CardHeader>
           <Divider />
           <CardBody className="space-y-4">
-            <Input
-              placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              startContent={<User size={18} className="text-gray-400" />}
-            />
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Input
+                placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                startContent={<User size={18} className="text-gray-400" />}
+              />
+              <Select
+                label="Chuyên khoa"
+                placeholder="Tất cả"
+                selectedKeys={specialityFilter ? [specialityFilter] : []}
+                onSelectionChange={(keys) => {
+                  const k = Array.from(keys)[0];
+                  setSpecialityFilter(k || "");
+                }}
+              >
+                {Object.entries(SPECIALTY_MAP).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </Select>
+              <Input
+                label="Tỉnh/Thành"
+                placeholder="Nhập tên tỉnh"
+                value={provinceFilter.name}
+                onChange={(e) => setProvinceFilter({ code: "", name: e.target.value })}
+              />
+              <Input
+                label="Quận/Huyện"
+                placeholder="Nhập tên quận"
+                value={districtFilter.name}
+                onChange={(e) => setDistrictFilter({ code: "", name: e.target.value })}
+              />
+              <Input
+                label="Phường/Xã"
+                placeholder="Nhập tên phường"
+                value={wardFilter.name}
+                onChange={(e) => setWardFilter({ code: "", name: e.target.value })}
+              />
+            </div>
 
             {loadingDoctors ? (
               <div className="text-center py-12">
@@ -364,58 +459,92 @@ export default function DatLichKham() {
           </CardHeader>
           <Divider />
           <CardBody className="space-y-6">
-            {/* Date Selection */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Chọn ngày khám</label>
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => handleDateChange(e.target.value)}
-                min={getMinDate()}
-                max={getMaxDate()}
-              />
-              <p className="text-xs text-gray-500 mt-1">Có thể đặt lịch từ ngày mai đến 30 ngày sau</p>
+            {/* Weekly Calendar */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2">
+                  <Button size="sm" variant="flat" onPress={() => {
+                    const prev = new Date(weekStart);
+                    prev.setDate(prev.getDate() - 7);
+                    setWeekStart(prev);
+                  }}>
+                    Tuần trước
+                  </Button>
+                  <Button size="sm" variant="flat" onPress={() => {
+                    const now = new Date();
+                    const day = now.getDay();
+                    const diff = (day === 0 ? -6 : 1) - day;
+                    const monday = new Date(now);
+                    monday.setDate(now.getDate() + diff);
+                    monday.setHours(0,0,0,0);
+                    setWeekStart(monday);
+                  }}>
+                    Tuần hiện tại
+                  </Button>
+                  <Button size="sm" variant="flat" onPress={() => {
+                    const next = new Date(weekStart);
+                    next.setDate(next.getDate() + 7);
+                    setWeekStart(next);
+                  }}>
+                    Tuần sau
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-auto border rounded-lg">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="p-2 text-left w-32">Khung giờ</th>
+                      {Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date(weekStart);
+                        d.setDate(weekStart.getDate() + i);
+                        const label = d.toLocaleDateString("vi-VN", { weekday: 'short', day: '2-digit', month: '2-digit' });
+                        const key = d.toISOString().split('T')[0];
+                        return (<th key={key} className="p-2 text-left">{label}</th>);
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(SLOT_TIMES).map((slotKey) => (
+                      <tr key={slotKey} className="border-t">
+                        <td className="p-2 font-medium text-gray-700">{SLOT_TIMES[slotKey]}</td>
+                        {Array.from({ length: 7 }, (_, i) => {
+                          const d = new Date(weekStart);
+                          d.setDate(weekStart.getDate() + i);
+                          const dateStr = d.toISOString().split('T')[0];
+                          const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
+                          const isPast = d < new Date();
+                          const selectable = available && !isPast;
+                          const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                          return (
+                            <td key={dateStr+slotKey} className="p-1">
+                              <Button
+                                size="sm"
+                                variant={isSelected ? 'solid' : (selectable ? 'bordered' : 'flat')}
+                                color={isSelected ? 'primary' : (selectable ? 'default' : 'default')}
+                                isDisabled={!selectable}
+                                onClick={() => {
+                                  handleDateChange(dateStr);
+                                  setSelectedSlot(slotKey);
+                                }}
+                                className="w-full"
+                              >
+                                {selectable ? 'Chọn' : '—'}
+                              </Button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* Slot Selection */}
-            {selectedDate && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium">Chọn khung giờ</label>
-                  {availableSlots.length > 0 && (
-                    <span className="text-xs text-gray-500">
-                      {availableSlots.length} khung giờ có sẵn
-                    </span>
-                  )}
-                </div>
-                {loadingSlots ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
-                    <p className="text-sm text-gray-500 mt-2">Đang tải lịch trống...</p>
-                  </div>
-                ) : availableSlots.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <AlertCircle className="mx-auto text-gray-400 mb-2" size={32} />
-                    <p className="text-gray-600">Bác sĩ không có lịch trống trong ngày này</p>
-                    <p className="text-sm text-gray-500">Vui lòng chọn ngày khác</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2">
-                    {availableSlots.map((slot) => (
-                      <Button
-                        key={slot}
-                        variant={selectedSlot === slot ? "solid" : "bordered"}
-                        color={selectedSlot === slot ? "primary" : "default"}
-                        onClick={() => setSelectedSlot(slot)}
-                        startContent={<Clock size={18} />}
-                        className="w-full"
-                      >
-                        {SLOT_TIMES[slot]}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* Slot Selection note */}
+            {selectedDate && selectedSlot && (
+              <div className="text-xs text-gray-500">Đã chọn: {new Date(selectedDate).toLocaleDateString('vi-VN')} - {SLOT_TIMES[selectedSlot]}</div>
             )}
 
             {/* Appointment Type */}

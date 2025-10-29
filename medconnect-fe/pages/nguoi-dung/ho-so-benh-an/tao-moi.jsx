@@ -40,6 +40,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import BHYTInput from "@/components/ui/BHYTInput";
+import AddressSelector from "@/components/ui/AddressSelector";
+import { useAddressData } from "@/hooks/useAddressData";
 
 export default function CreateEMRPage() {
   const router = useRouter();
@@ -53,6 +55,10 @@ export default function CreateEMRPage() {
     gender: "Nam",
     blood_type: "",
     address: "",
+    address_detail: "",
+    province_code: null,
+    district_code: null,
+    ward_code: null,
     phone: "",
     email: "",
     insurance_number: "",
@@ -83,6 +89,7 @@ export default function CreateEMRPage() {
   const [idPhotoUrl, setIdPhotoUrl] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const { getFullAddress } = useAddressData();
 
   useEffect(() => {
     if (authLoading) return;
@@ -109,6 +116,10 @@ export default function CreateEMRPage() {
             gender: patientData.gender || "Nam",
             blood_type: patientData.bloodType || "",
             address: patientData.address || "",
+          address_detail: "",
+          province_code: null,
+          district_code: null,
+          ward_code: null,
             phone: patientData.phone || "",
             email: patientData.email || "",
             insurance_number: patientData.socialInsurance || "",
@@ -238,13 +249,26 @@ export default function CreateEMRPage() {
     try {
       const token = await user.getIdToken();
 
+      const fullAddress = getFullAddress(
+        profile.province_code,
+        profile.district_code,
+        profile.ward_code,
+        profile.address_detail
+      );
+
       const emrData = {
         patient_profile: {
           full_name: profile.full_name,
           date_of_birth: profile.dob,
           gender: profile.gender,
           blood_type: profile.blood_type,
-          address: profile.address,
+          address: {
+            province_code: profile.province_code,
+            district_code: profile.district_code,
+            ward_code: profile.ward_code,
+            address_detail: profile.address_detail,
+            full: fullAddress || profile.address || "",
+          },
           phone: profile.phone,
           email: profile.email,
           citizenship: profile.citizenship,
@@ -562,15 +586,26 @@ export default function CreateEMRPage() {
               startContent={<Phone className="text-default-400" size={20} />}
             />
             <Input
-              label="Địa chỉ"
-              placeholder="Số nhà, đường, phường, quận"
-              value={profile.address}
-              onValueChange={(v) => setProfile({ ...profile, address: v })}
+              label="Địa chỉ chi tiết (tùy chọn)"
+              placeholder="Số nhà, tên đường, tòa nhà..."
+              value={profile.address_detail}
+              onValueChange={(v) => setProfile({ ...profile, address_detail: v })}
               variant="bordered"
               labelPlacement="outside"
               startContent={<MapPin className="text-default-400" size={20} />}
             />
           </div>
+
+          {/* Province/District/Ward */}
+          <AddressSelector
+            provinceCode={profile.province_code}
+            districtCode={profile.district_code}
+            wardCode={profile.ward_code}
+            onProvinceChange={(code) => setProfile({ ...profile, province_code: code })}
+            onDistrictChange={(code) => setProfile({ ...profile, district_code: code })}
+            onWardChange={(code) => setProfile({ ...profile, ward_code: code })}
+            required
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input

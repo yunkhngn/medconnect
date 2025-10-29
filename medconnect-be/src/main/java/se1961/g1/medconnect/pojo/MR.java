@@ -16,7 +16,7 @@ public class MR {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long recordId;
 
-    @Column(columnDefinition = "Text")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
     private String detail;
 
     @ManyToOne
