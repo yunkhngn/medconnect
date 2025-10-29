@@ -7,9 +7,11 @@ import se1961.g1.medconnect.dto.ScheduleDTO;
 import se1961.g1.medconnect.enums.ScheduleStatus;
 import se1961.g1.medconnect.enums.Slot;
 import se1961.g1.medconnect.pojo.Appointment;
+import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Schedule;
 import se1961.g1.medconnect.pojo.User;
 import se1961.g1.medconnect.repository.ScheduleRepository;
+import se1961.g1.medconnect.repository.DoctorRepository;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -27,6 +29,9 @@ public class ScheduleService {
 
     @Autowired
     private AppointmentService appointmentService;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
 
     /**
      * Get weekly schedule with appointments merged in
@@ -46,7 +51,9 @@ public class ScheduleService {
         System.out.println("[getWeeklySchedule] Found " + scheduleList.size() + " schedules (opened slots)");
         
         // 3. Get doctor's appointments
-        List<Appointment> appointmentList = appointmentService.findByDoctorUserIdAndDateBetween(userId, start, end);
+        Doctor doctor = doctorRepository.findById(userId)
+                .orElseThrow(() -> new Exception("Doctor not found"));
+        List<Appointment> appointmentList = appointmentService.findByDoctorAndDateBetween(doctor, start, end);
         System.out.println("[getWeeklySchedule] Found " + appointmentList.size() + " appointments");
         
         if (!appointmentList.isEmpty()) {

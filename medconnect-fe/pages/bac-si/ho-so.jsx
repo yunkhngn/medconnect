@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, FileText, Calendar, AlertCircle, Plus, Edit2, Award, Building2, Briefcase, CheckCircle, Trash2, GraduationCap, MapPin, Eye, X } from "lucide-react";
+import { Save, Upload, User, Mail, Phone, IdCard, Stethoscope, FileText, Calendar, AlertCircle, Plus, Edit2, Award, Building2, Briefcase, CheckCircle, Trash2, GraduationCap, MapPin, Eye, X, ExternalLink, ArrowLeft, ArrowRight } from "lucide-react";
 import {
-  Input, 
-  Select, 
+  Input,
+  Select,
   SelectItem,
   Card,
   CardHeader,
@@ -76,16 +76,21 @@ export default function DoctorProfile() {
     issuer_title: "Cục trưởng",
     scope_of_practice: "",
     notes: "",
-    proof_document_url: ""
+    proof_images: ""
   });
   const [savingLicense, setSavingLicense] = useState(false);
-  const [selectedPdfFile, setSelectedPdfFile] = useState(null);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [selectedImageFiles, setSelectedImageFiles] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   
   // Delete License Modal
   const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onClose: onDeleteModalClose } = useDisclosure();
   const [deletingLicense, setDeletingLicense] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // PDF Viewer Modal
+  const { isOpen: isImageModalOpen, onOpen: onImageModalOpen, onClose: onImageModalClose } = useDisclosure();
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Listen to Firebase auth
   useEffect(() => {
@@ -169,7 +174,7 @@ export default function DoctorProfile() {
             const finalAvatarUrl = avatarData.avatarUrl || firebaseUser.photoURL || null;
             console.log("[Avatar] Final URL:", finalAvatarUrl);
             setAvatarUrl(finalAvatarUrl);
-          } else {
+      } else {
             // Fallback to Gmail photo if API fails
             console.log("[Avatar] API failed, using Gmail photo:", firebaseUser.photoURL);
             setAvatarUrl(firebaseUser.photoURL || null);
@@ -305,6 +310,44 @@ export default function DoctorProfile() {
     }
   };
 
+  const handleImageUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    setUploadingImages(true);
+    try {
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('images', file);
+      });
+
+      const token = await user.getIdToken();
+      const response = await fetch('http://localhost:8080/api/licenses/upload-images', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const currentImages = licenseForm.proof_images ? JSON.parse(licenseForm.proof_images) : [];
+        const newImages = [...currentImages, ...data.imageUrls];
+        setLicenseForm({ ...licenseForm, proof_images: JSON.stringify(newImages) });
+        toast.success(`Upload ${files.length} hình ảnh thành công!`);
+      } else {
+        throw new Error('Upload thất bại');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast.error('Không thể upload hình ảnh');
+    } finally {
+      setUploadingImages(false);
+      event.target.value = ''; // Reset input
+    }
+  };
+
   const handleOpenLicenseModal = (license = null) => {
     if (license) {
       setEditingLicense(license);
@@ -316,7 +359,7 @@ export default function DoctorProfile() {
         issuer_title: license.issuerTitle || license.issuer_title || "Cục trưởng",
         scope_of_practice: license.scopeOfPractice || license.scope_of_practice || "",
         notes: license.notes || "",
-        proof_document_url: license.proofDocumentUrl || license.proof_document_url || ""
+        proof_images: license.proofImages || license.proof_images || ""
       });
     } else {
       setEditingLicense(null);
@@ -328,10 +371,10 @@ export default function DoctorProfile() {
         issuer_title: "Cục trưởng",
         scope_of_practice: "",
         notes: "",
-        proof_document_url: ""
+        proof_images: ""
       });
     }
-    setSelectedPdfFile(null); // Reset PDF file selection
+    setSelectedImageFiles([]); // Reset image file selection
     onLicenseModalOpen();
   };
 
@@ -342,60 +385,6 @@ export default function DoctorProfile() {
     return licenseRegex.test(licenseNumber.trim());
   };
 
-  const handlePdfFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (file.type !== "application/pdf") {
-      toast.error("Chỉ chấp nhận file PDF!");
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File PDF phải nhỏ hơn 10MB!");
-      return;
-    }
-
-    setSelectedPdfFile(file);
-    
-    // Auto-upload PDF
-    if (!user) {
-      toast.error("Vui lòng đăng nhập");
-      return;
-    }
-
-    setUploadingPdf(true);
-    try {
-      const token = await user.getIdToken();
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("http://localhost:8080/api/licenses/upload-proof", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setLicenseForm({ ...licenseForm, proof_document_url: data.proof_document_url });
-        toast.success("Upload PDF thành công!");
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Upload PDF thất bại");
-      }
-    } catch (error) {
-      console.error("PDF upload error:", error);
-      toast.error(error.message || "Không thể upload PDF");
-      setSelectedPdfFile(null);
-    } finally {
-      setUploadingPdf(false);
-    }
-  };
 
   const handleSaveLicense = async () => {
     if (!user) {
@@ -414,9 +403,9 @@ export default function DoctorProfile() {
       return;
     }
 
-    // Validate PDF document for new license
-    if (!editingLicense && !licenseForm.proof_document_url) {
-      toast.error("Vui lòng upload file PDF minh chứng giấy phép!");
+    // Validate images for new license
+    if (!editingLicense && !licenseForm.proof_images) {
+      toast.error("Vui lòng upload hình ảnh minh chứng giấy phép!");
       return;
     }
 
@@ -590,9 +579,9 @@ export default function DoctorProfile() {
                 Còn {doctor.active_license.days_until_expiry} ngày
               </Chip>
             )}
-          </CardBody>
-        </Card>
-      )}
+            </CardBody>
+          </Card>
+        )}
 
       {/* Info Card */}
       <Card className="shadow-md bg-blue-50 border border-blue-200">
@@ -782,7 +771,7 @@ export default function DoctorProfile() {
 
           <div className="flex justify-end pt-4">
             <Button
-              color="primary"
+                    color="primary"
               size="lg"
               startContent={<Save size={20} />}
               onPress={handleSave}
@@ -836,7 +825,7 @@ export default function DoctorProfile() {
                 const isActive = license.isActive !== undefined ? license.isActive : license.is_active;
                 const isExpired = license.isExpired !== undefined ? license.isExpired : license.is_expired;
                 const daysUntilExpiry = license.daysUntilExpiry !== undefined ? license.daysUntilExpiry : license.days_until_expiry;
-                const proofDocumentUrl = license.proofDocumentUrl || license.proof_document_url;
+                const proofImages = license.proofImages || license.proof_images;
 
                 return (
                   <div 
@@ -845,41 +834,51 @@ export default function DoctorProfile() {
                   >
                     {/* Status Badge - Top Left */}
                     <div className="absolute top-4 left-4">
-                      <Chip 
+                  <Chip
                         size="md" 
                         color={isActive && !isExpired ? "success" : isExpired ? "danger" : "default"} 
                         variant="shadow"
                         className="font-semibold"
                       >
                         {isExpired ? "Đã hết hạn" : isActive ? "Hiệu lực" : "Không hoạt động"}
-                      </Chip>
-                    </div>
+                  </Chip>
+                </div>
 
                     {/* Action Buttons - Top Right */}
                     <div className="absolute top-4 right-4 flex gap-2">
-                      {proofDocumentUrl && (
-                        <Button
+                      {proofImages && (
+                <Button
                           size="sm"
-                          variant="flat"
+                  variant="flat"
                           isIconOnly
-                          onPress={() => window.open(proofDocumentUrl, '_blank')}
+                          onPress={() => {
+                            try {
+                              const images = JSON.parse(proofImages);
+                              setSelectedImages(images);
+                              setCurrentImageIndex(0);
+                              onImageModalOpen();
+                            } catch (error) {
+                              console.error('Error parsing proof images:', error);
+                              toast.error('Không thể hiển thị hình ảnh');
+                            }
+                          }}
                           className="text-blue-600 hover:bg-blue-100"
-                          title="Xem minh chứng PDF"
+                          title="Xem minh chứng hình ảnh"
                         >
                           <Eye size={18} />
-                        </Button>
-                      )}
-                      <Button
+                </Button>
+              )}
+                <Button
                         size="sm"
-                        variant="flat"
+                  variant="flat"
                         isIconOnly
                         onPress={() => handleOpenLicenseModal(license)}
                         className="text-teal-600 hover:bg-teal-100"
                         title="Chỉnh sửa"
                       >
                         <Edit2 size={18} />
-                      </Button>
-                      <Button
+                </Button>
+                <Button
                         size="sm"
                         variant="flat"
                         isIconOnly
@@ -888,7 +887,7 @@ export default function DoctorProfile() {
                         className={licenses.length <= 1 ? "text-gray-400" : "text-red-600 hover:bg-red-100"}
                       >
                         <Trash2 size={18} />
-                      </Button>
+                </Button>
                     </div>
 
                     {/* Header */}
@@ -930,12 +929,12 @@ export default function DoctorProfile() {
                               <Building2 size={16} className="text-teal-500 mt-0.5 flex-shrink-0" />
                               <span className="font-medium text-sm leading-tight">{issuedBy}</span>
                             </div>
-                          </div>
-                        )}
+              </div>
+            )}
                       </div>
 
                       <div className="space-y-3">
-                        <div>
+              <div>
                           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Hết hạn</p>
                           <div className="flex items-center gap-2 text-gray-800">
                             <Calendar size={16} className="text-teal-500" />
@@ -1027,12 +1026,12 @@ export default function DoctorProfile() {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
+                <Input
                 label="Số giấy phép *"
                 placeholder="VD: 000001/BYT-GPHN"
                 value={licenseForm.license_number}
                 onValueChange={(v) => setLicenseForm({ ...licenseForm, license_number: v })}
-                variant="bordered"
+                  variant="bordered"
                 labelPlacement="outside"
                 isRequired
                 description="Định dạng: 6 số / BYT-GPHN"
@@ -1048,26 +1047,26 @@ export default function DoctorProfile() {
                 variant="bordered"
                 labelPlacement="outside"
                 isRequired
-              />
-            </div>
+                />
+              </div>
 
-            <Input
+                <Input
               type="date"
               label="Ngày hết hạn"
               description="Để trống nếu vô thời hạn"
               value={licenseForm.expiry_date}
               onValueChange={(v) => setLicenseForm({ ...licenseForm, expiry_date: v })}
-              variant="bordered"
+                  variant="bordered"
               labelPlacement="outside"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
+                <Input
                 label="Nơi cấp"
                 placeholder="VD: Cục Quản lý Khám chữa bệnh - Bộ Y tế"
                 value={licenseForm.issued_by}
                 onValueChange={(v) => setLicenseForm({ ...licenseForm, issued_by: v })}
-                variant="bordered"
+                  variant="bordered"
                 labelPlacement="outside"
               />
               <Input
@@ -1077,8 +1076,8 @@ export default function DoctorProfile() {
                 onValueChange={(v) => setLicenseForm({ ...licenseForm, issuer_title: v })}
                 variant="bordered"
                 labelPlacement="outside"
-              />
-            </div>
+                />
+              </div>
 
             <Textarea
               label="Phạm vi hành nghề"
@@ -1100,66 +1099,122 @@ export default function DoctorProfile() {
               minRows={2}
             />
 
-            {/* PDF Upload Section */}
+            {/* Image Upload Section */}
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minh chứng giấy phép (PDF) {!editingLicense && <span className="text-red-500">*</span>}
-              </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minh chứng giấy phép (Hình ảnh) {!editingLicense && <span className="text-red-500">*</span>}
+                </label>
               
-              {licenseForm.proof_document_url ? (
-                <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <FileText size={20} className="text-green-600" />
-                    <span className="text-sm text-gray-700">
-                      {editingLicense ? "Đã có file PDF" : selectedPdfFile?.name || "PDF đã upload"}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="flat"
-                      color="primary"
-                      onPress={() => window.open(licenseForm.proof_document_url, '_blank')}
-                      startContent={<Eye size={16} />}
+              {licenseForm.proof_images ? (
+                <div className="space-y-3">
+                  {(() => {
+                    try {
+                      const images = JSON.parse(licenseForm.proof_images);
+                      return images.map((imageUrl, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <img 
+                              src={imageUrl} 
+                              alt={`Minh chứng ${index + 1}`}
+                              className="w-12 h-12 object-cover rounded border"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                            <span className="text-sm text-gray-700">
+                              Hình ảnh {index + 1}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              color="primary"
+                              onPress={() => {
+                                setSelectedImages(images);
+                                setCurrentImageIndex(index);
+                                onImageModalOpen();
+                              }}
+                              startContent={<Eye size={16} />}
+                            >
+                              Xem
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              color="danger"
+                              onPress={() => {
+                                const newImages = images.filter((_, i) => i !== index);
+                                setLicenseForm({ 
+                                  ...licenseForm, 
+                                  proof_images: newImages.length > 0 ? JSON.stringify(newImages) : "" 
+                                });
+                              }}
+                              startContent={<X size={16} />}
+                            >
+                              Xóa
+                            </Button>
+                          </div>
+                        </div>
+                      ));
+                    } catch (error) {
+                      return (
+                        <div className="text-center text-red-500 text-sm">
+                          Lỗi hiển thị hình ảnh
+                        </div>
+                      );
+                    }
+                  })()}
+                  
+                  <div className="flex justify-center">
+                    <input
+                      type="file"
+                      id="image-upload"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
                     >
-                      Xem
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="flat"
-                      color="danger"
-                      onPress={() => {
-                        setLicenseForm({ ...licenseForm, proof_document_url: "" });
-                        setSelectedPdfFile(null);
-                      }}
-                      startContent={<X size={16} />}
-                    >
-                      Xóa
-                    </Button>
+                      <Plus size={16} className="mr-2" />
+                      Thêm hình ảnh
+                    </label>
                   </div>
                 </div>
               ) : (
                 <div>
                   <input
                     type="file"
-                    accept="application/pdf"
-                    onChange={handlePdfFileSelect}
-                    disabled={uploadingPdf}
-                    className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-full file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-purple-50 file:text-purple-700
-                      hover:file:bg-purple-100
-                      file:cursor-pointer cursor-pointer"
+                    id="image-upload"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
                   />
-                  <p className="mt-2 text-xs text-gray-500">
-                    Chấp nhận file PDF, tối đa 10MB
-                  </p>
-                  {uploadingPdf && (
-                    <p className="mt-2 text-sm text-purple-600">Đang upload...</p>
-                  )}
-                </div>
+                  <label
+                    htmlFor="image-upload"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload size={24} className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click để upload hình ảnh</span>
+                      </p>
+                      <p className="text-xs text-gray-500">Có thể chọn nhiều hình ảnh</p>
+                    </div>
+                  </label>
+                  {uploadingImages && (
+                    <div className="mt-2 text-center">
+                      <div className="inline-flex items-center gap-2 text-sm text-blue-600">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        Đang upload hình ảnh...
+                      </div>
+                    </div>
+                )}
+              </div>
               )}
             </div>
           </ModalBody>
@@ -1190,6 +1245,102 @@ export default function DoctorProfile() {
         confirmText="Xác nhận xóa"
         isLoading={isDeleting}
       />
+
+      {/* Image Gallery Modal */}
+      <Modal 
+        isOpen={isImageModalOpen} 
+        onClose={onImageModalClose}
+        size="5xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">Minh chứng giấy phép hành nghề</h3>
+            <p className="text-sm text-gray-500">
+              Hình ảnh {currentImageIndex + 1} / {selectedImages.length}
+            </p>
+          </ModalHeader>
+          <ModalBody className="p-0">
+            <div className="w-full h-[70vh] bg-gray-100">
+              {selectedImages.length > 0 ? (
+                <div className="w-full h-full flex flex-col">
+                  {/* Image Display */}
+                  <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+                    <img
+                      src={selectedImages[currentImageIndex]}
+                      alt={`Minh chứng ${currentImageIndex + 1}`}
+                      className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                      onError={() => {
+                        toast.error('Không thể tải hình ảnh');
+                  }}
+                />
+              </div>
+                  
+                  {/* Navigation */}
+                  {selectedImages.length > 1 && (
+                    <div className="flex items-center justify-between p-4 bg-white border-t">
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={() => setCurrentImageIndex(Math.max(0, currentImageIndex - 1))}
+                        isDisabled={currentImageIndex === 0}
+                        startContent={<ArrowLeft size={16} />}
+                      >
+                        Trước
+                      </Button>
+                      
+                      <div className="flex gap-2">
+                        {selectedImages.map((_, index) => (
+                          <Button
+                            key={index}
+                            size="sm"
+                            variant={index === currentImageIndex ? "solid" : "flat"}
+                            color={index === currentImageIndex ? "primary" : "default"}
+                            onPress={() => setCurrentImageIndex(index)}
+                            className="w-8 h-8 min-w-8"
+                          >
+                            {index + 1}
+                          </Button>
+                        ))}
+            </div>
+                      
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={() => setCurrentImageIndex(Math.min(selectedImages.length - 1, currentImageIndex + 1))}
+                        isDisabled={currentImageIndex === selectedImages.length - 1}
+                        endContent={<ArrowRight size={16} />}
+                      >
+                        Sau
+                      </Button>
+      </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <FileText size={48} className="mx-auto mb-2 text-gray-400" />
+                    <p>Không có hình ảnh để hiển thị</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              color="primary" 
+              variant="light" 
+              onPress={() => window.open(selectedImages[currentImageIndex], '_blank')}
+              startContent={<ExternalLink size={16} />}
+            >
+              Mở trong tab mới
+            </Button>
+            <Button color="danger" variant="light" onPress={onImageModalClose}>
+              Đóng
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </DoctorFrame>
   );
 }

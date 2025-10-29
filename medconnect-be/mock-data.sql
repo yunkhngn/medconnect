@@ -155,7 +155,7 @@ GO
 PRINT 'Inserting Licenses...';
 
 INSERT INTO License (
-  doctor_id, license_number, issued_date, expiry_date, issuer_title, scope_of_practice, notes, proof_document_url, created_at, updated_at
+  doctor_id, license_number, issued_date, expiry_date, issuer_title, scope_of_practice, notes, proof_images, created_at, updated_at
 ) VALUES
 (3, '000001/BYT-GPHN', '2015-01-15', '2030-01-15', N'Bộ Y tế', N'Tim mạch', NULL, NULL, GETDATE(), GETDATE()),
 (4, '000002/BYT-GPHN', '2016-03-20', '2031-03-20', N'Bộ Y tế', N'Tim mạch', NULL, NULL, GETDATE(), GETDATE()),

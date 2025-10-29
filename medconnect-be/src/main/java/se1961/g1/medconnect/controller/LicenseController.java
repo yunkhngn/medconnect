@@ -108,6 +108,50 @@ public class LicenseController {
     }
 
     /**
+     * Upload license proof images (multiple images)
+     * POST /api/licenses/upload-images
+     */
+    @PostMapping("/upload-images")
+    public ResponseEntity<Map<String, Object>> uploadProofImages(
+            Authentication authentication,
+            @RequestParam("images") MultipartFile[] images) {
+        try {
+            String uid = (String) authentication.getPrincipal();
+            
+            if (images == null || images.length == 0) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Vui lòng chọn ít nhất một hình ảnh");
+                return ResponseEntity.badRequest().body(error);
+            }
+
+            List<String> imageUrls = new ArrayList<>();
+            
+            // Upload each image to Cloudinary
+            for (MultipartFile image : images) {
+                if (!image.isEmpty()) {
+                    String imageUrl = cloudinaryService.uploadLicenseImage(image, uid);
+                    imageUrls.add(imageUrl);
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Images uploaded successfully");
+            response.put("imageUrls", imageUrls);
+            response.put("count", imageUrls.size());
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to upload images: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    /**
      * Create new license for current doctor
      */
     @PostMapping("/my")
@@ -146,8 +190,8 @@ public class LicenseController {
             license.setNotes((String) request.get("notes"));
         }
         
-        if (request.containsKey("proof_document_url")) {
-            license.setProofDocumentUrl((String) request.get("proof_document_url"));
+        if (request.containsKey("proof_images")) {
+            license.setProofImages((String) request.get("proof_images"));
         }
 
         License saved = licenseRepository.save(license);
@@ -209,8 +253,8 @@ public class LicenseController {
         if (request.containsKey("notes")) {
             license.setNotes((String) request.get("notes"));
         }
-        if (request.containsKey("proof_document_url")) {
-            license.setProofDocumentUrl((String) request.get("proof_document_url"));
+        if (request.containsKey("proof_images")) {
+            license.setProofImages((String) request.get("proof_images"));
         }
 
         License updated = licenseRepository.save(license);
@@ -257,7 +301,7 @@ public class LicenseController {
         map.put("scope_of_practice", license.getScopeOfPractice());
         map.put("is_active", license.getIsActive());
         map.put("notes", license.getNotes());
-        map.put("proof_document_url", license.getProofDocumentUrl());
+        map.put("proof_images", license.getProofImages());
         map.put("is_expired", license.isExpired());
         map.put("is_valid", license.isValid());
         map.put("days_until_expiry", license.getDaysUntilExpiry());

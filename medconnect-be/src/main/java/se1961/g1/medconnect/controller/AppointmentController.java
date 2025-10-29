@@ -129,7 +129,9 @@ public class AppointmentController {
     public ResponseEntity<?> getMyAppointments(Authentication authentication) {
         try {
             String firebaseUid = (String) authentication.getPrincipal();
+            System.out.println("[AppointmentController] /api/appointments/my for firebaseUid=" + firebaseUid);
             List<Appointment> appointments = appointmentService.getAppointmentsByPatientFirebaseUid(firebaseUid);
+            System.out.println("[AppointmentController] Found " + appointments.size() + " appointments for patient");
             
             // Convert to safe response format
             List<Map<String, Object>> response = appointments.stream()
@@ -163,6 +165,7 @@ public class AppointmentController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.out.println("[AppointmentController] Error in /my: " + e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
