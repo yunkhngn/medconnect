@@ -37,6 +37,8 @@ export default function DoctorAppointmentsPage() {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isEmrOpen, onOpen: onEmrOpen, onClose: onEmrClose } = useDisclosure();
+  const { isOpen: isImgOpen, onOpen: onImgOpen, onClose: onImgClose } = useDisclosure();
+  const [previewImgUrl, setPreviewImgUrl] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
@@ -332,6 +334,96 @@ export default function DoctorAppointmentsPage() {
     return labels[status] || status;
   };
 
+  // Extract attached symptom image filenames embedded in reason text
+  const parseAttachmentsFromReason = (reason) => {
+    if (!reason || typeof reason !== 'string') return [];
+    const idx = reason.indexOf('Đính kèm');
+    if (idx === -1) return [];
+    // take substring after 'Đính kèm'
+    const tail = reason.slice(idx);
+    // remove bracket wrappers if any
+    const cleaned = tail.replace(/[\[\]]/g, '');
+    // split by common delimiters and keep items that look like filenames
+    const parts = cleaned.split(/[:,]\s*/).flatMap(s => s.split(/\s+/));
+    const files = parts.filter(p => /\.(jpg|jpeg|png|gif|webp)$/i.test(p));
+    return files.slice(0, 6); // cap to avoid overflow
+  };
+
+  // Extract real attachment URLs if backend starts storing them in detail JSON or explicit fields
+  const extractAttachmentUrls = (apt) => {
+    const urls = [];
+    if (!apt) return urls;
+    // Common direct fields
+    if (Array.isArray(apt.attachmentUrls)) urls.push(...apt.attachmentUrls);
+    if (Array.isArray(apt.attachments)) urls.push(...apt.attachments);
+    // Try reason JSON (new canonical place)
+    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+      try {
+        const r = JSON.parse(apt.reason);
+        if (Array.isArray(r?.attachments)) urls.push(...r.attachments);
+      } catch {}
+    }
+    // Try parse JSON detail
+    if (apt.detail && typeof apt.detail === 'string') {
+      try {
+        const json = JSON.parse(apt.detail);
+        const candidates = [
+          json?.attachments,
+          json?.images,
+          json?.symptom_images,
+          json?.symptoms?.images,
+        ].filter(Boolean);
+        for (const c of candidates) {
+          if (Array.isArray(c)) urls.push(...c);
+        }
+      } catch {}
+    }
+    // Keep only http(s) image links
+    return urls.filter((u) => typeof u === 'string' && /^https?:\/\//.test(u) && /(\.jpg|\.jpeg|\.png|\.webp|\.gif)(\?|$)/i.test(u)).slice(0, 6);
+  };
+
+  const getDisplayReason = (apt) => {
+    if (!apt) return '';
+    // Prefer reason as JSON first
+    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+      try {
+        const j = JSON.parse(apt.reason);
+        if (j?.reason) return j.reason;
+      } catch {}
+    }
+    // Then detail.reason if provided
+    if (apt.detail && typeof apt.detail === 'string') {
+      try {
+        const json = JSON.parse(apt.detail);
+        if (json?.reason) return json.reason;
+      } catch {}
+    }
+    return apt.reason || '';
+  };
+
+  const getAttachmentNamesFromDetail = (apt) => {
+    if (!apt) return [];
+    // Try reason JSON first
+    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+      try {
+        const j = JSON.parse(apt.reason);
+        if (Array.isArray(j?.attachments)) return j.attachments.slice(0, 6);
+      } catch {}
+    }
+    if (!apt.detail || typeof apt.detail !== 'string') return [];
+    try {
+      const json = JSON.parse(apt.detail);
+      const arr = json?.attachments;
+      if (Array.isArray(arr)) {
+        return arr
+          .map((i) => (typeof i === 'string' ? i : i?.name))
+          .filter(Boolean)
+          .slice(0, 6);
+      }
+    } catch {}
+    return [];
+  };
+
   const getPendingCount = () => {
     return appointments.filter(apt => apt.status === "PENDING").length;
   };
@@ -522,7 +614,7 @@ export default function DoctorAppointmentsPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredAppointments.map((apt) => (
             <Card
               key={apt.appointmentId}
@@ -630,11 +722,36 @@ export default function DoctorAppointmentsPage() {
                       )}
                     </div>
 
-                    {/* Reason */}
-                    {apt.reason && (
+                    {/* Reason + Attachments (parsed) */}
+                    {(apt.reason) && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-3">
                         <p className="text-xs text-orange-700 font-medium mb-1">Lý do khám:</p>
-                        <p className="text-sm text-gray-700">{apt.reason}</p>
+                        <p className="text-sm text-gray-700 mb-2">{getDisplayReason(apt)}</p>
+                        {/* Real thumbnails if available via URLs */}
+                        {extractAttachmentUrls(apt).length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {extractAttachmentUrls(apt).map((url, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setPreviewImgUrl(url); onImgOpen(); }}
+                                className="w-16 h-16 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              >
+                                <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          (getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {(getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).map((name, i) => (
+                                <Chip key={i} size="sm" variant="flat" color="warning">
+                                  {name}
+                                </Chip>
+                              ))}
+                            </div>
+                          )
+                        )}
                       </div>
                     )}
 
@@ -954,9 +1071,34 @@ export default function DoctorAppointmentsPage() {
                                   <AlertCircle className="text-orange-600" size={18} />
                                   <p className="text-sm font-medium text-gray-700">Lý do khám</p>
                         </div>
-                                <p className="text-gray-900 bg-orange-50 p-3 rounded-lg">
-                                  {selectedAppointment.reason}
-                                </p>
+                                <div className="text-gray-900 bg-orange-50 p-3 rounded-lg">
+                                  <p className="mb-2">{getDisplayReason(selectedAppointment)}</p>
+                                  {/* Thumbnails if backend returns URLs */}
+                                  {extractAttachmentUrls(selectedAppointment).length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {extractAttachmentUrls(selectedAppointment).map((url, i) => (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() => { setPreviewImgUrl(url); onImgOpen(); }}
+                                          className="w-20 h-20 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        >
+                                          <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    (getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).length > 0 && (
+                                      <div className="flex flex-wrap gap-2">
+                                        {(getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).map((name, i) => (
+                                          <Chip key={i} size="sm" variant="flat" color="warning">
+                                            {name}
+                                          </Chip>
+                                        ))}
+                                      </div>
+                                    )
+                                  )}
+                                </div>
                               </div>
                             </>
                           )}
@@ -1420,6 +1562,30 @@ export default function DoctorAppointmentsPage() {
           )}
           </ModalContent>
         </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal isOpen={isImgOpen} onClose={() => { setPreviewImgUrl(null); onImgClose(); }} size="xl">
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">Ảnh đính kèm</h3>
+          </ModalHeader>
+          <ModalBody>
+            {previewImgUrl && (
+              <div className="w-full">
+                <img src={previewImgUrl} alt="attachment" className="w-full h-auto rounded-lg" />
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            {previewImgUrl && (
+              <Button as="a" href={previewImgUrl} target="_blank" rel="noreferrer" variant="flat" color="primary">
+                Mở ảnh gốc
+              </Button>
+            )}
+            <Button variant="light" onPress={() => { setPreviewImgUrl(null); onImgClose(); }}>Đóng</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </DoctorFrame>
   );
 }
