@@ -616,10 +616,10 @@ export default function EditEMRPage() {
             provinceCode={profile.province_code}
             districtCode={profile.district_code}
             wardCode={profile.ward_code}
-            onProvinceChange={(code) => setProfile({ ...profile, province_code: code })}
-            onDistrictChange={(code) => setProfile({ ...profile, district_code: code })}
-            onWardChange={(code) => setProfile({ ...profile, ward_code: code })}
-            required
+            onProvinceChange={(code) => setProfile(prev => ({ ...prev, province_code: code || null, district_code: null, ward_code: null }))}
+            onDistrictChange={(code) => setProfile(prev => ({ ...prev, district_code: code || null, ward_code: null }))}
+            onWardChange={(code) => setProfile(prev => ({ ...prev, ward_code: code || null }))}
+            required={false}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

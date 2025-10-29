@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { AdminFrame, Grid } from '@/components/layouts/';
 import {
   Table,
@@ -30,16 +31,14 @@ import {
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api',
   ENDPOINTS: {
-    GET_DOCTORS: '/doctors',
-    CREATE_DOCTOR: '/doctors',
-    UPDATE_DOCTOR: (id) => `/doctors/${id}`,
-    DELETE_DOCTOR: (id) => `/doctors/${id}`,
-    GET_SPECIALIZATIONS: '/specializations',
+    GET_DOCTORS: '/admin/doctor/all',
+    DELETE_DOCTOR: (id) => `/admin/doctor/${id}`,
   },
 };
 
 const Doctor = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const { user } = useAuth();
   const [doctors, setDoctors] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,16 +94,26 @@ const Doctor = () => {
   const fetchDoctors = async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_DOCTORS);
-      // const data = await response.json();
-      // setDoctors(data);
-      
-      // Mock data
-      setTimeout(() => {
-        setDoctors(mockDoctors);
-        setIsLoading(false);
-      }, 500);
+      const token = user ? await user.getIdToken() : null;
+      const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_DOCTORS, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!response.ok) throw new Error('Failed to fetch doctors');
+      const data = await response.json();
+      // Map backend -> UI
+      const mapped = (data || []).map((d) => ({
+        id: d.id,
+        name: d.name,
+        phone: d.phone,
+        licenseId: d.licenseId,
+        specializationLabel: d.specialty,
+        userId: d.userId,
+        avatar: d.avatar,
+        status: (d.status || 'ACTIVE').toLowerCase(),
+      }));
+      // Exclude soft-deleted doctors
+      setDoctors(mapped.filter((d) => d.status === 'active'));
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       setIsLoading(false);
@@ -148,12 +157,16 @@ const Doctor = () => {
     if (!confirm('Bạn có chắc muốn xóa bác sĩ này?')) return;
     
     try {
-      // TODO: Replace with actual API call
-      // await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DELETE_DOCTOR(id), {
-      //   method: 'DELETE',
-      // });
-      
-      setDoctors(doctors.filter(d => d.id !== id));
+      const token = user ? await user.getIdToken() : null;
+      const resp = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DELETE_DOCTOR(id), {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+      });
+      if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg || 'Delete failed');
+      }
+      setDoctors((prev) => prev.filter(d => d.id !== id));
     } catch (error) {
       console.error('Error deleting doctor:', error);
     }
@@ -163,16 +176,16 @@ const Doctor = () => {
     let filtered = doctors;
 
     if (searchQuery) {
-      filtered = filtered.filter(
-        (d) =>
-          d.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.phone.includes(searchQuery)
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((d) =>
+        (d.name || '').toLowerCase().includes(q) || (d.phone || '').includes(searchQuery)
       );
     }
 
     if (selectedSpecialty !== 'all') {
-      filtered = filtered.filter((d) => d.specialty === selectedSpecialty);
+      filtered = filtered.filter((d) =>
+        (d.specializationLabel || '').toLowerCase().includes(selectedSpecialty.replace('-', ' '))
+      );
     }
 
     setFilteredDoctors(filtered);
@@ -298,8 +311,10 @@ const Doctor = () => {
                 <div className="flex items-center gap-3">
                   <Avatar src={doctor.avatar} size="sm" />
                   <div>
-                    <p className="font-medium">{doctor.firstName} {doctor.lastName}</p>
-                    <p className="text-xs text-gray-500">BS. {doctor.lastName}</p>
+                    <p className="font-medium">{doctor.name || `${doctor.firstName || ''} ${doctor.lastName || ''}`}</p>
+                    {doctor.name && (
+                      <p className="text-xs text-gray-500">Bác sĩ</p>
+                    )}
                   </div>
                 </div>
               </TableCell>
@@ -310,7 +325,7 @@ const Doctor = () => {
               </TableCell>
               <TableCell>
                 <Chip size="sm" variant="flat">
-                  {specialties.find((s) => s.value === doctor.specialization)?.label}
+                  {doctor.specializationLabel || '—'}
                 </Chip>
               </TableCell>
               <TableCell>

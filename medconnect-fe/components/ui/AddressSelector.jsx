@@ -1,3 +1,4 @@
+"use client";
 import { Select, SelectItem } from '@heroui/react';
 import { useAddressData } from '../../hooks/useAddressData';
 import { useEffect } from 'react';
@@ -48,7 +49,9 @@ export default function AddressSelector({
   }, [districtCode, fetchWards]);
 
   const handleProvinceChange = (keys) => {
-    const code = Array.from(keys)[0];
+    const code = Array.isArray(keys)
+      ? keys[0]
+      : (typeof keys === 'string' ? keys : Array.from(keys || [])[0]);
     onProvinceChange(code || null);
     // Reset district and ward when province changes
     onDistrictChange(null);
@@ -56,14 +59,18 @@ export default function AddressSelector({
   };
 
   const handleDistrictChange = (keys) => {
-    const code = Array.from(keys)[0];
+    const code = Array.isArray(keys)
+      ? keys[0]
+      : (typeof keys === 'string' ? keys : Array.from(keys || [])[0]);
     onDistrictChange(code || null);
     // Reset ward when district changes
     onWardChange(null);
   };
 
   const handleWardChange = (keys) => {
-    const code = Array.from(keys)[0];
+    const code = Array.isArray(keys)
+      ? keys[0]
+      : (typeof keys === 'string' ? keys : Array.from(keys || [])[0]);
     onWardChange(code || null);
   };
 
@@ -86,6 +93,8 @@ export default function AddressSelector({
         isDisabled={disabled || loading.provinces}
         isLoading={loading.provinces}
         isRequired={required}
+        selectionMode="single"
+        disallowEmptySelection={false}
         size={size}
         variant={variant}
         classNames={{
@@ -93,7 +102,7 @@ export default function AddressSelector({
         }}
       >
         {provinces.map((province) => (
-          <SelectItem key={String(province.code)} value={String(province.code)}>
+          <SelectItem key={String(province.code)}>
             {province.name}
           </SelectItem>
         ))}
@@ -108,6 +117,8 @@ export default function AddressSelector({
         isDisabled={disabled || !provinceCode || loading.districts}
         isLoading={loading.districts}
         isRequired={required}
+        selectionMode="single"
+        disallowEmptySelection={false}
         size={size}
         variant={variant}
         classNames={{
@@ -115,7 +126,7 @@ export default function AddressSelector({
         }}
       >
         {districts.map((district) => (
-          <SelectItem key={String(district.code)} value={String(district.code)}>
+          <SelectItem key={String(district.code)}>
             {district.name}
           </SelectItem>
         ))}
@@ -130,6 +141,8 @@ export default function AddressSelector({
         isDisabled={disabled || !districtCode || loading.wards}
         isLoading={loading.wards}
         isRequired={required}
+        selectionMode="single"
+        disallowEmptySelection={false}
         size={size}
         variant={variant}
         classNames={{
@@ -137,7 +150,7 @@ export default function AddressSelector({
         }}
       >
         {wards.map((ward) => (
-          <SelectItem key={String(ward.code)} value={String(ward.code)}>
+          <SelectItem key={String(ward.code)}>
             {ward.name}
           </SelectItem>
         ))}

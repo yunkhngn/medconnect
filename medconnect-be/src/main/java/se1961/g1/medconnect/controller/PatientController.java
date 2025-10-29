@@ -47,7 +47,6 @@ public class PatientController {
             profile.put("province_code", patient.getProvinceCode());
             profile.put("province_name", patient.getProvinceName());
             profile.put("district_code", patient.getDistrictCode());
-            profile.put("district_name", patient.getDistrictName());
             profile.put("ward_code", patient.getWardCode());
             profile.put("ward_name", patient.getWardName());
             
@@ -125,9 +124,6 @@ public class PatientController {
             }
             if (request.containsKey("district_code")) {
                 patient.setDistrictCode((Integer) request.get("district_code"));
-            }
-            if (request.containsKey("district_name")) {
-                patient.setDistrictName((String) request.get("district_name"));
             }
             if (request.containsKey("ward_code")) {
                 patient.setWardCode((Integer) request.get("ward_code"));

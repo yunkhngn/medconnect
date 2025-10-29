@@ -127,21 +127,21 @@ PRINT 'Inserting Doctor data...';
 
 -- Note: Using speciality_id (entity) and enriched doctor profile fields
 -- Columns: user_id, speciality_id, status, experience_years, education_level, bio, clinic_address,
---          province_code, province_name, district_code, district_name, ward_code, ward_name
+--          province_code, province_name, district_code, ward_code, ward_name
 INSERT INTO Doctor (
   user_id, speciality_id, status, experience_years, education_level, bio, clinic_address,
-  province_code, province_name, district_code, district_name, ward_code, ward_name
+  province_code, province_name, district_code, ward_code, ward_name
 ) VALUES
-(3, 1, 'ACTIVE', 15, N'Tiến sĩ Y khoa', N'Bác sĩ tim mạch 15 năm kinh nghiệm', N'123 Đường ABC, Quận 1', 79, N'TP. Hồ Chí Minh', 760, N'Quận 1', 26734, N'Phường Bến Nghé'),
-(4, 1, 'ACTIVE', 10, N'Thạc sĩ Y khoa', N'Bác sĩ tim mạch 10 năm kinh nghiệm', N'456 Đường DEF, Quận 2', 79, N'TP. Hồ Chí Minh', 769, N'TP. Thủ Đức', 26806, N'Phường Thủ Thiêm'),
-(5, 2, 'ACTIVE', 12, N'Tiến sĩ Y khoa', N'Bác sĩ nội khoa 12 năm kinh nghiệm', N'789 Đường GHI, Quận 3', 79, N'TP. Hồ Chí Minh', 772, N'Quận 3', 27199, N'Phường Võ Thị Sáu'),
-(6, 2, 'ACTIVE', 8,  N'Bác sĩ CKI',    N'Bác sĩ nội tổng quát 8 năm kinh nghiệm', N'12 Đường JKL, Quận 4', 79, N'TP. Hồ Chí Minh', 773, N'Quận 4', 27211, N'Phường Bến Nghé'),
-(7, 3, 'ACTIVE', 14, N'Thạc sĩ Nhi',   N'Bác sĩ nhi khoa 14 năm kinh nghiệm', N'34 Đường MNO, Quận 5', 79, N'TP. Hồ Chí Minh', 774, N'Quận 5', 27235, N'Phường 7'),
-(8, 4, 'PENDING', 6, N'Bác sĩ CKI',    N'Bác sĩ da liễu 6 năm kinh nghiệm', N'56 Đường PQR, Quận 6', 79, N'TP. Hồ Chí Minh', 775, N'Quận 6', 27247, N'Phường 11'),
-(9, 5, 'ACTIVE', 11, N'Bác sĩ CKII',   N'Bác sĩ tai mũi họng 11 năm', N'78 Đường STU, Quận 7', 79, N'TP. Hồ Chí Minh', 769, N'TP. Thủ Đức', 26809, N'Phường An Khánh'),
-(10,1, 'ACTIVE', 9,  N'Thạc sĩ Y khoa',N'Bác sĩ tim mạch 9 năm kinh nghiệm', N'90 Đường VWX, Quận 8', 79, N'TP. Hồ Chí Minh', 776, N'Quận 8', 27271, N'Phường 5'),
-(11,2, 'INACTIVE',20,N'Tiến sĩ Nội',   N'Bác sĩ nội khoa 20 năm kinh nghiệm', N'12 Đường YZA, Quận 10',79, N'TP. Hồ Chí Minh', 777, N'Quận 10', 27307, N'Phường 4'),
-(12,3, 'ACTIVE', 7,  N'Bác sĩ CKI',    N'Bác sĩ nhi khoa 7 năm kinh nghiệm', N'34 Đường BCD, Quận 11',79, N'TP. Hồ Chí Minh', 778, N'Quận 11', 27331, N'Phường 13');
+(3, 1, 'ACTIVE', 15, N'Tiến sĩ Y khoa', N'Bác sĩ tim mạch 15 năm kinh nghiệm', N'123 Đường ABC, Quận 1', 79, N'TP. Hồ Chí Minh', 760, 26734, N'Phường Bến Nghé'),
+(4, 1, 'ACTIVE', 10, N'Thạc sĩ Y khoa', N'Bác sĩ tim mạch 10 năm kinh nghiệm', N'456 Đường DEF, Quận 2', 79, N'TP. Hồ Chí Minh', 769, 26806, N'Phường Thủ Thiêm'),
+(5, 2, 'ACTIVE', 12, N'Tiến sĩ Y khoa', N'Bác sĩ nội khoa 12 năm kinh nghiệm', N'789 Đường GHI, Quận 3', 79, N'TP. Hồ Chí Minh', 772, 27199, N'Phường Võ Thị Sáu'),
+(6, 2, 'ACTIVE', 8,  N'Bác sĩ CKI',    N'Bác sĩ nội tổng quát 8 năm kinh nghiệm', N'12 Đường JKL, Quận 4', 79, N'TP. Hồ Chí Minh', 773, 27211, N'Phường Bến Nghé'),
+(7, 3, 'ACTIVE', 14, N'Thạc sĩ Nhi',   N'Bác sĩ nhi khoa 14 năm kinh nghiệm', N'34 Đường MNO, Quận 5', 79, N'TP. Hồ Chí Minh', 774, 27235, N'Phường 7'),
+(8, 4, 'PENDING', 6, N'Bác sĩ CKI',    N'Bác sĩ da liễu 6 năm kinh nghiệm', N'56 Đường PQR, Quận 6', 79, N'TP. Hồ Chí Minh', 775, 27247, N'Phường 11'),
+(9, 5, 'ACTIVE', 11, N'Bác sĩ CKII',   N'Bác sĩ tai mũi họng 11 năm', N'78 Đường STU, Quận 7', 79, N'TP. Hồ Chí Minh', 769, 26809, N'Phường An Khánh'),
+(10,1, 'ACTIVE', 9,  N'Thạc sĩ Y khoa',N'Bác sĩ tim mạch 9 năm kinh nghiệm', N'90 Đường VWX, Quận 8', 79, N'TP. Hồ Chí Minh', 776, 27271, N'Phường 5'),
+(11,2, 'INACTIVE',20,N'Tiến sĩ Nội',   N'Bác sĩ nội khoa 20 năm kinh nghiệm', N'12 Đường YZA, Quận 10',79, N'TP. Hồ Chí Minh', 777, 27307, N'Phường 4'),
+(12,3, 'ACTIVE', 7,  N'Bác sĩ CKI',    N'Bác sĩ nhi khoa 7 năm kinh nghiệm', N'34 Đường BCD, Quận 11',79, N'TP. Hồ Chí Minh', 778, 27331, N'Phường 13');
 
 PRINT '10 Doctors inserted';
 GO
