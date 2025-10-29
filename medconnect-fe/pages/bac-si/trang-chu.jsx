@@ -540,8 +540,8 @@ export default function DoctorDashboard() {
                         <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  ))}
               </div>
             )}
           </CardBody>
@@ -590,11 +590,11 @@ export default function DoctorDashboard() {
                           </div>
                         </div>
                         <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
+            </div>
+          </div>
+                ))}
+        </div>
             )}
           </CardBody>
         </Card>

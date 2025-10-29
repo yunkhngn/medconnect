@@ -963,7 +963,7 @@ export default function DatLichKham() {
                       <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
                         <div className="text-xs text-gray-500">{dayLabel}</div>
                         <div className="text-sm">{dateLabel}</div>
-                      </div>
+                  </div>
                     );
                   })}
 
