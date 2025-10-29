@@ -18,6 +18,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
+  const [viewMode, setViewMode] = useState("schedule"); // 'schedule' | 'list'
 
   useEffect(() => {
     if (authLoading) return;
@@ -85,6 +86,36 @@ export default function AppointmentsPage() {
   }
 
   const weekDays = getWeekDays(currentWeekStart);
+  // slot start time (minutes) for sorting
+  const slotStartMinutes = {
+    SLOT_1: 7 * 60 + 30,
+    SLOT_2: 8 * 60 + 15,
+    SLOT_3: 9 * 60,
+    SLOT_4: 9 * 60 + 45,
+    SLOT_5: 10 * 60 + 30,
+    SLOT_6: 11 * 60 + 15,
+    SLOT_7: 13 * 60,
+    SLOT_8: 13 * 60 + 45,
+    SLOT_9: 14 * 60 + 30,
+    SLOT_10: 15 * 60 + 15,
+    SLOT_11: 16 * 60,
+    SLOT_12: 16 * 60 + 45,
+  };
+
+  function toDateTime(apt) {
+    const d = new Date(apt.date);
+    const mins = slotStartMinutes[apt.slot] || 0;
+    d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    return d;
+  }
+
+  const now = new Date();
+  const upcoming = [...appointments]
+    .filter((a) => a.status !== "CANCELLED" && a.status !== "DENIED")
+    .sort((a, b) => toDateTime(a) - toDateTime(b));
+  const history = [...appointments]
+    .filter((a) => toDateTime(a) < now || a.status === "CANCELLED" || a.status === "DENIED")
+    .sort((a, b) => toDateTime(b) - toDateTime(a));
 
   const getStatusColor = (status) => {
     const statusMap = {
@@ -193,10 +224,37 @@ function getSlotData(date, slot) {
             fullWidth
             color="primary"
             startContent={<Plus size={18} />}
-            onClick={() => router.push("/dat-lich-kham")}
+            onClick={() => router.push("/nguoi-dung/dat-lich-kham")}
           >
             Đặt lịch khám mới
           </Button>
+        </CardBody>
+      </Card>
+
+      {/* Mode Switch */}
+      <Card>
+        <CardHeader className="flex gap-3">
+          <Calendar className="text-teal-600" size={24} />
+          <h3 className="text-lg font-semibold">Chế độ hiển thị</h3>
+        </CardHeader>
+        <Divider />
+        <CardBody>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              color={viewMode === 'schedule' ? 'primary' : 'default'}
+              variant={viewMode === 'schedule' ? 'solid' : 'flat'}
+              onClick={() => setViewMode('schedule')}
+            >
+              Theo tuần
+            </Button>
+            <Button
+              color={viewMode === 'list' ? 'primary' : 'default'}
+              variant={viewMode === 'list' ? 'solid' : 'flat'}
+              onClick={() => setViewMode('list')}
+            >
+              Danh sách
+            </Button>
+          </div>
         </CardBody>
       </Card>
 
@@ -285,8 +343,8 @@ function getSlotData(date, slot) {
         </CardBody>
       </Card>
 
-      {/* Calendar Table Card */}
-<Card className="shadow-lg">
+      {viewMode === 'schedule' ? (
+      <Card className="shadow-lg">
   <CardBody className="p-0">
     <div className="overflow-auto max-h-[75vh]">
       <table className="w-full text-sm border-collapse">
@@ -378,6 +436,59 @@ function getSlotData(date, slot) {
     </div>
   </CardBody>
 </Card>
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Lịch sắp tới</h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-3">
+              {upcoming.length === 0 && <p className="text-sm text-gray-500">Không có lịch sắp tới</p>}
+              {upcoming.map((a, idx) => (
+                <div key={idx} className="p-4 bg-gradient-to-br from-white to-gray-50 rounded-xl border flex items-center justify-between hover:shadow-sm transition">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-teal-100 border-2 border-teal-300 flex items-center justify-center">
+                      <Calendar className="text-teal-700" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{new Date(a.date).toLocaleDateString('vi-VN')} • {SLOTS.find(s=>s.id===a.slot)?.time || a.slot}</p>
+                      <p className="text-sm text-gray-600">Bác sĩ: {a.doctor?.name || '—'}</p>
+                    </div>
+                  </div>
+                  <Chip color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')} variant="solid" className="font-semibold">
+                    {getStatusLabel(a.status)}
+                  </Chip>
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold">Lịch đã qua</h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-3">
+              {history.length === 0 && <p className="text-sm text-gray-500">Chưa có lịch đã qua</p>}
+              {history.map((a, idx) => (
+                <div key={idx} className="p-4 bg-white rounded-xl border flex items-center justify-between hover:bg-gray-50 transition">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
+                      <Calendar className="text-gray-600" size={20} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{new Date(a.date).toLocaleDateString('vi-VN')} • {SLOTS.find(s=>s.id===a.slot)?.time || a.slot}</p>
+                      <p className="text-sm text-gray-600">Bác sĩ: {a.doctor?.name || '—'}</p>
+                    </div>
+                  </div>
+                  <Chip color={a.status==='FINISHED' ? 'success' : (a.status==='CANCELLED'?'danger':'default')} variant="solid" className="font-semibold">{getStatusLabel(a.status)}</Chip>
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+        </>
+      )}
 
     </div>
   );

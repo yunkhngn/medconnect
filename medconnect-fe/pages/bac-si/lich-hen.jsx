@@ -37,6 +37,8 @@ export default function DoctorAppointmentsPage() {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isEmrOpen, onOpen: onEmrOpen, onClose: onEmrClose } = useDisclosure();
+  const { isOpen: isImgOpen, onOpen: onImgOpen, onClose: onImgClose } = useDisclosure();
+  const [previewImgUrl, setPreviewImgUrl] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
@@ -332,12 +334,102 @@ export default function DoctorAppointmentsPage() {
     return labels[status] || status;
   };
 
+  // Extract attached symptom image filenames embedded in reason text
+  const parseAttachmentsFromReason = (reason) => {
+    if (!reason || typeof reason !== 'string') return [];
+    const idx = reason.indexOf('Đính kèm');
+    if (idx === -1) return [];
+    // take substring after 'Đính kèm'
+    const tail = reason.slice(idx);
+    // remove bracket wrappers if any
+    const cleaned = tail.replace(/[\[\]]/g, '');
+    // split by common delimiters and keep items that look like filenames
+    const parts = cleaned.split(/[:,]\s*/).flatMap(s => s.split(/\s+/));
+    const files = parts.filter(p => /\.(jpg|jpeg|png|gif|webp)$/i.test(p));
+    return files.slice(0, 6); // cap to avoid overflow
+  };
+
+  // Extract real attachment URLs if backend starts storing them in detail JSON or explicit fields
+  const extractAttachmentUrls = (apt) => {
+    const urls = [];
+    if (!apt) return urls;
+    // Common direct fields
+    if (Array.isArray(apt.attachmentUrls)) urls.push(...apt.attachmentUrls);
+    if (Array.isArray(apt.attachments)) urls.push(...apt.attachments);
+    // Try reason JSON (new canonical place)
+    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+      try {
+        const r = JSON.parse(apt.reason);
+        if (Array.isArray(r?.attachments)) urls.push(...r.attachments);
+      } catch {}
+    }
+    // Try parse JSON detail
+    if (apt.detail && typeof apt.detail === 'string') {
+      try {
+        const json = JSON.parse(apt.detail);
+        const candidates = [
+          json?.attachments,
+          json?.images,
+          json?.symptom_images,
+          json?.symptoms?.images,
+        ].filter(Boolean);
+        for (const c of candidates) {
+          if (Array.isArray(c)) urls.push(...c);
+        }
+      } catch {}
+    }
+    // Keep only http(s) image links
+    return urls.filter((u) => typeof u === 'string' && /^https?:\/\//.test(u) && /(\.jpg|\.jpeg|\.png|\.webp|\.gif)(\?|$)/i.test(u)).slice(0, 6);
+  };
+
+  const getDisplayReason = (apt) => {
+    if (!apt) return '';
+    // Prefer reason as JSON first
+    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+      try {
+        const j = JSON.parse(apt.reason);
+        if (j?.reason) return j.reason;
+      } catch {}
+    }
+    // Then detail.reason if provided
+    if (apt.detail && typeof apt.detail === 'string') {
+      try {
+        const json = JSON.parse(apt.detail);
+        if (json?.reason) return json.reason;
+      } catch {}
+    }
+    return apt.reason || '';
+  };
+
+  const getAttachmentNamesFromDetail = (apt) => {
+    if (!apt) return [];
+    // Try reason JSON first
+    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+      try {
+        const j = JSON.parse(apt.reason);
+        if (Array.isArray(j?.attachments)) return j.attachments.slice(0, 6);
+      } catch {}
+    }
+    if (!apt.detail || typeof apt.detail !== 'string') return [];
+    try {
+      const json = JSON.parse(apt.detail);
+      const arr = json?.attachments;
+      if (Array.isArray(arr)) {
+        return arr
+          .map((i) => (typeof i === 'string' ? i : i?.name))
+          .filter(Boolean)
+          .slice(0, 6);
+      }
+    } catch {}
+    return [];
+  };
+
   const getPendingCount = () => {
     return appointments.filter(apt => apt.status === "PENDING").length;
   };
 
   if (authLoading || loading) {
-    return (
+  return (
       <DoctorFrame>
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -522,7 +614,7 @@ export default function DoctorAppointmentsPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredAppointments.map((apt) => (
             <Card
               key={apt.appointmentId}
@@ -630,11 +722,36 @@ export default function DoctorAppointmentsPage() {
                       )}
                     </div>
 
-                    {/* Reason */}
-                    {apt.reason && (
+                    {/* Reason + Attachments (parsed) */}
+                    {(apt.reason) && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-3">
                         <p className="text-xs text-orange-700 font-medium mb-1">Lý do khám:</p>
-                        <p className="text-sm text-gray-700">{apt.reason}</p>
+                        <p className="text-sm text-gray-700 mb-2">{getDisplayReason(apt)}</p>
+                        {/* Real thumbnails if available via URLs */}
+                        {extractAttachmentUrls(apt).length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {extractAttachmentUrls(apt).map((url, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setPreviewImgUrl(url); onImgOpen(); }}
+                                className="w-16 h-16 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              >
+                                <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          (getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {(getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).map((name, i) => (
+                                <Chip key={i} size="sm" variant="flat" color="warning">
+                                  {name}
+                                </Chip>
+                              ))}
+                            </div>
+                          )
+                        )}
                       </div>
                     )}
 
@@ -719,13 +836,17 @@ export default function DoctorAppointmentsPage() {
                         {/* ID Photo (3x4 if available) or Avatar */}
                         <div className="flex-shrink-0">
                           {selectedAppointment.patient?.idPhotoUrl ? (
-                            <div className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md">
+                            <button
+                              type="button"
+                              onClick={() => { setPreviewImgUrl(selectedAppointment.patient.idPhotoUrl); onImgOpen(); }}
+                              className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
                               <img 
                                 src={selectedAppointment.patient.idPhotoUrl} 
                                 alt="Patient ID Photo" 
                                 className="w-full h-full object-cover"
                               />
-                            </div>
+                            </button>
                           ) : (
                             <Avatar
                               src={selectedAppointment.patient?.avatar}
@@ -882,6 +1003,49 @@ export default function DoctorAppointmentsPage() {
                               </div>
                             </>
                           )}
+
+                          {/* Medications, Surgeries, Vaccinations, Family history, Lifestyle */}
+                          {(patientEmrInModal.medical_history?.current_medications ||
+                            patientEmrInModal.medical_history?.surgeries ||
+                            patientEmrInModal.medical_history?.vaccinations ||
+                            patientEmrInModal.medical_history?.family_history ||
+                            patientEmrInModal.medical_history?.lifestyle) && (
+                            <>
+                              <Divider className="my-4" />
+                              <div className="grid grid-cols-2 gap-4">
+                                {patientEmrInModal.medical_history?.current_medications && (
+                                  <div className="bg-blue-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Thuốc đang dùng</p>
+                                    <p className="font-medium text-blue-800 break-words">{patientEmrInModal.medical_history.current_medications}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.surgeries && (
+                                  <div className="bg-purple-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Tiền sử phẫu thuật</p>
+                                    <p className="font-medium text-purple-800 break-words">{patientEmrInModal.medical_history.surgeries}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.vaccinations && (
+                                  <div className="bg-green-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Tiêm chủng</p>
+                                    <p className="font-medium text-green-800 break-words">{patientEmrInModal.medical_history.vaccinations}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.family_history && (
+                                  <div className="bg-yellow-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Tiền sử gia đình</p>
+                                    <p className="font-medium text-yellow-800 break-words">{patientEmrInModal.medical_history.family_history}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.lifestyle && (
+                                  <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Lối sống</p>
+                                    <p className="font-medium text-gray-800 break-words">{patientEmrInModal.medical_history.lifestyle}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </>
                       ) : (
                         <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
@@ -954,9 +1118,34 @@ export default function DoctorAppointmentsPage() {
                                   <AlertCircle className="text-orange-600" size={18} />
                                   <p className="text-sm font-medium text-gray-700">Lý do khám</p>
                         </div>
-                                <p className="text-gray-900 bg-orange-50 p-3 rounded-lg">
-                                  {selectedAppointment.reason}
-                                </p>
+                                <div className="text-gray-900 bg-orange-50 p-3 rounded-lg">
+                                  <p className="mb-2">{getDisplayReason(selectedAppointment)}</p>
+                                  {/* Thumbnails if backend returns URLs */}
+                                  {extractAttachmentUrls(selectedAppointment).length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {extractAttachmentUrls(selectedAppointment).map((url, i) => (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() => { setPreviewImgUrl(url); onImgOpen(); }}
+                                          className="w-20 h-20 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        >
+                                          <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    (getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).length > 0 && (
+                                      <div className="flex flex-wrap gap-2">
+                                        {(getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).map((name, i) => (
+                                          <Chip key={i} size="sm" variant="flat" color="warning">
+                                            {name}
+                        </Chip>
+                                        ))}
+                                      </div>
+                                    )
+                                  )}
+                                </div>
                               </div>
                             </>
                           )}
@@ -966,7 +1155,7 @@ export default function DoctorAppointmentsPage() {
                           <div className="text-xs text-gray-500">
                             <p>Mã lịch hẹn: #{selectedAppointment.appointmentId}</p>
                             <p>Đặt lúc: {new Date(selectedAppointment.createdAt).toLocaleString("vi-VN")}</p>
-                          </div>
+                        </div>
           </CardBody>
         </Card>
                     </div>
@@ -1121,13 +1310,17 @@ export default function DoctorAppointmentsPage() {
                         {/* Patient Photo */}
                         <div className="flex-shrink-0">
                           {patientEmr.patient_profile?.id_photo_url ? (
-                            <div className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md">
+                            <button
+                              type="button"
+                              onClick={() => { setPreviewImgUrl(patientEmr.patient_profile.id_photo_url); onImgOpen(); }}
+                              className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
                               <img 
                                 src={patientEmr.patient_profile.id_photo_url} 
                                 alt="ID Photo" 
                                 className="w-full h-full object-cover"
                               />
-                            </div>
+                            </button>
                           ) : (
                             <Avatar
                               name={patientEmr.patient_profile?.full_name?.charAt(0)?.toUpperCase()}
@@ -1166,8 +1359,8 @@ export default function DoctorAppointmentsPage() {
                             <p className="text-sm text-gray-600">Email</p>
                             <p className="font-medium text-sm">{patientEmr.patient_profile?.email || "N/A"}</p>
                           </div>
-                        </div>
-                      </div>
+                    </div>
+                  </div>
 
                       {/* Full Address */}
                       <div className="mb-4">
@@ -1177,10 +1370,10 @@ export default function DoctorAppointmentsPage() {
 
                       <Divider className="my-4" />
 
-                      {/* Additional Medical Info in Grid */}
+                      {/* Additional Personal/Identification Info */}
                     <div className="grid grid-cols-2 gap-4">
                         {patientEmr.patient_profile?.identification_number && (
-                      <div>
+                  <div>
                             <p className="text-sm text-gray-600">CMND/CCCD</p>
                             <p className="font-medium">{patientEmr.patient_profile.identification_number}</p>
                       </div>
@@ -1190,6 +1383,18 @@ export default function DoctorAppointmentsPage() {
                             <p className="text-sm text-gray-600">Số BHYT</p>
                             <p className="font-medium">{patientEmr.patient_profile.insurance_number}</p>
                       </div>
+                        )}
+                        {(patientEmr.patient_profile?.insurance_expiry || patientEmr.patient_profile?.insurance_expired_at || patientEmr.patient_profile?.bhyt_expired_at) && (
+                          <div>
+                            <p className="text-sm text-gray-600">BHYT hết hạn</p>
+                            <p className="font-medium">{
+                              new Date(
+                                patientEmr.patient_profile.insurance_expiry ||
+                                patientEmr.patient_profile.insurance_expired_at ||
+                                patientEmr.patient_profile.bhyt_expired_at
+                              ).toLocaleDateString("vi-VN")
+                            }</p>
+                          </div>
                         )}
                         {patientEmr.patient_profile?.emergency_contact_name && (
                       <div>
@@ -1217,27 +1422,27 @@ export default function DoctorAppointmentsPage() {
                         )}
                   </div>
 
-                      {/* Medical Warnings */}
-                      {(patientEmr.patient_profile?.allergies || patientEmr.patient_profile?.chronic_conditions) && (
+                      {/* Medical Warnings from medical_history (preferred) */}
+                      {(patientEmr.medical_history?.allergies || patientEmr.medical_history?.previous_conditions || patientEmr.patient_profile?.allergies || patientEmr.patient_profile?.chronic_conditions) && (
                         <>
                           <Divider className="my-4" />
                           <div className="grid grid-cols-2 gap-4">
-                            {patientEmr.patient_profile?.allergies && (
+                            {(patientEmr.medical_history?.allergies || patientEmr.patient_profile?.allergies) && (
                               <div className="bg-red-50 p-3 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
                                   <AlertCircle className="text-red-600" size={16} />
                                   Dị ứng
                                 </p>
-                                <p className="font-medium text-red-700">{patientEmr.patient_profile.allergies}</p>
+                                <p className="font-medium text-red-700">{patientEmr.medical_history?.allergies || patientEmr.patient_profile?.allergies}</p>
                     </div>
                   )}
-                            {patientEmr.patient_profile?.chronic_conditions && (
+                            {(patientEmr.medical_history?.previous_conditions || patientEmr.patient_profile?.chronic_conditions) && (
                               <div className="bg-orange-50 p-3 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
                                   <Heart className="text-orange-600" size={16} />
                                   Bệnh mãn tính
                                 </p>
-                                <p className="font-medium text-orange-700">{patientEmr.patient_profile.chronic_conditions}</p>
+                                <p className="font-medium text-orange-700">{patientEmr.medical_history?.previous_conditions || patientEmr.patient_profile?.chronic_conditions}</p>
                 </div>
               )}
                           </div>
@@ -1271,28 +1476,28 @@ export default function DoctorAppointmentsPage() {
                               }
                             >
                               <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
                                     <p className="text-xs text-gray-600">Ngày khám</p>
                                     <p className="font-medium">{formatMedicalRecordDate(record.visit_date || record.date)}</p>
-                                  </div>
-                                  <div>
+                      </div>
+                      <div>
                                     <p className="text-xs text-gray-600">Giờ khám</p>
                                     <p className="font-medium">{record.visit_time || record.time || "N/A"}</p>
-                                  </div>
-                                  <div>
+                      </div>
+                      <div>
                                     <p className="text-xs text-gray-600">Bác sĩ</p>
                                     <p className="font-medium">{record.doctor_name || "N/A"}</p>
-                                  </div>
-                                  <div>
+                      </div>
+                      <div>
                                     <p className="text-xs text-gray-600">Loại khám</p>
                                     <p className="font-medium">
                                       {(record.visit_type || record.type) === 'online' || (record.visit_type || record.type) === 'ONLINE' 
                                         ? 'Online' 
                                         : 'Tại phòng khám'}
                                     </p>
-                                  </div>
-                                </div>
+                      </div>
+                    </div>
 
                                 {/* Vital Signs if available */}
                                 {record.vital_signs && (
@@ -1308,7 +1513,7 @@ export default function DoctorAppointmentsPage() {
                                           <div className="bg-white p-2 rounded">
                                             <p className="text-xs text-gray-500">Nhiệt độ</p>
                                             <p className="font-medium">{record.vital_signs.temperature}°C</p>
-                                          </div>
+                  </div>
                                         )}
                                         {record.vital_signs.blood_pressure && (
                                           <div className="bg-white p-2 rounded">
@@ -1350,8 +1555,8 @@ export default function DoctorAppointmentsPage() {
                                   <div>
                                     <p className="text-xs text-gray-600 mb-1">Lý do khám</p>
                                     <p className="text-sm bg-orange-50 p-2 rounded">{record.chief_complaint || record.reason}</p>
-                                  </div>
-                                )}
+                    </div>
+                  )}
 
                                 {record.diagnosis && (
                                   <div>
@@ -1362,8 +1567,8 @@ export default function DoctorAppointmentsPage() {
                                     <p className="font-medium bg-red-50 p-2 rounded">
                                       {formatDiagnosis(record.diagnosis)}
                                     </p>
-                                  </div>
-                                )}
+                </div>
+              )}
 
                                 {record.prescriptions && record.prescriptions.length > 0 && (
                                   <div>
@@ -1411,13 +1616,37 @@ export default function DoctorAppointmentsPage() {
                   )}
                 </div>
               </ModalBody>
-              <ModalFooter>
+            <ModalFooter>
                 <Button variant="light" onPress={onEmrClose}>
                   Đóng
-                </Button>
+              </Button>
             </ModalFooter>
-            </>
-          )}
+                </>
+              )}
+          </ModalContent>
+        </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal isOpen={isImgOpen} onClose={() => { setPreviewImgUrl(null); onImgClose(); }} size="xl">
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">Ảnh đính kèm</h3>
+          </ModalHeader>
+          <ModalBody>
+            {previewImgUrl && (
+              <div className="w-full">
+                <img src={previewImgUrl} alt="attachment" className="w-full h-auto rounded-lg" />
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            {previewImgUrl && (
+              <Button as="a" href={previewImgUrl} target="_blank" rel="noreferrer" variant="flat" color="primary">
+                Mở ảnh gốc
+              </Button>
+            )}
+            <Button variant="light" onPress={() => { setPreviewImgUrl(null); onImgClose(); }}>Đóng</Button>
+            </ModalFooter>
           </ModalContent>
         </Modal>
     </DoctorFrame>
