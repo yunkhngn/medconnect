@@ -1,28 +1,51 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function RouteMap({ originAddress, destinationAddress, apiKey }) {
   const containerRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  // Defer load until map is near viewport
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      });
+    }, { rootMargin: '200px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (!originAddress || !destinationAddress || !apiKey) return;
+    if (!originAddress || !destinationAddress || !apiKey || !visible) return;
     let mapInstance;
     let aborted = false;
     let LRef = null;
 
     const geocode = async (text) => {
       try {
-        const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
-          text
-        )}&limit=1&apiKey=${apiKey}`;
+        const cacheKey = `geo_${text}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const v = JSON.parse(cached);
+          if (v && typeof v.lat === 'number' && typeof v.lon === 'number') return v;
+        }
+        const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text)}&limit=1&apiKey=${apiKey}`;
         const res = await fetch(url);
         if (!res.ok) return null;
         const data = await res.json();
         const f = data?.features?.[0];
         if (!f?.geometry?.coordinates) return null;
         const [lon, lat] = f.geometry.coordinates;
-        return { lat, lon };
+        const out = { lat, lon };
+        sessionStorage.setItem(cacheKey, JSON.stringify(out));
+        return out;
       } catch {
         return null;
       }
@@ -56,10 +79,18 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
       LRef.marker([to.lat, to.lon]).addTo(mapInstance);
 
       try {
-        const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
-        const res = await fetch(routeUrl);
-        if (res.ok) {
-          const json = await res.json();
+        const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
+        let json = null;
+        const cached = sessionStorage.getItem(rKey);
+        if (cached) {
+          json = JSON.parse(cached);
+        } else {
+          const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
+          const res = await fetch(routeUrl);
+          if (res.ok) json = await res.json();
+          if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
+        }
+        if (json) {
           const geom = json?.features?.[0]?.geometry;
           let coords = [];
           if (geom?.type === "LineString") coords = geom.coordinates;
@@ -82,12 +113,16 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
       }
     };
 
-    init();
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(init);
+    } else {
+      setTimeout(init, 0);
+    }
     return () => {
       aborted = true;
       if (mapInstance) mapInstance.remove();
     };
-  }, [originAddress, destinationAddress, apiKey]);
+  }, [originAddress, destinationAddress, apiKey, visible]);
 
   return <div ref={containerRef} className="w-full h-96 rounded-xl overflow-hidden" />;
 }

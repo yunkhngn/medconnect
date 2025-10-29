@@ -68,6 +68,7 @@ export default function DatLichKham() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [appointmentType, setAppointmentType] = useState("ONLINE");
   const [reason, setReason] = useState("");
+  const [symptomImages, setSymptomImages] = useState([]); // [{name, url, file}]
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
@@ -455,7 +456,13 @@ export default function DatLichKham() {
           date: selectedDate,
           slot: selectedSlot,
           type: appointmentType,
-          reason: reason || null
+          reason: (() => {
+            if (!reason && symptomImages.length === 0) return null;
+            if (symptomImages.length === 0) return reason;
+            const filesList = symptomImages.map((i) => i.name).join(", ");
+            const note = `\n\n[Đính kèm: ${symptomImages.length} ảnh triệu chứng: ${filesList}. Ảnh chưa tải lên hệ thống.]`;
+            return (reason || "").concat(note);
+          })()
         })
       });
 
@@ -850,6 +857,7 @@ export default function DatLichKham() {
                         <div className="mt-3 text-xs text-gray-600 flex flex-wrap gap-x-6 gap-y-2">
                           <div className="flex items-center gap-1"><Star size={14} className="text-yellow-500" /><span>Đánh giá</span><span className="font-medium ml-1">{doctor.rating || '4.8'}</span></div>
                           <div className="flex items-center gap-1"><Award size={14} className="text-teal-600" /><span>Năm KN</span><span className="font-medium ml-1">{doctor.experience_years || doctor.experienceYears || '—'}</span></div>
+                          <br/>
                           <div className="flex items-center gap-1 min-w-[180px] truncate"><User size={14} className="text-cyan-600" /><span>Email</span><span className="font-medium ml-1 truncate">{doctor.email || '—'}</span></div>
                           <div className="flex items-center gap-1"><Phone size={14} className="text-green-600" /><span>Điện thoại</span><span className="font-medium ml-1">{doctor.phone || '—'}</span></div>
                         </div>
@@ -886,15 +894,15 @@ export default function DatLichKham() {
             {/* Weekly Calendar */}
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-sm">
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
                     const prev = new Date(weekStart);
                     prev.setDate(prev.getDate() - 7);
                     setWeekStart(prev);
                   }}>
                     Tuần trước
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
                     const now = new Date();
                     const day = now.getDay();
                     const diff = (day === 0 ? -6 : 1) - day;
@@ -905,7 +913,7 @@ export default function DatLichKham() {
                   }}>
                     Tuần hiện tại
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
                     const next = new Date(weekStart);
                     next.setDate(next.getDate() + 7);
                     setWeekStart(next);
@@ -915,10 +923,10 @@ export default function DatLichKham() {
                 </div>
             </div>
 
-              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-                <div className="grid grid-cols-8 min-w-[800px]">
+              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div className="grid grid-cols-8 min-w-[920px]">
                   {/* Header */}
-                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50 border-r">Khung giờ</div>
+                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50/80 border-r sticky left-0 z-10">Khung giờ</div>
                   {Array.from({ length: 7 }).map((_, i) => {
                     const d = new Date(weekStart);
                     d.setDate(weekStart.getDate() + i);
@@ -927,7 +935,8 @@ export default function DatLichKham() {
                     const key = d.toISOString().split('T')[0];
                     return (
                       <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
-                        {dayLabel}, {dateLabel}
+                        <div className="text-xs text-gray-500">{dayLabel}</div>
+                        <div className="text-sm">{dateLabel}</div>
                       </div>
                     );
                   })}
@@ -935,7 +944,7 @@ export default function DatLichKham() {
                   {/* Body */}
                   {Object.keys(SLOT_TIMES).map((slotKey) => (
                     <div key={slotKey} className="contents">
-                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center">{SLOT_TIMES[slotKey]}</div>
+                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center sticky left-0 bg-white/90 z-10">{SLOT_TIMES[slotKey]}</div>
                       {Array.from({ length: 7 }, (_, i) => {
                         const d = new Date(weekStart);
                         d.setDate(weekStart.getDate() + i);
@@ -947,21 +956,21 @@ export default function DatLichKham() {
                         const selectable = available && !isPast;
                         const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
                         return (
-                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center">
+                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center bg-white">
                             <button
                               onClick={() => {
                                 if (!selectable) return;
                                 handleDateChange(dateStr);
                                 setSelectedSlot(slotKey);
                               }}
-                              className={`w-full h-10 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out
-                                ${isSelected ? 'bg-teal-600 text-white shadow-md' : ''}
-                                ${!isSelected && selectable ? 'bg-white border border-gray-300 hover:border-teal-500 hover:bg-teal-50 text-gray-700' : ''}
+                              className={`w-full h-10 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none
+                                ${isSelected ? 'bg-teal-600 text-white shadow-md ring-2 ring-teal-300' : ''}
+                                ${!isSelected && selectable ? 'bg-teal-50/40 border border-teal-300 hover:bg-teal-100 text-teal-700' : ''}
                                 ${!selectable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
                               `}
                               disabled={!selectable}
                             >
-                              {isSelected ? 'Đã chọn' : (selectable ? 'Đặt' : '—')}
+                              {isSelected ? 'Đã chọn' : (selectable ? 'Chọn' : '—')}
                             </button>
                   </div>
                         );
@@ -972,10 +981,10 @@ export default function DatLichKham() {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-2">
-                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-teal-600"></span>Đã chọn</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-white border border-gray-300"></span>Có thể đặt</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-gray-100"></span>Không khả dụng</div>
+              <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-3">
+                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-600"></span>Đã chọn</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-100 border border-teal-300"></span>Có thể đặt</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-gray-100"></span>Không khả dụng</div>
               </div>
             </div>
 
@@ -1016,6 +1025,46 @@ export default function DatLichKham() {
                   onChange={(e) => setReason(e.target.value)}
                   minRows={3}
                 />
+
+                {/* Symptom images */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-2">Đính kèm ảnh triệu chứng <span className="text-gray-500">(tùy chọn)</span></label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      files.forEach((file) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                      e.target.value = '';
+                    }}
+                    className="block"
+                  />
+
+                  {symptomImages.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      {symptomImages.map((img, idx) => (
+                        <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden relative group border">
+                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setSymptomImages((prev) => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 bg-white/80 text-red-600 text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">Ảnh chỉ lưu kèm nội dung ghi chú của bạn khi tạo lịch. Nếu cần gửi ảnh chất lượng cao, vui lòng mang theo hoặc gửi qua kênh chat sau khi đặt lịch.</p>
+                </div>
               </div>
             )}
 
