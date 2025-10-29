@@ -21,6 +21,7 @@ DELETE FROM Video_Call_Session;
 DELETE FROM Medical_Record;
 DELETE FROM Payment;
 DELETE FROM Appointment;
+DELETE FROM License;
 DELETE FROM Schedule;
 
 -- Delete parent tables
@@ -126,21 +127,41 @@ GO
 
 PRINT 'Inserting Doctor data...';
 
--- Note: Using speciality_id instead of specialization enum
--- 1=Tim mạch, 2=Nội khoa, 3=Nhi khoa, 4=Da liễu, 5=Tai mũi họng
-INSERT INTO Doctor (user_id, speciality_id, license_id, status, experience_years) VALUES
-(3, 1, 'LIC-CARD-001', 'ACTIVE', 15),  -- Tim mạch
-(4, 1, 'LIC-CARD-002', 'ACTIVE', 10),  -- Tim mạch
-(5, 2, 'LIC-INT-001', 'ACTIVE', 12),   -- Nội khoa
-(6, 2, 'LIC-INT-002', 'ACTIVE', 8),    -- Nội khoa
-(7, 3, 'LIC-PED-001', 'ACTIVE', 14),   -- Nhi khoa
-(8, 4, 'LIC-DER-001', 'PENDING', 6),   -- Da liễu
-(9, 5, 'LIC-ENT-001', 'ACTIVE', 11),   -- Tai mũi họng
-(10, 1, 'LIC-CARD-003', 'ACTIVE', 9),  -- Tim mạch
-(11, 2, 'LIC-INT-003', 'INACTIVE', 20),-- Nội khoa
-(12, 3, 'LIC-PED-002', 'ACTIVE', 7);   -- Nhi khoa
+-- Note: Using speciality_id (entity) and enriched doctor profile fields
+-- Columns: user_id, speciality_id, status, experience_years, education_level, bio, clinic_address,
+--          province_code, province_name, district_code, district_name, ward_code, ward_name
+INSERT INTO Doctor (
+  user_id, speciality_id, status, experience_years, education_level, bio, clinic_address,
+  province_code, province_name, district_code, district_name, ward_code, ward_name
+) VALUES
+(3, 1, 'ACTIVE', 15, N'Tiến sĩ Y khoa', N'Bác sĩ tim mạch 15 năm kinh nghiệm', N'123 Đường ABC, Quận 1', 79, N'TP. Hồ Chí Minh', 760, N'Quận 1', 26734, N'Phường Bến Nghé'),
+(4, 1, 'ACTIVE', 10, N'Thạc sĩ Y khoa', N'Bác sĩ tim mạch 10 năm kinh nghiệm', N'456 Đường DEF, Quận 2', 79, N'TP. Hồ Chí Minh', 769, N'TP. Thủ Đức', 26806, N'Phường Thủ Thiêm'),
+(5, 2, 'ACTIVE', 12, N'Tiến sĩ Y khoa', N'Bác sĩ nội khoa 12 năm kinh nghiệm', N'789 Đường GHI, Quận 3', 79, N'TP. Hồ Chí Minh', 772, N'Quận 3', 27199, N'Phường Võ Thị Sáu'),
+(6, 2, 'ACTIVE', 8,  N'Bác sĩ CKI',    N'Bác sĩ nội tổng quát 8 năm kinh nghiệm', N'12 Đường JKL, Quận 4', 79, N'TP. Hồ Chí Minh', 773, N'Quận 4', 27211, N'Phường Bến Nghé'),
+(7, 3, 'ACTIVE', 14, N'Thạc sĩ Nhi',   N'Bác sĩ nhi khoa 14 năm kinh nghiệm', N'34 Đường MNO, Quận 5', 79, N'TP. Hồ Chí Minh', 774, N'Quận 5', 27235, N'Phường 7'),
+(8, 4, 'PENDING', 6, N'Bác sĩ CKI',    N'Bác sĩ da liễu 6 năm kinh nghiệm', N'56 Đường PQR, Quận 6', 79, N'TP. Hồ Chí Minh', 775, N'Quận 6', 27247, N'Phường 11'),
+(9, 5, 'ACTIVE', 11, N'Bác sĩ CKII',   N'Bác sĩ tai mũi họng 11 năm', N'78 Đường STU, Quận 7', 79, N'TP. Hồ Chí Minh', 769, N'TP. Thủ Đức', 26809, N'Phường An Khánh'),
+(10,1, 'ACTIVE', 9,  N'Thạc sĩ Y khoa',N'Bác sĩ tim mạch 9 năm kinh nghiệm', N'90 Đường VWX, Quận 8', 79, N'TP. Hồ Chí Minh', 776, N'Quận 8', 27271, N'Phường 5'),
+(11,2, 'INACTIVE',20,N'Tiến sĩ Nội',   N'Bác sĩ nội khoa 20 năm kinh nghiệm', N'12 Đường YZA, Quận 10',79, N'TP. Hồ Chí Minh', 777, N'Quận 10', 27307, N'Phường 4'),
+(12,3, 'ACTIVE', 7,  N'Bác sĩ CKI',    N'Bác sĩ nhi khoa 7 năm kinh nghiệm', N'34 Đường BCD, Quận 11',79, N'TP. Hồ Chí Minh', 778, N'Quận 11', 27331, N'Phường 13');
 
 PRINT '10 Doctors inserted';
+GO
+
+-- ============================================
+-- STEP 4.1: Insert Licenses for Doctors (optional but recommended)
+-- ============================================
+
+PRINT 'Inserting Licenses...';
+
+INSERT INTO License (
+  doctor_id, license_number, issued_date, expiry_date, issuer_title, scope_of_practice, notes, proof_document_url, created_at, updated_at
+) VALUES
+(3, '000001/BYT-GPHN', '2015-01-15', '2030-01-15', N'Bộ Y tế', N'Tim mạch', NULL, NULL, GETDATE(), GETDATE()),
+(4, '000002/BYT-GPHN', '2016-03-20', '2031-03-20', N'Bộ Y tế', N'Tim mạch', NULL, NULL, GETDATE(), GETDATE()),
+(5, '000003/BYT-GPHN', '2014-06-10', '2029-06-10', N'Bộ Y tế', N'Nội khoa', NULL, NULL, GETDATE(), GETDATE());
+
+PRINT '3 Licenses inserted';
 GO
 
 -- ============================================
@@ -411,37 +432,38 @@ GO
 -- STEP 12: Insert Schedules (10 records - for doctors)
 -- ============================================
 
-PRINT 'Inserting Schedules...';
+PRINT 'Inserting Schedules (12-slot model)...';
 
 DBCC CHECKIDENT ('Schedule', RESEED, 0);
 GO
 
 SET IDENTITY_INSERT Schedule ON;
 
+-- Columns: schedule_id, status, date, slot, user_id
 INSERT INTO Schedule (schedule_id, status, date, slot, user_id) VALUES
--- Doctor 1 schedules (next week)
-(1, 'AVAILABLE', '2025-10-28', '09:00:00', 3),
-(2, 'AVAILABLE', '2025-10-28', '14:00:00', 3),
-(3, 'AVAILABLE', '2025-10-29', '10:00:00', 3),
+-- Doctor 1 schedules (today and tomorrow)
+(1, 'RESERVED', '2025-10-29', 'SLOT_1', 3),
+(2, 'RESERVED', '2025-10-29', 'SLOT_5', 3),
+(3, 'RESERVED', '2025-10-30', 'SLOT_7', 3),
 
 -- Doctor 2 schedules
-(4, 'AVAILABLE', '2025-10-28', '08:30:00', 4),
-(5, 'BOOKED', '2025-10-29', '09:00:00', 4),
+(4, 'RESERVED', '2025-10-29', 'SLOT_2', 4),
+(5, 'BUSY',     '2025-10-29', 'SLOT_9', 4),
 
 -- Doctor 3 schedules
-(6, 'AVAILABLE', '2025-10-28', '11:00:00', 5),
-(7, 'AVAILABLE', '2025-10-29', '13:00:00', 5),
+(6, 'RESERVED', '2025-10-30', 'SLOT_3', 5),
+(7, 'RESERVED', '2025-10-30', 'SLOT_11',5),
 
 -- Doctor 4 schedules
-(8, 'AVAILABLE', '2025-10-30', '10:00:00', 6),
+(8, 'RESERVED', '2025-10-31', 'SLOT_4', 6),
 
 -- Doctor 5 schedules
-(9, 'AVAILABLE', '2025-10-28', '15:00:00', 7),
-(10, 'AVAILABLE', '2025-10-31', '09:00:00', 12);
+(9, 'RESERVED', '2025-10-31', 'SLOT_10',7),
+(10,'RESERVED', '2025-10-31', 'SLOT_12',12);
 
 SET IDENTITY_INSERT Schedule OFF;
 
-PRINT '10 Schedules inserted';
+PRINT '10 Schedules inserted (12-slot)';
 GO
 
 -- ============================================
