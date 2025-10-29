@@ -54,7 +54,11 @@ public class DoctorService {
     }
 
     public void deleteDoctor(Long id) throws Exception {
-        doctorRepository.deleteById(id);
+        // Soft delete to avoid FK constraint violations
+        Doctor existing = doctorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+        existing.setStatus(se1961.g1.medconnect.enums.DoctorStatus.INACTIVE);
+        doctorRepository.save(existing);
     }
 
     /**

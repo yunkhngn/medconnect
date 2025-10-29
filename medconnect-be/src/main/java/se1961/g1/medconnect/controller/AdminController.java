@@ -263,6 +263,7 @@ public class AdminController {
             doctorData.put("phone", doctor.getPhone());
             doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
             doctorData.put("avatar", doctor.getAvatarUrl());
+            doctorData.put("status", doctor.getStatus() != null ? doctor.getStatus().name() : null);
 
             // Get license number from active license
             License activeLicense = doctor.getActiveLicense();

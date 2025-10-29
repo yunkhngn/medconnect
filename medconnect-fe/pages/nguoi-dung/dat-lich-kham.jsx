@@ -3,12 +3,13 @@ import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
 } from "@heroui/react";
-import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter } from "lucide-react";
+import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
+import { useAddressData } from "@/hooks/useAddressData";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -38,6 +39,20 @@ const SPECIALTY_MAP = {
   GENERAL: "Đa khoa"
 };
 
+// Map speciality key → default ID used in seed data (if BE returns numeric ids)
+const SPECIALTY_KEY_TO_ID = {
+  TIM_MACH: 1,
+  NOI_KHOA: 2,
+  NHI_KHOA: 3,
+  DA_LIEU: 4,
+  TAI_MUI_HONG: 5,
+  MAT: 6,
+  NGOAI_KHOA: 10, // example mapping; adjust if BE uses different ids
+  SAN_PHU_KHOA: 9,
+  THAN_KINH: 8,
+  GENERAL: 0,
+};
+
 export default function DatLichKham() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -46,6 +61,7 @@ export default function DatLichKham() {
   // Booking flow steps
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [previewDoctor, setPreviewDoctor] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -62,9 +78,10 @@ export default function DatLichKham() {
 
   // Filters
   const [specialityFilter, setSpecialityFilter] = useState("");
-  const [provinceFilter, setProvinceFilter] = useState({ code: "", name: "" });
-  const [districtFilter, setDistrictFilter] = useState({ code: "", name: "" });
-  const [wardFilter, setWardFilter] = useState({ code: "", name: "" });
+  const [provinceCode, setProvinceCode] = useState(null);
+  const [districtCode, setDistrictCode] = useState(null);
+  const [wardCode, setWardCode] = useState(null);
+  const { provinces, getProvinceName, getDistrictName, getWardName } = useAddressData();
 
   // Weekly calendar state
   const [weekStart, setWeekStart] = useState(() => {
@@ -77,6 +94,11 @@ export default function DatLichKham() {
     return monday;
   });
   const [weeklyAvailable, setWeeklyAvailable] = useState({}); // { 'YYYY-MM-DD': [slotIds] }
+  // Map (Geoapify) for preview doctor
+  const [mapUrl, setMapUrl] = useState("");
+  const [embedUrl, setEmbedUrl] = useState("");
+  const [loadingMap, setLoadingMap] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   // Fetch doctors from backend
   useEffect(() => {
@@ -91,7 +113,7 @@ export default function DatLichKham() {
     }
   }, [user, authLoading]);
 
-  // Filter doctors based on search query
+  // Filter doctors based on search query and filters
   useEffect(() => {
     let filtered = doctors;
     // Text search
@@ -103,20 +125,43 @@ export default function DatLichKham() {
     }
     // Speciality filter
     if (specialityFilter) {
-      filtered = filtered.filter(doc => (doc.specialty || "").toString() === specialityFilter);
+      const specLabel = (SPECIALTY_MAP[specialityFilter] || "").toLowerCase();
+      const specId = SPECIALTY_KEY_TO_ID[specialityFilter];
+      filtered = filtered.filter(doc => {
+        const key = (doc.specialty || doc.speciality || doc.speciality_key || "").toString().toUpperCase();
+        const id = Number(doc.speciality_id ?? doc.specialityId ?? doc.specialtyId ?? NaN);
+        const name = (doc.speciality_name || doc.specialityName || doc.specialtyName || doc.specialty || "").toLowerCase();
+        return (
+          (key && key === specialityFilter) ||
+          (!Number.isNaN(id) && specId != null && id === Number(specId)) ||
+          (specLabel && name.includes(specLabel))
+        );
+      });
     }
-    // Address filters (match by name if available)
-    if (provinceFilter.name) {
-      filtered = filtered.filter(doc => (doc.province_name || doc.provinceName || "").includes(provinceFilter.name));
+    // Address filters (prefer code if backend provides it)
+    if (provinceCode) {
+      const pName = getProvinceName(provinceCode);
+      filtered = filtered.filter(doc => {
+        const c = Number(doc.province_code ?? doc.provinceCode ?? NaN);
+        return (!Number.isNaN(c) && c === Number(provinceCode)) || (doc.province_name || doc.provinceName || "").includes(pName);
+      });
     }
-    if (districtFilter.name) {
-      filtered = filtered.filter(doc => (doc.district_name || doc.districtName || "").includes(districtFilter.name));
+    if (districtCode) {
+      const dName = getDistrictName(districtCode);
+      filtered = filtered.filter(doc => {
+        const c = Number(doc.district_code ?? doc.districtCode ?? NaN);
+        return (!Number.isNaN(c) && c === Number(districtCode)) || (doc.district_name || doc.districtName || "").includes(dName);
+      });
     }
-    if (wardFilter.name) {
-      filtered = filtered.filter(doc => (doc.ward_name || doc.wardName || "").includes(wardFilter.name));
+    if (wardCode) {
+      const wName = getWardName(wardCode);
+      filtered = filtered.filter(doc => {
+        const c = Number(doc.ward_code ?? doc.wardCode ?? NaN);
+        return (!Number.isNaN(c) && c === Number(wardCode)) || (doc.ward_name || doc.wardName || "").includes(wName);
+      });
     }
-    setFilteredDoctors(filtered);
-  }, [searchQuery, doctors, specialityFilter, provinceFilter, districtFilter, wardFilter]);
+      setFilteredDoctors(filtered);
+  }, [searchQuery, doctors, specialityFilter, provinceCode, districtCode, wardCode, getProvinceName, getDistrictName, getWardName]);
 
   const fetchDoctors = async () => {
     setLoadingDoctors(true);
@@ -125,9 +170,54 @@ export default function DatLichKham() {
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched doctors:", data.length, "doctors");
-        setDoctors(data);
-        setFilteredDoctors(data);
-      } else {
+        const activeOnly = (data || []).filter((d) => {
+          if (!d.status) return true; // backward compatibility
+          return String(d.status).toUpperCase() === 'ACTIVE';
+        });
+        // Resolve address names by codes (fetch minimal data and cache)
+        const cache = { districts: new Map(), wards: new Map() };
+        async function getDistrictNameByCode(provinceCode, districtCode) {
+          if (!districtCode) return '';
+          const key = `${provinceCode}`;
+          if (!cache.districts.has(key)) {
+            try {
+              const resp = await fetch(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`);
+              const j = await resp.json();
+              cache.districts.set(key, j.districts || []);
+            } catch {}
+          }
+          const list = cache.districts.get(key) || [];
+          const found = list.find((d) => d.code === Number(districtCode));
+          return found?.name || '';
+        }
+        async function getWardNameByCode(districtCode, wardCode) {
+          if (!wardCode) return '';
+          const key = `${districtCode}`;
+          if (!cache.wards.has(key)) {
+            try {
+              const resp = await fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
+              const j = await resp.json();
+              cache.wards.set(key, j.wards || []);
+            } catch {}
+          }
+          const list = cache.wards.get(key) || [];
+          const found = list.find((w) => w.code === Number(wardCode));
+          return found?.name || '';
+        }
+        const withAddress = await Promise.all(activeOnly.map(async (doc) => {
+          const province = doc.province_name || '';
+          const district = await getDistrictNameByCode(doc.province_code, doc.district_code);
+          const ward = await getWardNameByCode(doc.district_code, doc.ward_code);
+          const parts = [];
+          if (doc.clinicAddress) parts.push(doc.clinicAddress);
+          if (ward) parts.push(ward);
+          if (district) parts.push(district);
+          if (province) parts.push(province);
+          return { ...doc, displayAddress: parts.join(', ') };
+        }));
+        setDoctors(withAddress);
+        setFilteredDoctors(withAddress);
+    } else {
         console.error("Failed to fetch doctors:", response.status, response.statusText);
         toast.error("Không thể tải danh sách bác sĩ");
       }
@@ -198,10 +288,86 @@ export default function DatLichKham() {
     }
   };
 
+  const handlePreviewDoctor = (doctor) => {
+    setPreviewDoctor(doctor);
+  };
+
   const handleSelectDoctor = (doctor) => {
     setSelectedDoctor(doctor);
     setCurrentStep(2);
   };
+
+  // Build static map for preview doctor using Geoapify
+  useEffect(() => {
+    // Only NEXT_PUBLIC_* is guaranteed on client, but accept fallback if user used GEOAPIFY_API_KEY
+    const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY || process.env.GEOAPIFY_API_KEY;
+    console.log('[Geoapify] effect run', { hasKey: Boolean(apiKey), previewDoctor: Boolean(previewDoctor) });
+    if (!previewDoctor || !apiKey) {
+      if (!apiKey) console.warn('[Geoapify] Missing NEXT_PUBLIC_GEOAPIFY_API_KEY');
+      setMapUrl("");
+      setMapError(false);
+      setEmbedUrl("");
+      return;
+    }
+    const address = previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "";
+    console.log('[Geoapify] using address', address);
+    if (!address) {
+      setMapUrl("");
+      setMapError(false);
+      return;
+    }
+    const controller = new AbortController();
+    const fetchCoords = async () => {
+      try {
+        setLoadingMap(true);
+        setMapError(false);
+        const candidates = [
+          address,
+          [previewDoctor.clinicAddress, previewDoctor.province_name].filter(Boolean).join(", "),
+          previewDoctor.province_name,
+        ].filter(Boolean);
+
+        let found = null;
+        for (const addr of candidates) {
+          const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(addr)}&filter=countrycode:vn&limit=1&lang=vi&apiKey=${apiKey}`;
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) continue;
+          const json = await res.json();
+          console.debug('[Geoapify] Geocode response for', addr, json);
+          const feature = json?.features?.[0];
+          if (feature?.geometry?.coordinates) {
+            found = feature.geometry.coordinates; // [lon, lat]
+            break;
+          }
+        }
+        if (found) {
+          const [lon, lat] = found;
+          const flon = Number(lon).toFixed(6);
+          const flat = Number(lat).toFixed(6);
+          // Use the simplest valid marker to avoid API 400s across plans
+          const staticUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=1200&height=260&center=lonlat:${flon},${flat}&zoom=14&marker=lonlat:${flon},${flat}&apiKey=${apiKey}`;
+          console.log('[Geoapify] static url', staticUrl);
+          setMapUrl(staticUrl);
+          // Prepare interactive OpenStreetMap embed (no key, fast, pannable)
+          const d = 0.02; // ~2km bbox
+          const minLon = (Number(flon) - d).toFixed(6);
+          const minLat = (Number(flat) - d).toFixed(6);
+          const maxLon = (Number(flon) + d).toFixed(6);
+          const maxLat = (Number(flat) + d).toFixed(6);
+          const osm = `https://www.openstreetmap.org/export/embed.html?bbox=${minLon}%2C${minLat}%2C${maxLon}%2C${maxLat}&layer=mapnik&marker=${flat}%2C${flon}`;
+          setEmbedUrl(osm);
+        } else {
+          setMapError(true);
+        }
+      } catch (e) {
+        setMapError(true);
+      } finally {
+        setLoadingMap(false);
+      }
+    };
+    fetchCoords();
+    return () => controller.abort();
+  }, [previewDoctor]);
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
@@ -369,52 +535,212 @@ export default function DatLichKham() {
             <h3 className="text-lg font-semibold">Chọn bác sĩ</h3>
           </CardHeader>
           <Divider />
-          <CardBody className="space-y-4">
+          <CardBody className="space-y-5">
+            {/* Page Intro */}
+            <div className="rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-100 p-4">
+              <p className="text-sm text-teal-900">
+                Lọc và xem hồ sơ bác sĩ, sau đó chọn lịch trống trong tuần. Chúng tôi gợi ý các bác sĩ nổi bật theo chuyên khoa và khu vực của bạn.
+              </p>
+            </div>
+            {previewDoctor && (
+              <Card shadow="lg" className="rounded-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 text-white">
+                  <div className="flex items-center gap-5">
+                    <Avatar
+                      src={previewDoctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(previewDoctor.name)}&background=0D9488&color=fff`}
+                      className="w-24 h-24 ring-4 ring-white/30"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-3xl font-extrabold leading-tight truncate">{previewDoctor.name}</h3>
+                        <Chip variant="flat" color="primary" size="sm" className="bg-white/20 text-white">{SPECIALTY_MAP[previewDoctor.specialty] || previewDoctor.specialty}</Chip>
+                      </div>
+                      <p className="text-white/90 mt-2 text-sm">
+                        {previewDoctor.bio || "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
+                      </p>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2">
+                      <Button size="sm" variant="bordered" className="border-white/50 text-white" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
+                      <Button size="sm" color="primary" className="bg-white text-teal-700" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
+                    </div>
+                  </div>
+                </div>
+                <CardBody className="p-6 space-y-6">
+                  {/* Stats (minimal) */}
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
+                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2 text-gray-700"><Star size={18} className="text-yellow-500" /><span className="text-sm">Đánh giá</span></div>
+                      <p className="text-2xl font-bold">{previewDoctor.rating || "4.8"}</p>
+                    </div>
+                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2 text-gray-700"><Award size={18} className="text-teal-600" /><span className="text-sm">Năm KN</span></div>
+                      <p className="text-2xl font-bold">{previewDoctor.experience_years || previewDoctor.experienceYears || "—"}</p>
+                    </div>
+                  </div>
+
+                  {/* Contacts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Điện thoại</p>
+                      <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Email</p>
+                      <p className="font-medium truncate">{previewDoctor.email || "doctor@medconnect.vn"}</p>
+                    </div>
+                  </div>
+
+                  {/* Education & License */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Trình độ</p>
+                      <p className="font-medium">{previewDoctor.education_level || "—"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Chứng chỉ hành nghề</p>
+                      <p className="font-medium">{previewDoctor.licenseId ? `#${previewDoctor.licenseId}` : "—"}</p>
+                    </div>
+                  </div>
+
+                  {/* Address + Map (moved below, bigger) */}
+                  <div className="space-y-2">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Địa chỉ phòng khám</p>
+                      <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
+                    </div>
+                    <div className="rounded-xl overflow-hidden bg-gray-100">
+                      {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
+                      {!loadingMap && embedUrl && (
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-96 border-0"
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          allowFullScreen
+                        />
+                      )}
+                      {!loadingMap && !embedUrl && mapUrl && (
+                        <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                      )}
+                      {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                        <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mock reviews */}
+                  <div className="mt-2">
+                    <p className="font-semibold mb-2">Đánh giá nổi bật</p>
+                    <div className="space-y-2 text-sm">
+                      {[
+                        { name: "Nguyễn T.", content: "Bác sĩ tư vấn kỹ, điều trị hiệu quả." },
+                        { name: "Lê Q.", content: "Phòng khám sạch sẽ, đặt lịch nhanh chóng." }
+                      ].map((rv, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-gray-50">
+                          <div className="flex items-center gap-2 text-yellow-500"><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} /></div>
+                          <p className="mt-1 text-gray-700"><span className="font-medium">{rv.name}</span>: {rv.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex md:hidden gap-3 mt-5">
+                    <Button variant="light" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
+                    <Button color="primary" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Input
-                placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                startContent={<User size={18} className="text-gray-400" />}
-              />
-              <Select
-                label="Chuyên khoa"
-                placeholder="Tất cả"
-                selectedKeys={specialityFilter ? [specialityFilter] : []}
-                onSelectionChange={(keys) => {
-                  const k = Array.from(keys)[0];
-                  setSpecialityFilter(k || "");
-                }}
-              >
+            <div className="space-y-4 bg-white/70 p-4 rounded-2xl shadow-sm">
+              <div className="grid grid-cols-12 gap-3 items-stretch">
+                {/* Row 1: Search full width */}
+                <div className="col-span-12">
+            <Input
+                    size="lg"
+                    classNames={{
+                      inputWrapper: "min-h-[64px] h-[64px]",
+                      input: "text-base",
+                    }}
+              placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              startContent={<User size={18} className="text-gray-400" />}
+            />
+                </div>
+                {/* Row 2: Specialty + Province */}
+                <div className="col-span-12 md:col-span-6">
+                  <Select
+                    size="lg"
+                    label="Chuyên khoa"
+                    placeholder="Tất cả"
+                    selectedKeys={specialityFilter ? [specialityFilter] : []}
+                    onSelectionChange={(keys) => {
+                      const k = Array.from(keys)[0];
+                      setSpecialityFilter(k || "");
+                    }}
+                  >
+                    {Object.entries(SPECIALTY_MAP).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </Select>
+                </div>
+                <div className="col-span-12 md:col-span-6">
+                  <Select
+                    size="lg"
+                    label="Tỉnh/Thành phố"
+                    placeholder="Chọn tỉnh/thành"
+                    selectedKeys={provinceCode ? [String(provinceCode)] : []}
+                    onSelectionChange={(keys) => {
+                      const k = Array.from(keys)[0];
+                      const code = k ? parseInt(k) : null;
+                      setProvinceCode(code);
+                      setDistrictCode(null);
+                      setWardCode(null);
+                    }}
+                  >
+                    {provinces.map((p) => (
+                      <SelectItem key={String(p.code)} value={String(p.code)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+
+              {/* Quick speciality chips */}
+              <div className="flex flex-wrap gap-2 pt-1">
                 {Object.entries(SPECIALTY_MAP).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                  <button
+                    key={key}
+                    onClick={() => setSpecialityFilter(prev => prev === key ? "" : key)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                      specialityFilter === key
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white hover:bg-teal-50 border-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
                 ))}
-              </Select>
-              <Input
-                label="Tỉnh/Thành"
-                placeholder="Nhập tên tỉnh"
-                value={provinceFilter.name}
-                onChange={(e) => setProvinceFilter({ code: "", name: e.target.value })}
-              />
-              <Input
-                label="Quận/Huyện"
-                placeholder="Nhập tên quận"
-                value={districtFilter.name}
-                onChange={(e) => setDistrictFilter({ code: "", name: e.target.value })}
-              />
-              <Input
-                label="Phường/Xã"
-                placeholder="Nhập tên phường"
-                value={wardFilter.name}
-                onChange={(e) => setWardFilter({ code: "", name: e.target.value })}
-              />
+              </div>
             </div>
 
             {loadingDoctors ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-                <p className="text-sm text-gray-500 mt-4">Đang tải danh sách bác sĩ...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from({length: 6}).map((_,i)=> (
+                  <div key={i} className="rounded-2xl border bg-white p-4 shadow-sm animate-pulse">
+                    <div className="flex items-start gap-3">
+                      <div className="w-14 h-14 rounded-full bg-gray-200" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                        <div className="h-3 bg-gray-100 rounded w-1/3" />
+                        <div className="h-3 bg-gray-100 rounded w-2/3" />
+                      </div>
+                    </div>
+                    <div className="h-10 bg-gray-100 rounded mt-4" />
+                  </div>
+                ))}
               </div>
             ) : filteredDoctors.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -423,28 +749,46 @@ export default function DatLichKham() {
                 <p className="text-sm text-gray-500">Thử tìm kiếm với từ khóa khác</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
-                {filteredDoctors.map((doctor) => (
-                  <Card key={doctor.id} shadow="none" className="border hover:border-teal-500 transition-all cursor-pointer" isPressable onPress={() => handleSelectDoctor(doctor)}>
-                    <CardBody className="p-4">
-                      <div className="flex items-start gap-3">
-                        <Avatar 
-                          src={doctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=0D9488&color=fff`} 
-                          size="lg" 
-                        />
-                        <div className="flex-1">
-                          <p className="font-semibold">{doctor.name}</p>
-                          <p className="text-sm text-gray-600">{SPECIALTY_MAP[doctor.specialty] || doctor.specialty}</p>
-                          {doctor.licenseId && (
-                            <p className="text-xs text-gray-500 mt-1">CCHN: {doctor.licenseId}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[640px] overflow-y-auto pr-1">
+              {filteredDoctors.map((doctor) => (
+                <Card key={doctor.id} shadow="none" className="rounded-2xl transition-colors bg-white/70 hover:bg-teal-50/40 cursor-pointer" isPressable onPress={() => handlePreviewDoctor(doctor)}>
+                  <CardBody className="p-5">
+                    <div className="flex items-start gap-4">
+                      <Avatar
+                        src={doctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=0D9488&color=fff`}
+                        className="w-16 h-16"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-base truncate">{doctor.name}</p>
+                          <Chip size="sm" variant="flat" color="primary">{SPECIALTY_MAP[doctor.specialty] || doctor.specialty}</Chip>
+                          {doctor.displayAddress && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={14} />{doctor.displayAddress}</span>
                           )}
                         </div>
-                        <ChevronRight size={20} className="text-gray-400" />
+                        {doctor.bio && (
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{doctor.bio}</p>
+                        )}
+                        <div className="mt-3 text-xs text-gray-600 flex flex-wrap gap-x-6 gap-y-2">
+                          <div className="flex items-center gap-1"><Star size={14} className="text-yellow-500" /><span>Đánh giá</span><span className="font-medium ml-1">{doctor.rating || '4.8'}</span></div>
+                          <div className="flex items-center gap-1"><Award size={14} className="text-teal-600" /><span>Năm KN</span><span className="font-medium ml-1">{doctor.experience_years || doctor.experienceYears || '—'}</span></div>
+                          <div className="flex items-center gap-1 min-w-[180px] truncate"><User size={14} className="text-cyan-600" /><span>Email</span><span className="font-medium ml-1 truncate">{doctor.email || '—'}</span></div>
+                          <div className="flex items-center gap-1"><Phone size={14} className="text-green-600" /><span>Điện thoại</span><span className="font-medium ml-1">{doctor.phone || '—'}</span></div>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                          {doctor.licenseId && <span>CCHN #{doctor.licenseId}</span>}
+                          {doctor.education_level && <><span className="w-1 h-1 bg-gray-300 rounded-full"></span><span>{doctor.education_level}</span></>}
+                        </div>
+                        <div className="mt-4 flex gap-3">
+                          <Button size="sm" variant="light" onPress={() => handlePreviewDoctor(doctor)}>Xem hồ sơ</Button>
+                          <Button size="sm" color="primary" variant="solid" onPress={() => handleSelectDoctor(doctor)}>Xem lịch & đặt</Button>
+                        </div>
                       </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
             )}
           </CardBody>
         </Card>
@@ -452,25 +796,27 @@ export default function DatLichKham() {
 
       {/* Step 2: Select Date & Time */}
       {currentStep === 2 && (
-        <Card>
-          <CardHeader className="flex gap-3">
+        <Card className="shadow-lg rounded-2xl">
+          <CardHeader className="flex items-center gap-3 p-6">
+            <div className="bg-teal-100 p-2 rounded-lg">
             <Calendar className="text-teal-600" size={24} />
-            <h3 className="text-lg font-semibold">Chọn ngày & giờ khám</h3>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">Chọn ngày & giờ khám</h3>
           </CardHeader>
           <Divider />
-          <CardBody className="space-y-6">
+          <CardBody className="p-6 space-y-6">
             {/* Weekly Calendar */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  <Button size="sm" variant="flat" onPress={() => {
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
                     const prev = new Date(weekStart);
                     prev.setDate(prev.getDate() - 7);
                     setWeekStart(prev);
                   }}>
                     Tuần trước
                   </Button>
-                  <Button size="sm" variant="flat" onPress={() => {
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
                     const now = new Date();
                     const day = now.getDay();
                     const diff = (day === 0 ? -6 : 1) - day;
@@ -481,7 +827,7 @@ export default function DatLichKham() {
                   }}>
                     Tuần hiện tại
                   </Button>
-                  <Button size="sm" variant="flat" onPress={() => {
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
                     const next = new Date(weekStart);
                     next.setDate(next.getDate() + 7);
                     setWeekStart(next);
@@ -489,67 +835,75 @@ export default function DatLichKham() {
                     Tuần sau
                   </Button>
                 </div>
-              </div>
+            </div>
 
-              <div className="overflow-auto border rounded-lg">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-2 text-left w-32">Khung giờ</th>
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <div className="grid grid-cols-8 min-w-[800px]">
+                  {/* Header */}
+                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50 border-r">Khung giờ</div>
+                  {Array.from({ length: 7 }).map((_, i) => {
+                    const d = new Date(weekStart);
+                    d.setDate(weekStart.getDate() + i);
+                    const dayLabel = d.toLocaleDateString("vi-VN", { weekday: 'short' });
+                    const dateLabel = d.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit' });
+                    const key = d.toISOString().split('T')[0];
+                    return (
+                      <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
+                        {dayLabel}, {dateLabel}
+                      </div>
+                    );
+                  })}
+
+                  {/* Body */}
+                  {Object.keys(SLOT_TIMES).map((slotKey) => (
+                    <div key={slotKey} className="contents">
+                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center">{SLOT_TIMES[slotKey]}</div>
                       {Array.from({ length: 7 }, (_, i) => {
                         const d = new Date(weekStart);
                         d.setDate(weekStart.getDate() + i);
-                        const label = d.toLocaleDateString("vi-VN", { weekday: 'short', day: '2-digit', month: '2-digit' });
-                        const key = d.toISOString().split('T')[0];
-                        return (<th key={key} className="p-2 text-left">{label}</th>);
+                        const dateStr = d.toISOString().split('T')[0];
+                        const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const isPast = d < today;
+                        const selectable = available && !isPast;
+                        const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                        return (
+                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center">
+                            <button
+                              onClick={() => {
+                                if (!selectable) return;
+                                handleDateChange(dateStr);
+                                setSelectedSlot(slotKey);
+                              }}
+                              className={`w-full h-10 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out
+                                ${isSelected ? 'bg-teal-600 text-white shadow-md' : ''}
+                                ${!isSelected && selectable ? 'bg-white border border-gray-300 hover:border-teal-500 hover:bg-teal-50 text-gray-700' : ''}
+                                ${!selectable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
+                              `}
+                              disabled={!selectable}
+                            >
+                              {isSelected ? 'Đã chọn' : (selectable ? 'Đặt' : '—')}
+                            </button>
+                  </div>
+                        );
                       })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.keys(SLOT_TIMES).map((slotKey) => (
-                      <tr key={slotKey} className="border-t">
-                        <td className="p-2 font-medium text-gray-700">{SLOT_TIMES[slotKey]}</td>
-                        {Array.from({ length: 7 }, (_, i) => {
-                          const d = new Date(weekStart);
-                          d.setDate(weekStart.getDate() + i);
-                          const dateStr = d.toISOString().split('T')[0];
-                          const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
-                          const isPast = d < new Date();
-                          const selectable = available && !isPast;
-                          const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
-                          return (
-                            <td key={dateStr+slotKey} className="p-1">
-                              <Button
-                                size="sm"
-                                variant={isSelected ? 'solid' : (selectable ? 'bordered' : 'flat')}
-                                color={isSelected ? 'primary' : (selectable ? 'default' : 'default')}
-                                isDisabled={!selectable}
-                                onClick={() => {
-                                  handleDateChange(dateStr);
-                                  setSelectedSlot(slotKey);
-                                }}
-                                className="w-full"
-                              >
-                                {selectable ? 'Chọn' : '—'}
-                              </Button>
-                            </td>
-                          );
-                        })}
-                      </tr>
+                  </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-2">
+                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-teal-600"></span>Đã chọn</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-white border border-gray-300"></span>Có thể đặt</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-gray-100"></span>Không khả dụng</div>
               </div>
             </div>
 
-            {/* Slot Selection note */}
-            {selectedDate && selectedSlot && (
-              <div className="text-xs text-gray-500">Đã chọn: {new Date(selectedDate).toLocaleDateString('vi-VN')} - {SLOT_TIMES[selectedSlot]}</div>
-            )}
-
             {/* Appointment Type */}
             {selectedSlot && (
-              <div>
+              <div className="!mt-8">
                 <label className="block text-sm font-medium mb-2">Hình thức khám</label>
                 <RadioGroup value={appointmentType} onValueChange={setAppointmentType}>
                   <Radio value="ONLINE">
@@ -577,7 +931,7 @@ export default function DatLichKham() {
             {/* Reason (Optional) */}
             {selectedSlot && (
               <div>
-                <label className="block text-sm font-medium mb-2">Lý do khám (tùy chọn)</label>
+                <label className="block text-sm font-medium mb-2">Lý do khám <span className="text-gray-500">(tùy chọn)</span></label>
                 <Textarea
                   placeholder="Mô tả triệu chứng hoặc lý do bạn muốn khám..."
                   value={reason}
@@ -588,21 +942,24 @@ export default function DatLichKham() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-4 pt-6 border-t">
               <Button
                 variant="bordered"
                 onClick={() => setCurrentStep(1)}
                 fullWidth
+                size="lg"
               >
                 Quay lại
               </Button>
               <Button
                 color="primary"
-                onClick={() => selectedSlot && setCurrentStep(3)}
+                onClick={handleConfirmBooking}
                 isDisabled={!selectedSlot}
                 fullWidth
+                size="lg"
+                isLoading={loading}
               >
-                Tiếp tục
+                Xác nhận & Tiếp tục
               </Button>
             </div>
           </CardBody>

@@ -43,6 +43,15 @@ public class DoctorController {
             doctorData.put("phone", doctor.getPhone());
             doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
             doctorData.put("avatar", doctor.getAvatarUrl());
+            doctorData.put("status", doctor.getStatus() != null ? doctor.getStatus().name() : null);
+            doctorData.put("experienceYears", doctor.getExperienceYears());
+            doctorData.put("bio", doctor.getBio());
+            doctorData.put("education_level", doctor.getEducationLevel());
+            doctorData.put("clinicAddress", doctor.getClinicAddress());
+            doctorData.put("province_code", doctor.getProvinceCode());
+            doctorData.put("province_name", doctor.getProvinceName());
+            doctorData.put("district_code", doctor.getDistrictCode());
+            doctorData.put("ward_code", doctor.getWardCode());
             
             // Get license number from active license
             License activeLicense = doctor.getActiveLicense();
@@ -132,9 +141,7 @@ public class DoctorController {
             profile.put("province_code", doctor.getProvinceCode());
             profile.put("province_name", doctor.getProvinceName());
             profile.put("district_code", doctor.getDistrictCode());
-            profile.put("district_name", doctor.getDistrictName());
             profile.put("ward_code", doctor.getWardCode());
-            profile.put("ward_name", doctor.getWardName());
             
             // Get active license info
             se1961.g1.medconnect.pojo.License activeLicense = doctor.getActiveLicense();
@@ -209,15 +216,10 @@ public class DoctorController {
         if(request.containsKey("district_code")) {
             currDoc.setDistrictCode((Integer) request.get("district_code"));
         }
-        if(request.containsKey("district_name")) {
-            currDoc.setDistrictName((String) request.get("district_name"));
-        }
         if(request.containsKey("ward_code")) {
             currDoc.setWardCode((Integer) request.get("ward_code"));
         }
-        if(request.containsKey("ward_name")) {
-            currDoc.setWardName((String) request.get("ward_name"));
-        }
+        
 
         doctorService.saveDoctor(currDoc);
 
@@ -233,9 +235,7 @@ public class DoctorController {
         updatedProfile.put("province_code", currDoc.getProvinceCode());
         updatedProfile.put("province_name", currDoc.getProvinceName());
         updatedProfile.put("district_code", currDoc.getDistrictCode());
-        updatedProfile.put("district_name", currDoc.getDistrictName());
         updatedProfile.put("ward_code", currDoc.getWardCode());
-        updatedProfile.put("ward_name", currDoc.getWardName());
 
         return  ResponseEntity.ok(updatedProfile);
     }

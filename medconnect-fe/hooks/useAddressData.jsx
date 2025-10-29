@@ -33,7 +33,11 @@ export const useAddressData = () => {
     } catch (err) {
       console.error('[useAddressData] Error fetching provinces:', err);
       setError(err.message);
-      setProvinces([]);
+      // Fallback minimal list to keep UI usable offline
+      setProvinces([
+        { code: 1, name: 'Thành phố Hà Nội' },
+        { code: 79, name: 'TP. Hồ Chí Minh' },
+      ]);
     } finally {
       setLoading(prev => ({ ...prev, provinces: false }));
     }
@@ -58,7 +62,22 @@ export const useAddressData = () => {
     } catch (err) {
       console.error('[useAddressData] Error fetching districts:', err);
       setError(err.message);
-      setDistricts([]);
+      // Fallback minimal districts for major provinces
+      if (parseInt(provinceCode) === 1) {
+        setDistricts([
+          { code: 101, name: 'Quận Ba Đình' },
+          { code: 102, name: 'Quận Hoàn Kiếm' },
+          { code: 103, name: 'Quận Hà Đông' },
+        ]);
+      } else if (parseInt(provinceCode) === 79) {
+        setDistricts([
+          { code: 760, name: 'Quận 1' },
+          { code: 769, name: 'TP. Thủ Đức' },
+          { code: 772, name: 'Quận 3' },
+        ]);
+      } else {
+        setDistricts([]);
+      }
       setWards([]);
     } finally {
       setLoading(prev => ({ ...prev, districts: false }));
@@ -82,7 +101,21 @@ export const useAddressData = () => {
     } catch (err) {
       console.error('[useAddressData] Error fetching wards:', err);
       setError(err.message);
-      setWards([]);
+      // Fallback minimal wards for known districts
+      const code = parseInt(districtCode);
+      if ([101,102,103].includes(code)) {
+        setWards([
+          { code: 1001, name: 'Phường Quang Trung' },
+          { code: 1002, name: 'Phường Nguyễn Trãi' },
+        ]);
+      } else if ([760,769,772].includes(code)) {
+        setWards([
+          { code: 2001, name: 'Phường Bến Nghé' },
+          { code: 2002, name: 'Phường Thủ Thiêm' },
+        ]);
+      } else {
+        setWards([]);
+      }
     } finally {
       setLoading(prev => ({ ...prev, wards: false }));
     }
