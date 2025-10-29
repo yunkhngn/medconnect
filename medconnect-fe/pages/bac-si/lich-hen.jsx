@@ -836,13 +836,17 @@ export default function DoctorAppointmentsPage() {
                         {/* ID Photo (3x4 if available) or Avatar */}
                         <div className="flex-shrink-0">
                           {selectedAppointment.patient?.idPhotoUrl ? (
-                            <div className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md">
+                            <button
+                              type="button"
+                              onClick={() => { setPreviewImgUrl(selectedAppointment.patient.idPhotoUrl); onImgOpen(); }}
+                              className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
                               <img 
                                 src={selectedAppointment.patient.idPhotoUrl} 
                                 alt="Patient ID Photo" 
                                 className="w-full h-full object-cover"
                               />
-                            </div>
+                            </button>
                           ) : (
                             <Avatar
                               src={selectedAppointment.patient?.avatar}
@@ -996,6 +1000,49 @@ export default function DoctorAppointmentsPage() {
                                     </div>
                                   )}
                                 </div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Medications, Surgeries, Vaccinations, Family history, Lifestyle */}
+                          {(patientEmrInModal.medical_history?.current_medications ||
+                            patientEmrInModal.medical_history?.surgeries ||
+                            patientEmrInModal.medical_history?.vaccinations ||
+                            patientEmrInModal.medical_history?.family_history ||
+                            patientEmrInModal.medical_history?.lifestyle) && (
+                            <>
+                              <Divider className="my-4" />
+                              <div className="grid grid-cols-2 gap-4">
+                                {patientEmrInModal.medical_history?.current_medications && (
+                                  <div className="bg-blue-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Thuốc đang dùng</p>
+                                    <p className="font-medium text-blue-800 break-words">{patientEmrInModal.medical_history.current_medications}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.surgeries && (
+                                  <div className="bg-purple-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Tiền sử phẫu thuật</p>
+                                    <p className="font-medium text-purple-800 break-words">{patientEmrInModal.medical_history.surgeries}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.vaccinations && (
+                                  <div className="bg-green-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Tiêm chủng</p>
+                                    <p className="font-medium text-green-800 break-words">{patientEmrInModal.medical_history.vaccinations}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.family_history && (
+                                  <div className="bg-yellow-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Tiền sử gia đình</p>
+                                    <p className="font-medium text-yellow-800 break-words">{patientEmrInModal.medical_history.family_history}</p>
+                                  </div>
+                                )}
+                                {patientEmrInModal.medical_history?.lifestyle && (
+                                  <div className="bg-gray-50 p-4 rounded-lg">
+                                    <p className="text-xs text-gray-600 mb-1">Lối sống</p>
+                                    <p className="font-medium text-gray-800 break-words">{patientEmrInModal.medical_history.lifestyle}</p>
+                                  </div>
+                                )}
                               </div>
                             </>
                           )}
@@ -1263,13 +1310,17 @@ export default function DoctorAppointmentsPage() {
                         {/* Patient Photo */}
                         <div className="flex-shrink-0">
                           {patientEmr.patient_profile?.id_photo_url ? (
-                            <div className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md">
+                            <button
+                              type="button"
+                              onClick={() => { setPreviewImgUrl(patientEmr.patient_profile.id_photo_url); onImgOpen(); }}
+                              className="w-32 h-[170px] rounded-lg overflow-hidden border-2 border-teal-500 shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            >
                               <img 
                                 src={patientEmr.patient_profile.id_photo_url} 
                                 alt="ID Photo" 
                                 className="w-full h-full object-cover"
                               />
-                            </div>
+                            </button>
                           ) : (
                             <Avatar
                               name={patientEmr.patient_profile?.full_name?.charAt(0)?.toUpperCase()}
@@ -1319,7 +1370,7 @@ export default function DoctorAppointmentsPage() {
 
                       <Divider className="my-4" />
 
-                      {/* Additional Medical Info in Grid */}
+                      {/* Additional Personal/Identification Info */}
                     <div className="grid grid-cols-2 gap-4">
                         {patientEmr.patient_profile?.identification_number && (
                       <div>
@@ -1332,6 +1383,18 @@ export default function DoctorAppointmentsPage() {
                             <p className="text-sm text-gray-600">Số BHYT</p>
                             <p className="font-medium">{patientEmr.patient_profile.insurance_number}</p>
                       </div>
+                        )}
+                        {(patientEmr.patient_profile?.insurance_expiry || patientEmr.patient_profile?.insurance_expired_at || patientEmr.patient_profile?.bhyt_expired_at) && (
+                          <div>
+                            <p className="text-sm text-gray-600">BHYT hết hạn</p>
+                            <p className="font-medium">{
+                              new Date(
+                                patientEmr.patient_profile.insurance_expiry ||
+                                patientEmr.patient_profile.insurance_expired_at ||
+                                patientEmr.patient_profile.bhyt_expired_at
+                              ).toLocaleDateString("vi-VN")
+                            }</p>
+                          </div>
                         )}
                         {patientEmr.patient_profile?.emergency_contact_name && (
                       <div>
@@ -1359,27 +1422,27 @@ export default function DoctorAppointmentsPage() {
                         )}
                   </div>
 
-                      {/* Medical Warnings */}
-                      {(patientEmr.patient_profile?.allergies || patientEmr.patient_profile?.chronic_conditions) && (
+                      {/* Medical Warnings from medical_history (preferred) */}
+                      {(patientEmr.medical_history?.allergies || patientEmr.medical_history?.previous_conditions || patientEmr.patient_profile?.allergies || patientEmr.patient_profile?.chronic_conditions) && (
                         <>
                           <Divider className="my-4" />
                           <div className="grid grid-cols-2 gap-4">
-                            {patientEmr.patient_profile?.allergies && (
+                            {(patientEmr.medical_history?.allergies || patientEmr.patient_profile?.allergies) && (
                               <div className="bg-red-50 p-3 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
                                   <AlertCircle className="text-red-600" size={16} />
                                   Dị ứng
                                 </p>
-                                <p className="font-medium text-red-700">{patientEmr.patient_profile.allergies}</p>
+                                <p className="font-medium text-red-700">{patientEmr.medical_history?.allergies || patientEmr.patient_profile?.allergies}</p>
                     </div>
                   )}
-                            {patientEmr.patient_profile?.chronic_conditions && (
+                            {(patientEmr.medical_history?.previous_conditions || patientEmr.patient_profile?.chronic_conditions) && (
                               <div className="bg-orange-50 p-3 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
                                   <Heart className="text-orange-600" size={16} />
                                   Bệnh mãn tính
                                 </p>
-                                <p className="font-medium text-orange-700">{patientEmr.patient_profile.chronic_conditions}</p>
+                                <p className="font-medium text-orange-700">{patientEmr.medical_history?.previous_conditions || patientEmr.patient_profile?.chronic_conditions}</p>
                 </div>
               )}
                           </div>
