@@ -369,7 +369,7 @@ export default function DoctorAppointmentsPage() {
 
         {/* Confirmed */}
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300">
-          <CardBody className="p-4">
+            <CardBody className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Đã xác nhận</p>
@@ -381,12 +381,12 @@ export default function DoctorAppointmentsPage() {
                 <CheckCircle className="text-blue-700" size={24} />
               </div>
             </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
 
         {/* Finished */}
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300">
-          <CardBody className="p-4">
+            <CardBody className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Hoàn thành</p>
@@ -398,13 +398,13 @@ export default function DoctorAppointmentsPage() {
                 <Activity className="text-green-700" size={24} />
               </div>
             </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
       </div>
 
       {/* Total Appointments */}
       <Card className="bg-gradient-to-br from-teal-500 to-teal-600 text-white">
-        <CardBody className="p-4">
+            <CardBody className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-teal-100 uppercase tracking-wide">Tổng lịch hẹn</p>
@@ -414,8 +414,8 @@ export default function DoctorAppointmentsPage() {
               <Calendar className="text-white" size={28} />
             </div>
           </div>
-        </CardBody>
-      </Card>
+            </CardBody>
+          </Card>
 
       {/* Filters Card */}
       <Card>
@@ -451,8 +451,8 @@ export default function DoctorAppointmentsPage() {
             <SelectItem key="DENIED">Đã từ chối</SelectItem>
             <SelectItem key="CANCELLED">Đã hủy</SelectItem>
           </Select>
-        </CardBody>
-      </Card>
+            </CardBody>
+          </Card>
 
       {/* Legend */}
       <Card>
@@ -464,7 +464,7 @@ export default function DoctorAppointmentsPage() {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
             <span>Chờ xác nhận</span>
-          </div>
+        </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
             <span>Đã xác nhận</span>
@@ -515,7 +515,7 @@ export default function DoctorAppointmentsPage() {
             <div className="text-center">
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Calendar className="text-gray-400" size={48} />
-              </div>
+                </div>
               <h3 className="text-xl font-semibold text-gray-700 mb-2">Không có lịch hẹn</h3>
               <p className="text-gray-500">Chưa có lịch hẹn nào phù hợp với bộ lọc của bạn</p>
             </div>
@@ -595,7 +595,7 @@ export default function DoctorAppointmentsPage() {
                       <div className="flex items-center gap-2 text-sm">
                         <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
                           <Calendar size={16} className="text-teal-600" />
-                        </div>
+                  </div>
                         <div>
                           <p className="text-xs text-gray-500">Ngày khám</p>
                           <p className="font-semibold text-gray-900">
@@ -693,7 +693,7 @@ export default function DoctorAppointmentsPage() {
     </div>
   );
 
-  return (
+                  return (
     <DoctorFrame>
       <ToastNotification toast={toast} />
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
@@ -737,12 +737,12 @@ export default function DoctorAppointmentsPage() {
 
                         {/* Patient Info */}
                         <div className="flex-1 space-y-3">
-                          <div>
+                        <div>
                             <h3 className="text-2xl font-bold text-gray-900">
                               {selectedAppointment.patient?.name || "Bệnh nhân"}
                             </h3>
                             <p className="text-gray-600">ID bệnh nhân: {selectedAppointment.patient?.id || "N/A"}</p>
-                          </div>
+                        </div>
 
                           <div className="grid grid-cols-2 gap-4">
                             <div className="flex items-start gap-2">
@@ -750,8 +750,8 @@ export default function DoctorAppointmentsPage() {
                               <div>
                                 <p className="text-xs text-gray-500">Email</p>
                                 <p className="font-medium">{selectedAppointment.patient?.email || "N/A"}</p>
-                              </div>
-                            </div>
+                          </div>
+                        </div>
                             <div className="flex items-start gap-2">
                               <Phone className="text-teal-600 mt-1" size={18} />
                               <div>
@@ -818,7 +818,7 @@ export default function DoctorAppointmentsPage() {
                           {patientEmrInModal.patient_profile.emergency_contact && (
                             <>
                               <Divider className="my-4" />
-                              <div>
+                        <div>
                                 <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                                   <Phone className="text-orange-600" size={18} />
                                   Liên hệ khẩn cấp
@@ -828,7 +828,7 @@ export default function DoctorAppointmentsPage() {
                                     <div className="bg-orange-50 p-3 rounded-lg">
                                       <p className="text-xs text-gray-600 mb-1">Người liên hệ</p>
                                       <p className="font-medium text-orange-900">{patientEmrInModal.patient_profile.emergency_contact.name}</p>
-                                    </div>
+                        </div>
                                   )}
                                   {patientEmrInModal.patient_profile.emergency_contact.phone && (
                                     <div className="bg-orange-50 p-3 rounded-lg">
@@ -936,7 +936,7 @@ export default function DoctorAppointmentsPage() {
                                 startContent={selectedAppointment.type === "ONLINE" ? <Video size={16} /> : <MapPin size={16} />}
                               >
                                 {selectedAppointment.type === "ONLINE" ? "Khám Online (Video Call)" : "Khám tại phòng khám"}
-                              </Chip>
+                        </Chip>
                             </div>
                             <div>
                               <p className="text-sm text-gray-600 mb-1">Trạng thái</p>
@@ -953,7 +953,7 @@ export default function DoctorAppointmentsPage() {
                                 <div className="flex items-center gap-2 mb-2">
                                   <AlertCircle className="text-orange-600" size={18} />
                                   <p className="text-sm font-medium text-gray-700">Lý do khám</p>
-                                </div>
+                        </div>
                                 <p className="text-gray-900 bg-orange-50 p-3 rounded-lg">
                                   {selectedAppointment.reason}
                                 </p>
@@ -967,8 +967,8 @@ export default function DoctorAppointmentsPage() {
                             <p>Mã lịch hẹn: #{selectedAppointment.appointmentId}</p>
                             <p>Đặt lúc: {new Date(selectedAppointment.createdAt).toLocaleString("vi-VN")}</p>
                           </div>
-                        </CardBody>
-                      </Card>
+          </CardBody>
+        </Card>
                     </div>
                   </Tab>
 
@@ -1017,7 +1017,7 @@ export default function DoctorAppointmentsPage() {
                               >
                                 Ghi kết quả khám bệnh
                               </Button>
-                            </div>
+                </div>
                           )}
 
                           {/* Actions for PENDING appointments */}
@@ -1028,7 +1028,7 @@ export default function DoctorAppointmentsPage() {
                                   <AlertCircle size={16} />
                                   Lịch hẹn đang chờ xác nhận. Vui lòng xác nhận hoặc từ chối.
                                 </p>
-                              </div>
+              </div>
                               <Button
                                 color="success"
                                 size="lg"
@@ -1107,7 +1107,7 @@ export default function DoctorAppointmentsPage() {
                   {patientEmr.patient_profile?.full_name || "Bệnh nhân"}
                 </p>
               </ModalHeader>
-              <ModalBody>
+            <ModalBody>
                 <div className="space-y-6">
                   {/* Patient Profile Card with Photo */}
                   <Card>
@@ -1138,31 +1138,31 @@ export default function DoctorAppointmentsPage() {
 
                         {/* Patient Basic Info */}
                         <div className="flex-1 grid grid-cols-2 gap-4">
-                          <div>
+                      <div>
                             <p className="text-sm text-gray-600">Họ và tên</p>
                             <p className="font-medium text-lg">{patientEmr.patient_profile?.full_name || "N/A"}</p>
-                          </div>
-                          <div>
+                      </div>
+                      <div>
                             <p className="text-sm text-gray-600">Ngày sinh</p>
                             <p className="font-medium">
                               {patientEmr.patient_profile?.date_of_birth 
                                 ? new Date(patientEmr.patient_profile.date_of_birth).toLocaleDateString("vi-VN")
                                 : "N/A"}
                             </p>
-                          </div>
-                          <div>
+                      </div>
+                      <div>
                             <p className="text-sm text-gray-600">Giới tính</p>
                             <p className="font-medium">{patientEmr.patient_profile?.gender || "N/A"}</p>
-                          </div>
+                      </div>
                           <div>
                             <p className="text-sm text-gray-600">Nhóm máu</p>
                             <p className="font-medium">{patientEmr.patient_profile?.blood_type || "N/A"}</p>
-                          </div>
+                    </div>
                           <div>
                             <p className="text-sm text-gray-600">Số điện thoại</p>
                             <p className="font-medium">{patientEmr.patient_profile?.phone || "N/A"}</p>
-                          </div>
-                          <div>
+                  </div>
+                  <div>
                             <p className="text-sm text-gray-600">Email</p>
                             <p className="font-medium text-sm">{patientEmr.patient_profile?.email || "N/A"}</p>
                           </div>
@@ -1178,36 +1178,36 @@ export default function DoctorAppointmentsPage() {
                       <Divider className="my-4" />
 
                       {/* Additional Medical Info in Grid */}
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         {patientEmr.patient_profile?.identification_number && (
-                          <div>
+                      <div>
                             <p className="text-sm text-gray-600">CMND/CCCD</p>
                             <p className="font-medium">{patientEmr.patient_profile.identification_number}</p>
-                          </div>
+                      </div>
                         )}
                         {patientEmr.patient_profile?.insurance_number && (
-                          <div>
+                      <div>
                             <p className="text-sm text-gray-600">Số BHYT</p>
                             <p className="font-medium">{patientEmr.patient_profile.insurance_number}</p>
-                          </div>
+                      </div>
                         )}
                         {patientEmr.patient_profile?.emergency_contact_name && (
-                          <div>
+                      <div>
                             <p className="text-sm text-gray-600">Người liên hệ khẩn cấp</p>
                             <p className="font-medium">{patientEmr.patient_profile.emergency_contact_name}</p>
-                          </div>
+                      </div>
                         )}
                         {patientEmr.patient_profile?.emergency_contact_phone && (
-                          <div>
+                      <div>
                             <p className="text-sm text-gray-600">SĐT khẩn cấp</p>
                             <p className="font-medium">{patientEmr.patient_profile.emergency_contact_phone}</p>
-                          </div>
+                      </div>
                         )}
                         {patientEmr.patient_profile?.emergency_contact_relationship && (
                           <div>
                             <p className="text-sm text-gray-600">Mối quan hệ</p>
                             <p className="font-medium">{patientEmr.patient_profile.emergency_contact_relationship}</p>
-                          </div>
+                    </div>
                         )}
                         {patientEmr.patient_profile?.occupation && (
                           <div>
@@ -1215,7 +1215,7 @@ export default function DoctorAppointmentsPage() {
                             <p className="font-medium">{patientEmr.patient_profile.occupation}</p>
                           </div>
                         )}
-                      </div>
+                  </div>
 
                       {/* Medical Warnings */}
                       {(patientEmr.patient_profile?.allergies || patientEmr.patient_profile?.chronic_conditions) && (
@@ -1229,8 +1229,8 @@ export default function DoctorAppointmentsPage() {
                                   Dị ứng
                                 </p>
                                 <p className="font-medium text-red-700">{patientEmr.patient_profile.allergies}</p>
-                              </div>
-                            )}
+                    </div>
+                  )}
                             {patientEmr.patient_profile?.chronic_conditions && (
                               <div className="bg-orange-50 p-3 rounded-lg">
                                 <p className="text-sm text-gray-600 mb-1 flex items-center gap-2">
@@ -1238,8 +1238,8 @@ export default function DoctorAppointmentsPage() {
                                   Bệnh mãn tính
                                 </p>
                                 <p className="font-medium text-orange-700">{patientEmr.patient_profile.chronic_conditions}</p>
-                              </div>
-                            )}
+                </div>
+              )}
                           </div>
                         </>
                       )}
@@ -1342,8 +1342,8 @@ export default function DoctorAppointmentsPage() {
                                         )}
                                       </div>
                                     </div>
-                                  </>
-                                )}
+                </>
+              )}
 
                                 {/* Reason for visit */}
                                 {(record.chief_complaint || record.reason) && (
@@ -1415,11 +1415,11 @@ export default function DoctorAppointmentsPage() {
                 <Button variant="light" onPress={onEmrClose}>
                   Đóng
                 </Button>
-              </ModalFooter>
+            </ModalFooter>
             </>
           )}
-        </ModalContent>
-      </Modal>
+          </ModalContent>
+        </Modal>
     </DoctorFrame>
   );
 }

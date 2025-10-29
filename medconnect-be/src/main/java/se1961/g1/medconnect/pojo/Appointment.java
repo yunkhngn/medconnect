@@ -34,7 +34,7 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     private AppointmentType type;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
     private String reason; // Lý do khám bệnh
 
     @ManyToOne

@@ -532,7 +532,10 @@ export default function HoSoBenhAn() {
             <InfoItem label="Số điện thoại" value={patientProfile.phone} />
             <InfoItem label="Email" value={patientProfile.email} />
               </div>
-          <InfoItem label="Địa chỉ" value={patientProfile.address} />
+          <InfoItem 
+            label="Địa chỉ" 
+            value={typeof patientProfile.address === 'object' ? (patientProfile.address.full || '') : patientProfile.address} 
+          />
           <InfoItem label="Mã BHYT" value={patientProfile.insurance_number} />
           {patientProfile.insurance_valid_to && (
             <InfoItem 

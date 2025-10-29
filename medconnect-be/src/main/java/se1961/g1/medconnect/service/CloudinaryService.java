@@ -144,6 +144,49 @@ public class CloudinaryService {
     }
 
     /**
+     * Upload license proof image to Cloudinary
+     * @param file MultipartFile image
+     * @param userId User ID for organizing folders
+     * @return URL of uploaded image
+     */
+    public String uploadLicenseImage(MultipartFile file, String userId) throws IOException {
+        // Validate file
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        // Validate file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File must be an image");
+        }
+
+        // Validate file size (max 10MB for license images)
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("Image file size must be less than 10MB");
+        }
+
+        // Generate unique filename
+        String publicId = "medconnect/licenses/" + userId + "/" + UUID.randomUUID();
+
+        // Upload to Cloudinary
+        @SuppressWarnings("unchecked")
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                "public_id", publicId,
+                "folder", "medconnect/licenses",
+                "transformation", new com.cloudinary.Transformation<>()
+                        .width(1200)
+                        .height(1600)
+                        .crop("fit")
+                        .quality("auto")
+                        .fetchFormat("auto")
+        ));
+
+        // Return secure URL
+        return (String) uploadResult.get("secure_url");
+    }
+
+    /**
      * Delete avatar from Cloudinary
      * @param imageUrl URL of image to delete
      */

@@ -41,8 +41,10 @@ export default function AppointmentsPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("[Patient Schedule] /api/appointments/my ->", data);
         setAppointments(data);
       } else {
+        console.error("[Patient Schedule] Fetch failed:", response.status);
         toast.error("Không thể tải danh sách lịch hẹn");
       }
     } catch (error) {
@@ -140,8 +142,15 @@ const SLOTS = [
 ];
 
 // Lấy thông tin lịch hẹn của từng ô (theo ngày + ca)
+function formatDateLocal(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`; // YYYY-MM-DD in local timezone
+}
+
 function getSlotData(date, slot) {
-  const dayStr = date.toISOString().split("T")[0];
+  const dayStr = formatDateLocal(date);
   const slotAppointments = appointments.filter(
     (a) =>
       a.date === dayStr &&

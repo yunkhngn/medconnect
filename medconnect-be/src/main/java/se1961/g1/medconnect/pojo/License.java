@@ -61,9 +61,9 @@ public class License {
     @Column(name = "notes", columnDefinition = "NVARCHAR(MAX)")
     private String notes;
     
-    // URL file PDF minh chứng giấy phép (lưu trên Cloudinary)
-    @Column(name = "proof_document_url", columnDefinition = "NVARCHAR(MAX)")
-    private String proofDocumentUrl;
+    // URLs hình ảnh minh chứng giấy phép (lưu trên Cloudinary, JSON array)
+    @Column(name = "proof_images", columnDefinition = "NVARCHAR(MAX)")
+    private String proofImages;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

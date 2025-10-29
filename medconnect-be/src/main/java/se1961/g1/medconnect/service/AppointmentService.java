@@ -18,7 +18,6 @@ import se1961.g1.medconnect.repository.ScheduleRepository;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -78,6 +77,27 @@ public class AppointmentService {
         System.out.println("[findByDoctorUserIdAndDateBetween] Called with userId: " + userId + ", start: " + start + ", end: " + end);
         List<Appointment> result = appointmentRepository.findByDoctorUserIdAndDateBetween(userId, start, end);
         System.out.println("[findByDoctorUserIdAndDateBetween] Found " + result.size() + " appointments");
+        
+        if (!result.isEmpty()) {
+            System.out.println("[findByDoctorUserIdAndDateBetween] Appointment details:");
+            result.forEach(a -> {
+                System.out.println("  - ID: " + a.getAppointmentId() + 
+                                 ", Date: " + a.getDate() + 
+                                 ", Slot: " + a.getSlot() + 
+                                 ", Status: " + a.getStatus() +
+                                 ", Doctor: " + (a.getDoctor() != null ? a.getDoctor().getName() : "null") +
+                                 ", Doctor UserID: " + (a.getDoctor() != null ? a.getDoctor().getUserId() : "null"));
+            });
+        }
+        
+        return result;
+    }
+
+    public List<Appointment> findByDoctorAndDateBetween(Doctor doctor, LocalDate start, LocalDate end) {
+        System.out.println("[findByDoctorAndDateBetween] Doctor UserID: " + (doctor != null ? doctor.getUserId() : null)
+                + ", start: " + start + ", end: " + end);
+        List<Appointment> result = appointmentRepository.findByDoctorAndDateBetween(doctor, start, end);
+        System.out.println("[findByDoctorAndDateBetween] Found " + result.size() + " appointments");
         return result;
     }
 
@@ -188,6 +208,9 @@ public class AppointmentService {
         appointment.setReason(request.getReason());
         appointment.setStatus(AppointmentStatus.PENDING);
         
+        System.out.println("[createAppointment] Doctor set in appointment: " + appointment.getDoctor().getName());
+        System.out.println("[createAppointment] Doctor user_id in appointment: " + appointment.getDoctor().getUserId());
+        
         // 7. Save
         Appointment saved = appointmentRepository.save(appointment);
         
@@ -213,7 +236,7 @@ public class AppointmentService {
     public AppointmentDTO updateAppointment(Long id, AppointmentDTO dto) throws Exception {
         Appointment appointment = getAppointmentById(id)
                 .orElseThrow(() -> new Exception("Appointment not found"));
-        
+
         if (dto.getStatus() != null) {
             try {
                 appointment.setStatus(AppointmentStatus.valueOf(dto.getStatus().toUpperCase()));

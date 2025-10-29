@@ -157,9 +157,6 @@ export default function DoctorSchedulePage() {
     try {
       const token = await user.getIdToken();
       
-      try {
-      const token = await user.getIdToken();
-      
       let response;
       if (isUpdate) {
         // Update existing slot status from EMPTY to RESERVED
