@@ -42,4 +42,4 @@ Thumbs.db
 *.mdf
 *.ldf
 
-tmp
+tmp/
