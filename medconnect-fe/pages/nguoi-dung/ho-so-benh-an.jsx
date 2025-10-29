@@ -480,15 +480,6 @@ export default function HoSoBenhAn() {
           <div className="space-y-2">
             <Button
               fullWidth
-              color="primary"
-              variant="flat"
-              startContent={<Settings size={18} />}
-              onPress={() => router.push("/nguoi-dung/cai-dat")}
-            >
-              Cập nhật thông tin
-            </Button>
-            <Button
-              fullWidth
               color="success"
               variant="flat"
               startContent={<Edit size={18} />}
@@ -505,7 +496,16 @@ export default function HoSoBenhAn() {
               >
                 Xuất hồ sơ bệnh án
               </Button>
-                      </div>
+              <Button
+              fullWidth
+              color="primary"
+              variant="flat"
+              startContent={<Settings size={18} />}
+              onPress={() => router.push("/nguoi-dung/cai-dat")}
+            >
+              Cài đặt tài khoản
+            </Button>
+            </div>
         </CardBody>
       </Card>
                 </div>

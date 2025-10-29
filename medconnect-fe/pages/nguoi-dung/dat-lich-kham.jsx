@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
 } from "@heroui/react";
 import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
+import RouteMap from "@/components/ui/RouteMap";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
@@ -67,6 +68,9 @@ export default function DatLichKham() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [appointmentType, setAppointmentType] = useState("ONLINE");
   const [reason, setReason] = useState("");
+  const [symptomImages, setSymptomImages] = useState([]); // [{name, url, file}]
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
@@ -97,6 +101,9 @@ export default function DatLichKham() {
   // Map (Geoapify) for preview doctor
   const [mapUrl, setMapUrl] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
+  const [routeUrl, setRouteUrl] = useState("");
+  const [originAddr, setOriginAddr] = useState("");
+  const [destAddr, setDestAddr] = useState("");
   const [loadingMap, setLoadingMap] = useState(false);
   const [mapError, setMapError] = useState(false);
 
@@ -369,6 +376,63 @@ export default function DatLichKham() {
     return () => controller.abort();
   }, [previewDoctor]);
 
+  // Build patient -> clinic route link (Google Maps) using patient profile
+  useEffect(() => {
+    const buildRoute = async () => {
+      try {
+        if (!previewDoctor || !user) { setRouteUrl(""); return; }
+        const token = await user.getIdToken();
+        const res = await fetch('http://localhost:8080/api/patient/profile', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { setRouteUrl(""); return; }
+        const profile = await res.json();
+        const addrParts = [];
+        const detail = profile.address_detail || profile.addressDetail || profile.address;
+        if (detail) addrParts.push(detail);
+        const wardName = profile.ward_name || (profile.ward_code ? getWardName(profile.ward_code) : "");
+        const districtName = profile.district_name || (profile.district_code ? getDistrictName(profile.district_code) : "");
+        const provinceName = profile.province_name || (profile.province_code ? getProvinceName(profile.province_code) : "");
+        if (wardName) addrParts.push(wardName);
+        if (districtName) addrParts.push(districtName);
+        if (provinceName) addrParts.push(provinceName);
+        const origin = addrParts.filter(Boolean).join(', ');
+        const destination = previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || '';
+        setOriginAddr(origin);
+        setDestAddr(destination);
+        if (!origin || !destination) { setRouteUrl(""); return; }
+
+        // Prefer coordinates to avoid ambiguous Google geocoding
+        const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
+        const geocode = async (text) => {
+          try {
+            const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text)}&limit=1&apiKey=${apiKey}`;
+            const r = await fetch(url);
+            if (!r.ok) return null;
+            const j = await r.json();
+            const f = j?.features?.[0];
+            if (f?.geometry?.coordinates) {
+              const [lon, lat] = f.geometry.coordinates;
+              return { lat, lon };
+            }
+          } catch {}
+          return null;
+        };
+
+        if (apiKey) {
+          const [from, to] = await Promise.all([geocode(origin), geocode(destination)]);
+          if (from && to) {
+            const gmaps = `https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lon}&destination=${to.lat},${to.lon}&travelmode=driving`;
+            setRouteUrl(gmaps);
+            return;
+          }
+        }
+        // Fallback to address strings
+        setRouteUrl(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`);
+      } catch { setRouteUrl(""); }
+    };
+    buildRoute();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewDoctor, user]);
+
   const handleDateChange = (date) => {
     setSelectedDate(date);
     setSelectedSlot(""); // Reset slot when date changes
@@ -394,7 +458,13 @@ export default function DatLichKham() {
           date: selectedDate,
           slot: selectedSlot,
           type: appointmentType,
-          reason: reason || null
+          reason: (() => {
+            if (!reason && symptomImages.length === 0) return null;
+            if (symptomImages.length === 0) return reason;
+            const filesList = symptomImages.map((i) => i.name).join(", ");
+            const note = `\n\n[Đính kèm: ${symptomImages.length} ảnh triệu chứng: ${filesList}. Ảnh chưa tải lên hệ thống.]`;
+            return (reason || "").concat(note);
+          })()
         })
       });
 
@@ -609,21 +679,38 @@ export default function DatLichKham() {
                       <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
                     </div>
                     <div className="rounded-xl overflow-hidden bg-gray-100">
-                      {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
-                      {!loadingMap && embedUrl && (
-                        <iframe
-                          src={embedUrl}
-                          className="w-full h-96 border-0"
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                          allowFullScreen
+                      {originAddr && destAddr && process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ? (
+                        <RouteMap
+                          originAddress={originAddr}
+                          destinationAddress={destAddr}
+                          apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}
                         />
+                      ) : (
+                        <>
+                          {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
+                          {!loadingMap && embedUrl && (
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-96 border-0"
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              allowFullScreen
+                            />
+                          )}
+                          {!loadingMap && !embedUrl && mapUrl && (
+                            <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                          )}
+                          {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                            <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                          )}
+                        </>
                       )}
-                      {!loadingMap && !embedUrl && mapUrl && (
-                        <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
-                      )}
-                      {!loadingMap && !embedUrl && !mapUrl && mapError && (
-                        <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                      {routeUrl && (
+                        <div className="p-3 bg-white/70 border-t flex justify-end">
+                          <Button as={"a"} href={routeUrl} target="_blank" rel="noopener" color="primary" size="sm">
+                            Mở trên Google Maps
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -772,6 +859,7 @@ export default function DatLichKham() {
                         <div className="mt-3 text-xs text-gray-600 flex flex-wrap gap-x-6 gap-y-2">
                           <div className="flex items-center gap-1"><Star size={14} className="text-yellow-500" /><span>Đánh giá</span><span className="font-medium ml-1">{doctor.rating || '4.8'}</span></div>
                           <div className="flex items-center gap-1"><Award size={14} className="text-teal-600" /><span>Năm KN</span><span className="font-medium ml-1">{doctor.experience_years || doctor.experienceYears || '—'}</span></div>
+                          <br/>
                           <div className="flex items-center gap-1 min-w-[180px] truncate"><User size={14} className="text-cyan-600" /><span>Email</span><span className="font-medium ml-1 truncate">{doctor.email || '—'}</span></div>
                           <div className="flex items-center gap-1"><Phone size={14} className="text-green-600" /><span>Điện thoại</span><span className="font-medium ml-1">{doctor.phone || '—'}</span></div>
                         </div>
@@ -808,15 +896,15 @@ export default function DatLichKham() {
             {/* Weekly Calendar */}
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-sm">
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
                     const prev = new Date(weekStart);
                     prev.setDate(prev.getDate() - 7);
                     setWeekStart(prev);
                   }}>
                     Tuần trước
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
                     const now = new Date();
                     const day = now.getDay();
                     const diff = (day === 0 ? -6 : 1) - day;
@@ -827,7 +915,7 @@ export default function DatLichKham() {
                   }}>
                     Tuần hiện tại
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white" onPress={() => {
+                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
                     const next = new Date(weekStart);
                     next.setDate(next.getDate() + 7);
                     setWeekStart(next);
@@ -837,10 +925,10 @@ export default function DatLichKham() {
                 </div>
             </div>
 
-              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-                <div className="grid grid-cols-8 min-w-[800px]">
+              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div className="grid grid-cols-8 min-w-[920px]">
                   {/* Header */}
-                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50 border-r">Khung giờ</div>
+                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50/80 border-r sticky left-0 z-10">Khung giờ</div>
                   {Array.from({ length: 7 }).map((_, i) => {
                     const d = new Date(weekStart);
                     d.setDate(weekStart.getDate() + i);
@@ -849,7 +937,8 @@ export default function DatLichKham() {
                     const key = d.toISOString().split('T')[0];
                     return (
                       <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
-                        {dayLabel}, {dateLabel}
+                        <div className="text-xs text-gray-500">{dayLabel}</div>
+                        <div className="text-sm">{dateLabel}</div>
                       </div>
                     );
                   })}
@@ -857,7 +946,7 @@ export default function DatLichKham() {
                   {/* Body */}
                   {Object.keys(SLOT_TIMES).map((slotKey) => (
                     <div key={slotKey} className="contents">
-                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center">{SLOT_TIMES[slotKey]}</div>
+                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center sticky left-0 bg-white/90 z-10">{SLOT_TIMES[slotKey]}</div>
                       {Array.from({ length: 7 }, (_, i) => {
                         const d = new Date(weekStart);
                         d.setDate(weekStart.getDate() + i);
@@ -869,21 +958,21 @@ export default function DatLichKham() {
                         const selectable = available && !isPast;
                         const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
                         return (
-                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center">
+                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center bg-white">
                             <button
                               onClick={() => {
                                 if (!selectable) return;
                                 handleDateChange(dateStr);
                                 setSelectedSlot(slotKey);
                               }}
-                              className={`w-full h-10 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out
-                                ${isSelected ? 'bg-teal-600 text-white shadow-md' : ''}
-                                ${!isSelected && selectable ? 'bg-white border border-gray-300 hover:border-teal-500 hover:bg-teal-50 text-gray-700' : ''}
+                              className={`w-full h-10 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none
+                                ${isSelected ? 'bg-teal-600 text-white shadow-md ring-2 ring-teal-300' : ''}
+                                ${!isSelected && selectable ? 'bg-teal-50/40 border border-teal-300 hover:bg-teal-100 text-teal-700' : ''}
                                 ${!selectable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
                               `}
                               disabled={!selectable}
                             >
-                              {isSelected ? 'Đã chọn' : (selectable ? 'Đặt' : '—')}
+                              {isSelected ? 'Đã chọn' : (selectable ? 'Chọn' : '—')}
                             </button>
                   </div>
                         );
@@ -894,10 +983,10 @@ export default function DatLichKham() {
               </div>
 
               {/* Legend */}
-              <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-2">
-                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-teal-600"></span>Đã chọn</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-white border border-gray-300"></span>Có thể đặt</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-4 h-4 rounded-md bg-gray-100"></span>Không khả dụng</div>
+              <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-3">
+                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-600"></span>Đã chọn</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-100 border border-teal-300"></span>Có thể đặt</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-gray-100"></span>Không khả dụng</div>
               </div>
             </div>
 
@@ -938,6 +1027,71 @@ export default function DatLichKham() {
                   onChange={(e) => setReason(e.target.value)}
                   minRows={3}
                 />
+
+                {/* Symptom images */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-2">Đính kèm ảnh triệu chứng <span className="text-gray-500">(tùy chọn)</span></label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      files.forEach((file) => {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+
+                  {/* Dropzone */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const files = Array.from(e.dataTransfer.files || []);
+                      files.forEach((file) => {
+                        if (!file.type.startsWith('image/')) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    className={`rounded-xl w-full p-6 text-center cursor-pointer transition border-2 border-dashed ${isDragging ? 'bg-teal-50 border-teal-400' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
+                  >
+                    <p className="text-sm text-gray-700">Kéo & thả ảnh vào đây hoặc <span className="text-teal-600 font-medium">bấm để chọn</span></p>
+                    <p className="text-xs text-gray-500 mt-1">Hỗ trợ nhiều ảnh, định dạng JPEG/PNG</p>
+                  </div>
+
+                  {symptomImages.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      {symptomImages.map((img, idx) => (
+                        <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden relative group border">
+                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setSymptomImages((prev) => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 bg-white/80 text-red-600 text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">Ảnh chỉ lưu kèm nội dung ghi chú của bạn khi tạo lịch. Nếu cần gửi ảnh chất lượng cao, vui lòng mang theo hoặc gửi qua kênh chat sau khi đặt lịch.</p>
+                </div>
               </div>
             )}
 
