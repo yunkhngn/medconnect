@@ -18,6 +18,62 @@ export default function OfflineExamDetailPage() {
   const [saving, setSaving] = useState(false);
   const [patientUserId, setPatientUserId] = useState("");
   const [appointmentInfo, setAppointmentInfo] = useState(null);
+  const [isFinished, setIsFinished] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+  const [previousEntry, setPreviousEntry] = useState(null);
+
+  const mergeRecord = (base, incoming) => {
+    if (!incoming) return base;
+    const merged = { ...base };
+    const pick = (v, fb) => (v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0) ? fb : v);
+    merged.visit_date = pick(incoming.visit_date, merged.visit_date);
+    merged.visit_time = pick(incoming.visit_time, merged.visit_time);
+    merged.visit_type = pick((incoming.visit_type||"").toString().toLowerCase(), merged.visit_type);
+    merged.chief_complaint = pick(incoming.chief_complaint, merged.chief_complaint);
+    if (incoming.vital_signs) merged.vital_signs = { ...merged.vital_signs, ...incoming.vital_signs };
+    if (incoming.physical_exam) merged.physical_exam = { ...merged.physical_exam, ...incoming.physical_exam };
+    if (incoming.diagnosis) {
+      merged.diagnosis = {
+        primary: pick(incoming.diagnosis.primary, merged.diagnosis.primary),
+        secondary: pick(incoming.diagnosis.secondary, merged.diagnosis.secondary),
+        icd_codes: pick(incoming.diagnosis.icd_codes, merged.diagnosis.icd_codes)
+      }
+    }
+    if (incoming.prescriptions) merged.prescriptions = pick(incoming.prescriptions, merged.prescriptions);
+    merged.notes = pick(incoming.notes, merged.notes);
+    return merged;
+  };
+
+  const normalizeEntry = (raw) => {
+    try {
+      const e = typeof raw === 'string' ? JSON.parse(raw) : raw || {};
+      const n = { ...e };
+      // Some APIs may nest payload under `entry`
+      const src = n.entry && typeof n.entry === 'object' ? n.entry : n;
+      // Some fields may be JSON-stringified
+      const parseMaybe = (v) => {
+        if (typeof v === 'string') {
+          try { return JSON.parse(v); } catch { return v; }
+        }
+        return v;
+      };
+      return {
+        visit_date: src.visit_date,
+        visit_time: src.visit_time,
+        visit_type: src.visit_type,
+        chief_complaint: src.chief_complaint || src.reason || src.complaint,
+        vital_signs: parseMaybe(src.vital_signs),
+        physical_exam: parseMaybe(src.physical_exam),
+        diagnosis: parseMaybe(src.diagnosis),
+        prescriptions: parseMaybe(src.prescriptions),
+        notes: src.notes || src.note,
+        appointment_id: src.appointment_id || n.appointment_id,
+      };
+    } catch (err) {
+      console.warn('[Offline Exam] normalizeEntry failed', err);
+      return {};
+    }
+  };
 
   const [record, setRecord] = useState({
     visit_date: new Date().toISOString().split("T")[0],
@@ -52,6 +108,7 @@ export default function OfflineExamDetailPage() {
         console.log("[Offline Exam] Appointment data:", data);
         console.log("[Offline Exam] Patient avatar/idPhotoUrl:", data.patient?.idPhotoUrl, data.patient?.avatar);
         setAppointmentInfo(data);
+        setIsFinished(String(data?.status).toUpperCase() === "FINISHED");
         setPatientUserId(String(data.patient?.id || ""));
         // Prefill visit date, type and chief complaint from appointment.reason (JSON or plain text)
         let reasonText = "";
@@ -69,7 +126,42 @@ export default function OfflineExamDetailPage() {
           visit_type: (data.type||"OFFLINE").toString().toLowerCase(),
           chief_complaint: reasonText || prev.chief_complaint
         }));
-        await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
+        // Try prefill from existing EMR (keep old information when editing finished appointments)
+        try {
+          const pid = String(data.patient?.id || "");
+          if (pid) {
+            const emrUrl = `http://localhost:8080/api/medical-records/patient/${pid}`;
+            const emrResp = await fetch(emrUrl, { headers: { Authorization: `Bearer ${token}` } });
+            if (emrResp.ok) {
+              const emrData = await emrResp.json();
+              // Support two shapes: {entries:[...] } or { detail: '{"entries": [...] }' }
+              let entries = emrData?.entries;
+              if (!Array.isArray(entries)) {
+                try {
+                  const detail = typeof emrData?.detail === 'string' ? JSON.parse(emrData.detail) : (emrData?.detail || {});
+                  if (Array.isArray(detail?.entries)) entries = detail.entries;
+                } catch (_) { /* ignore */ }
+              }
+              if (!Array.isArray(entries)) entries = [];
+              console.log('[Offline Exam] EMR raw entries:', entries);
+              const byAptRaw = entries.find((e) => String((e.appointment_id || e.entry?.appointment_id)) === String(appointmentId));
+              const latestRaw = entries[entries.length - 1];
+              const toUseRaw = byAptRaw || latestRaw;
+              const toUse = normalizeEntry(toUseRaw);
+              if (toUse) {
+                setPreviousEntry(toUse);
+                setRecord((prev) => mergeRecord(prev, toUse));
+                setPrefilled(true);
+              }
+            }
+          }
+        } catch (_) {
+          // ignore
+        }
+        // Chỉ đánh dấu bắt đầu khi lịch chưa hoàn thành
+        if (String(data?.status).toUpperCase() !== "FINISHED") {
+          await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
+        }
       } catch (e) { toast.error(e.message || "Không thể tải lịch hẹn"); }
     })();
   }, [appointmentId, user]);
@@ -87,11 +179,17 @@ export default function OfflineExamDetailPage() {
     setSaving(true);
     try {
       const token = await user.getIdToken();
-      const entry = { visit_id:`V${Date.now()}`, ...record, appointment_id:Number(appointmentId) };
+      // Merge với bản ghi cũ để không làm mất dữ liệu khi cập nhật
+      const mergedToSave = isFinished && previousEntry ? mergeRecord(previousEntry, record) : record;
+      const entry = { visit_id:`V${Date.now()}`, ...mergedToSave, appointment_id:Number(appointmentId) };
       const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ entry }) });
       if (!resp.ok) throw new Error((await resp.json()).error || "Lưu bệnh án thất bại");
-      await fetch(`http://localhost:8080/api/appointments/${appointmentId}/finish`, { method:"PATCH", headers:{ Authorization:`Bearer ${token}` } });
-      toast.success("Đã lưu bệnh án và hoàn thành lịch hẹn");
+      if (!isFinished) {
+        await fetch(`http://localhost:8080/api/appointments/${appointmentId}/finish`, { method:"PATCH", headers:{ Authorization:`Bearer ${token}` } });
+        toast.success("Đã lưu bệnh án và hoàn thành lịch hẹn");
+      } else {
+        toast.success("Đã cập nhật bệnh án cho lịch hẹn đã hoàn thành");
+      }
       router.push("/bac-si/lich-hen");
     } catch (e) { toast.error(e.message || "Không thể lưu"); } finally { setSaving(false); }
   };
@@ -257,7 +355,7 @@ export default function OfflineExamDetailPage() {
               variant="bordered"
               placeholder="Nhập chẩn đoán chính..."
               classNames={{
-                input: "font-medium text-gray-400",
+                input: "font-medium text-gray-900",
                 inputWrapper: "border-gray-300 hover:border-amber-400 transition-colors"
               }}
               isRequired 
@@ -273,7 +371,7 @@ export default function OfflineExamDetailPage() {
                 onValueChange={setSecondaryDiagnosis} 
                 variant="bordered"
                 classNames={{
-                  input: "text-gray-400",
+                  input: "text-gray-900",
                   inputWrapper: "border-gray-300"
                 }}
                 onKeyPress={(e) => e.key === 'Enter' && addSecondary()}
@@ -314,7 +412,7 @@ export default function OfflineExamDetailPage() {
                 onValueChange={setIcdCode} 
                 variant="bordered"
                 classNames={{
-                  input: "font-mono text-gray-400",
+                  input: "font-mono text-gray-900",
                   inputWrapper: "border-gray-300"
                 }}
                 onKeyPress={(e) => e.key === 'Enter' && addICD()}
@@ -368,7 +466,7 @@ export default function OfflineExamDetailPage() {
                 variant="bordered"
                 placeholder="Tên thuốc..."
                 classNames={{
-                  input: "font-medium text-gray-400",
+                  input: "font-medium text-gray-900",
                   inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
                 }}
               />
@@ -381,7 +479,7 @@ export default function OfflineExamDetailPage() {
                 variant="bordered"
                 placeholder="VD: 500mg"
                 classNames={{
-                  input: "font-medium text-gray-400",
+                  input: "font-medium text-gray-900",
                   inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
                 }}
               />
@@ -394,7 +492,7 @@ export default function OfflineExamDetailPage() {
                 variant="bordered"
                 placeholder="VD: 2 lần/ngày"
                 classNames={{
-                  input: "font-medium text-gray-400",
+                  input: "font-medium text-gray-900",
                   inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
                 }}
               />
@@ -407,7 +505,7 @@ export default function OfflineExamDetailPage() {
                 variant="bordered"
                 placeholder="VD: 7 ngày"
                 classNames={{
-                  input: "font-medium text-gray-400",
+                  input: "font-medium text-gray-900",
                   inputWrapper: "border-gray-300 hover:border-green-400 transition-colors"
                 }}
               />
@@ -479,7 +577,7 @@ export default function OfflineExamDetailPage() {
             variant="bordered" 
             minRows={4}
             classNames={{
-              input: "font-medium text-gray-400",
+              input: "font-medium text-gray-900",
               inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
             }}
           />

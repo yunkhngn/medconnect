@@ -275,6 +275,16 @@ export default function OfflineExamListPage() {
                     >
                       Bắt đầu khám
                     </Button>
+                  ) : apt.status === "FINISHED" ? (
+                    <Button 
+                      size="sm" 
+                      color="warning" 
+                      variant="flat"
+                      startContent={<Stethoscope size={16}/>}
+                      onClick={() => router.push(`/bac-si/kham-offline/${apt.appointmentId}`)}
+                    >
+                      Cập nhật
+                    </Button>
                   ) : null}
                   <Button 
                     size="sm" 
