@@ -152,16 +152,7 @@ GO
 -- STEP 4.1: Insert Licenses for Doctors (optional but recommended)
 -- ============================================
 
-PRINT 'Inserting Licenses...';
-
-INSERT INTO License (
-  doctor_id, license_number, issued_date, expiry_date, issuer_title, scope_of_practice, notes, proof_images, created_at, updated_at
-) VALUES
-(3, '000001/BYT-GPHN', '2015-01-15', '2030-01-15', N'Bộ Y tế', N'Tim mạch', NULL, NULL, GETDATE(), GETDATE()),
-(4, '000002/BYT-GPHN', '2016-03-20', '2031-03-20', N'Bộ Y tế', N'Tim mạch', NULL, NULL, GETDATE(), GETDATE()),
-(5, '000003/BYT-GPHN', '2014-06-10', '2029-06-10', N'Bộ Y tế', N'Nội khoa', NULL, NULL, GETDATE(), GETDATE());
-
-PRINT '3 Licenses inserted';
+PRINT 'Skip Licenses seeding (upload via app)';
 GO
 
 -- ============================================
@@ -258,7 +249,7 @@ PRINT '30 Appointments inserted';
 GO
 */
 
-PRINT 'Skipped Appointments (need new slot structure)';
+PRINT 'Skip Appointments seeding (created via app)';
 GO
 
 -- ============================================
@@ -308,7 +299,7 @@ PRINT '25 Payments inserted';
 GO
 */
 
-PRINT 'Skipped Payments (depend on appointments)';
+PRINT 'Skip Payments seeding (created via app)';
 GO
 
 -- ============================================
@@ -341,129 +332,35 @@ PRINT '15 VideoCallSessions inserted';
 GO
 */
 
-PRINT 'Skipped VideoCallSessions (depend on appointments)';
+PRINT 'Skip VideoCallSessions seeding (created via app)';
 GO
 
 -- ============================================
 -- STEP 9: Insert MedicalRecords (12 records - for finished appointments)
 -- ============================================
 
-PRINT 'Inserting MedicalRecords...';
-
-DBCC CHECKIDENT ('Medical_Record', RESEED, 0);
-GO
-
-SET IDENTITY_INSERT Medical_Record ON;
-
-INSERT INTO Medical_Record (record_id, detail, doctor_id, patient_id, created_at, updated_at) VALUES
-(1, N'Triệu chứng: Đau ngực, khó thở. Chẩn đoán: Tăng huyết áp. Đơn thuốc: Amlodipine 5mg x 1 viên/ngày. Tái khám sau 2 tuần.', 3, 13, '2025-10-20 09:35:00', '2025-10-20 09:35:00'),
-(2, N'Triệu chứng: Ho, sốt. Chẩn đoán: Viêm phổi nhẹ. Đơn thuốc: Amoxicillin 500mg x 3 lần/ngày x 7 ngày. Nghỉ ngơi, uống nhiều nước.', 3, 14, '2025-10-21 10:30:00', '2025-10-21 10:30:00'),
-(3, N'Triệu chứng: Đau đầu, chóng mặt. Chẩn đoán: Migraine. Đơn thuốc: Paracetamol 500mg khi đau. Tránh stress.', 4, 16, '2025-10-19 09:20:00', '2025-10-19 09:20:00'),
-(4, N'Triệu chứng: Đau bụng, tiêu chảy. Chẩn đoán: Viêm dạ dày. Đơn thuốc: Omeprazole 20mg x 2 lần/ngày trước ăn. Ăn nhẹ, tránh cay nóng.', 5, 19, '2025-10-18 11:45:00', '2025-10-18 11:45:00'),
-(5, N'Triệu chứng: Mệt mỏi, tăng cân. Chẩn đoán: Suy giáp. Xét nghiệm TSH: 8.5. Đơn thuốc: Levothyroxine 50mcg x 1 viên/ngày lúc đói. Tái khám sau 1 tháng.', 5, 20, '2025-10-22 13:50:00', '2025-10-22 13:50:00'),
-(6, N'Triệu chứng: Khó thở, ho khè khè. Chẩn đoán: Hen phế quản. Đơn thuốc: Salbutamol inhaler 2 nhát khi cần. Tránh yếu tố kích thích.', 6, 22, '2025-10-17 10:30:00', '2025-10-17 10:30:00'),
-(7, N'Triệu chứng: Đau khớp gối. Chẩn đoán: Thoái hóa khớp độ 2. Đơn thuốc: Glucosamine 1500mg/ngày. Vật lý trị liệu. Giảm cân nếu thừa cân.', 7, 15, '2025-10-16 09:45:00', '2025-10-16 09:45:00'),
-(8, N'Khám định kỳ. Sức khỏe tốt. Không có vấn đề đặc biệt. Tiếp tục duy trì lối sống lành mạnh.', 9, 20, '2025-10-15 14:40:00', '2025-10-15 14:40:00'),
-(9, N'Triệu chứng: Sốt, đau đầu. Chẩn đoán: Cúm mùa. Đơn thuốc: Paracetamol 500mg x 3 lần/ngày. Nghỉ ngơi, uống nhiều nước. Tái khám nếu sốt trên 39°C hoặc không đỡ sau 3 ngày.', 10, 13, '2025-10-14 10:05:00', '2025-10-14 10:05:00'),
-(10, N'Triệu chứng: Mụn trứng cá. Chẩn đoán: Acne vulgaris. Đơn thuốc: Benzoyl peroxide gel bôi tối. Rửa mặt 2 lần/ngày. Tái khám sau 1 tháng.', 10, 14, '2025-10-20 11:30:00', '2025-10-20 11:30:00'),
-(11, N'Triệu chứng: Buồn chán, mất ngủ. Chẩn đoán: Trầm cảm nhẹ. Tư vấn tâm lý. Đơn thuốc: Sertraline 50mg x 1 viên/ngày buổi sáng. Tái khám sau 2 tuần.', 12, 18, '2025-10-13 09:00:00', '2025-10-13 09:00:00'),
-(12, N'Triệu chứng: Đau ngực trái khi gắng sức. Chẩn đoán: Nghi ngờ bệnh mạch vành. Chỉ định: ECG, Siêu âm tim. Tái khám sau khi có kết quả xét nghiệm.', 12, 19, '2025-10-19 11:00:00', '2025-10-19 11:00:00');
-
-SET IDENTITY_INSERT Medical_Record OFF;
-
-PRINT '12 MedicalRecords inserted';
+PRINT 'Skip MedicalRecords seeding (created via app)';
 GO
 
 -- ============================================
 -- STEP 10: Insert Feedback (10 records)
 -- ============================================
 
-PRINT 'Inserting Feedback...';
-
-DBCC CHECKIDENT ('Feedback', RESEED, 0);
-GO
-
-SET IDENTITY_INSERT Feedback ON;
-
-INSERT INTO Feedback (feedback_id, comment, rating, created_at, patient, doctor) VALUES
-(1, N'Bác sĩ tư vấn rất tận tình và chu đáo. Rất hài lòng!', 5, '2025-10-20 10:00:00', 13, 3),
-(2, N'Khám nhanh, chính xác. Đơn thuốc hiệu quả.', 5, '2025-10-21 11:00:00', 14, 3),
-(3, N'Bác sĩ nhiệt tình, giải thích rõ ràng dễ hiểu.', 5, '2025-10-19 09:30:00', 16, 4),
-(4, N'Khám kỹ càng, tư vấn dinh dưỡng chi tiết.', 4, '2025-10-18 12:00:00', 19, 5),
-(5, N'Video call chất lượng tốt, bác sĩ dễ giao tiếp.', 5, '2025-10-22 14:00:00', 20, 5),
-(6, N'Phòng khám sạch sẽ, nhân viên thân thiện.', 4, '2025-10-17 11:00:00', 22, 6),
-(7, N'Bác sĩ lắng nghe và chia sẻ rất tốt.', 5, '2025-10-16 10:00:00', 15, 7),
-(8, N'Khám định kỳ nhanh gọn, chuyên nghiệp.', 4, '2025-10-15 15:00:00', 20, 9),
-(9, N'Giải thích bệnh rõ ràng, đơn thuốc hiệu quả.', 5, '2025-10-14 10:30:00', 13, 10),
-(10, N'Bác sĩ rất kiên nhẫn và chuyên nghiệp.', 5, '2025-10-20 12:00:00', 14, 10);
-
-SET IDENTITY_INSERT Feedback OFF;
-
-PRINT '10 Feedback inserted';
+PRINT 'Skip Feedback seeding';
 GO
 
 -- ============================================
 -- STEP 11: Insert Notifications (8 records)
 -- ============================================
 
-PRINT 'Inserting Notifications...';
-
-DBCC CHECKIDENT ('Notification', RESEED, 0);
-GO
-
-SET IDENTITY_INSERT Notification ON;
-
-INSERT INTO Notification (notification_id, created_at, send_at, status, user_id) VALUES
-(1, '2025-10-20 08:00:00', 'patient.mai@gmail.com', 'SENT', 13),
-(2, '2025-10-21 09:00:00', 'patient.nam@gmail.com', 'SENT', 14),
-(3, '2025-10-22 08:00:00', 'patient.quynh@gmail.com', 'SENT', 17),
-(4, '2025-10-25 13:00:00', 'patient.oanh@gmail.com', 'PENDING', 15),
-(5, '2025-10-26 14:00:00', 'patient.phuc@gmail.com', 'PENDING', 16),
-(6, '2025-10-22 08:30:00', 'doctor.an@medconnect.vn', 'SENT', 3),
-(7, '2025-10-22 08:35:00', 'doctor.binh@medconnect.vn', 'SENT', 4),
-(8, '2025-10-25 12:00:00', 'doctor.cuong@medconnect.vn', 'PENDING', 5);
-
-SET IDENTITY_INSERT Notification OFF;
-
-PRINT '8 Notifications inserted';
+PRINT 'Skip Notifications seeding';
 GO
 
 -- ============================================
 -- STEP 12: Insert Schedules (10 records - for doctors)
 -- ============================================
 
-PRINT 'Inserting Schedules (12-slot model)...';
-
-DBCC CHECKIDENT ('Schedule', RESEED, 0);
-GO
-
-SET IDENTITY_INSERT Schedule ON;
-
--- Columns: schedule_id, status, date, slot, user_id
-INSERT INTO Schedule (schedule_id, status, date, slot, user_id) VALUES
--- Doctor 1 schedules (today and tomorrow)
-(1, 'RESERVED', '2025-10-29', 'SLOT_1', 3),
-(2, 'RESERVED', '2025-10-29', 'SLOT_5', 3),
-(3, 'RESERVED', '2025-10-30', 'SLOT_7', 3),
-
--- Doctor 2 schedules
-(4, 'RESERVED', '2025-10-29', 'SLOT_2', 4),
-(5, 'BUSY',     '2025-10-29', 'SLOT_9', 4),
-
--- Doctor 3 schedules
-(6, 'RESERVED', '2025-10-30', 'SLOT_3', 5),
-(7, 'RESERVED', '2025-10-30', 'SLOT_11',5),
-
--- Doctor 4 schedules
-(8, 'RESERVED', '2025-10-31', 'SLOT_4', 6),
-
--- Doctor 5 schedules
-(9, 'RESERVED', '2025-10-31', 'SLOT_10',7),
-(10,'RESERVED', '2025-10-31', 'SLOT_12',12);
-
-SET IDENTITY_INSERT Schedule OFF;
-
-PRINT '10 Schedules inserted (12-slot)';
+PRINT 'Skip Schedules seeding (managed by app)';
 GO
 
 -- ============================================
@@ -484,29 +381,14 @@ SELECT 'Doctor', COUNT(*) FROM Doctor
 UNION ALL
 SELECT 'Patient', COUNT(*) FROM Patient
 UNION ALL
-SELECT 'Appointment', COUNT(*) FROM Appointment
-UNION ALL
-SELECT 'Payment', COUNT(*) FROM Payment
-UNION ALL
-SELECT 'Video_Call_Session', COUNT(*) FROM Video_Call_Session
-UNION ALL
-SELECT 'Medical_Record', COUNT(*) FROM Medical_Record
-UNION ALL
-SELECT 'Feedback', COUNT(*) FROM Feedback
-UNION ALL
-SELECT 'Notification', COUNT(*) FROM Notification
-UNION ALL
-SELECT 'Schedule', COUNT(*) FROM Schedule
+SELECT 'Speciality', COUNT(*) FROM speciality
 UNION ALL
 SELECT '=== TOTAL ===' AS TableName, 
     (SELECT COUNT(*) FROM Users) +
-    (SELECT COUNT(*) FROM Appointment) +
-    (SELECT COUNT(*) FROM Payment) +
-    (SELECT COUNT(*) FROM Video_Call_Session) +
-    (SELECT COUNT(*) FROM Medical_Record) +
-    (SELECT COUNT(*) FROM Feedback) +
-    (SELECT COUNT(*) FROM Notification) +
-    (SELECT COUNT(*) FROM Schedule) AS RecordCount;
+    (SELECT COUNT(*) FROM Admin) +
+    (SELECT COUNT(*) FROM Doctor) +
+    (SELECT COUNT(*) FROM Patient) +
+    (SELECT COUNT(*) FROM speciality) AS RecordCount;
 
 PRINT '';
 PRINT 'Note: Firebase UIDs are placeholders (firebase_uid_xxx)';
