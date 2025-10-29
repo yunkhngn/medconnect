@@ -224,7 +224,7 @@ function getSlotData(date, slot) {
             fullWidth
             color="primary"
             startContent={<Plus size={18} />}
-            onClick={() => router.push("/dat-lich-kham")}
+            onClick={() => router.push("/nguoi-dung/dat-lich-kham")}
           >
             Đặt lịch khám mới
           </Button>
