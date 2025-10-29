@@ -46,6 +46,13 @@ public class Doctor extends User{
     @Column(name = "ward_code")
     private Integer wardCode;
 
+    @Column(name = "district_name", columnDefinition = "NVARCHAR(100)")
+private String districtName;
+
+@Column(name = "ward_name", columnDefinition = "NVARCHAR(100)")
+private String wardName;
+
+
     // Relationships
     @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY)
     @com.fasterxml.jackson.annotation.JsonIgnore
