@@ -56,6 +56,12 @@ export default function DoctorProfile() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({
+    phone: "",
+    experienceYears: "",
+    educationLevel: "",
+  });
+
 
   // Specialities from API
   const [specialities, setSpecialities] = useState([]);
@@ -64,7 +70,7 @@ export default function DoctorProfile() {
   // Licenses
   const [licenses, setLicenses] = useState([]);
   const [loadingLicenses, setLoadingLicenses] = useState(false);
-  
+
   // License modal
   const { isOpen: isLicenseModalOpen, onOpen: onLicenseModalOpen, onClose: onLicenseModalClose } = useDisclosure();
   const [editingLicense, setEditingLicense] = useState(null);
@@ -81,12 +87,12 @@ export default function DoctorProfile() {
   const [savingLicense, setSavingLicense] = useState(false);
   const [selectedImageFiles, setSelectedImageFiles] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
-  
+
   // Delete License Modal
   const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onClose: onDeleteModalClose } = useDisclosure();
   const [deletingLicense, setDeletingLicense] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // PDF Viewer Modal
   const { isOpen: isImageModalOpen, onOpen: onImageModalOpen, onClose: onImageModalClose } = useDisclosure();
   const [selectedImages, setSelectedImages] = useState([]);
@@ -133,10 +139,10 @@ export default function DoctorProfile() {
   const fetchDoctorData = async (firebaseUser) => {
     console.log("[DEBUG] Current Firebase UID:", firebaseUser.uid);
     console.log("[DEBUG] Current Email:", firebaseUser.email);
-    
+
     try {
       const token = await firebaseUser.getIdToken();
-      
+
       // Fetch doctor profile
       const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
         headers: {
@@ -150,7 +156,7 @@ export default function DoctorProfile() {
         console.log("[Doctor Data] speciality_id:", data.speciality_id);
         console.log("[Doctor Data] active_license:", data.active_license);
         console.log("[Doctor Data] avatar:", data.avatar);
-        
+
         setDoctor(prev => ({
           ...prev,
           ...data,
@@ -159,22 +165,22 @@ export default function DoctorProfile() {
           // Ensure experience_years doesn't get lost
           experience_years: data.experience_years !== undefined ? data.experience_years : prev.experience_years
         }));
-        
+
         // Fetch avatar from backend API
         try {
           const avatarResponse = await fetch(`http://localhost:8080/api/avatar`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          
+
           if (avatarResponse.ok) {
             const avatarData = await avatarResponse.json();
             console.log("[Avatar] Backend response:", avatarData);
-            
+
             // Priority: DB custom avatar > Gmail photo > null
             const finalAvatarUrl = avatarData.avatarUrl || firebaseUser.photoURL || null;
             console.log("[Avatar] Final URL:", finalAvatarUrl);
             setAvatarUrl(finalAvatarUrl);
-      } else {
+          } else {
             // Fallback to Gmail photo if API fails
             console.log("[Avatar] API failed, using Gmail photo:", firebaseUser.photoURL);
             setAvatarUrl(firebaseUser.photoURL || null);
@@ -238,15 +244,52 @@ export default function DoctorProfile() {
       return;
     }
 
+    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+
     if (!doctor.phone) {
-      toast.error("Vui lòng điền số điện thoại");
+      setErrors(prev => ({ ...prev, phone: "Vui lòng nhập số điện thoại" }));
+      toast.error("Vui lòng nhập số điện thoại");
       return;
     }
+
+    if (!phoneRegex.test(doctor.phone)) {
+      setErrors(prev => ({ ...prev, phone: "Số điện thoại không hợp lệ (VD: 0912345678)" }));
+      toast.error("Số điện thoại không hợp lệ");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, phone: "" }));
+    }
+
+    // Validate số năm kinh nghiệm
+    if (doctor.experienceYears === null || doctor.experienceYears === undefined || doctor.experienceYears === "") {
+      setErrors(prev => ({ ...prev, experienceYears: "Vui lòng nhập số năm kinh nghiệm" }));
+      toast.error("Vui lòng nhập số năm kinh nghiệm");
+      return;
+    }
+
+    const years = Number(doctor.experienceYears);
+    if (isNaN(years) || years < 0 || !Number.isInteger(years)) {
+      setErrors(prev => ({ ...prev, experienceYears: "Số năm kinh nghiệm phải là số nguyên không âm" }));
+      toast.error("Số năm kinh nghiệm phải là số nguyên không âm");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, experienceYears: "" }));
+    }
+
+    // Validate trình độ học vấn
+    if (!doctor.educationLevel || doctor.educationLevel.trim() === "") {
+      setErrors(prev => ({ ...prev, educationLevel: "Vui lòng nhập trình độ học vấn" }));
+      toast.error("Vui lòng nhập trình độ học vấn");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, educationLevel: "" }));
+    }
+
 
     setSaving(true);
     try {
       const token = await user.getIdToken();
-      
+
       const payload = {
         phone: doctor.phone,
         speciality_id: doctor.speciality_id,
@@ -263,7 +306,7 @@ export default function DoctorProfile() {
       };
 
       console.log("[Update Profile] Payload:", payload);
-      
+
       const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
         method: "PATCH",
         headers: {
@@ -274,7 +317,7 @@ export default function DoctorProfile() {
       });
 
       console.log("[Update Profile] Response status:", response.status);
-      
+
       const responseText = await response.text();
       console.log("[Update Profile] Response body:", responseText);
 
@@ -416,7 +459,7 @@ export default function DoctorProfile() {
       const url = editingLicense
         ? `http://localhost:8080/api/licenses/my/${licenseId}`
         : "http://localhost:8080/api/licenses/my";
-      
+
       const response = await fetch(url, {
         method: editingLicense ? "PATCH" : "POST",
         headers: {
@@ -542,8 +585,8 @@ export default function DoctorProfile() {
               <span>{doctor.experience_years} năm kinh nghiệm</span>
             </Chip>
           )}
-            </CardBody>
-          </Card>
+        </CardBody>
+      </Card>
 
       {/* Status Card */}
       <Card className="shadow-md bg-gradient-to-br from-teal-50 to-cyan-50">
@@ -552,8 +595,8 @@ export default function DoctorProfile() {
             <span className="text-sm text-gray-600">Trạng thái:</span>
             <Chip size="sm" color="success" variant="flat" startContent={<CheckCircle size={14} />}>
               Đang hoạt động
-                  </Chip>
-                </div>
+            </Chip>
+          </div>
         </CardBody>
       </Card>
 
@@ -571,17 +614,17 @@ export default function DoctorProfile() {
             <p className="text-xs text-purple-700 mt-1">
               Hết hạn: {formatDate(doctor.active_license.expiry_date || doctor.active_license.expiryDate) || "Vô thời hạn"}
             </p>
-            {doctor.active_license.days_until_expiry !== null && 
-             doctor.active_license.days_until_expiry < 365 && 
-             doctor.active_license.days_until_expiry > 0 && (
-              <Chip size="sm" color="warning" variant="flat" className="mt-2">
-                <AlertCircle size={12} className="mr-1" />
-                Còn {doctor.active_license.days_until_expiry} ngày
-              </Chip>
-            )}
-            </CardBody>
-          </Card>
-        )}
+            {doctor.active_license.days_until_expiry !== null &&
+              doctor.active_license.days_until_expiry < 365 &&
+              doctor.active_license.days_until_expiry > 0 && (
+                <Chip size="sm" color="warning" variant="flat" className="mt-2">
+                  <AlertCircle size={12} className="mr-1" />
+                  Còn {doctor.active_license.days_until_expiry} ngày
+                </Chip>
+              )}
+          </CardBody>
+        </Card>
+      )}
 
       {/* Info Card */}
       <Card className="shadow-md bg-blue-50 border border-blue-200">
@@ -592,7 +635,7 @@ export default function DoctorProfile() {
           </p>
         </CardBody>
       </Card>
-              </div>
+    </div>
   );
 
   // Right Main Panel
@@ -605,17 +648,17 @@ export default function DoctorProfile() {
             <User size={24} className="text-teal-600" />
             Thông tin cá nhân
           </h3>
-          </CardHeader>
-          <Divider />
+        </CardHeader>
+        <Divider />
         <CardBody className="p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Input
+            <Input
               label="Họ và tên"
               value={doctor.name || ""}
               variant="bordered"
               labelPlacement="outside"
               startContent={<User className="text-default-400" size={20} />}
-                  isReadOnly
+              isReadOnly
               classNames={{
                 input: "text-base",
                 inputWrapper: "border-default-200 bg-gray-50"
@@ -624,46 +667,67 @@ export default function DoctorProfile() {
             <Input
               label="Email"
               value={doctor.email || ""}
-                  variant="bordered"
+              variant="bordered"
               labelPlacement="outside"
               startContent={<Mail className="text-default-400" size={20} />}
               isReadOnly
               description="Email không thể thay đổi"
-                  classNames={{
+              classNames={{
                 input: "text-base",
                 inputWrapper: "border-default-200 bg-gray-50"
               }}
             />
-                <Input
+            <Input
+              type="tel"
               label="Số điện thoại"
-              placeholder="VD: 0376971168"
+              placeholder="VD: 0912345678"
               value={doctor.phone || ""}
-              onValueChange={(v) => setDoctor(prev => ({ ...prev, phone: v }))}
-                  variant="bordered"
+              onValueChange={(v) => {
+                setDoctor(prev => ({ ...prev, phone: v }));
+                if (/^(0|\+84)[0-9]{9}$/.test(v)) {
+                  setErrors(prev => ({ ...prev, phone: "" }));
+                }
+              }}
+              variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}
-                  classNames={{
+              classNames={{
                 input: "text-base",
-                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+                inputWrapper: errors.phone
+                  ? "border-red-500 focus-within:!border-red-500"
+                  : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
+              isInvalid={!!errors.phone}
+              errorMessage={errors.phone}
             />
-                <Input
+
+            <Input
               type="number"
               label="Số năm kinh nghiệm"
-              placeholder="VD: 15"
-              value={String(doctor.experience_years || 0)}
-              onValueChange={(v) => setDoctor(prev => ({ ...prev, experience_years: parseInt(v) || 0 }))}
-                  variant="bordered"
+              placeholder="VD: 5"
+              value={doctor.experienceYears || ""}
+              onValueChange={(v) => {
+                setDoctor({ ...doctor, experienceYears: v });
+                if (v === "" || (Number(v) >= 0 && Number.isInteger(Number(v)))) {
+                  setErrors(prev => ({ ...prev, experienceYears: "" }));
+                }
+              }}
+              variant="bordered"
               labelPlacement="outside"
-              startContent={<Award className="text-default-400" size={20} />}
-                  classNames={{
+              startContent={<Calendar className="text-default-400" size={20} />}
+              classNames={{
                 input: "text-base",
-                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
-                  }}
-                />
-              </div>
+                inputWrapper: errors.experienceYears
+                  ? "border-red-500 focus-within:!border-red-500"
+                  : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              }}
+              isInvalid={!!errors.experienceYears}
+              errorMessage={errors.experienceYears}
+            />
 
-                  <Select
+          </div>
+
+          <Select
             label="Chuyên khoa"
             placeholder={loadingSpecialities ? "Đang tải..." : "Chọn chuyên khoa"}
             selectedKeys={doctor.speciality_id ? [String(doctor.speciality_id)] : []}
@@ -673,7 +737,7 @@ export default function DoctorProfile() {
               console.log("[Select] Selected:", selected, "→ ID:", id);
               setDoctor(prev => ({ ...prev, speciality_id: id }));
             }}
-                    variant="bordered"
+            variant="bordered"
             labelPlacement="outside"
             startContent={<Stethoscope className="text-default-400" size={20} />}
             classNames={{
@@ -685,23 +749,33 @@ export default function DoctorProfile() {
             {specialities.map((spec) => (
               <SelectItem key={String(spec.id)} textValue={spec.name}>
                 {spec.name}
-                      </SelectItem>
-                    ))}
-                  </Select>
+              </SelectItem>
+            ))}
+          </Select>
 
-                  <Input
+          <Input
             label="Trình độ học vấn"
             placeholder="VD: Tiến sĩ Y khoa, Thạc sĩ, Bác sĩ chuyên khoa II..."
-            value={doctor.education_level || ""}
-            onValueChange={(v) => setDoctor(prev => ({ ...prev, education_level: v }))}
+            value={doctor.educationLevel || ""}
+            onValueChange={(v) => {
+              setDoctor({ ...doctor, educationLevel: v });
+              if (v.trim() !== "") {
+                setErrors(prev => ({ ...prev, educationLevel: "" }));
+              }
+            }}
             variant="bordered"
             labelPlacement="outside"
-            startContent={<GraduationCap className="text-default-400" size={20} />}
+            startContent={<User className="text-default-400" size={20} />}
             classNames={{
               input: "text-base",
-              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              inputWrapper: errors.educationLevel
+                ? "border-red-500 focus-within:!border-red-500"
+                : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
             }}
+            isInvalid={!!errors.educationLevel}
+            errorMessage={errors.educationLevel}
           />
+
 
           <Textarea
             label="Giới thiệu bản thân"
@@ -758,12 +832,12 @@ export default function DoctorProfile() {
             placeholder="Số nhà, tên đường... (VD: Số 123, Đường ABC)"
             value={doctor.clinic_address || ""}
             onValueChange={(v) => setDoctor(prev => ({ ...prev, clinic_address: v }))}
-                    variant="bordered"
+            variant="bordered"
             labelPlacement="outside"
             startContent={<MapPin className="text-default-400" size={20} />}
             minRows={2}
             maxRows={3}
-                    classNames={{
+            classNames={{
               input: "text-base",
               inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
             }}
@@ -771,7 +845,7 @@ export default function DoctorProfile() {
 
           <div className="flex justify-end pt-4">
             <Button
-                    color="primary"
+              color="primary"
               size="lg"
               startContent={<Save size={20} />}
               onPress={handleSave}
@@ -828,28 +902,28 @@ export default function DoctorProfile() {
                 const proofImages = license.proofImages || license.proof_images;
 
                 return (
-                  <div 
-                    key={licenseId} 
+                  <div
+                    key={licenseId}
                     className="relative bg-gradient-to-br from-white rounded-xl p-8 border-4 border-double border-teal-200 shadow-lg hover:shadow-xl transition-all"
                   >
                     {/* Status Badge - Top Left */}
                     <div className="absolute top-4 left-4">
-                  <Chip
-                        size="md" 
-                        color={isActive && !isExpired ? "success" : isExpired ? "danger" : "default"} 
+                      <Chip
+                        size="md"
+                        color={isActive && !isExpired ? "success" : isExpired ? "danger" : "default"}
                         variant="shadow"
                         className="font-semibold"
                       >
                         {isExpired ? "Đã hết hạn" : isActive ? "Hiệu lực" : "Không hoạt động"}
-                  </Chip>
-                </div>
+                      </Chip>
+                    </div>
 
                     {/* Action Buttons - Top Right */}
                     <div className="absolute top-4 right-4 flex gap-2">
                       {proofImages && (
-                <Button
+                        <Button
                           size="sm"
-                  variant="flat"
+                          variant="flat"
                           isIconOnly
                           onPress={() => {
                             try {
@@ -866,19 +940,19 @@ export default function DoctorProfile() {
                           title="Xem minh chứng hình ảnh"
                         >
                           <Eye size={18} />
-                </Button>
-              )}
-                <Button
+                        </Button>
+                      )}
+                      <Button
                         size="sm"
-                  variant="flat"
+                        variant="flat"
                         isIconOnly
                         onPress={() => handleOpenLicenseModal(license)}
                         className="text-teal-600 hover:bg-teal-100"
                         title="Chỉnh sửa"
                       >
                         <Edit2 size={18} />
-                </Button>
-                <Button
+                      </Button>
+                      <Button
                         size="sm"
                         variant="flat"
                         isIconOnly
@@ -887,7 +961,7 @@ export default function DoctorProfile() {
                         className={licenses.length <= 1 ? "text-gray-400" : "text-red-600 hover:bg-red-100"}
                       >
                         <Trash2 size={18} />
-                </Button>
+                      </Button>
                     </div>
 
                     {/* Header */}
@@ -929,12 +1003,12 @@ export default function DoctorProfile() {
                               <Building2 size={16} className="text-teal-500 mt-0.5 flex-shrink-0" />
                               <span className="font-medium text-sm leading-tight">{issuedBy}</span>
                             </div>
-              </div>
-            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-3">
-              <div>
+                        <div>
                           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Hết hạn</p>
                           <div className="flex items-center gap-2 text-gray-800">
                             <Calendar size={16} className="text-teal-500" />
@@ -967,7 +1041,7 @@ export default function DoctorProfile() {
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Last License Warning */}
                       {licenses.length === 1 && (
                         <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg p-3 flex items-center gap-3">
@@ -979,8 +1053,8 @@ export default function DoctorProfile() {
                             <p className="text-blue-600 text-xs">Không thể xóa giấy phép này</p>
                           </div>
                         </div>
-                )}
-              </div>
+                      )}
+                    </div>
 
                     {/* Decorative Seal/Stamp */}
                     <div className="absolute bottom-6 right-6 opacity-10">
@@ -988,14 +1062,14 @@ export default function DoctorProfile() {
                         <FileText size={40} className="text-teal-500" />
                       </div>
                     </div>
-              </div>
+                  </div>
                 );
               })}
             </div>
           )}
-          </CardBody>
-        </Card>
-      </div>
+        </CardBody>
+      </Card>
+    </div>
   );
 
   return (
@@ -1009,10 +1083,10 @@ export default function DoctorProfile() {
         onClose={toast.hideToast}
         duration={toast.toast.duration}
       />
-      
+
       {/* License Modal */}
-      <Modal 
-        isOpen={isLicenseModalOpen} 
+      <Modal
+        isOpen={isLicenseModalOpen}
         onClose={onLicenseModalClose}
         size="2xl"
         scrollBehavior="inside"
@@ -1026,12 +1100,12 @@ export default function DoctorProfile() {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
+              <Input
                 label="Số giấy phép *"
                 placeholder="VD: 000001/BYT-GPHN"
                 value={licenseForm.license_number}
                 onValueChange={(v) => setLicenseForm({ ...licenseForm, license_number: v })}
-                  variant="bordered"
+                variant="bordered"
                 labelPlacement="outside"
                 isRequired
                 description="Định dạng: 6 số / BYT-GPHN"
@@ -1047,26 +1121,26 @@ export default function DoctorProfile() {
                 variant="bordered"
                 labelPlacement="outside"
                 isRequired
-                />
-              </div>
+              />
+            </div>
 
-                <Input
+            <Input
               type="date"
               label="Ngày hết hạn"
               description="Để trống nếu vô thời hạn"
               value={licenseForm.expiry_date}
               onValueChange={(v) => setLicenseForm({ ...licenseForm, expiry_date: v })}
-                  variant="bordered"
+              variant="bordered"
               labelPlacement="outside"
             />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
+              <Input
                 label="Nơi cấp"
                 placeholder="VD: Cục Quản lý Khám chữa bệnh - Bộ Y tế"
                 value={licenseForm.issued_by}
                 onValueChange={(v) => setLicenseForm({ ...licenseForm, issued_by: v })}
-                  variant="bordered"
+                variant="bordered"
                 labelPlacement="outside"
               />
               <Input
@@ -1076,8 +1150,8 @@ export default function DoctorProfile() {
                 onValueChange={(v) => setLicenseForm({ ...licenseForm, issuer_title: v })}
                 variant="bordered"
                 labelPlacement="outside"
-                />
-              </div>
+              />
+            </div>
 
             <Textarea
               label="Phạm vi hành nghề"
@@ -1101,10 +1175,10 @@ export default function DoctorProfile() {
 
             {/* Image Upload Section */}
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Minh chứng giấy phép (Hình ảnh) {!editingLicense && <span className="text-red-500">*</span>}
-                </label>
-              
+              </label>
+
               {licenseForm.proof_images ? (
                 <div className="space-y-3">
                   {(() => {
@@ -1113,8 +1187,8 @@ export default function DoctorProfile() {
                       return images.map((imageUrl, index) => (
                         <div key={index} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
                           <div className="flex items-center gap-3">
-                            <img 
-                              src={imageUrl} 
+                            <img
+                              src={imageUrl}
                               alt={`Minh chứng ${index + 1}`}
                               className="w-12 h-12 object-cover rounded border"
                               onError={(e) => {
@@ -1145,9 +1219,9 @@ export default function DoctorProfile() {
                               color="danger"
                               onPress={() => {
                                 const newImages = images.filter((_, i) => i !== index);
-                                setLicenseForm({ 
-                                  ...licenseForm, 
-                                  proof_images: newImages.length > 0 ? JSON.stringify(newImages) : "" 
+                                setLicenseForm({
+                                  ...licenseForm,
+                                  proof_images: newImages.length > 0 ? JSON.stringify(newImages) : ""
                                 });
                               }}
                               startContent={<X size={16} />}
@@ -1165,7 +1239,7 @@ export default function DoctorProfile() {
                       );
                     }
                   })()}
-                  
+
                   <div className="flex justify-center">
                     <input
                       type="file"
@@ -1213,8 +1287,8 @@ export default function DoctorProfile() {
                         Đang upload hình ảnh...
                       </div>
                     </div>
-                )}
-              </div>
+                  )}
+                </div>
               )}
             </div>
           </ModalBody>
@@ -1222,8 +1296,8 @@ export default function DoctorProfile() {
             <Button variant="light" onPress={onLicenseModalClose}>
               Hủy
             </Button>
-            <Button 
-              color="primary" 
+            <Button
+              color="primary"
               onPress={handleSaveLicense}
               isLoading={savingLicense}
             >
@@ -1247,8 +1321,8 @@ export default function DoctorProfile() {
       />
 
       {/* Image Gallery Modal */}
-      <Modal 
-        isOpen={isImageModalOpen} 
+      <Modal
+        isOpen={isImageModalOpen}
         onClose={onImageModalClose}
         size="5xl"
         scrollBehavior="inside"
@@ -1272,10 +1346,10 @@ export default function DoctorProfile() {
                       className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                       onError={() => {
                         toast.error('Không thể tải hình ảnh');
-                  }}
-                />
-              </div>
-                  
+                      }}
+                    />
+                  </div>
+
                   {/* Navigation */}
                   {selectedImages.length > 1 && (
                     <div className="flex items-center justify-between p-4 bg-white border-t">
@@ -1288,7 +1362,7 @@ export default function DoctorProfile() {
                       >
                         Trước
                       </Button>
-                      
+
                       <div className="flex gap-2">
                         {selectedImages.map((_, index) => (
                           <Button
@@ -1302,8 +1376,8 @@ export default function DoctorProfile() {
                             {index + 1}
                           </Button>
                         ))}
-            </div>
-                      
+                      </div>
+
                       <Button
                         size="sm"
                         variant="flat"
@@ -1313,7 +1387,7 @@ export default function DoctorProfile() {
                       >
                         Sau
                       </Button>
-      </div>
+                    </div>
                   )}
                 </div>
               ) : (
@@ -1327,9 +1401,9 @@ export default function DoctorProfile() {
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button 
-              color="primary" 
-              variant="light" 
+            <Button
+              color="primary"
+              variant="light"
               onPress={() => window.open(selectedImages[currentImageIndex], '_blank')}
               startContent={<ExternalLink size={16} />}
             >
