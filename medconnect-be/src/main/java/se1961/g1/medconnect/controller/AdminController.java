@@ -7,12 +7,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.AdminDTO;
 import se1961.g1.medconnect.dto.CreateAdminRequest;
+import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.dto.UpdateAdminRequest;
+import se1961.g1.medconnect.pojo.*;
 import se1961.g1.medconnect.service.AdminService;
+import se1961.g1.medconnect.service.DoctorService;
+import se1961.g1.medconnect.service.SpecialityService;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -20,6 +26,12 @@ public class AdminController {
     
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private DoctorService doctorService;
+
+    @Autowired
+    private SpecialityService specialityService;
 
     /**
      * Lấy danh sách tất cả admin
@@ -236,5 +248,77 @@ public class AdminController {
             
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
+    }
+
+    @GetMapping("/doctor/all")
+    public ResponseEntity<List<Map<String, Object>>> getAllDoctors() {
+        List<Doctor> doctors = doctorService.getAllDoctors();
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Doctor doctor : doctors) {
+            Map<String, Object> doctorData = new HashMap<>();
+            doctorData.put("id", doctor.getUserId());
+            doctorData.put("name", doctor.getName());
+            doctorData.put("email", doctor.getEmail());
+            doctorData.put("phone", doctor.getPhone());
+            doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
+            doctorData.put("avatar", doctor.getAvatarUrl());
+
+            // Get license number from active license
+            License activeLicense = doctor.getActiveLicense();
+            doctorData.put("licenseId", activeLicense != null ? activeLicense.getLicenseNumber() : null);
+
+            response.add(doctorData);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createDoctor(@RequestBody DoctorDTO dto) {
+        try {
+            Doctor saved = doctorService.addDoctor(dto);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody DoctorDTO dto) {
+        try {
+            Doctor updated = doctorService.updateDoctor(id, dto);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+
+    @DeleteMapping("/doctor/{id}")
+    public ResponseEntity<?> deleteDoctor(@PathVariable Long id){
+        try{
+            doctorService.deleteDoctor(id);
+            return ResponseEntity.ok("Doctor deleted successfully");
+        } catch(Exception e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/speciality/all")
+    public ResponseEntity<List<Map<String, Object>>> getAllSpecialities() {
+        List<Speciality> specialities = specialityService.getAllSpecialities();
+
+        List<Map<String, Object>> result = specialities.stream()
+                .map(s -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", s.getSpecialityId());
+                    map.put("name", s.getName());
+                    map.put("description", s.getDescription());
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
     }
 }

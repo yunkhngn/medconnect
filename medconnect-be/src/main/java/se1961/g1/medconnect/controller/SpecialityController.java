@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.pojo.Speciality;
 import se1961.g1.medconnect.repository.SpecialityRepository;
+import se1961.g1.medconnect.service.SpecialityService;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,14 +16,14 @@ import java.util.stream.Collectors;
 public class SpecialityController {
 
     @Autowired
-    private SpecialityRepository specialityRepository;
+    private SpecialityService specialityService;
 
     /**
      * Get all specialities (public - for dropdown)
      */
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getAllSpecialities() {
-        List<Speciality> specialities = specialityRepository.findAll();
+        List<Speciality> specialities = specialityService.getAllSpecialities();
         
         List<Map<String, Object>> result = specialities.stream()
                 .map(s -> {
@@ -42,7 +43,7 @@ public class SpecialityController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<?> getSpecialityById(@PathVariable Integer id) {
-        Optional<Speciality> speciality = specialityRepository.findById(id);
+        Optional<Speciality> speciality = specialityService.getSpecialityById(id);
         
         if (speciality.isEmpty()) {
             return ResponseEntity.notFound().build();

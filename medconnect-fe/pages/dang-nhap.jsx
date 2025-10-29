@@ -169,29 +169,46 @@ export default function MedConnectLogin() {
 
     let errorMessage = "Đăng nhập thất bại!";
 
+    // Clear remembered credentials on auth failure
+    const clearRemembered = () => {
+      localStorage.removeItem("rememberedEmail");
+      localStorage.removeItem("rememberedPassword");
+      localStorage.removeItem("rememberMe");
+    };
+
+    // Map Firebase error codes to friendly Vietnamese messages
     switch (error.code) {
       case "auth/invalid-credential":
       case "auth/wrong-password":
       case "auth/user-not-found":
-        localStorage.removeItem("rememberedEmail");
-        localStorage.removeItem("rememberedPassword");
-        localStorage.removeItem("rememberMe");
+      case "auth/invalid-login-credentials":
+        clearRemembered();
         errorMessage = "Email hoặc mật khẩu không chính xác!";
         break;
       case "auth/invalid-email":
-        errorMessage = "Email không hợp lệ!";
+        errorMessage = "Địa chỉ email không hợp lệ!";
         break;
       case "auth/user-disabled":
-        errorMessage = "Tài khoản đã bị khóa!";
+        clearRemembered();
+        errorMessage = "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên!";
         break;
       case "auth/too-many-requests":
-        errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau!";
+        errorMessage = "Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau ít phút!";
         break;
       case "auth/network-request-failed":
-        errorMessage = "Lỗi kết nối mạng!";
+        errorMessage = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng!";
+        break;
+      case "auth/popup-closed-by-user":
+        errorMessage = "Đăng nhập đã bị hủy!";
         break;
       default:
-        errorMessage = `Đăng nhập thất bại: ${error.message || error}`;
+        // Fallback for unknown errors - show generic message, not raw Firebase error
+        console.warn("Unhandled Firebase error code:", error.code);
+        errorMessage = "Đăng nhập thất bại. Vui lòng thử lại!";
+        // Log full error for debugging
+        if (process.env.NODE_ENV === "development") {
+          console.error("Full error:", error);
+        }
     }
 
     showMessage(errorMessage, "error");

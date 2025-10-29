@@ -381,6 +381,7 @@ export default function EditEMRPage() {
   ];
 
   const bloodTypeOptions = [
+    { key: "", label: "Chưa xác định" },
     { key: "A", label: "A" },
     { key: "B", label: "B" },
     { key: "AB", label: "AB" },

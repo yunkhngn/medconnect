@@ -3,9 +3,12 @@ package se1961.g1.medconnect.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import se1961.g1.medconnect.dto.AppointmentDTO;
+import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Patient;
+import se1961.g1.medconnect.pojo.Speciality;
 import se1961.g1.medconnect.repository.DoctorRepository;
+import se1961.g1.medconnect.repository.SpecialityRepository;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -16,6 +19,8 @@ import java.util.stream.Collectors;
 public class DoctorService {
     @Autowired
     private DoctorRepository doctorRepository;
+    @Autowired
+    private SpecialityRepository specialityRepository;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
         return doctorRepository.findByFirebaseUid(uid);
@@ -31,12 +36,53 @@ public class DoctorService {
                 .map(AppointmentDTO::new)
                 .collect(Collectors.toList());
     }
+    public List<Doctor> getAllDoctors() {
+        return doctorRepository.findAll();
+    }
 
-    public Doctor saveDoctor(Doctor doctor) throws Exception {
+    public Doctor addDoctor(DoctorDTO dto) {
+        Doctor doctor = new Doctor();
+        mapDtoToDoctor(dto, doctor);
         return doctorRepository.save(doctor);
     }
 
-    public List<Doctor> getAllDoctors() {
-        return doctorRepository.findAll();
+    public Doctor updateDoctor(Long id, DoctorDTO dto) {
+        Doctor existing = doctorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+        mapDtoToDoctor(dto, existing);
+        return doctorRepository.save(existing);
+    }
+
+    public void deleteDoctor(Long id) throws Exception {
+        doctorRepository.deleteById(id);
+    }
+
+    /**
+     * Save or update a Doctor entity directly (for profile updates)
+     */
+    public Doctor saveDoctor(Doctor doctor) {
+        return doctorRepository.save(doctor);
+    }
+
+    private void mapDtoToDoctor(DoctorDTO dto, Doctor doctor) {
+        doctor.setStatus(dto.getStatus());
+        doctor.setExperienceYears(dto.getExperienceYears());
+        doctor.setEducationLevel(dto.getEducationLevel());
+        doctor.setBio(dto.getBio());
+        doctor.setClinicAddress(dto.getClinicAddress());
+        doctor.setProvinceCode(dto.getProvinceCode());
+        doctor.setProvinceName(dto.getProvinceName());
+        doctor.setDistrictCode(dto.getDistrictCode());
+        doctor.setDistrictName(dto.getDistrictName());
+        doctor.setWardCode(dto.getWardCode());
+        doctor.setWardName(dto.getWardName());
+
+        if (dto.getSpecialityId() != null) {
+            Speciality speciality = specialityRepository.findById(dto.getSpecialityId())
+                    .orElseThrow(() -> new RuntimeException("Speciality not found"));
+            doctor.setSpeciality(speciality);
+        } else {
+            doctor.setSpeciality(null);
+        }
     }
 }

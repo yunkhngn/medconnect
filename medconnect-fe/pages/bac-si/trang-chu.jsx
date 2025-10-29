@@ -115,10 +115,20 @@ export default function DoctorDashboard() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("[Dashboard] Failed to fetch appointments:", response.status, errorText);
+        
+        // If 400 error, it might be because doctor record doesn't exist
+        if (response.status === 400) {
+          console.warn("[Dashboard] Doctor record may not exist. Setting empty appointments.");
+          processAppointments([]);
+          return;
+        }
+        
         throw new Error(`Failed to fetch appointments: ${response.status}`);
       }
 
       const appointments = await response.json();
+      console.log("[Dashboard] Fetched appointments:", appointments.length);
       processAppointments(appointments);
     } catch (error) {
       console.error("Dashboard data fetch error:", error);

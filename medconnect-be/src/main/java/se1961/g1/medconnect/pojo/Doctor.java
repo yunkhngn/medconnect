@@ -31,7 +31,26 @@ public class Doctor extends User{
     private String bio; // Giới thiệu bản thân
     
     @Column(name = "clinic_address", columnDefinition = "NVARCHAR(500)")
-    private String clinicAddress; // Địa chỉ phòng khám
+    private String clinicAddress; // Địa chỉ phòng khám chi tiết (số nhà, đường...)
+    
+    // Structured address fields (for filtering and distance calculation)
+    @Column(name = "province_code")
+    private Integer provinceCode;
+    
+    @Column(name = "province_name", columnDefinition = "NVARCHAR(100)")
+    private String provinceName;
+    
+    @Column(name = "district_code")
+    private Integer districtCode;
+    
+    @Column(name = "district_name", columnDefinition = "NVARCHAR(100)")
+    private String districtName;
+    
+    @Column(name = "ward_code")
+    private Integer wardCode;
+    
+    @Column(name = "ward_name", columnDefinition = "NVARCHAR(100)")
+    private String wardName;
 
     // Relationships
     @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY)

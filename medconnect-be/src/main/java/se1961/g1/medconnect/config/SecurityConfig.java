@@ -15,7 +15,7 @@ import se1961.g1.medconnect.filter.FirebaseFilter;
 
 import java.util.List;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -39,8 +39,10 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/appointments/doctor/*/available-slots").permitAll()
+                .requestMatchers("/api/appointments/doctor/{doctorId}/available-slots").permitAll()
                 .requestMatchers("/api/specialities/**").permitAll()
                 .requestMatchers("/api/payment/ipn").permitAll() // webhook
+                .requestMatchers("/doctor/dashboard/all").permitAll() // public list of doctors for booking
 
                 // Avatar & media
                 .requestMatchers("/api/avatar/**").authenticated()

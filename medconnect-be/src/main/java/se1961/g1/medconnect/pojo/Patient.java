@@ -25,7 +25,29 @@ public class Patient extends User {
     private Date dateOfBirth;
 
     private String gender;
-    private String address;
+    
+    @Column(columnDefinition = "NVARCHAR(500)")
+    private String address; // Keep old address field for backward compatibility
+    
+    // Structured address fields (for calculating distance)
+    @Column(name = "province_code")
+    private Integer provinceCode;
+    
+    @Column(name = "province_name", columnDefinition = "NVARCHAR(100)")
+    private String provinceName;
+    
+    @Column(name = "district_code")
+    private Integer districtCode;
+    
+    @Column(name = "district_name", columnDefinition = "NVARCHAR(100)")
+    private String districtName;
+    
+    @Column(name = "ward_code")
+    private Integer wardCode;
+    
+    @Column(name = "ward_name", columnDefinition = "NVARCHAR(100)")
+    private String wardName;
+    
     private String emergencyContactName;
     private String emergencyContactPhone;
     private String emergencyContactRelationship;

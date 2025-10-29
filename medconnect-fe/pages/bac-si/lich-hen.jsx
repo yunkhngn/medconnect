@@ -78,15 +78,40 @@ export default function DoctorAppointmentsPage() {
     setLoading(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/appointments/doctor", {
+      
+      // Fetch appointments for last 30 days and next 60 days
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - 30);
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() + 60);
+      
+      const url = new URL("http://localhost:8080/api/appointments/doctor");
+      url.searchParams.append("startDate", startDate.toISOString().split('T')[0]);
+      url.searchParams.append("endDate", endDate.toISOString().split('T')[0]);
+      
+      console.log("[Appointments] Fetching appointments from", startDate.toISOString().split('T')[0], "to", endDate.toISOString().split('T')[0]);
+      
+      const response = await fetch(url, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
       if (response.ok) {
         const data = await response.json();
+        console.log("[Appointments] Fetched", data.length, "appointments");
         setAppointments(data);
       } else {
-        toast.error("Không thể tải danh sách lịch hẹn");
+        const errorText = await response.text();
+        console.error("[Appointments] Failed to fetch:", response.status, errorText);
+        
+        // If 400 error, might be because doctor record doesn't exist
+        if (response.status === 400) {
+          console.warn("[Appointments] Doctor record may not exist. Setting empty appointments.");
+          setAppointments([]);
+          toast.warning("Chưa có lịch hẹn nào");
+        } else {
+          toast.error("Không thể tải danh sách lịch hẹn");
+        }
       }
     } catch (error) {
       console.error("Error fetching appointments:", error);

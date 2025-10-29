@@ -43,6 +43,14 @@ public class PatientController {
             profile.put("socialInsurance", patient.getSocialInsurance());
             profile.put("citizenship", patient.getCitizenship());
             
+            // Address fields
+            profile.put("province_code", patient.getProvinceCode());
+            profile.put("province_name", patient.getProvinceName());
+            profile.put("district_code", patient.getDistrictCode());
+            profile.put("district_name", patient.getDistrictName());
+            profile.put("ward_code", patient.getWardCode());
+            profile.put("ward_name", patient.getWardName());
+            
             // Format dates
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             if (patient.getDateOfBirth() != null) {
@@ -106,6 +114,26 @@ public class PatientController {
             }
             if (request.containsKey("citizenship")) {
                 patient.setCitizenship((String) request.get("citizenship"));
+            }
+            
+            // Address fields
+            if (request.containsKey("province_code")) {
+                patient.setProvinceCode((Integer) request.get("province_code"));
+            }
+            if (request.containsKey("province_name")) {
+                patient.setProvinceName((String) request.get("province_name"));
+            }
+            if (request.containsKey("district_code")) {
+                patient.setDistrictCode((Integer) request.get("district_code"));
+            }
+            if (request.containsKey("district_name")) {
+                patient.setDistrictName((String) request.get("district_name"));
+            }
+            if (request.containsKey("ward_code")) {
+                patient.setWardCode((Integer) request.get("ward_code"));
+            }
+            if (request.containsKey("ward_name")) {
+                patient.setWardName((String) request.get("ward_name"));
             }
             if (request.containsKey("dateOfBirth") && request.get("dateOfBirth") != null) {
                 String dateStr = String.valueOf(request.get("dateOfBirth"));

@@ -28,56 +28,103 @@ public class ScheduleService {
     @Autowired
     private AppointmentService appointmentService;
 
+    /**
+     * Get weekly schedule with appointments merged in
+     */
     public List<ScheduleDTO> getWeeklySchedule(Long userId, LocalDate start, LocalDate end) throws Exception {
+        System.out.println("[getWeeklySchedule] ========== START ==========");
+        System.out.println("[getWeeklySchedule] Doctor UserID: " + userId);
+        System.out.println("[getWeeklySchedule] Date range: " + start + " to " + end);
+        
+        // 1. Validate user exists
         if (!userService.findById(userId).isPresent()) {
             throw new Exception("User not found");
         }
 
+        // 2. Get doctor's schedules (slots doctor has opened)
         List<Schedule> scheduleList = scheduleRepository.findByUserUserIdAndDateBetween(userId, start, end);
+        System.out.println("[getWeeklySchedule] Found " + scheduleList.size() + " schedules (opened slots)");
+        
+        // 3. Get doctor's appointments
         List<Appointment> appointmentList = appointmentService.findByDoctorUserIdAndDateBetween(userId, start, end);
+        System.out.println("[getWeeklySchedule] Found " + appointmentList.size() + " appointments");
+        
+        if (!appointmentList.isEmpty()) {
+            System.out.println("[getWeeklySchedule] Appointment details:");
+            appointmentList.forEach(a -> {
+                System.out.println("  - ID: " + a.getAppointmentId() + 
+                                 ", Date: " + a.getDate() + 
+                                 ", Slot: " + a.getSlot() + 
+                                 ", Status: " + a.getStatus() +
+                                 ", Patient: " + (a.getPatient() != null ? a.getPatient().getName() : "null"));
+            });
+        }
+        
+        // 4. Generate full week grid (7 days x 12 slots)
         List<LocalDate> dates = start.datesUntil(end.plusDays(1)).toList();
         List<Slot> slots = Arrays.asList(Slot.values());
-
         List<ScheduleDTO> fullWeek = new ArrayList<>();
+        
+        System.out.println("[getWeeklySchedule] Generating grid for " + dates.size() + " days x " + slots.size() + " slots");
+        
         for (LocalDate date : dates) {
             for (Slot slot : slots) {
-                ScheduleDTO scheduleDTO = scheduleList.stream()
+                // Check if doctor has opened this slot
+                Schedule schedule = scheduleList.stream()
                         .filter(s -> s.getDate().equals(date) && s.getSlot() == slot)
                         .findFirst()
-                        .map(ScheduleDTO::new)
-                        .orElseGet(() -> {
-                            ScheduleDTO empty = new ScheduleDTO();
-                            empty.setDate(date);
-                            empty.setSlot(slot);
-                            empty.setStatus(ScheduleStatus.EMPTY);
-                            return empty;
-                        });
+                        .orElse(null);
                 
-                // Check if there's an active appointment for this slot
-                appointmentList.stream()
+                ScheduleDTO scheduleDTO;
+                
+                if (schedule != null) {
+                    // Doctor has opened this slot
+                    scheduleDTO = new ScheduleDTO(schedule);
+                } else {
+                    // Doctor has NOT opened this slot (empty)
+                    scheduleDTO = new ScheduleDTO();
+                    scheduleDTO.setDate(date);
+                    scheduleDTO.setSlot(slot);
+                    scheduleDTO.setStatus(ScheduleStatus.EMPTY);
+                }
+                
+                // Check if there's an appointment for this slot
+                Appointment appointment = appointmentList.stream()
                         .filter(a -> a.getDate().equals(date) && a.getSlot() == slot)
                         .filter(a -> {
-                            // Only consider non-cancelled and non-denied appointments
+                            // Only consider active appointments
                             String status = a.getStatus().name();
                             return !status.equals("CANCELLED") && !status.equals("DENIED");
                         })
                         .findFirst()
-                        .ifPresent(a -> {
-                            scheduleDTO.setStatus(ScheduleStatus.BUSY);
-                            scheduleDTO.setAppointment(new AppointmentDTO(a));
-                        });
-
+                        .orElse(null);
+                
+                if (appointment != null) {
+                    // There's an appointment -> mark as BUSY
+                    scheduleDTO.setStatus(ScheduleStatus.BUSY);
+                    scheduleDTO.setAppointment(new AppointmentDTO(appointment));
+                    System.out.println("  [BUSY] " + date + " " + slot + " -> Appointment #" + appointment.getAppointmentId());
+                }
+                
                 fullWeek.add(scheduleDTO);
             }
         }
-
+        
+        System.out.println("[getWeeklySchedule] Total slots in grid: " + fullWeek.size());
+        System.out.println("[getWeeklySchedule] ========== END ==========");
+        
         return fullWeek;
     }
 
+    /**
+     * Update schedule status
+     */
     public ScheduleDTO updateSchedule(Long scheduleId, ScheduleStatus status) throws Exception {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new Exception("Schedule not found"));
+        
         if(status == ScheduleStatus.EMPTY) {
+            // Delete schedule (doctor closes this slot)
             scheduleRepository.delete(schedule);
             return null;
         }
@@ -87,25 +134,42 @@ public class ScheduleService {
         return new ScheduleDTO(schedule);
     }
 
+    /**
+     * Add new schedule (doctor opens a slot)
+     */
     public ScheduleDTO addSchedule(ScheduleDTO dto, Long userId) throws Exception {
+        System.out.println("[addSchedule] ========== START ==========");
+        System.out.println("[addSchedule] Doctor UserID: " + userId);
+        System.out.println("[addSchedule] Date: " + dto.getDate());
+        System.out.println("[addSchedule] Slot: " + dto.getSlot());
+        System.out.println("[addSchedule] Status: " + dto.getStatus());
+        
         User user = userService.findById(userId)
                 .orElseThrow(() -> new Exception("User not found"));
 
         // Validate: không cho phép đặt lịch cho ngày đã qua
         if (dto.getDate().isBefore(LocalDate.now())) {
+            System.out.println("[addSchedule] ❌ Cannot schedule for past date");
             throw new Exception("Không thể đặt lịch cho ngày đã qua");
         }
 
+        // Check if schedule already exists
         if (scheduleRepository.findByUserUserIdAndDateAndSlot(userId, dto.getDate(), dto.getSlot()).isPresent()) {
+            System.out.println("[addSchedule] ❌ Schedule already exists");
             throw new Exception("Schedule already exists");
         }
 
+        // Create new schedule
         Schedule schedule = new Schedule();
         schedule.setDate(dto.getDate());
         schedule.setSlot(dto.getSlot());
         schedule.setStatus(dto.getStatus());
         schedule.setUser(user);
+        
         scheduleRepository.save(schedule);
+        
+        System.out.println("[addSchedule] ✅ Schedule created with ID: " + schedule.getScheduleId());
+        System.out.println("[addSchedule] ========== END ==========");
 
         return new ScheduleDTO(schedule);
     }
