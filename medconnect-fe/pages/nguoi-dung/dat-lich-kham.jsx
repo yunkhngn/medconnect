@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
 } from "@heroui/react";
-import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter } from "lucide-react";
+import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +46,7 @@ export default function DatLichKham() {
   // Booking flow steps
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [previewDoctor, setPreviewDoctor] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -115,7 +116,7 @@ export default function DatLichKham() {
     if (wardFilter.name) {
       filtered = filtered.filter(doc => (doc.ward_name || doc.wardName || "").includes(wardFilter.name));
     }
-    setFilteredDoctors(filtered);
+      setFilteredDoctors(filtered);
   }, [searchQuery, doctors, specialityFilter, provinceFilter, districtFilter, wardFilter]);
 
   const fetchDoctors = async () => {
@@ -127,7 +128,7 @@ export default function DatLichKham() {
         console.log("Fetched doctors:", data.length, "doctors");
         setDoctors(data);
         setFilteredDoctors(data);
-      } else {
+    } else {
         console.error("Failed to fetch doctors:", response.status, response.statusText);
         toast.error("Không thể tải danh sách bác sĩ");
       }
@@ -196,6 +197,10 @@ export default function DatLichKham() {
     } finally {
       setLoadingSlots(false);
     }
+  };
+
+  const handlePreviewDoctor = (doctor) => {
+    setPreviewDoctor(doctor);
   };
 
   const handleSelectDoctor = (doctor) => {
@@ -369,15 +374,72 @@ export default function DatLichKham() {
             <h3 className="text-lg font-semibold">Chọn bác sĩ</h3>
           </CardHeader>
           <Divider />
-          <CardBody className="space-y-4">
+          <CardBody className="space-y-5">
+            {previewDoctor && (
+              <Card shadow="sm" className="border rounded-2xl overflow-hidden">
+                <CardBody className="p-6">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
+                    <Avatar
+                      src={previewDoctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(previewDoctor.name)}&background=0D9488&color=fff`}
+                      className="w-24 h-24"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-2xl font-bold leading-tight truncate">{previewDoctor.name}</h3>
+                        <Chip variant="flat" color="primary" size="md">{SPECIALTY_MAP[previewDoctor.specialty] || previewDoctor.specialty}</Chip>
+                      </div>
+                      <p className="text-gray-600 mt-2">
+                        {previewDoctor.bio || "Bác sĩ giàu kinh nghiệm, tận tâm với bệnh nhân."}
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-center">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-2xl font-semibold">{previewDoctor.rating || "4.8"}</p>
+                          <p className="text-xs text-gray-500">Đánh giá</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-2xl font-semibold">{previewDoctor.experience_years || previewDoctor.experienceYears || "10"}</p>
+                          <p className="text-xs text-gray-500">Năm KN</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-2xl font-semibold">{previewDoctor.patients_served || previewDoctor.patientsServed || "500+"}</p>
+                          <p className="text-xs text-gray-500">Bệnh nhân</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-2xl font-semibold">24/7</p>
+                          <p className="text-xs text-gray-500">Hỗ trợ</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-sm">
+                        <div className="bg-white rounded-lg p-3 border">
+                          <p className="text-gray-500">Điện thoại</p>
+                          <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border">
+                          <p className="text-gray-500">Email</p>
+                          <p className="font-medium">{previewDoctor.email || "doctor@medconnect.vn"}</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border">
+                          <p className="text-gray-500">Địa chỉ</p>
+                          <p className="font-medium truncate">{previewDoctor.clinic_address || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 mt-5">
+                        <Button variant="light" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
+                        <Button color="primary" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Input
-                placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                startContent={<User size={18} className="text-gray-400" />}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-gray-50/60 p-3 rounded-xl border">
+            <Input
+              placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              startContent={<User size={18} className="text-gray-400" />}
+            />
               <Select
                 label="Chuyên khoa"
                 placeholder="Tất cả"
@@ -423,28 +485,33 @@ export default function DatLichKham() {
                 <p className="text-sm text-gray-500">Thử tìm kiếm với từ khóa khác</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
-                {filteredDoctors.map((doctor) => (
-                  <Card key={doctor.id} shadow="none" className="border hover:border-teal-500 transition-all cursor-pointer" isPressable onPress={() => handleSelectDoctor(doctor)}>
-                    <CardBody className="p-4">
-                      <div className="flex items-start gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[620px] overflow-y-auto pr-1">
+              {filteredDoctors.map((doctor) => (
+                  <Card key={doctor.id} shadow="sm" className="border hover:shadow-lg hover:border-teal-500 transition-all cursor-pointer rounded-xl" isPressable onPress={() => handlePreviewDoctor(doctor)}>
+                  <CardBody className="p-4">
+                    <div className="flex items-start gap-3">
                         <Avatar 
                           src={doctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=0D9488&color=fff`} 
                           size="lg" 
                         />
-                        <div className="flex-1">
-                          <p className="font-semibold">{doctor.name}</p>
-                          <p className="text-sm text-gray-600">{SPECIALTY_MAP[doctor.specialty] || doctor.specialty}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{doctor.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Chip size="sm" variant="flat" color="primary">{SPECIALTY_MAP[doctor.specialty] || doctor.specialty}</Chip>
+                            {doctor.province_name && (
+                              <span className="text-xs text-gray-500 flex items-center gap-1"><MapPin size={14} />{doctor.province_name}</span>
+                            )}
+                          </div>
                           {doctor.licenseId && (
                             <p className="text-xs text-gray-500 mt-1">CCHN: {doctor.licenseId}</p>
                           )}
-                        </div>
-                        <ChevronRight size={20} className="text-gray-400" />
                       </div>
-                    </CardBody>
-                  </Card>
-                ))}
-              </div>
+                      <ChevronRight size={20} className="text-gray-400" />
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
             )}
           </CardBody>
         </Card>
@@ -489,11 +556,11 @@ export default function DatLichKham() {
                     Tuần sau
                   </Button>
                 </div>
-              </div>
+            </div>
 
-              <div className="overflow-auto border rounded-lg">
+              <div className="overflow-auto border rounded-xl">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th className="p-2 text-left w-32">Khung giờ</th>
                       {Array.from({ length: 7 }, (_, i) => {
@@ -518,20 +585,22 @@ export default function DatLichKham() {
                           const selectable = available && !isPast;
                           const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
                           return (
-                            <td key={dateStr+slotKey} className="p-1">
-                              <Button
-                                size="sm"
-                                variant={isSelected ? 'solid' : (selectable ? 'bordered' : 'flat')}
-                                color={isSelected ? 'primary' : (selectable ? 'default' : 'default')}
-                                isDisabled={!selectable}
+                            <td key={dateStr+slotKey} className={`p-1`}>
+                              <button
                                 onClick={() => {
+                                  if (!selectable) return;
                                   handleDateChange(dateStr);
                                   setSelectedSlot(slotKey);
                                 }}
-                                className="w-full"
+                                className={`w-full h-9 rounded-lg border transition-all 
+                                  ${isSelected ? 'bg-teal-600 text-white border-teal-600' : ''}
+                                  ${!isSelected && selectable ? 'hover:border-teal-400 hover:bg-teal-50 border-gray-200' : ''}
+                                  ${!selectable ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed' : ''}
+                                `}
+                                disabled={!selectable}
                               >
-                                {selectable ? 'Chọn' : '—'}
-                              </Button>
+                                {selectable ? 'Đặt' : '—'}
+                              </button>
                             </td>
                           );
                         })}
@@ -539,6 +608,13 @@ export default function DatLichKham() {
                     ))}
                   </tbody>
                 </table>
+                  </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-teal-600"></span>Đã chọn</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-teal-50 border border-teal-300"></span>Có thể đặt</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-gray-100 border"></span>Không khả dụng</div>
               </div>
             </div>
 
