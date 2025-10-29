@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.dto.PaymentRequest;
 import se1961.g1.medconnect.dto.PaymentResponse;
+import se1961.g1.medconnect.enums.PaymentStatus;
 import se1961.g1.medconnect.pojo.Payment;
 import se1961.g1.medconnect.service.PaymentService;
 
@@ -64,6 +65,32 @@ public class PaymentController {
                     "amount", payment.getAmount(),
                     "paidAt", payment.getPaidAt()
             ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/confirm")
+    public ResponseEntity<?> confirmPayment(@RequestParam Map<String, String> vnpParams) {
+        try {
+            // VNPay returns params via GET, same structure as IPN
+            Payment payment = paymentService.handleIPN(vnpParams);
+
+            if (payment.getStatus() == PaymentStatus.PAID) {
+                // You can redirect to frontend success page if desired
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Thanh toán thành công",
+                        "paymentId", payment.getPaymentId(),
+                        "status", payment.getStatus()
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                        "success", false,
+                        "message", "Thanh toán thất bại",
+                        "status", payment.getStatus()
+                ));
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
