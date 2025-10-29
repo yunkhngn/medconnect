@@ -191,7 +191,7 @@ public class PaymentService {
     }
 
     public Payment getPaymentByAppointment(Long appointmentId) {
-        return paymentRepository.findByAppointmentId(appointmentId).orElse(null);
+        return paymentRepository.findByAppointmentAppointmentId(appointmentId).orElse(null);
     }
 
     public List<Payment> getPaymentsByPatient(String firebaseUid) {

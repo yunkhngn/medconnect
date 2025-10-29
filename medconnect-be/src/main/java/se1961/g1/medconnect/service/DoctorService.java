@@ -77,9 +77,7 @@ public class DoctorService {
         doctor.setProvinceCode(dto.getProvinceCode());
         doctor.setProvinceName(dto.getProvinceName());
         doctor.setDistrictCode(dto.getDistrictCode());
-        doctor.setDistrictName(dto.getDistrictName());
         doctor.setWardCode(dto.getWardCode());
-        doctor.setWardName(dto.getWardName());
 
         if (dto.getSpecialityId() != null) {
             Speciality speciality = specialityRepository.findById(dto.getSpecialityId())
