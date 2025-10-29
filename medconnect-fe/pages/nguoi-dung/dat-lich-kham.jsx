@@ -578,8 +578,8 @@ export default function DatLichKham() {
                     </div>
                   </div>
 
-                  {/* Contacts & Address */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  {/* Contacts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-gray-500">Điện thoại</p>
                       <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
@@ -588,41 +588,43 @@ export default function DatLichKham() {
                       <p className="text-gray-500">Email</p>
                       <p className="font-medium truncate">{previewDoctor.email || "doctor@medconnect.vn"}</p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Địa chỉ phòng khám</p>
-                      <p className="font-medium truncate">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
-                    </div>
-                  </div>
-
-                  {/* Map */}
-                  <div className="rounded-xl overflow-hidden bg-gray-100">
-                    {loadingMap && <div className="h-56 animate-pulse bg-gray-200" />}
-                    {!loadingMap && embedUrl && (
-                      <iframe
-                        src={embedUrl}
-                        className="w-full h-64 border-0"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                        allowFullScreen
-                      />
-                    )}
-                    {!loadingMap && !embedUrl && mapUrl && (
-                      <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-56 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
-                    )}
-                    {!loadingMap && !embedUrl && !mapUrl && mapError && (
-                      <div className="h-56 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
-                    )}
                   </div>
 
                   {/* Education & License */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-gray-500">Trình độ</p>
                       <p className="font-medium">{previewDoctor.education_level || "—"}</p>
                     </div>
-                    <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-gray-500">Chứng chỉ hành nghề</p>
                       <p className="font-medium">{previewDoctor.licenseId ? `#${previewDoctor.licenseId}` : "—"}</p>
+                    </div>
+                  </div>
+
+                  {/* Address + Map (moved below, bigger) */}
+                  <div className="space-y-2">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Địa chỉ phòng khám</p>
+                      <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
+                    </div>
+                    <div className="rounded-xl overflow-hidden bg-gray-100">
+                      {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
+                      {!loadingMap && embedUrl && (
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-96 border-0"
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          allowFullScreen
+                        />
+                      )}
+                      {!loadingMap && !embedUrl && mapUrl && (
+                        <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                      )}
+                      {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                        <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                      )}
                     </div>
                   </div>
 
