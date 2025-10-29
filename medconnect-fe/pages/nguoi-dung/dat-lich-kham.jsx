@@ -94,6 +94,11 @@ export default function DatLichKham() {
     return monday;
   });
   const [weeklyAvailable, setWeeklyAvailable] = useState({}); // { 'YYYY-MM-DD': [slotIds] }
+  // Map (Geoapify) for preview doctor
+  const [mapUrl, setMapUrl] = useState("");
+  const [embedUrl, setEmbedUrl] = useState("");
+  const [loadingMap, setLoadingMap] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   // Fetch doctors from backend
   useEffect(() => {
@@ -155,7 +160,7 @@ export default function DatLichKham() {
         return (!Number.isNaN(c) && c === Number(wardCode)) || (doc.ward_name || doc.wardName || "").includes(wName);
       });
     }
-    setFilteredDoctors(filtered);
+      setFilteredDoctors(filtered);
   }, [searchQuery, doctors, specialityFilter, provinceCode, districtCode, wardCode, getProvinceName, getDistrictName, getWardName]);
 
   const fetchDoctors = async () => {
@@ -212,7 +217,7 @@ export default function DatLichKham() {
         }));
         setDoctors(withAddress);
         setFilteredDoctors(withAddress);
-      } else {
+    } else {
         console.error("Failed to fetch doctors:", response.status, response.statusText);
         toast.error("Không thể tải danh sách bác sĩ");
       }
@@ -291,6 +296,78 @@ export default function DatLichKham() {
     setSelectedDoctor(doctor);
     setCurrentStep(2);
   };
+
+  // Build static map for preview doctor using Geoapify
+  useEffect(() => {
+    // Only NEXT_PUBLIC_* is guaranteed on client, but accept fallback if user used GEOAPIFY_API_KEY
+    const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY || process.env.GEOAPIFY_API_KEY;
+    console.log('[Geoapify] effect run', { hasKey: Boolean(apiKey), previewDoctor: Boolean(previewDoctor) });
+    if (!previewDoctor || !apiKey) {
+      if (!apiKey) console.warn('[Geoapify] Missing NEXT_PUBLIC_GEOAPIFY_API_KEY');
+      setMapUrl("");
+      setMapError(false);
+      setEmbedUrl("");
+      return;
+    }
+    const address = previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "";
+    console.log('[Geoapify] using address', address);
+    if (!address) {
+      setMapUrl("");
+      setMapError(false);
+      return;
+    }
+    const controller = new AbortController();
+    const fetchCoords = async () => {
+      try {
+        setLoadingMap(true);
+        setMapError(false);
+        const candidates = [
+          address,
+          [previewDoctor.clinicAddress, previewDoctor.province_name].filter(Boolean).join(", "),
+          previewDoctor.province_name,
+        ].filter(Boolean);
+
+        let found = null;
+        for (const addr of candidates) {
+          const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(addr)}&filter=countrycode:vn&limit=1&lang=vi&apiKey=${apiKey}`;
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) continue;
+          const json = await res.json();
+          console.debug('[Geoapify] Geocode response for', addr, json);
+          const feature = json?.features?.[0];
+          if (feature?.geometry?.coordinates) {
+            found = feature.geometry.coordinates; // [lon, lat]
+            break;
+          }
+        }
+        if (found) {
+          const [lon, lat] = found;
+          const flon = Number(lon).toFixed(6);
+          const flat = Number(lat).toFixed(6);
+          // Use the simplest valid marker to avoid API 400s across plans
+          const staticUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=1200&height=260&center=lonlat:${flon},${flat}&zoom=14&marker=lonlat:${flon},${flat}&apiKey=${apiKey}`;
+          console.log('[Geoapify] static url', staticUrl);
+          setMapUrl(staticUrl);
+          // Prepare interactive OpenStreetMap embed (no key, fast, pannable)
+          const d = 0.02; // ~2km bbox
+          const minLon = (Number(flon) - d).toFixed(6);
+          const minLat = (Number(flat) - d).toFixed(6);
+          const maxLon = (Number(flon) + d).toFixed(6);
+          const maxLat = (Number(flat) + d).toFixed(6);
+          const osm = `https://www.openstreetmap.org/export/embed.html?bbox=${minLon}%2C${minLat}%2C${maxLon}%2C${maxLat}&layer=mapnik&marker=${flat}%2C${flon}`;
+          setEmbedUrl(osm);
+        } else {
+          setMapError(true);
+        }
+      } catch (e) {
+        setMapError(true);
+      } finally {
+        setLoadingMap(false);
+      }
+    };
+    fetchCoords();
+    return () => controller.abort();
+  }, [previewDoctor]);
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
@@ -517,6 +594,26 @@ export default function DatLichKham() {
                     </div>
                   </div>
 
+                  {/* Map */}
+                  <div className="rounded-xl overflow-hidden bg-gray-100">
+                    {loadingMap && <div className="h-56 animate-pulse bg-gray-200" />}
+                    {!loadingMap && embedUrl && (
+                      <iframe
+                        src={embedUrl}
+                        className="w-full h-64 border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        allowFullScreen
+                      />
+                    )}
+                    {!loadingMap && !embedUrl && mapUrl && (
+                      <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-56 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                    )}
+                    {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                      <div className="h-56 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                    )}
+                  </div>
+
                   {/* Education & License */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -557,17 +654,17 @@ export default function DatLichKham() {
               <div className="grid grid-cols-12 gap-3 items-stretch">
                 {/* Row 1: Search full width */}
                 <div className="col-span-12">
-                  <Input
+            <Input
                     size="lg"
                     classNames={{
                       inputWrapper: "min-h-[64px] h-[64px]",
                       input: "text-base",
                     }}
-                    placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    startContent={<User size={18} className="text-gray-400" />}
-                  />
+              placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              startContent={<User size={18} className="text-gray-400" />}
+            />
                 </div>
                 {/* Row 2: Specialty + Province */}
                 <div className="col-span-12 md:col-span-6">
@@ -670,10 +767,10 @@ export default function DatLichKham() {
                         {doctor.bio && (
                           <p className="text-sm text-gray-600 mt-1 line-clamp-2">{doctor.bio}</p>
                         )}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-xs text-gray-600">
+                        <div className="mt-3 text-xs text-gray-600 flex flex-wrap gap-x-6 gap-y-2">
                           <div className="flex items-center gap-1"><Star size={14} className="text-yellow-500" /><span>Đánh giá</span><span className="font-medium ml-1">{doctor.rating || '4.8'}</span></div>
                           <div className="flex items-center gap-1"><Award size={14} className="text-teal-600" /><span>Năm KN</span><span className="font-medium ml-1">{doctor.experience_years || doctor.experienceYears || '—'}</span></div>
-                          <div className="flex items-center gap-1"><User size={14} className="text-cyan-600" /><span>Email</span><span className="font-medium ml-1 truncate">{doctor.email || '—'}</span></div>
+                          <div className="flex items-center gap-1 min-w-[180px] truncate"><User size={14} className="text-cyan-600" /><span>Email</span><span className="font-medium ml-1 truncate">{doctor.email || '—'}</span></div>
                           <div className="flex items-center gap-1"><Phone size={14} className="text-green-600" /><span>Điện thoại</span><span className="font-medium ml-1">{doctor.phone || '—'}</span></div>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-600">
@@ -700,7 +797,7 @@ export default function DatLichKham() {
         <Card className="shadow-lg rounded-2xl">
           <CardHeader className="flex items-center gap-3 p-6">
             <div className="bg-teal-100 p-2 rounded-lg">
-              <Calendar className="text-teal-600" size={24} />
+            <Calendar className="text-teal-600" size={24} />
             </div>
             <h3 className="text-xl font-bold text-gray-800">Chọn ngày & giờ khám</h3>
           </CardHeader>
@@ -786,12 +883,12 @@ export default function DatLichKham() {
                             >
                               {isSelected ? 'Đã chọn' : (selectable ? 'Đặt' : '—')}
                             </button>
-                          </div>
+                  </div>
                         );
                       })}
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                    ))}
+                  </div>
               </div>
 
               {/* Legend */}
@@ -841,7 +938,7 @@ export default function DatLichKham() {
                 />
               </div>
             )}
-            
+
             {/* Action Buttons */}
             <div className="flex gap-4 pt-6 border-t">
               <Button
