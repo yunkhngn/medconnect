@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
@@ -69,6 +69,8 @@ export default function DatLichKham() {
   const [appointmentType, setAppointmentType] = useState("ONLINE");
   const [reason, setReason] = useState("");
   const [symptomImages, setSymptomImages] = useState([]); // [{name, url, file}]
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
@@ -1030,6 +1032,7 @@ export default function DatLichKham() {
                 <div className="mt-4">
                   <label className="block text-sm font-medium mb-2">Đính kèm ảnh triệu chứng <span className="text-gray-500">(tùy chọn)</span></label>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
@@ -1044,8 +1047,32 @@ export default function DatLichKham() {
                       });
                       e.target.value = '';
                     }}
-                    className="block"
+                    className="hidden"
                   />
+
+                  {/* Dropzone */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const files = Array.from(e.dataTransfer.files || []);
+                      files.forEach((file) => {
+                        if (!file.type.startsWith('image/')) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    className={`rounded-xl w-full p-6 text-center cursor-pointer transition border-2 border-dashed ${isDragging ? 'bg-teal-50 border-teal-400' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
+                  >
+                    <p className="text-sm text-gray-700">Kéo & thả ảnh vào đây hoặc <span className="text-teal-600 font-medium">bấm để chọn</span></p>
+                    <p className="text-xs text-gray-500 mt-1">Hỗ trợ nhiều ảnh, định dạng JPEG/PNG</p>
+                  </div>
 
                   {symptomImages.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-3">

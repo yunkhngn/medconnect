@@ -351,7 +351,7 @@ function getSlotData(date, slot) {
                     {isReserved && (
                       <div className="py-3">
                         <Chip color="warning" size="sm" variant="solid" className="font-semibold">
-                          Có thể đặt
+                          Chờ bác sĩ xác nhận
                         </Chip>
                       </div>
                     )}
