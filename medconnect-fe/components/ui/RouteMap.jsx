@@ -65,6 +65,14 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
         link.crossOrigin = "";
         document.head.appendChild(link);
       }
+      // Fix default marker icon urls when using CDN ESM (avoid broken icon with 'Mar' text)
+      if (LRef?.Icon?.Default) {
+        LRef.Icon.Default.mergeOptions({
+          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        });
+      }
       const from = await geocode(originAddress);
       const to = await geocode(destinationAddress);
       if (aborted || !from || !to || !containerRef.current || !LRef) return;
@@ -75,8 +83,20 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
         { attribution: "© OpenStreetMap contributors" }
       ).addTo(mapInstance);
 
-      LRef.marker([from.lat, from.lon]).addTo(mapInstance);
-      LRef.marker([to.lat, to.lon]).addTo(mapInstance);
+      // Custom div icons for origin (home) and destination (clinic/office)
+      const makeDivIcon = (bg, emoji) =>
+        LRef.divIcon({
+          className: "",
+          html: `<div style="width:28px;height:28px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.9)">${emoji}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
+          popupAnchor: [0, -28],
+        });
+      const homeIcon = makeDivIcon('#22c55e', '🏠');
+      const officeIcon = makeDivIcon('#0ea5a9', '🏥');
+
+      LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
+      LRef.marker([to.lat, to.lon], { icon: officeIcon }).addTo(mapInstance);
 
       try {
         const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
