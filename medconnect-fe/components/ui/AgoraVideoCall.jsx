@@ -43,10 +43,23 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
     }
     const client = clientRef.current;
     await client.join(APP_ID, channel, token, uid);
-    localTracksRef.current = await AgoraRTC.createMicrophoneAndCameraTracks();
-    const [audioTrack, videoTrack] = localTracksRef.current;
-    if(localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
-    await client.publish([audioTrack, videoTrack]);
+    // Cho phép join kể cả không có thiết bị đầu vào
+    let audioTrack = null, videoTrack = null, tracks = [];
+    try {
+      [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+    } catch (err) {
+      console.warn('Lỗi tạo track audio/cam:', err?.message || err);
+      // Thử audio riêng
+      try { audioTrack = await AgoraRTC.createMicrophoneAudioTrack(); } catch {}
+      // Thử video riêng
+      try { videoTrack = await AgoraRTC.createCameraVideoTrack(); } catch {}
+    }
+    tracks = [audioTrack, videoTrack].filter(Boolean);
+    localTracksRef.current = tracks;
+    if (videoTrack && localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
+    if (tracks.length > 0) {
+      await client.publish(tracks);
+    }
     joinedRef.current = true;
     // Khi join xong, subscribe lại remote
     client.remoteUsers.forEach(async (user) => {

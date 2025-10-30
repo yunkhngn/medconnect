@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
+import { subscribeRoomMessages, sendChatMessage } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
@@ -40,6 +41,8 @@ export default function DoctorOnlineExamRoom() {
   useEffect(() => {
     if (appointmentId) {
       fetchAppointmentDetails();
+      const unsub = subscribeRoomMessages(appointmentId, setChatMessages);
+      return () => unsub && unsub();
     }
   }, [appointmentId]);
 
@@ -102,17 +105,17 @@ export default function DoctorOnlineExamRoom() {
     return `${mm}:${ss}`;
   };
 
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      const newMessage = {
-        id: Date.now(),
-        sender: 'doctor',
-        message: chatMessage.trim(),
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, newMessage]);
-      setChatMessage("");
-    }
+  const handleSendMessage = async () => {
+    const text = chatMessage.trim();
+    if (!text) return;
+    setChatMessage("");
+    const user = auth.currentUser;
+    await sendChatMessage(appointmentId, {
+      senderId: user?.uid,
+      senderName: user?.displayName || "Bác sĩ",
+      senderRole: "doctor",
+      text,
+    });
   };
 
   const handleStartAppointment = async () => {
@@ -256,16 +259,16 @@ export default function DoctorOnlineExamRoom() {
             <Divider/>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'doctor' ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg.id} className={`flex ${msg.senderRole === 'doctor' ? 'justify-end' : 'justify-start'}`}>
                   <Card 
                     shadow="none" 
                     className={`max-w-[80%] ${
-                      msg.sender === 'doctor' 
+                      msg.senderRole === 'doctor' 
                         ? 'bg-blue-50' 
                         : 'bg-gray-50'
                     }`}
                   >
-                    <CardBody className="p-3 text-sm">{msg.message}</CardBody>
+                    <CardBody className="p-3 text-sm">{msg.text}</CardBody>
                   </Card>
                 </div>
               ))}
