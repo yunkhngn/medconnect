@@ -23,14 +23,14 @@ public class EmailTemplateLoader {
      * @throws IOException if template file not found
      */
     public String loadTemplate(String templateName, Map<String, String> variables) throws IOException {
+        if (!templateExists(templateName)) {
+            throw new IOException("Template does not exist.");
+        }
         String templatePath = TEMPLATE_BASE_PATH + templateName + ".html";
         
-        // Load template from classpath
+        // ONLY load via ClassPathResource safely -- don't use Paths.get(resource.getURI())
         ClassPathResource resource = new ClassPathResource(templatePath);
-        String content = new String(
-            Files.readAllBytes(Paths.get(resource.getURI())),
-            StandardCharsets.UTF_8
-        );
+        String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         
         // Replace all placeholders
         for (Map.Entry<String, String> entry : variables.entrySet()) {
