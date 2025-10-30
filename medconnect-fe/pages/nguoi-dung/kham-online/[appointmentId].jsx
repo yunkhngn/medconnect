@@ -6,6 +6,10 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSq
 import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
+import dynamic from "next/dynamic";
+import { v4 as uuidv4 } from 'uuid';
+
+const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
 
 export default function PatientOnlineExamRoom() {
   const router = useRouter();
@@ -19,6 +23,8 @@ export default function PatientOnlineExamRoom() {
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isDoctorInfoOpen, onOpen: onDoctorInfoOpen, onOpenChange: onDoctorInfoOpenChange } = useDisclosure();
+  const [agoraToken, setAgoraToken] = useState("");
+  const [agoraUid, setAgoraUid] = useState(() => Math.floor(Math.random() * 1000000));
 
   useEffect(() => {
     if (appointmentId) {
@@ -30,6 +36,24 @@ export default function PatientOnlineExamRoom() {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (appointment && appointment.status === 'ONGOING') {
+      // Gọi backend lấy token qua backend server port 8080
+      const fetchToken = async () => {
+        const tokenResp = await fetch(
+          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+        );
+        if (tokenResp.ok) {
+          const data = await tokenResp.json();
+          setAgoraToken(data.token);
+        } else {
+          setAgoraToken("");
+        }
+      };
+      fetchToken();
+    }
+  }, [appointment, appointmentId, agoraUid]);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -112,6 +136,29 @@ export default function PatientOnlineExamRoom() {
 
   const { reasonText, attachments } = parseReason(appointment.reason);
 
+  if (appointment.status !== 'ONGOING') {
+    return (
+      <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">{appointment.status === 'CONFIRMED' ? 'Phòng đang chờ bác sĩ bắt đầu' : 'Chờ xác nhận hoặc đã kết thúc...'}</p>
+          <Button color="default" onClick={() => router.push('/nguoi-dung/kham-online')} className="mt-4">Quay lại</Button>
+        </div>
+      </div>
+    );
+  }
+  // Show video call UI
+  return (
+    <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
+      {agoraToken && appointmentId && (
+        <AgoraVideoCall channel={appointmentId} token={agoraToken} uid={agoraUid} />
+      )}
+      {!agoraToken && (
+        <div className="text-gray-600 mt-4">Đang lấy quyền truy cập phòng gọi video...</div>
+      )}
+    </div>
+  );
+
+  // Doctor Info Modal
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
       <div className="flex h-full">
@@ -334,6 +381,7 @@ export default function PatientOnlineExamRoom() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      {appointmentId && <AgoraVideoCall channel={appointmentId} />}
     </div>
   );
 }

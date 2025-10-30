@@ -6,6 +6,10 @@ import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSq
 import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
+import dynamic from "next/dynamic";
+import { v4 as uuidv4 } from 'uuid';
+
+const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
 
 export default function DoctorOnlineExamRoom() {
   const router = useRouter();
@@ -19,6 +23,8 @@ export default function DoctorOnlineExamRoom() {
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isPatientInfoOpen, onOpen: onPatientInfoOpen, onOpenChange: onPatientInfoOpenChange } = useDisclosure();
+  const [agoraToken, setAgoraToken] = useState("");
+  const [agoraUid, setAgoraUid] = useState(() => Math.floor(Math.random() * 1000000)); // random mặc định, dùng user id thực thì thay
 
   useEffect(() => {
     if (appointmentId) {
@@ -30,6 +36,24 @@ export default function DoctorOnlineExamRoom() {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (appointment && appointment.status === 'ONGOING') {
+      // Gọi backend lấy token qua backend server port 8080
+      const fetchToken = async () => {
+        const tokenResp = await fetch(
+          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+        );
+        if (tokenResp.ok) {
+          const data = await tokenResp.json();
+          setAgoraToken(data.token);
+        } else {
+          setAgoraToken("");
+        }
+      };
+      fetchToken();
+    }
+  }, [appointment, appointmentId, agoraUid]);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -149,6 +173,23 @@ export default function DoctorOnlineExamRoom() {
           <Button color="primary" onPress={() => router.push('/bac-si/kham-online')}>
             Quay lại danh sách
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (appointment.status !== 'ONGOING') {
+    return (
+      <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          {appointment.status === 'CONFIRMED' ? (
+            <Button color="success" onClick={handleStartAppointment} className="font-semibold">
+              Bắt đầu khám online
+            </Button>
+          ) : (
+            <p className="text-gray-600 mb-4">Chờ bệnh nhân xác nhận hoặc đã khám xong!</p>
+          )}
+          <Button color="default" onClick={() => router.push('/bac-si/kham-online')} className="mt-4">Quay lại</Button>
         </div>
       </div>
     );
@@ -367,6 +408,7 @@ export default function DoctorOnlineExamRoom() {
           </ModalFooter>
         </ModalContent>
       </Modal>
+      {appointmentId && <AgoraVideoCall channel={appointmentId} token={agoraToken} uid={agoraUid} />}
     </div>
   );
 }
