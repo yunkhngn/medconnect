@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardBody, Button, Input, Chip } from '@heroui/react';
 import { useGemini } from '@/hooks/useGemini';
 import Image from 'next/image';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -303,7 +303,7 @@ const Chatbot = () => {
                     ) : (
                       <div 
                         className="text-sm leading-relaxed prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMessage(msg.content)) }}
                       />
                     )}
                     <p className={`text-xs mt-3 opacity-70 ${

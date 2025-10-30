@@ -24,7 +24,13 @@ export default function DoctorOnlineExamRoom() {
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isPatientInfoOpen, onOpen: onPatientInfoOpen, onOpenChange: onPatientInfoOpenChange } = useDisclosure();
   const [agoraToken, setAgoraToken] = useState("");
-  const [agoraUid, setAgoraUid] = useState(() => Math.floor(Math.random() * 1000000));
+  const [agoraUid, setAgoraUid] = useState(() => {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      return window.crypto.getRandomValues(new Uint32Array(1))[0];
+    } else {
+      return Math.floor(Math.random() * 1000000);
+    }
+  });
 
   // refs video call
   const localVideoRef = useRef(null);
@@ -190,6 +196,14 @@ export default function DoctorOnlineExamRoom() {
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
+            {/* Nếu partner chưa vào (remote chưa có stream) thì hiện thông báo */}
+            {!appointment || !showChat ? null : (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
+                  Đang đợi kết nối với Bệnh nhân
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Local preview nhỏ góc phải giống patient */}
@@ -221,8 +235,8 @@ export default function DoctorOnlineExamRoom() {
             <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full px-4 py-3 ring-1 ring-white/20 shadow-lg">
               <Button isIconOnly variant="flat" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/10" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff/> : <Mic/>}</Button>
               <Button isIconOnly variant="flat" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/10" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff/> : <Video/>}</Button>
-              {/* ... các nút khác như cũ ... */}
-              <Button color="danger" onPress={handleEndAppointment} className="font-semibold ml-6">Kết thúc khám</Button>
+              {/* Rời phòng - thay nút "Kết thúc khám" */}
+              <Button color="danger" onPress={()=>router.push('/bac-si/kham-online')} className="font-semibold ml-6">Rời phòng</Button>
             </div>
           </div>
           {/* Controls - glassy, có thể dùng lại hoặc customize thêm */}
@@ -256,7 +270,7 @@ export default function DoctorOnlineExamRoom() {
               ))}
             </div>
             <Divider/>
-            <div className="p-3 flex gap-2">
+            <div className="p-3 flex gap-2 border-t mt-auto">
               <Input 
                 placeholder="Nhập tin nhắn…" 
                 className="flex-1"
@@ -265,6 +279,10 @@ export default function DoctorOnlineExamRoom() {
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               />
               <Button color="primary" onPress={handleSendMessage}><Send size={16} /></Button>
+            </div>
+            {/* footer mới: nút Kết thúc khám */}
+            <div className="w-full px-4 py-3 border-t bg-gray-50 flex justify-end">
+              <Button color="danger" onPress={handleEndAppointment} className="font-semibold">Kết thúc khám</Button>
             </div>
           </div>
         )}

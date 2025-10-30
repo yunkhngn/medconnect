@@ -4,7 +4,7 @@ import { Card, CardBody, CardHeader, Input, Button, Avatar, Chip, Select, Select
 import Float from '@/components/ui/Float';
 import Image from 'next/image';
 import { useGemini } from '@/hooks/useGemini';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 import mockDoctors from '@/lib/doctorProps';
 import Link from 'next/link';
 
@@ -231,10 +231,7 @@ const SearchDoctor = () => {
                             {msg.role === 'user' ? (
                               <p className="text-sm">{msg.content}</p>
                             ) : (
-                              <div
-                                className="text-sm prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }}
-                              />
+                              <div className="text-sm prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMessage(msg.content)) }} />
                             )}
                           </div>
                         </div>

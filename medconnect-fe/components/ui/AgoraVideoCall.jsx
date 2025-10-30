@@ -8,6 +8,7 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
   const clientRef = useRef(null);
   const localTracksRef = useRef([]);
   const remoteTracksRef = useRef([]);
+  // TODO: Optionally nhận callback để truyền trạng thái overlay remote lên parent
 
   useEffect(() => {
     clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
@@ -47,7 +48,7 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
     if(localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
     await client.publish([audioTrack, videoTrack]);
     joinedRef.current = true;
-    // Khi join xong, duyệt và play lại remote đã có trước đó (fix bug ai vào trước/sau đều thấy nhau)
+    // Khi join xong, subscribe lại remote
     client.remoteUsers.forEach(async (user) => {
       if (user.hasVideo) {
         await client.subscribe(user, "video");
@@ -61,7 +62,7 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
         user.audioTrack.play();
       }
     });
-    // Khi có user mới publish hoặc user-published, vẫn phải lắng nghe
+    // Lắng nghe user-published
     client.on("user-published", async (user, mediaType) => {
       await client.subscribe(user, mediaType);
       if (mediaType === "video" && remoteVideoRef && remoteVideoRef.current) {
@@ -72,12 +73,7 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
         user.audioTrack.play();
       }
     });
-    client.on("user-unpublished", (user, mediaType) => {
-      // Optionally: stop video in remoteVideoRef.current
-    });
-    client.on("user-left", user => {
-      // Optionally: stop video in remoteVideoRef.current
-    });
+    // TODO: (extension) listen for remote track mute/unmute for overlay
   }
 
   async function leave() {
@@ -92,5 +88,5 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
     if (typeof onLeave === "function") onLeave();
   }
 
-  return null; // logic only, UI ở layout ngoài
+  return null; // logic only
 }
