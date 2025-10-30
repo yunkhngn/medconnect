@@ -20,6 +20,70 @@ const Chatbot = () => {
   const messagesEndRef = useRef(null);
   const { sendMessage, loading, error } = useGemini();
 
+  // Draggable floating button position (snap to edges)
+  const [btnPos, setBtnPos] = useState({ x: null, y: null });
+  const draggingRef = useRef(false);
+  const startRef = useRef({ x: 0, y: 0 });
+  const [panelSide, setPanelSide] = useState('right'); // 'left' | 'right'
+
+  const updatePanelSide = (nextPos = btnPos) => {
+    if (typeof window === 'undefined') return;
+    const vw = window.innerWidth;
+    setPanelSide((nextPos.x ?? vw - 80) > vw / 2 ? 'right' : 'left');
+  };
+
+  // Ensure initial position at bottom-right (after mount when we know viewport size)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const vw = window.innerWidth; const vh = window.innerHeight;
+      const init = { x: Math.max(16, vw - 16 - 64), y: Math.max(16, vh - 16 - 64) };
+      setBtnPos(init);
+      updatePanelSide(init);
+      const onResize = () => updatePanelSide();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+  }, []);
+
+  const onBtnMouseDown = (e) => {
+    draggingRef.current = true;
+    startRef.current = { x: e.clientX - btnPos.x, y: e.clientY - btnPos.y };
+  };
+  const onBtnMouseMove = (e) => {
+    if (!draggingRef.current) return;
+    const pos = { x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y };
+    setBtnPos(pos);
+  };
+  const onBtnMouseUp = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    const vw = window.innerWidth; const vh = window.innerHeight;
+    const size = 64; // button size
+    const candidates = [
+      { x: 16, y: 16 }, // TL
+      { x: vw - size - 16, y: 16 }, // TR
+      { x: 16, y: vh - size - 16 }, // BL
+      { x: vw - size - 16, y: vh - size - 16 }, // BR
+      { x: 16, y: (vh - size) / 2 }, // ML
+      { x: vw - size - 16, y: (vh - size) / 2 }, // MR
+    ];
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const best = candidates.reduce((best, c) => (dist(btnPos, c) < dist(btnPos, best) ? c : best), candidates[0]);
+    setBtnPos(best);
+    updatePanelSide(best);
+  };
+  useEffect(() => {
+    window.addEventListener('mousemove', onBtnMouseMove);
+    window.addEventListener('mouseup', onBtnMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onBtnMouseMove);
+      window.removeEventListener('mouseup', onBtnMouseUp);
+    };
+  }, [btnPos]);
+
+  // Prevent default drag ghost image
+  const preventDrag = (e) => { e.preventDefault(); };
+
   const MAX_QUESTIONS = 5;
   const RESET_INTERVAL = 60000; // 1 minute
 
@@ -153,7 +217,7 @@ const Chatbot = () => {
         <div className={`fixed z-9999 transition-all duration-300 ${
           isFullscreen 
             ? 'inset-0' 
-            : 'bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)]'
+            : panelSide === 'right' ? 'bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)]' : 'bottom-24 left-6 w-96 max-w-[calc(100vw-3rem)]'
         }`}>
           <div className={`bg-white/10 backdrop-blur-3xl shadow-2xl border border-white/20 overflow-hidden ${
             isFullscreen ? 'h-full' : 'rounded-3xl'
@@ -162,7 +226,7 @@ const Chatbot = () => {
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 bg-white/5 backdrop-blur-2xl">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-lg">
-                  <Image src="/assets/logo.svg" alt="Logo" width={24} height={24} />
+                  <Image src="/assets/logo.svg" alt="Logo" width={24} height={24} draggable={false} onDragStart={preventDrag} />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">MedConnect AI</h3>
@@ -311,35 +375,45 @@ const Chatbot = () => {
         </div>
       )}
 
-      {/* Floating Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group backdrop-blur-sm border-4 border-white"
-        aria-label="Open chatbot"
+      {/* Floating Button (draggable, snaps to edges) */}
+      <div
+        className="fixed z-50"
+        style={{ left: btnPos.x ?? 24, top: btnPos.y ?? 24 }}
+        onMouseDown={onBtnMouseDown}
+        onDragStart={preventDrag}
       >
-        {isOpen ? (
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <>
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
-              <Image 
-                src="/assets/chatbot.svg" 
-                alt="Chatbot" 
-                width={24} 
-                height={24}
-                
-              />
-            </div>
-            {questionCount >= MAX_QUESTIONS && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-                <span className="text-[10px] font-bold text-white">!</span>
-              </span>
-            )}
-          </>
-        )}
-      </button>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-16 h-16 rounded-full bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group backdrop-blur-sm border-4 border-white"
+          aria-label="Open chatbot"
+          draggable={false}
+          onDragStart={preventDrag}
+        >
+          {isOpen ? (
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
+                <Image 
+                  src="/assets/chatbot.svg" 
+                  alt="Chatbot" 
+                  width={24} 
+                  height={24}
+                  draggable={false}
+                  onDragStart={preventDrag}
+                />
+              </div>
+              {questionCount >= MAX_QUESTIONS && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                  <span className="text-[10px] font-bold text-white">!</span>
+                </span>
+              )}
+            </>
+          )}
+        </button>
+      </div>
     </>
   );
 };

@@ -354,7 +354,7 @@ export default function DoctorProfile() {
   };
 
   const handleImageUpload = async (event) => {
-    const files = Array.from(event.target.files);
+    const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
     setUploadingImages(true);
