@@ -337,7 +337,7 @@ const Patient = () => {
                 </div>
               </TableCell>
               <TableCell>
-                <p className="text-sm">{patient.address}</p>
+                <p className="text-sm">{typeof patient.address === 'object' ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', ')) : (patient.address || '')}</p>
               </TableCell>
               <TableCell>
                 <Chip size="sm" variant="flat" color="danger">

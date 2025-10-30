@@ -32,6 +32,7 @@ import {
   Printer,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAddressData } from "@/hooks/useAddressData";
 
 export default function HoSoBenhAn() {
   const router = useRouter();
@@ -39,6 +40,8 @@ export default function HoSoBenhAn() {
   const [loading, setLoading] = useState(false);
   const [emrData, setEmrData] = useState(null);
   const [error, setError] = useState(null);
+  const { getProvinceName, getDistrictName, getWardName } = useAddressData();
+  const [displayAddress, setDisplayAddress] = useState("");
 
   useEffect(() => {
     console.log('[HoSoBenhAn] Auth state:', { authLoading, hasUser: !!user });
@@ -109,11 +112,88 @@ export default function HoSoBenhAn() {
     return parts.join(' | ') || 'N/A';
   };
 
+  const buildFormattedAddress = (pp) => {
+    if (!pp) return "";
+    const isMeaningful = (s) => {
+      const t = String(s || "").trim();
+      if (!t) return false;
+      const generic = ["Phường", "Xã", "Thị trấn", "Quận", "Huyện", "Thành phố", "Tỉnh"];
+      return !generic.includes(t);
+    };
+
+    const parts = [];
+
+    // Prefer nested address object when available
+    const addr = typeof pp.address === "object" && pp.address ? pp.address : {};
+    const addressDetail = addr.address_detail || pp.address_detail || pp.address || "";
+    if (isMeaningful(addressDetail)) parts.push(addressDetail);
+
+    const wardName = addr.ward_name || pp.ward_name || (addr.ward_code ? getWardName(addr.ward_code) : (pp.ward_code ? getWardName(pp.ward_code) : ""));
+    if (isMeaningful(wardName)) parts.push(wardName);
+
+    const districtName = addr.district_name || pp.district_name || (addr.district_code ? getDistrictName(addr.district_code) : (pp.district_code ? getDistrictName(pp.district_code) : ""));
+    if (isMeaningful(districtName)) parts.push(districtName);
+
+    const provinceName = addr.province_name || pp.province_name || (addr.province_code ? getProvinceName(addr.province_code) : (pp.province_code ? getProvinceName(pp.province_code) : ""));
+    if (isMeaningful(provinceName)) parts.push(provinceName);
+
+    return parts.join(", ");
+  };
+
+  // Resolve address names by code if missing using public API
+  useEffect(() => {
+    const detail = parseDetail(emrData?.detail);
+    const pp = detail?.patient_profile || {};
+    const addr = (pp && typeof pp.address === 'object') ? pp.address : {};
+
+    // If we already have a good formatted address, use it
+    const initial = buildFormattedAddress(pp);
+    if (initial && initial.split(',').length >= 2) {
+      setDisplayAddress(initial);
+      return;
+    }
+
+    const API_BASE = 'https://provinces.open-api.vn/api';
+    const fetchJSON = async (url) => {
+      try { const r = await fetch(url); if (!r.ok) return null; return await r.json(); } catch { return null; }
+    };
+
+    const resolve = async () => {
+      let provinceName = addr.province_name || pp.province_name || '';
+      let districtName = addr.district_name || pp.district_name || '';
+      let wardName = addr.ward_name || pp.ward_name || '';
+
+      if (!provinceName && (addr.province_code || pp.province_code)) {
+        const data = await fetchJSON(`${API_BASE}/p/${addr.province_code || pp.province_code}`);
+        provinceName = data?.name || provinceName;
+      }
+      if (!districtName && (addr.district_code || pp.district_code)) {
+        const data = await fetchJSON(`${API_BASE}/d/${addr.district_code || pp.district_code}`);
+        districtName = data?.name || districtName;
+      }
+      if (!wardName && (addr.ward_code || pp.ward_code)) {
+        const data = await fetchJSON(`${API_BASE}/w/${addr.ward_code || pp.ward_code}`);
+        wardName = data?.name || wardName;
+      }
+
+      const parts = [];
+      const detailPart = addr.address_detail || pp.address_detail || pp.address || '';
+      if (detailPart) parts.push(detailPart);
+      if (wardName) parts.push(wardName);
+      if (districtName) parts.push(districtName);
+      if (provinceName) parts.push(provinceName);
+      setDisplayAddress(parts.join(', '));
+    };
+
+    resolve();
+  }, [emrData]);
+
   const generatePDFContent = () => {
     const detail = parseDetail(emrData.detail);
     const patientProfile = detail?.patient_profile || {};
     const medicalHistory = detail?.medical_history || {};
     const medicalRecords = detail?.medical_records || [];
+    const formattedAddress = (displayAddress || buildFormattedAddress(patientProfile));
 
     return `
       <!DOCTYPE html>
@@ -238,7 +318,7 @@ export default function HoSoBenhAn() {
             </div>
             <div class="info-row">
               <div class="info-label">Địa chỉ:</div>
-              <div class="info-value">${patientProfile.address || 'N/A'}</div>
+              <div class="info-value">${formattedAddress || 'N/A'}</div>
             </div>
             <div class="info-row">
               <div class="info-label">Số BHYT:</div>
@@ -414,6 +494,8 @@ export default function HoSoBenhAn() {
   const detail = parseDetail(emrData.detail);
   const patientProfile = detail?.patient_profile || {};
   const medicalRecords = detail?.medical_records || [];
+  const displayAddressImmediate = buildFormattedAddress(patientProfile);
+  const addressToShow = displayAddress || displayAddressImmediate;
 
   // Left Panel - Quick Info
   const leftPanel = (
@@ -534,7 +616,7 @@ export default function HoSoBenhAn() {
               </div>
           <InfoItem 
             label="Địa chỉ" 
-            value={typeof patientProfile.address === 'object' ? (patientProfile.address.full || '') : patientProfile.address} 
+            value={addressToShow} 
           />
           <InfoItem label="Mã BHYT" value={patientProfile.insurance_number} />
           {patientProfile.insurance_valid_to && (

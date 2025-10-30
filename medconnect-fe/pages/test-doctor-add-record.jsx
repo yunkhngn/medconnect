@@ -149,8 +149,10 @@ export default function TestDoctorAddRecord() {
       const medicalEntry = {
         visit_id: `V${Date.now()}`,
         visit_date: record.visit_date,
-        visit_time: record.visit_time,
+        visit_time: record.visit_time || new Date().toTimeString().slice(0,5),
         visit_type: record.visit_type,
+        doctor_name: user?.displayName || "",
+        doctor_id: user?.uid || "",
         chief_complaint: record.chief_complaint,
         vital_signs: record.vital_signs,
         physical_exam: record.physical_exam,

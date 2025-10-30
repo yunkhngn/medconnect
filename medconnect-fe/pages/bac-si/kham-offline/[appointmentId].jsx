@@ -58,6 +58,7 @@ export default function OfflineExamDetailPage() {
         return v;
       };
       return {
+        visit_id: src.visit_id || n.visit_id,
         visit_date: src.visit_date,
         visit_time: src.visit_time,
         visit_type: src.visit_type,
@@ -123,6 +124,7 @@ export default function OfflineExamDetailPage() {
         setRecord((prev) => ({
           ...prev,
           visit_date: data.date || prev.visit_date,
+          visit_time: (data.time || data.startTime || prev.visit_time || new Date().toTimeString().slice(0,5)),
           visit_type: (data.type||"OFFLINE").toString().toLowerCase(),
           chief_complaint: reasonText || prev.chief_complaint
         }));
@@ -181,7 +183,11 @@ export default function OfflineExamDetailPage() {
       const token = await user.getIdToken();
       // Merge với bản ghi cũ để không làm mất dữ liệu khi cập nhật
       const mergedToSave = isFinished && previousEntry ? mergeRecord(previousEntry, record) : record;
-      const entry = { visit_id:`V${Date.now()}`, ...mergedToSave, appointment_id:Number(appointmentId) };
+      const doctor_name = appointmentInfo?.doctor?.name || user?.displayName || "";
+      const doctor_id = appointmentInfo?.doctor?.id || user?.uid || "";
+      const visit_time = mergedToSave.visit_time || new Date().toTimeString().slice(0,5);
+      const visit_id = previousEntry?.visit_id || mergedToSave.visit_id || `V${Date.now()}`;
+      const entry = { visit_id, ...mergedToSave, visit_time, doctor_name, doctor_id, appointment_id:Number(appointmentId) };
       const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ entry }) });
       if (!resp.ok) throw new Error((await resp.json()).error || "Lưu bệnh án thất bại");
       if (!isFinished) {
