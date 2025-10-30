@@ -33,6 +33,7 @@ export default function PatientOnlineExamRoom() {
   });
   const [remoteMuted, setRemoteMuted] = useState(false);
   const [remoteCamOff, setRemoteCamOff] = useState(false);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
   // Video refs cho injection của Agora
   const localVideoRef = useRef(null);
@@ -158,7 +159,7 @@ export default function PatientOnlineExamRoom() {
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
             {/* Nếu doctor chưa vào hoặc chưa có remote stream thì hiện thông báo */}
-            {!showChat ? null : (
+            {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
                   Đang đợi kết nối với Bác sĩ
@@ -320,6 +321,7 @@ export default function PatientOnlineExamRoom() {
           remoteVideoRef={remoteVideoRef}
           muted={muted}
           camOff={camOff}
+          onRemoteVideoChange={setHasRemoteVideo}
         />
       )}
     </div>
