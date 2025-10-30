@@ -3,7 +3,7 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID;
 
-export default function AgoraVideoCall({ channel, token, uid, localVideoRef, remoteVideoRef, muted = false, camOff = false, onLeave }) {
+export default function AgoraVideoCall({ channel, token, uid, localVideoRef, remoteVideoRef, muted = false, camOff = false, onLeave, onRemoteVideoChange }) {
   const joinedRef = useRef(false);
   const clientRef = useRef(null);
   const localTracksRef = useRef([]);
@@ -55,6 +55,7 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
         if (remoteVideoRef && remoteVideoRef.current) {
           user.videoTrack.play(remoteVideoRef.current);
           remoteTracksRef.current = [user.videoTrack];
+          if (onRemoteVideoChange) onRemoteVideoChange(true);
         }
       }
       if (user.hasAudio) {
@@ -68,10 +69,14 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
       if (mediaType === "video" && remoteVideoRef && remoteVideoRef.current) {
         user.videoTrack.play(remoteVideoRef.current);
         remoteTracksRef.current = [user.videoTrack];
+        if (onRemoteVideoChange) onRemoteVideoChange(true);
       }
       if (mediaType === "audio") {
         user.audioTrack.play();
       }
+    });
+    client.on("user-unpublished", (user, mediaType) => {
+      if (mediaType === "video" && onRemoteVideoChange) onRemoteVideoChange(false);
     });
     // TODO: (extension) listen for remote track mute/unmute for overlay
   }

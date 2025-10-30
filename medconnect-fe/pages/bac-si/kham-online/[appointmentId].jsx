@@ -31,6 +31,7 @@ export default function DoctorOnlineExamRoom() {
       return Math.floor(Math.random() * 1000000);
     }
   });
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
   // refs video call
   const localVideoRef = useRef(null);
@@ -353,6 +354,7 @@ export default function DoctorOnlineExamRoom() {
           remoteVideoRef={remoteVideoRef}
           muted={muted}
           camOff={camOff}
+          onRemoteVideoChange={setHasRemoteVideo}
         />
       )}
     </div>
