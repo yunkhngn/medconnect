@@ -89,7 +89,7 @@ export default function CreateEMRPage() {
   const [idPhotoUrl, setIdPhotoUrl] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const { getFullAddress } = useAddressData();
+  const { getProvinceName, getDistrictName, getWardName } = useAddressData();
 
   useEffect(() => {
     if (authLoading) return;
@@ -249,12 +249,13 @@ export default function CreateEMRPage() {
     try {
       const token = await user.getIdToken();
 
-      const fullAddress = getFullAddress(
-        profile.province_code,
-        profile.district_code,
-        profile.ward_code,
-        profile.address_detail
-      );
+      const province_name = profile.province_code ? getProvinceName(profile.province_code) : "";
+      const district_name = profile.district_code ? getDistrictName(profile.district_code) : "";
+      const ward_name = profile.ward_code ? getWardName(profile.ward_code) : "";
+      const parts = [profile.address_detail, ward_name, district_name, province_name]
+        .map(v => (v || '').trim())
+        .filter(v => !!v);
+      const fullAddress = parts.join(', ');
 
       const emrData = {
         patient_profile: {
@@ -266,6 +267,9 @@ export default function CreateEMRPage() {
             province_code: profile.province_code,
             district_code: profile.district_code,
             ward_code: profile.ward_code,
+            province_name,
+            district_name,
+            ward_name,
             address_detail: profile.address_detail,
             full: fullAddress || profile.address || "",
           },
