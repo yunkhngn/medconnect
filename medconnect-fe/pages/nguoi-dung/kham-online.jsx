@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider } from "@heroui/react";
+import { Button, Card, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Star } from "lucide-react";
 import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
+import PatientFrame from "@/components/layouts/Patient/Frame";
 import { auth } from "@/lib/firebase";
 
 export default function PatientOnlineExamList() {
@@ -14,10 +15,35 @@ export default function PatientOnlineExamList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("today");
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [rxLoading, setRxLoading] = useState(false);
+  const [prescription, setPrescription] = useState(null);
 
   useEffect(() => {
     fetchOnlineAppointments();
   }, []);
+
+  const openAppointmentModal = async (apt) => {
+    setSelectedAppointment(apt);
+    setPrescription(null);
+    onOpen();
+    try {
+      setRxLoading(true);
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const meds = data.medications || data.medicines || [];
+        setPrescription({ medications: Array.isArray(meds) ? meds : [], note: data.note || data.notes || "" });
+      }
+    } catch {}
+    finally { setRxLoading(false); }
+  };
 
   const fetchOnlineAppointments = async () => {
     try {
@@ -106,11 +132,8 @@ export default function PatientOnlineExamList() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Grid>
-        {/* Left Panel */}
-        <div className="space-y-6">
+  const leftChildren = (
+    <div className="space-y-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-2 gap-4">
             <Card className="p-4">
@@ -171,10 +194,11 @@ export default function PatientOnlineExamList() {
               </div>
             </div>
           </Card>
-        </div>
+    </div>
+  );
 
-        {/* Right Panel */}
-        <div>
+  const rightChildren = (
+    <div>
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Lịch khám online của tôi</h1>
             <Chip color="primary" variant="flat">
@@ -195,11 +219,16 @@ export default function PatientOnlineExamList() {
               </Button>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredAppointments.map((appointment) => {
                 const { date, time } = formatDateTime(appointment.appointmentDate);
                 return (
-                  <Card key={appointment.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <Card
+                    key={appointment.id}
+                    isPressable
+                    onPress={() => openAppointmentModal(appointment)}
+                    className="p-5 hover:shadow-lg transition-shadow border border-gray-200"
+                  >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <Avatar
@@ -235,12 +264,6 @@ export default function PatientOnlineExamList() {
                         <MapPin className="w-4 h-4" />
                         <span>Khám online</span>
                       </div>
-                      {appointment.doctorRating && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span>{appointment.doctorRating}/5</span>
-                        </div>
-                      )}
                     </div>
 
                     <Divider className="my-4" />
@@ -268,7 +291,7 @@ export default function PatientOnlineExamList() {
                           color="success"
                           size="sm"
                           className="flex-1"
-                          onPress={() => handleJoinExam(appointment.id)}
+                          onPress={(e) => { e.stopPropagation(); handleJoinExam(appointment.id); }}
                         >
                           Tham gia khám
                         </Button>
@@ -278,7 +301,7 @@ export default function PatientOnlineExamList() {
                           color="warning"
                           size="sm"
                           className="flex-1"
-                          onPress={() => handleJoinExam(appointment.id)}
+                          onPress={(e) => { e.stopPropagation(); handleJoinExam(appointment.id); }}
                         >
                           Tiếp tục khám
                         </Button>
@@ -288,7 +311,7 @@ export default function PatientOnlineExamList() {
                           color="default"
                           size="sm"
                           className="flex-1"
-                          onPress={() => handleJoinExam(appointment.id)}
+                          onPress={(e) => { e.stopPropagation(); handleJoinExam(appointment.id); }}
                         >
                           Xem lại
                         </Button>
@@ -311,6 +334,53 @@ export default function PatientOnlineExamList() {
           )}
         </div>
       </Grid>
-    </div>
+
+      {/* Modal: Prescription or details */}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {selectedAppointment ? `Khám với BS. ${selectedAppointment.doctorName}` : "Chi tiết cuộc hẹn"}
+          </ModalHeader>
+          <ModalBody>
+            {rxLoading ? (
+              <div className="text-center py-8">Đang tải thông tin...</div>
+            ) : selectedAppointment ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  <span>Ngày: {formatDateTime(selectedAppointment.appointmentDate).date}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock className="w-4 h-4" />
+                  <span>Giờ: {formatDateTime(selectedAppointment.appointmentDate).time}</span>
+                </div>
+                <Divider />
+                <h4 className="text-sm font-medium text-gray-700">Đơn thuốc</h4>
+                {prescription?.medications && prescription.medications.length > 0 ? (
+                  <div className="space-y-2">
+                    {prescription.medications.map((med, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm text-gray-600">
+                        <span>{med.name}</span>
+                        <span>{med.dose} {med.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Chưa có đơn thuốc</p>
+                )}
+                <Divider />
+                <h4 className="text-sm font-medium text-gray-700">Ghi chú</h4>
+                <p className="text-sm text-gray-600">{prescription?.note || "Không có ghi chú"}</p>
+              </div>
+            ) : (
+              <div className="text-center py-8">Chọn một cuộc hẹn để xem chi tiết.</div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" variant="flat" onPress={onClose}>Đóng</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </PatientFrame>
   );
 }
