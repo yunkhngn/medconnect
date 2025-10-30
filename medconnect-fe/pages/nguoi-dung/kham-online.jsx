@@ -333,9 +333,13 @@ export default function PatientOnlineExamList() {
             </div>
           )}
         </div>
-      </Grid>
 
-      {/* Modal: Prescription or details */}
+  );
+
+  return (
+    <PatientFrame title="Khám online">
+      <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
@@ -377,7 +381,9 @@ export default function PatientOnlineExamList() {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button color="danger" variant="flat" onPress={onClose}>Đóng</Button>
+            <Button color="danger" variant="flat" onPress={onClose}>
+              Đóng
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
