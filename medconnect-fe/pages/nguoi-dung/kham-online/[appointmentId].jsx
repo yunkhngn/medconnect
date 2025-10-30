@@ -24,7 +24,15 @@ export default function PatientOnlineExamRoom() {
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isDoctorInfoOpen, onOpen: onDoctorInfoOpen, onOpenChange: onDoctorInfoOpenChange } = useDisclosure();
   const [agoraToken, setAgoraToken] = useState("");
-  const [agoraUid, setAgoraUid] = useState(() => Math.floor(Math.random() * 1000000));
+  const [agoraUid, setAgoraUid] = useState(() => {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+      return window.crypto.getRandomValues(new Uint32Array(1))[0];
+    } else {
+      return Math.floor(Math.random() * 1000000);
+    }
+  });
+  const [remoteMuted, setRemoteMuted] = useState(false);
+  const [remoteCamOff, setRemoteCamOff] = useState(false);
 
   // Video refs cho injection của Agora
   const localVideoRef = useRef(null);
@@ -149,12 +157,22 @@ export default function PatientOnlineExamRoom() {
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
+            {/* Nếu doctor chưa vào hoặc chưa có remote stream thì hiện thông báo */}
+            {!showChat ? null : (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
+                  Đang đợi kết nối với Bác sĩ
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Local preview nhỏ góc phải như doctor */}
           <div className="absolute right-5 top-5 w-56 aspect-video rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
             <div ref={localVideoRef} className="absolute inset-0 rounded-xl overflow-hidden" />
             <span className="absolute bottom-2 left-2 text-xs text-white/70">Patient preview</span>
+            {muted && <MicOff className="absolute top-2 right-2 text-red-400 w-6 h-6" />}
+            {camOff && <VideoOff className="absolute top-2 right-10 text-red-400 w-6 h-6" />}
           </div>
 
           {/* Top bar giống doctor */}
