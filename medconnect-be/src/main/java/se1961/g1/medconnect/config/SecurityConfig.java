@@ -69,6 +69,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/email/test").permitAll()
                 .requestMatchers("/api/email/**").authenticated()
 
+                // PERMIT VIDEO CALL TOKEN API!
+                .requestMatchers("/api/agora/token").permitAll()
+
                 // Appointments
                 .requestMatchers("/api/appointments/my").authenticated()
                 .requestMatchers("/api/appointments/doctor").authenticated()
