@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Button, Card, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star } from "lucide-react";
 import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
@@ -144,7 +144,7 @@ export default function PatientOnlineExamRoom() {
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
       <div className="flex h-full">
-        {/* Left: Video Area (giống UI bác sĩ) */}
+        {/* Left: Video Area */}
         <div className="flex-1 min-w-0 relative bg-black">
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
@@ -157,28 +157,28 @@ export default function PatientOnlineExamRoom() {
             <span className="absolute bottom-2 left-2 text-xs text-white/70">Patient preview</span>
           </div>
 
-          {/* Top bar giống bác sĩ */}
+          {/* Top bar giống doctor */}
           <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-3">
               <Chip color="success" variant="flat">Phiên khám online • Bệnh nhân</Chip>
               <Chip variant="flat">{formatTime(seconds)}</Chip>
-              <Button
-                size="sm"
-                variant="flat"
-                color="default"
-                onPress={onDoctorInfoOpen}
-                startContent={<User size={16} />}
-              >Thông tin bác sĩ</Button>
+              <Button size="sm" variant="flat" color="default" onPress={onDoctorInfoOpen} startContent={<User size={16} />}>Thông tin bác sĩ</Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto pr-2">
               <Button size="sm" variant="flat" startContent={<Maximize2 size={16} />}>Toàn màn hình</Button>
               <Button size="sm" variant="flat" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={16}/> }>Chat</Button>
             </div>
           </div>
-          {/* Controls + các nút... nếu muốn */}
+          {/* Controls bottom - mute/tắt cam/leave giống doctor */}
+          <div className="absolute left-0 right-0 bottom-0 pb-6 flex items-center justify-center">
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full px-4 py-3 ring-1 ring-white/20 shadow-lg">
+              <Button isIconOnly variant="flat" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/10" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff/> : <Mic/>}</Button>
+              <Button isIconOnly variant="flat" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/10" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff/> : <Video/>}</Button>
+              <Button color="danger" onPress={()=>window.location.href='/nguoi-dung/kham-online'} className="font-semibold ml-6">Rời phòng</Button>
+            </div>
+          </div>
         </div>
-
-        {/* Right: Chat y chang UI bác sĩ */}
+        {/* Right: Chat and modal info... (unchanged)*/}
         {showChat && (
           <div className="w-[380px] h-full bg-white border-l border-gray-200 flex flex-col">
             <div className="p-4 flex items-center gap-3">
@@ -192,38 +192,21 @@ export default function PatientOnlineExamRoom() {
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'patient' ? 'justify-end' : 'justify-start'}`}>
-                  <Card 
-                    shadow="none" 
-                    className={`max-w-[80%] ${
-                      msg.sender === 'patient' 
-                        ? 'bg-blue-50' 
-                        : 'bg-gray-50'
-                    }`}
-                  >
-                    <CardBody className="p-3 text-sm">
-                      {msg.message}
-                    </CardBody>
+                  <Card shadow="none" className={`max-w-[80%] ${msg.sender === 'patient' ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                    <CardBody className="p-3 text-sm">{msg.message}</CardBody>
                   </Card>
                 </div>
               ))}
             </div>
             <Divider/>
             <div className="p-3 flex gap-2">
-              <Input 
-                placeholder="Nhập tin nhắn…" 
-                className="flex-1"
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              />
-              <Button color="success" onPress={handleSendMessage}>
-                <Send size={16} />
-              </Button>
+              <Input placeholder="Nhập tin nhắn…" className="flex-1" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
+              <Button color="success" onPress={handleSendMessage}><Send size={16} /></Button>
             </div>
           </div>
         )}
       </div>
-      {/* Modal + THÔNG TIN BÁC SĨ (y chang doctor) */}
+      {/* Modal, info modal (keep unchanged)  ... */}
       <Modal isOpen={isDoctorInfoOpen} onOpenChange={onDoctorInfoOpenChange} size="2xl">
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
@@ -317,6 +300,8 @@ export default function PatientOnlineExamRoom() {
           uid={agoraUid}
           localVideoRef={localVideoRef}
           remoteVideoRef={remoteVideoRef}
+          muted={muted}
+          camOff={camOff}
         />
       )}
     </div>
