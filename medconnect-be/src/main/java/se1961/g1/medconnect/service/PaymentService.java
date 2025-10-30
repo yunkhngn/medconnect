@@ -1,5 +1,7 @@
 package se1961.g1.medconnect.service;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -22,6 +24,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
+@Getter
+@Setter
 public class PaymentService {
     
     @Autowired
@@ -120,19 +124,24 @@ public class PaymentService {
             List<String> fieldNames = new ArrayList<>(params.keySet());
             Collections.sort(fieldNames);
 
-            StringBuilder data = new StringBuilder();
-            for (String fieldName : fieldNames) {
+            StringBuilder hashData = new StringBuilder();
+            for (int i = 0; i < fieldNames.size(); i++) {
+                String fieldName = fieldNames.get(i);
                 String fieldValue = params.get(fieldName);
-                if ((fieldValue != null) && (fieldValue.length() > 0)) {
-                    if (data.length() > 0) data.append('&');
-                    data.append(fieldName).append('=').append(fieldValue);
+                if (fieldValue != null && !fieldValue.isEmpty()) {
+                    hashData.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII));
+                    hashData.append('=');
+                    hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
+                    if (i != fieldNames.size() - 1) {
+                        hashData.append('&');
+                    }
                 }
             }
 
             Mac hmac = Mac.getInstance("HmacSHA512");
             SecretKeySpec secretKey = new SecretKeySpec(vnpHashSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
             hmac.init(secretKey);
-            byte[] hashBytes = hmac.doFinal(data.toString().getBytes(StandardCharsets.UTF_8));
+            byte[] hashBytes = hmac.doFinal(hashData.toString().getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hexString = new StringBuilder();
             for (byte b : hashBytes) {
@@ -141,18 +150,23 @@ public class PaymentService {
                 hexString.append(hex);
             }
             return hexString.toString();
+
         } catch (Exception e) {
             throw new RuntimeException("Cannot generate VNPAY signature", e);
         }
     }
 
     private String buildQuery(Map<String, String> params) {
+        List<String> keys = new ArrayList<>(params.keySet());
+        Collections.sort(keys);
+
         StringBuilder query = new StringBuilder();
-        for (Map.Entry<String, String> entry : params.entrySet()) {
+        for (String key : keys) {
+            String value = params.get(key);
             if (query.length() > 0) query.append('&');
-            query.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
+            query.append(URLEncoder.encode(key, StandardCharsets.US_ASCII))
                     .append('=')
-                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+                    .append(URLEncoder.encode(value, StandardCharsets.US_ASCII));
         }
         return query.toString();
     }
