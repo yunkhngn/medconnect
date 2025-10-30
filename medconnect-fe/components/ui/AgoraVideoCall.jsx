@@ -1,13 +1,10 @@
-import React, { useRef, useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 
 const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID;
 
-export default function AgoraVideoCall({ channel, token, uid }) {
-  const [joined, setJoined] = useState(false);
-  const [remoteConnected, setRemoteConnected] = useState(false);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+export default function AgoraVideoCall({ channel, token, uid, localVideoRef, remoteVideoRef, onLeave }) {
+  const joinedRef = useRef(false);
   const clientRef = useRef(null);
   const localTracksRef = useRef([]);
   const remoteTracksRef = useRef([]);
@@ -20,9 +17,7 @@ export default function AgoraVideoCall({ channel, token, uid }) {
   }, []);
 
   useEffect(() => {
-    if (!joined && APP_ID && channel && token && (uid !== undefined && uid !== null)) {
-      // Log
-      console.log("[AgoraVideoCall] Joining call:", { APP_ID, channel, token, uid });
+    if (!joinedRef.current && APP_ID && channel && token && (uid !== undefined && uid !== null)) {
       join();
     }
     // eslint-disable-next-line
@@ -34,20 +29,15 @@ export default function AgoraVideoCall({ channel, token, uid }) {
       return;
     }
     const client = clientRef.current;
-    // Check bằng localStorage để xem thử có bị trùng UID không
-    console.log("[AgoraVideoCall] Đang join...", { channel, uid });
     await client.join(APP_ID, channel, token, uid);
     localTracksRef.current = await AgoraRTC.createMicrophoneAndCameraTracks();
     const [audioTrack, videoTrack] = localTracksRef.current;
-    videoTrack.play(localVideoRef.current);
+    if(localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
     await client.publish([audioTrack, videoTrack]);
-    setJoined(true);
-    setRemoteConnected(false);
+    joinedRef.current = true;
     client.on("user-published", async (user, mediaType) => {
-      console.log("[AgoraVideoCall] Remote user published: ", user, mediaType);
       await client.subscribe(user, mediaType);
-      if (mediaType === "video") {
-        setRemoteConnected(true);
+      if (mediaType === "video" && remoteVideoRef && remoteVideoRef.current) {
         user.videoTrack.play(remoteVideoRef.current);
         remoteTracksRef.current = [user.videoTrack];
       }
@@ -56,12 +46,10 @@ export default function AgoraVideoCall({ channel, token, uid }) {
       }
     });
     client.on("user-unpublished", (user, mediaType) => {
-      console.log("[AgoraVideoCall] Remote user unpublished: ", user, mediaType);
-      setRemoteConnected(false);
+      // Optionally: stop video in remoteVideoRef.current
     });
     client.on("user-left", user => {
-      console.log("[AgoraVideoCall] Remote user left:", user);
-      setRemoteConnected(false);
+      // Optionally: stop video in remoteVideoRef.current
     });
   }
 
@@ -73,30 +61,9 @@ export default function AgoraVideoCall({ channel, token, uid }) {
       remoteTracksRef.current.forEach(track => track.close());
     }
     await clientRef.current?.leave();
-    setJoined(false);
-    setRemoteConnected(false);
+    joinedRef.current = false;
+    if (typeof onLeave === "function") onLeave();
   }
 
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 16 }}>
-        <div>
-          <div ref={localVideoRef} style={{ width: 320, height: 240, background: "#232323" }} />
-          <div style={{ textAlign: "center" }}>Local</div>
-        </div>
-        <div>
-          <div ref={remoteVideoRef} style={{ width: 320, height: 240, background: "#444" }} />
-          <div style={{ textAlign: "center" }}>Remote</div>
-          {!remoteConnected && joined && (
-            <div style={{ color: '#888', textAlign: 'center', marginTop: 4, fontSize: 14 }}>
-              Đợi đối phương vào phòng...
-            </div>
-          )}
-        </div>
-      </div>
-      <div style={{ marginTop: 16 }}>
-        {joined && <button onClick={leave} style={{ padding: "8px 16px", background: "#ff0033", color: "#fff", border: "none", borderRadius: 5 }}>Leave</button>}
-      </div>
-    </div>
-  );
+  return null; // logic only, UI ở layout ngoài
 }

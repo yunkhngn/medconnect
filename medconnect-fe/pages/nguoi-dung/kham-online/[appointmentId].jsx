@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Button, Card, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star } from "lucide-react";
 import { useRouter } from "next/router";
@@ -26,6 +26,10 @@ export default function PatientOnlineExamRoom() {
   const [agoraToken, setAgoraToken] = useState("");
   const [agoraUid, setAgoraUid] = useState(() => Math.floor(Math.random() * 1000000));
 
+  // Video refs cho injection của Agora
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+
   useEffect(() => {
     if (appointmentId) {
       fetchAppointmentDetails();
@@ -39,7 +43,6 @@ export default function PatientOnlineExamRoom() {
 
   useEffect(() => {
     if (appointment && appointment.status === 'ONGOING') {
-      // Gọi backend lấy token qua backend server port 8080
       const fetchToken = async () => {
         const tokenResp = await fetch(
           `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
@@ -60,7 +63,7 @@ export default function PatientOnlineExamRoom() {
       setLoading(true);
       const user = auth.currentUser;
       if (!user) return;
-      
+
       const token = await user.getIdToken();
       const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
         headers: {
@@ -68,12 +71,11 @@ export default function PatientOnlineExamRoom() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setAppointment(data);
-        
-        // Initialize chat messages
+
         setChatMessages([
           {
             id: 1,
@@ -109,72 +111,53 @@ export default function PatientOnlineExamRoom() {
     }
   };
 
-
-  if (loading) {
-    return (
-      <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải phòng khám...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!appointment) {
-    return (
-      <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Không tìm thấy cuộc hẹn</p>
-          <Button color="success" onPress={() => router.push('/nguoi-dung/kham-online')}>
-            Quay lại danh sách
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const { reasonText, attachments } = parseReason(appointment.reason);
-
-  if (appointment.status !== 'ONGOING') {
-    return (
-      <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">{appointment.status === 'CONFIRMED' ? 'Phòng đang chờ bác sĩ bắt đầu' : 'Chờ xác nhận hoặc đã kết thúc...'}</p>
-          <Button color="default" onClick={() => router.push('/nguoi-dung/kham-online')} className="mt-4">Quay lại</Button>
-        </div>
-      </div>
-    );
-  }
-  // Show video call UI
-  return (
+  // Đợi loading hoặc chưa có appointment/status
+  if (loading) return (
     <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
-      {agoraToken && appointmentId && (
-        <AgoraVideoCall channel={appointmentId} token={agoraToken} uid={agoraUid} />
-      )}
-      {!agoraToken && (
-        <div className="text-gray-600 mt-4">Đang lấy quyền truy cập phòng gọi video...</div>
-      )}
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Đang tải phòng khám...</p>
+      </div>
     </div>
   );
 
-  // Doctor Info Modal
+  if (!appointment) return (
+    <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-gray-600 mb-4">Không tìm thấy cuộc hẹn</p>
+        <Button color="success" onClick={() => router.push('/nguoi-dung/kham-online')}>Quay lại danh sách</Button>
+      </div>
+    </div>
+  );
+
+  if (appointment.status !== 'ONGOING') return (
+    <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-gray-600 mb-4">{appointment.status === 'CONFIRMED' ? 'Phòng đang chờ bác sĩ bắt đầu' : 'Chờ xác nhận hoặc đã kết thúc...'}</p>
+        <Button color="default" onClick={() => router.push('/nguoi-dung/kham-online')} className="mt-4">Quay lại</Button>
+      </div>
+    </div>
+  );
+
+  const { reasonText, attachments } = parseReason(appointment.reason);
+
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
       <div className="flex h-full">
-        {/* Left: Video Area (8/12 width) */}
+        {/* Left: Video Area (giống UI bác sĩ) */}
         <div className="flex-1 min-w-0 relative bg-black">
-          {/* Remote video placeholder - fill whole area */}
-          <div className="absolute inset-0">
-            <div className="w-full h-full bg-gradient-to-br from-zinc-950 to-zinc-800" />
+          {/* Remote video fill area */}
+          <div className="absolute inset-0 rounded-xl overflow-hidden">
+            <div ref={remoteVideoRef} className="w-full h-full" />
           </div>
 
-          {/* Local preview */}
+          {/* Local preview nhỏ góc phải như doctor */}
           <div className="absolute right-5 top-5 w-56 aspect-video rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
-            Patient preview
+            <div ref={localVideoRef} className="absolute inset-0 rounded-xl overflow-hidden" />
+            <span className="absolute bottom-2 left-2 text-xs text-white/70">Patient preview</span>
           </div>
 
-          {/* Top bar */}
+          {/* Top bar giống bác sĩ */}
           <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-3">
               <Chip color="success" variant="flat">Phiên khám online • Bệnh nhân</Chip>
@@ -185,58 +168,17 @@ export default function PatientOnlineExamRoom() {
                 color="default"
                 onPress={onDoctorInfoOpen}
                 startContent={<User size={16} />}
-              >
-                Thông tin bác sĩ
-              </Button>
+              >Thông tin bác sĩ</Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto pr-2">
-              <Button size="sm" variant="flat" startContent={<Maximize2 size={16} />}>
-                Toàn màn hình
-              </Button>
-              <Button size="sm" variant="flat" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={16}/> }>
-                Chat
-              </Button>
+              <Button size="sm" variant="flat" startContent={<Maximize2 size={16} />}>Toàn màn hình</Button>
+              <Button size="sm" variant="flat" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={16}/> }>Chat</Button>
             </div>
           </div>
-
-          {/* Controls - glassy */}
-          <div className="absolute left-0 right-0 bottom-0 pb-6 flex items-center justify-center">
-            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full px-4 py-3 ring-1 ring-white/20 shadow-lg">
-              <Button isIconOnly variant="flat" color={muted?"warning":"default"} onPress={()=>setMuted(!muted)} className="bg-white/10">
-                {muted? <MicOff/> : <Mic/>}
-              </Button>
-              <Button isIconOnly variant="flat" color={camOff?"warning":"default"} onPress={()=>setCamOff(!camOff)} className="bg-white/10">
-                {camOff? <VideoOff/> : <Video/>}
-              </Button>
-              <Button isIconOnly variant="flat" color="default" className="bg-white/10">
-                <MonitorUp/>
-              </Button>
-              <Divider orientation="vertical" className="h-8 mx-1 bg-white/30" />
-              {appointment.status === 'PENDING' && (
-                <Button color="default" isDisabled className="font-semibold">
-                  Chờ bác sĩ xác nhận
-                </Button>
-              )}
-              {appointment.status === 'CONFIRMED' && (
-                <Button color="success" className="font-semibold">
-                  Sẵn sàng tham gia
-                </Button>
-              )}
-              {appointment.status === 'ONGOING' && (
-                <Button color="warning" className="font-semibold">
-                  Đang khám
-                </Button>
-              )}
-              {appointment.status === 'FINISHED' && (
-                <Button color="default" onPress={() => router.push('/nguoi-dung/kham-online')} className="font-semibold">
-                  Quay lại
-                </Button>
-              )}
-            </div>
-          </div>
+          {/* Controls + các nút... nếu muốn */}
         </div>
 
-        {/* Right: Chat panel (4/12 width) */}
+        {/* Right: Chat y chang UI bác sĩ */}
         {showChat && (
           <div className="w-[380px] h-full bg-white border-l border-gray-200 flex flex-col">
             <div className="p-4 flex items-center gap-3">
@@ -281,8 +223,7 @@ export default function PatientOnlineExamRoom() {
           </div>
         )}
       </div>
-
-      {/* Doctor Info Modal */}
+      {/* Modal + THÔNG TIN BÁC SĨ (y chang doctor) */}
       <Modal isOpen={isDoctorInfoOpen} onOpenChange={onDoctorInfoOpenChange} size="2xl">
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
@@ -290,7 +231,6 @@ export default function PatientOnlineExamRoom() {
           </ModalHeader>
           <ModalBody>
             <div className="space-y-6">
-              {/* Doctor Basic Info */}
               <div className="flex items-center gap-4">
                 <Avatar
                   src={appointment.doctorAvatar}
@@ -309,10 +249,7 @@ export default function PatientOnlineExamRoom() {
                   )}
                 </div>
               </div>
-
               <Divider />
-
-              {/* Contact Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-500" />
@@ -323,10 +260,7 @@ export default function PatientOnlineExamRoom() {
                   <span className="text-sm">{appointment.doctorEmail}</span>
                 </div>
               </div>
-
               <Divider />
-
-              {/* Appointment Details */}
               <div className="space-y-3">
                 <h4 className="font-semibold">Chi tiết cuộc hẹn</h4>
                 <div className="flex items-center gap-2">
@@ -342,15 +276,10 @@ export default function PatientOnlineExamRoom() {
                   <span className="text-sm">Khám online</span>
                 </div>
               </div>
-
               <Divider />
-
-              {/* Reason for Visit */}
               <div className="space-y-3">
                 <h4 className="font-semibold">Lý do khám của bạn</h4>
                 <p className="text-sm text-gray-700">{reasonText}</p>
-                
-                {/* Attachments */}
                 {attachments && attachments.length > 0 && (
                   <div className="space-y-2">
                     <h5 className="font-medium text-sm">Hình ảnh đính kèm</h5>
@@ -375,13 +304,21 @@ export default function PatientOnlineExamRoom() {
             </div>
           </ModalBody>
           <ModalFooter>
-            <Button color="default" variant="light" onPress={onDoctorInfoOpenChange}>
-              Đóng
-            </Button>
+            <Button color="default" variant="light" onPress={onDoctorInfoOpenChange}>Đóng</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-      {appointmentId && <AgoraVideoCall channel={appointmentId} />}
+
+      {/* Agora logic inject video + audio vào UI layout này */}
+      {agoraToken && appointmentId && (
+        <AgoraVideoCall
+          channel={appointmentId}
+          token={agoraToken}
+          uid={agoraUid}
+          localVideoRef={localVideoRef}
+          remoteVideoRef={remoteVideoRef}
+        />
+      )}
     </div>
   );
 }
