@@ -59,6 +59,7 @@ export default function PatientProfileWithFrame() {
     phone: "",
     dateOfBirth: "",
     emergencyContactPhone: "",
+    citizenship: "",
   });
 
   // Security states
@@ -225,6 +226,19 @@ export default function PatientProfileWithFrame() {
       return;
     }
 
+    // Validate căn cước công dân (CCCD)
+    if (patient.citizenship) {
+      const cccdRegex = /^[0-9]{12}$/;
+      if (!cccdRegex.test(patient.citizenship)) {
+        setErrors(prev => ({ ...prev, citizenship: "Căn cước công dân phải gồm 12 chữ số" }));
+        toast.error("Căn cước công dân không hợp lệ (phải gồm 12 số)");
+        return;
+      } else {
+        setErrors(prev => ({ ...prev, citizenship: "" }));
+      }
+    }
+
+
     setSaving(true);
     try {
       const token = await user.getIdToken();
@@ -304,8 +318,8 @@ export default function PatientProfileWithFrame() {
   };
 
   if (loading) {
-  return (
-    <PatientFrame title="Hồ sơ bệnh nhân">
+    return (
+      <PatientFrame title="Hồ sơ bệnh nhân">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
@@ -341,7 +355,7 @@ export default function PatientProfileWithFrame() {
               className="hidden"
               disabled={uploading}
             />
-                  </div>
+          </div>
           <h3 className="text-lg font-semibold">{patient.name || "Bệnh nhân"}</h3>
           <p className="text-sm text-gray-600">{patient.email}</p>
           {patient.socialInsurance && (
@@ -357,7 +371,7 @@ export default function PatientProfileWithFrame() {
             <div className="flex justify-between">
               <span className="text-gray-600">Vai trò:</span>
               <span className="font-medium text-teal-600">Bệnh nhân</span>
-              </div>
+            </div>
             {patient.bloodType && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Nhóm máu:</span>
@@ -380,12 +394,12 @@ export default function PatientProfileWithFrame() {
           </p>
         </CardBody>
       </Card>
-              </div>
+    </div>
   );
 
   // Right Panel
   const rightPanel = (
-              <div className="space-y-6">
+    <div className="space-y-6">
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -424,7 +438,7 @@ export default function PatientProfileWithFrame() {
                 inputWrapper: "border-default-200 bg-gray-50"
               }}
             />
-                </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
@@ -504,7 +518,7 @@ export default function PatientProfileWithFrame() {
                 </SelectItem>
               ))}
             </Select>
-                </div>
+          </div>
 
           {/* Address Selector */}
           <div className="space-y-3">
@@ -539,7 +553,7 @@ export default function PatientProfileWithFrame() {
               disabled={saving}
               required
             />
-              </div>
+          </div>
 
           <Input
             label="Địa chỉ chi tiết (tùy chọn)"
@@ -559,15 +573,25 @@ export default function PatientProfileWithFrame() {
             label="Căn cước công dân"
             placeholder="VD: 001234567890"
             value={patient.citizenship || ""}
-            onValueChange={(v) => setPatient({ ...patient, citizenship: v })}
+            onValueChange={(v) => {
+              setPatient({ ...patient, citizenship: v });
+              if (/^[0-9]{0,12}$/.test(v)) {
+                setErrors(prev => ({ ...prev, citizenship: "" }));
+              }
+            }}
             variant="bordered"
             labelPlacement="outside"
             startContent={<IdCard className="text-default-400" size={20} />}
             classNames={{
               input: "text-base",
-              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              inputWrapper: errors.citizenship
+                ? "border-red-500 focus-within:!border-red-500"
+                : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
             }}
+            isInvalid={!!errors.citizenship}
+            errorMessage={errors.citizenship}
           />
+
         </CardBody>
       </Card>
 
@@ -680,7 +704,7 @@ export default function PatientProfileWithFrame() {
                 inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
             />
-            </div>
+          </div>
 
           <Button
             color="primary"
@@ -708,7 +732,7 @@ export default function PatientProfileWithFrame() {
             <p className="text-sm text-yellow-800">
               ⚠️ <strong>Lưu ý:</strong> Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại.
             </p>
-        </div>
+          </div>
 
           <Input
             type="password"
@@ -754,7 +778,7 @@ export default function PatientProfileWithFrame() {
                 inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
               }}
             />
-      </div>
+          </div>
 
           <Button
             color="danger"
