@@ -520,28 +520,29 @@ export default function DoctorDashboard() {
               <div className="divide-y">
                 {todayAppointments.map((apt) => (
                   <div key={apt.appointmentId} className="p-3 hover:bg-gray-50">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-10 rounded bg-teal-500" />
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Clock size={14} className="text-teal-600" />
-                          <span className="text-sm font-semibold">{SLOT_TIMES[apt.slot]}</span>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} className="text-teal-600" />
+                            <span className="text-sm font-semibold">{SLOT_TIMES[apt.slot]}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold">
+                              {getStatusText(apt.status)}
+                            </Chip>
+                            {apt.type === "ONLINE" && (
+                              <Chip size="sm" color="secondary" variant="flat">Online</Chip>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-900 font-medium mb-1">
-                          {apt.patient?.name || "N/A"}
-                        </p>
-                        <div className="flex gap-2">
-                          <Chip size="sm" color={getStatusColor(apt.status)} variant="flat">
-                            {getStatusText(apt.status)}
-                          </Chip>
-                          {apt.type === "ONLINE" && (
-                            <Chip size="sm" color="secondary" variant="flat">Online</Chip>
-                          )}
-                        </div>
+                        <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
                       </div>
                     </div>
                     </div>
                   ))}
-                </div>
+              </div>
             )}
           </CardBody>
         </Card>
@@ -568,25 +569,28 @@ export default function DoctorDashboard() {
               <div className="divide-y">
                 {upcomingAppointments.map((apt) => (
                   <div key={apt.appointmentId} className="p-3 hover:bg-gray-50">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar size={14} className="text-blue-600" />
-                      <span className="text-sm font-semibold">
-                        {new Date(apt.date).toLocaleDateString('vi-VN', { 
-                          weekday: 'short', month: 'short', day: 'numeric' 
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-1">{SLOT_TIMES[apt.slot]}</p>
-                    <p className="text-sm font-medium text-gray-900 mb-2">
-                      {apt.patient?.name || "N/A"}
-                    </p>
-                    <div className="flex gap-2">
-                      <Chip size="sm" color={getStatusColor(apt.status)} variant="flat">
-                        {getStatusText(apt.status)}
-                      </Chip>
-                      {apt.type === "ONLINE" && (
-                        <Chip size="sm" color="secondary" variant="flat">Online</Chip>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className="w-1.5 h-10 rounded bg-blue-500" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-blue-600" />
+                            <span className="text-sm font-semibold">
+                              {new Date(apt.date).toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            </span>
+                            <span className="text-sm text-gray-600">• {SLOT_TIMES[apt.slot]}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold">
+                              {getStatusText(apt.status)}
+                            </Chip>
+                            {apt.type === "ONLINE" && (
+                              <Chip size="sm" color="secondary" variant="flat">Online</Chip>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
+              </div>
             </div>
           </div>
                 ))}

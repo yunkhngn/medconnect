@@ -447,6 +447,27 @@ export default function DatLichKham() {
     setLoading(true);
     try {
       const token = await user.getIdToken();
+
+      // Upload symptom images to backend (Cloudinary) first, get URLs
+      let uploadedUrls = [];
+      if (symptomImages.length > 0) {
+        const uploadOne = async (file) => {
+          const form = new FormData();
+          form.append("file", file);
+          const resp = await fetch("http://localhost:8080/api/medical-photo/upload", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: form
+          });
+          if (!resp.ok) throw new Error(await resp.text());
+          const j = await resp.json();
+          return j.photoUrl;
+        };
+        uploadedUrls = await Promise.all(
+          symptomImages.map((i) => uploadOne(i.file))
+        );
+      }
+
       const response = await fetch("http://localhost:8080/api/appointments", {
         method: "POST",
         headers: {
@@ -458,13 +479,16 @@ export default function DatLichKham() {
           date: selectedDate,
           slot: selectedSlot,
           type: appointmentType,
-          reason: (() => {
-            if (!reason && symptomImages.length === 0) return null;
-            if (symptomImages.length === 0) return reason;
-            const filesList = symptomImages.map((i) => i.name).join(", ");
-            const note = `\n\n[Đính kèm: ${symptomImages.length} ảnh triệu chứng: ${filesList}. Ảnh chưa tải lên hệ thống.]`;
-            return (reason || "").concat(note);
-          })()
+          // Store JSON in reason field as requested
+          reason: JSON.stringify({
+            reason: reason || null,
+            attachments: uploadedUrls
+          }),
+          // Keep detail optional for backward compatibility
+          detail: JSON.stringify({
+            reason: reason || null,
+            attachments: uploadedUrls
+          })
         })
       });
 
@@ -939,7 +963,7 @@ export default function DatLichKham() {
                       <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
                         <div className="text-xs text-gray-500">{dayLabel}</div>
                         <div className="text-sm">{dateLabel}</div>
-                      </div>
+                  </div>
                     );
                   })}
 
