@@ -542,7 +542,7 @@ export default function DoctorDashboard() {
                     </div>
                     </div>
                   ))}
-              </div>
+                </div>
             )}
           </CardBody>
         </Card>
