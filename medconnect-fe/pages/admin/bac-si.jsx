@@ -51,8 +51,9 @@ const Doctor = () => {
     email: '',
     phone: '',
     specialityId: '',
-    licenseNumber: '',
     experienceYears: 0,
+    educationLevel: '',
+    bio: '',
   });
 
   useEffect(() => {
@@ -89,18 +90,28 @@ const Doctor = () => {
     setIsLoading(true);
     try {
       const data = await doctorAPI.getAllDoctors(user);
+      console.log('Raw data from API:', data);
       const mapped = (data || []).map((d) => ({
         id: d.id,
         name: d.name,
+        email: d.email,
         phone: d.phone,
         licenseId: d.licenseId,
         specializationLabel: d.specialty,
         userId: d.userId,
         avatar: d.avatar,
         status: (d.status || 'ACTIVE').toLowerCase(),
+        experienceYears: d.experienceYears,
+        educationLevel: d.educationLevel,
+        bio: d.bio,
+        clinicAddress: d.clinicAddress,
+        provinceCode: d.provinceCode,
+        districtCode: d.districtCode,
+        wardCode: d.wardCode,
       }));
-      // Exclude soft-deleted doctors
-      setDoctors(mapped.filter((d) => d.status === 'active'));
+      console.log('Mapped doctors:', mapped);
+      // Show all doctors (including newly created ones)
+      setDoctors(mapped);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       toast.error('Không thể tải danh sách bác sĩ');
@@ -111,29 +122,45 @@ const Doctor = () => {
 
   const createDoctor = async () => {
     try {
-      // TODO: Backend cần API đầy đủ với name, email, phone, licenseNumber
-      // await doctorAPI.createDoctor(formData, user);
-      toast.error('Tính năng tạo bác sĩ đang được phát triển. Vui lòng liên hệ quản trị viên.');
-      // toast.success('Tạo bác sĩ thành công');
-      // await fetchDoctors();
-      // resetForm();
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        specialityId: parseInt(formData.specialityId),
+        experienceYears: formData.experienceYears,
+        educationLevel: formData.educationLevel,
+        bio: formData.bio,
+      };
+      
+      await doctorAPI.createDoctor(payload, user);
+      toast.success('Tạo bác sĩ thành công');
+      await fetchDoctors();
+      resetForm();
     } catch (error) {
       console.error('Error creating doctor:', error);
-      toast.error('Không thể tạo bác sĩ');
+      toast.error(error.message || 'Không thể tạo bác sĩ');
     }
   };
 
   const updateDoctor = async () => {
     try {
-      // TODO: Backend cần API đầy đủ
-      // await doctorAPI.updateDoctor(currentDoctor.id, formData, user);
-      toast.error('Tính năng cập nhật bác sĩ đang được phát triển. Vui lòng liên hệ quản trị viên.');
-      // toast.success('Cập nhật bác sĩ thành công');
-      // await fetchDoctors();
-      // resetForm();
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        specialityId: parseInt(formData.specialityId),
+        experienceYears: formData.experienceYears,
+        educationLevel: formData.educationLevel,
+        bio: formData.bio,
+      };
+      
+      await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
+      toast.success('Cập nhật bác sĩ thành công');
+      await fetchDoctors();
+      resetForm();
     } catch (error) {
       console.error('Error updating doctor:', error);
-      toast.error('Không thể cập nhật bác sĩ');
+      toast.error(error.message || 'Không thể cập nhật bác sĩ');
     }
   };
 
@@ -176,13 +203,20 @@ const Doctor = () => {
 
   const handleEdit = (doctor) => {
     setCurrentDoctor(doctor);
+    
+    // Find specialty ID from specialty name
+    const specialty = specialties.find(s => 
+      s.label.toLowerCase() === (doctor.specializationLabel || '').toLowerCase()
+    );
+    
     setFormData({
-      name: doctor.name,
+      name: doctor.name || '',
       email: doctor.email || '',
-      phone: doctor.phone,
-      specialityId: doctor.specialityId || '',
-      licenseNumber: doctor.licenseId,
+      phone: doctor.phone || '',
+      specialityId: specialty?.value || '',
       experienceYears: doctor.experienceYears || 0,
+      educationLevel: doctor.educationLevel || '',
+      bio: doctor.bio || '',
     });
     onOpen();
   };
@@ -199,8 +233,9 @@ const Doctor = () => {
       email: '',
       phone: '',
       specialityId: '',
-      licenseNumber: '',
       experienceYears: 0,
+      educationLevel: '',
+      bio: '',
     });
   };
 
@@ -272,9 +307,8 @@ const Doctor = () => {
             </svg>
           }
         />
-        {/* TODO: Enable when backend has full CREATE API */}
-        <Button color="primary" onPress={handleAdd} isDisabled>
-          + Thêm Bác Sĩ (Coming Soon)
+        <Button color="primary" onPress={handleAdd}>
+          + Thêm Bác Sĩ
         </Button>
       </div>
 
@@ -333,9 +367,8 @@ const Doctor = () => {
                     </Button>
                   </DropdownTrigger>
                   <DropdownMenu aria-label="Actions">
-                    {/* TODO: Enable when backend has full UPDATE API */}
-                    <DropdownItem key="edit" onPress={() => handleEdit(doctor)} isDisabled>
-                      Chỉnh sửa (Coming Soon)
+                    <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
+                      Chỉnh sửa
                     </DropdownItem>
                     <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deleteDoctor(doctor.id)}>
                       Xóa
@@ -374,7 +407,7 @@ const Doctor = () => {
               <ModalBody>
                 <div className="grid grid-cols-2 gap-4">
                   <Input
-                    label="Họ tên"
+                    label="Họ và tên"
                     placeholder="BS. Nguyễn Văn An"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -388,19 +421,14 @@ const Doctor = () => {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     isRequired
+                    isDisabled={currentDoctor !== null}
+                    description={currentDoctor ? "Email không thể thay đổi" : ""}
                   />
                   <Input
                     label="Số điện thoại"
                     placeholder="0901234567"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    isRequired
-                  />
-                  <Input
-                    label="Số chứng chỉ hành nghề"
-                    placeholder="BS-12345"
-                    value={formData.licenseNumber}
-                    onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
                     isRequired
                   />
                   <Input
@@ -416,7 +444,6 @@ const Doctor = () => {
                     selectedKeys={formData.specialityId ? [formData.specialityId] : []}
                     onChange={(e) => setFormData({ ...formData, specialityId: e.target.value })}
                     isRequired
-                    className="col-span-2"
                   >
                     {specialties.slice(1).map((item) => (
                       <SelectItem key={item.value} value={item.value}>
@@ -424,6 +451,22 @@ const Doctor = () => {
                       </SelectItem>
                     ))}
                   </Select>
+                  <Input
+                    label="Trình độ học vấn"
+                    placeholder="Tiến sĩ Y khoa, Thạc sĩ..."
+                    value={formData.educationLevel}
+                    onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
+                  />
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-2">Giới thiệu bản thân</label>
+                    <textarea
+                      placeholder="Tôi là bác sĩ tim mạch..."
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      className="w-full min-h-[100px] p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows="4"
+                    />
+                  </div>
                 </div>
               </ModalBody>
               <ModalFooter>
