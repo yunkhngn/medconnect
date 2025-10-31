@@ -7,7 +7,7 @@ import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
-import { subscribeRoomMessages, sendChatMessage } from "@/services/chatService";
+import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
@@ -53,6 +53,18 @@ export default function DoctorOnlineExamRoom() {
       unsubFS && unsubFS();
     };
   }, [appointmentId]);
+
+  // Presence: bác sĩ online khi phòng đang ONGOING; rời sẽ cleanup nếu cả 2 out
+  useEffect(() => {
+    if (!appointmentId) return;
+    if (appointment && appointment.status === 'ONGOING') {
+      setPresence(appointmentId, 'doctor', true);
+      return () => {
+        setPresence(appointmentId, 'doctor', false);
+        cleanupRoomIfEmpty(appointmentId);
+      };
+    }
+  }, [appointmentId, appointment?.status]);
 
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
