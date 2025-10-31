@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Globe, MapPin, Plus } from "lucide-react";
 import { useRouter } from "next/router";
-import { Button, Card, CardBody, CardHeader, Divider } from "@heroui/react";
+import { Button, Card, CardBody, CardHeader, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Chip as UiChip } from "@heroui/react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,10 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
   const [viewMode, setViewMode] = useState("schedule"); // 'schedule' | 'list'
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [rxLoading, setRxLoading] = useState(false);
+  const [prescription, setPrescription] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -116,6 +120,27 @@ export default function AppointmentsPage() {
   const history = [...appointments]
     .filter((a) => toDateTime(a) < now || a.status === "CANCELLED" || a.status === "DENIED")
     .sort((a, b) => toDateTime(b) - toDateTime(a));
+
+  const openAppointmentModal = async (apt) => {
+    setSelectedAppointment(apt);
+    setPrescription(null);
+    onOpen();
+    try {
+      setRxLoading(true);
+      const token = await user.getIdToken();
+      const id = apt.id || apt.appointmentId;
+      if (!id) return;
+      const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const meds = data.medications || data.medicines || [];
+        setPrescription({ medications: Array.isArray(meds) ? meds : [], note: data.note || data.notes || "" });
+      }
+    } catch {}
+    finally { setRxLoading(false); }
+  };
 
   const getStatusColor = (status) => {
     const statusMap = {
@@ -446,9 +471,9 @@ function getSlotData(date, slot) {
             <CardBody className="space-y-3">
               {upcoming.length === 0 && <p className="text-sm text-gray-500">Không có lịch sắp tới</p>}
               {upcoming.map((a, idx) => (
-                <div key={idx} className="p-4 bg-gradient-to-br from-white to-gray-50 rounded-xl border flex items-center justify-between hover:shadow-sm transition">
+              <button key={idx} onClick={() => openAppointmentModal(a)} className="w-full text-left p-5 md:p-6 bg-white rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:bg-gray-50 transition focus:outline-none">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-teal-100 border-2 border-teal-300 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center ring-2 ring-teal-200">
                       <Calendar className="text-teal-700" size={20} />
                     </div>
                     <div>
@@ -456,10 +481,10 @@ function getSlotData(date, slot) {
                       <p className="text-sm text-gray-600">Bác sĩ: {a.doctor?.name || '—'}</p>
                     </div>
                   </div>
-                  <Chip color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')} variant="solid" className="font-semibold">
+                  <UiChip color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')} variant="solid" className="font-semibold">
                     {getStatusLabel(a.status)}
-                  </Chip>
-                </div>
+                  </UiChip>
+                </button>
               ))}
             </CardBody>
           </Card>
@@ -472,7 +497,7 @@ function getSlotData(date, slot) {
             <CardBody className="space-y-3">
               {history.length === 0 && <p className="text-sm text-gray-500">Chưa có lịch đã qua</p>}
               {history.map((a, idx) => (
-                <div key={idx} className="p-4 bg-white rounded-xl border flex items-center justify-between hover:bg-gray-50 transition">
+                <button key={idx} onClick={() => openAppointmentModal(a)} className="w-full text-left p-4 bg-white rounded-xl border flex items-center justify-between hover:shadow-sm hover:bg-gray-50 transition focus:outline-none">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
                       <Calendar className="text-gray-600" size={20} />
@@ -482,8 +507,8 @@ function getSlotData(date, slot) {
                       <p className="text-sm text-gray-600">Bác sĩ: {a.doctor?.name || '—'}</p>
                     </div>
                   </div>
-                  <Chip color={a.status==='FINISHED' ? 'success' : (a.status==='CANCELLED'?'danger':'default')} variant="solid" className="font-semibold">{getStatusLabel(a.status)}</Chip>
-                </div>
+                  <UiChip color={a.status==='FINISHED' ? 'success' : (a.status==='CANCELLED'?'danger':'default')} variant="solid" className="font-semibold">{getStatusLabel(a.status)}</UiChip>
+                </button>
               ))}
             </CardBody>
           </Card>
@@ -497,6 +522,47 @@ function getSlotData(date, slot) {
     <PatientFrame>
       <ToastNotification toast={toast} />
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+
+      {/* Modal: Prescription or Appointment detail */}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            {selectedAppointment ? `Chi tiết lịch hẹn • ${new Date(selectedAppointment.date).toLocaleDateString('vi-VN')}` : 'Chi tiết lịch hẹn'}
+          </ModalHeader>
+          <ModalBody>
+            {rxLoading ? (
+              <div className="text-center py-8">Đang tải...</div>
+            ) : selectedAppointment ? (
+              <div className="space-y-4 text-sm">
+                <div className="flex items-center gap-2"><Calendar size={16} className="text-teal-600" /><span>Ngày: {new Date(selectedAppointment.date).toLocaleDateString('vi-VN')}</span></div>
+                <div className="flex items-center gap-2"><MapPin size={16} className="text-cyan-600" /><span>Hình thức: {selectedAppointment.type || '—'}</span></div>
+                <Divider />
+                <h4 className="font-medium text-gray-800">Đơn thuốc</h4>
+                {prescription?.medications && prescription.medications.length > 0 ? (
+                  <div className="space-y-2">
+                    {prescription.medications.map((m, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span>{m.name}</span>
+                        <span className="text-gray-600">{m.dose} {m.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Chưa có đơn thuốc</p>
+                )}
+                <Divider />
+                <h4 className="font-medium text-gray-800">Ghi chú</h4>
+                <p className="text-gray-700">{prescription?.note || 'Không có ghi chú'}</p>
+              </div>
+            ) : (
+              <div className="text-center py-8">Chọn một lịch để xem chi tiết</div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" color="primary" onPress={onClose}>Đóng</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </PatientFrame>
   );
 }

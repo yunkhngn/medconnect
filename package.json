@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@heroicons/react": "^2.2.0",
-    "isomorphic-dompurify": "^2.29.0",
-    "leaflet": "^1.9.4",
-    "nextjs-toploader": "^3.9.17"
-  }
-}

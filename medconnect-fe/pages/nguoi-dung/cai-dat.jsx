@@ -55,6 +55,12 @@ export default function PatientProfileWithFrame() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({
+    phone: "",
+    dateOfBirth: "",
+    emergencyContactPhone: "",
+    citizenship: "",
+  });
 
   // Security states
   const [security, setSecurity] = useState({
@@ -94,7 +100,7 @@ export default function PatientProfileWithFrame() {
       setLoading(true);
       return;
     }
-    
+
     if (!user) {
       setLoading(false);
       return;
@@ -106,7 +112,7 @@ export default function PatientProfileWithFrame() {
   const fetchPatientData = async (firebaseUser) => {
     try {
       const token = await firebaseUser.getIdToken();
-      
+
       const response = await fetch("http://localhost:8080/api/patient/profile", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -116,7 +122,7 @@ export default function PatientProfileWithFrame() {
       if (response.ok) {
         const data = await response.json();
         setPatient({ ...patient, ...data });
-        
+
         const avatarResponse = await fetch("http://localhost:8080/api/avatar", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -164,16 +170,79 @@ export default function PatientProfileWithFrame() {
       return;
     }
 
+    // Validate số điện thoại
+    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+    if (!patient.phone || !phoneRegex.test(patient.phone)) {
+      setErrors(prev => ({ ...prev, phone: "Số điện thoại không hợp lệ. Nhập đúng định dạng (VD: 0912345678)" }));
+      toast.error("Số điện thoại không hợp lệ");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, phone: "" }));
+    }
+
+    // Validate số điện thoại liên hệ khẩn cấp (nếu có nhập)
+    const emergencyPhoneRegex = /^(0|\+84)[0-9]{9}$/;
+
+    if (patient.emergencyContactPhone && !emergencyPhoneRegex.test(patient.emergencyContactPhone)) {
+      setErrors(prev => ({
+        ...prev,
+        emergencyContactPhone: "Số điện thoại liên hệ khẩn cấp không hợp lệ (VD: 0912345678)"
+      }));
+      toast.error("Số điện thoại liên hệ khẩn cấp không hợp lệ");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, emergencyContactPhone: "" }));
+    }
+
+
+    // Validate ngày sinh
+    if (!patient.dateOfBirth) {
+      setErrors(prev => ({ ...prev, dateOfBirth: "Vui lòng nhập ngày sinh" }));
+      toast.error("Vui lòng nhập ngày sinh");
+      return;
+    }
+
+    const dob = new Date(patient.dateOfBirth);
+    const today = new Date();
+
+    if (dob > today) {
+      setErrors(prev => ({ ...prev, dateOfBirth: "Ngày sinh không hợp lệ (lớn hơn ngày hiện tại)" }));
+      toast.error("Ngày sinh không hợp lệ");
+      return;
+    }
+
+    const age = today.getFullYear() - dob.getFullYear();
+    if (age < 12) {
+      setErrors(prev => ({ ...prev, dateOfBirth: "Tuổi phải ít nhất 12 tuổi" }));
+      toast.error("Tuổi phải ít nhất 12 tuổi");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, dateOfBirth: "" }));
+    }
+
     // Validate BHYT if provided
     if (patient.socialInsurance && !isValidBHYT(patient.socialInsurance)) {
       toast.error("Mã số BHYT không hợp lệ");
       return;
     }
 
+    // Validate căn cước công dân (CCCD)
+    if (patient.citizenship) {
+      const cccdRegex = /^[0-9]{12}$/;
+      if (!cccdRegex.test(patient.citizenship)) {
+        setErrors(prev => ({ ...prev, citizenship: "Căn cước công dân phải gồm 12 chữ số" }));
+        toast.error("Căn cước công dân không hợp lệ (phải gồm 12 số)");
+        return;
+      } else {
+        setErrors(prev => ({ ...prev, citizenship: "" }));
+      }
+    }
+
+
     setSaving(true);
     try {
       const token = await user.getIdToken();
-      
+
       const response = await fetch("http://localhost:8080/api/patient/profile", {
         method: "PATCH",
         headers: {
@@ -249,8 +318,8 @@ export default function PatientProfileWithFrame() {
   };
 
   if (loading) {
-  return (
-    <PatientFrame title="Hồ sơ bệnh nhân">
+    return (
+      <PatientFrame title="Hồ sơ bệnh nhân">
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
@@ -286,7 +355,7 @@ export default function PatientProfileWithFrame() {
               className="hidden"
               disabled={uploading}
             />
-                  </div>
+          </div>
           <h3 className="text-lg font-semibold">{patient.name || "Bệnh nhân"}</h3>
           <p className="text-sm text-gray-600">{patient.email}</p>
           {patient.socialInsurance && (
@@ -302,7 +371,7 @@ export default function PatientProfileWithFrame() {
             <div className="flex justify-between">
               <span className="text-gray-600">Vai trò:</span>
               <span className="font-medium text-teal-600">Bệnh nhân</span>
-              </div>
+            </div>
             {patient.bloodType && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Nhóm máu:</span>
@@ -325,12 +394,12 @@ export default function PatientProfileWithFrame() {
           </p>
         </CardBody>
       </Card>
-              </div>
+    </div>
   );
 
   // Right Panel
   const rightPanel = (
-              <div className="space-y-6">
+    <div className="space-y-6">
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -369,7 +438,7 @@ export default function PatientProfileWithFrame() {
                 inputWrapper: "border-default-200 bg-gray-50"
               }}
             />
-                </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
@@ -383,9 +452,14 @@ export default function PatientProfileWithFrame() {
               startContent={<Phone className="text-default-400" size={20} />}
               classNames={{
                 input: "text-base",
-                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+                inputWrapper: errors.phone
+                  ? "border-red-500 focus-within:!border-red-500"
+                  : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
+              errorMessage={errors.phone}
+              isInvalid={!!errors.phone}
             />
+
             <Input
               type="date"
               label="Ngày sinh"
@@ -397,10 +471,15 @@ export default function PatientProfileWithFrame() {
               startContent={<Calendar className="text-default-400" size={20} />}
               classNames={{
                 input: "text-base",
-                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+                inputWrapper: errors.dateOfBirth
+                  ? "border-red-500 focus-within:!border-red-500"
+                  : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
+              errorMessage={errors.dateOfBirth}
+              isInvalid={!!errors.dateOfBirth}
             />
-                </div>
+
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select
@@ -439,7 +518,7 @@ export default function PatientProfileWithFrame() {
                 </SelectItem>
               ))}
             </Select>
-                </div>
+          </div>
 
           {/* Address Selector */}
           <div className="space-y-3">
@@ -474,7 +553,7 @@ export default function PatientProfileWithFrame() {
               disabled={saving}
               required
             />
-              </div>
+          </div>
 
           <Input
             label="Địa chỉ chi tiết (tùy chọn)"
@@ -494,15 +573,25 @@ export default function PatientProfileWithFrame() {
             label="Căn cước công dân"
             placeholder="VD: 001234567890"
             value={patient.citizenship || ""}
-            onValueChange={(v) => setPatient({ ...patient, citizenship: v })}
+            onValueChange={(v) => {
+              setPatient({ ...patient, citizenship: v });
+              if (/^[0-9]{0,12}$/.test(v)) {
+                setErrors(prev => ({ ...prev, citizenship: "" }));
+              }
+            }}
             variant="bordered"
             labelPlacement="outside"
             startContent={<IdCard className="text-default-400" size={20} />}
             classNames={{
               input: "text-base",
-              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              inputWrapper: errors.citizenship
+                ? "border-red-500 focus-within:!border-red-500"
+                : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
             }}
+            isInvalid={!!errors.citizenship}
+            errorMessage={errors.citizenship}
           />
+
         </CardBody>
       </Card>
 
@@ -582,15 +671,26 @@ export default function PatientProfileWithFrame() {
               label="Số điện thoại"
               placeholder="0912 345 678"
               value={patient.emergencyContactPhone || ""}
-              onValueChange={(v) => setPatient({ ...patient, emergencyContactPhone: v })}
+              onValueChange={(v) => {
+                setPatient({ ...patient, emergencyContactPhone: v });
+                // Khi người dùng nhập đúng, xóa lỗi
+                if (/^(0|\+84)[0-9]{9}$/.test(v)) {
+                  setErrors(prev => ({ ...prev, emergencyContactPhone: "" }));
+                }
+              }}
               variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}
               classNames={{
                 input: "text-base",
-                inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+                inputWrapper: errors.emergencyContactPhone
+                  ? "border-red-500 focus-within:!border-red-500"
+                  : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
+              errorMessage={errors.emergencyContactPhone}
+              isInvalid={!!errors.emergencyContactPhone}
             />
+
             <Input
               label="Quan hệ"
               placeholder="VD: Vợ/Chồng, Con, Anh/Chị/Em"
@@ -604,7 +704,7 @@ export default function PatientProfileWithFrame() {
                 inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
               }}
             />
-            </div>
+          </div>
 
           <Button
             color="primary"
@@ -632,7 +732,7 @@ export default function PatientProfileWithFrame() {
             <p className="text-sm text-yellow-800">
               ⚠️ <strong>Lưu ý:</strong> Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại.
             </p>
-        </div>
+          </div>
 
           <Input
             type="password"
@@ -678,7 +778,7 @@ export default function PatientProfileWithFrame() {
                 inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
               }}
             />
-      </div>
+          </div>
 
           <Button
             color="danger"

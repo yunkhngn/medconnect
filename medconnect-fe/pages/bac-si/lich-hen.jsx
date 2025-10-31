@@ -895,7 +895,7 @@ export default function DoctorAppointmentsPage() {
                               <MapPin className="text-teal-600 mt-1" size={18} />
                               <div>
                                 <p className="text-xs text-gray-500">Địa chỉ</p>
-                                <p className="font-medium">{selectedAppointment.patient?.address || "N/A"}</p>
+                                <p className="font-medium">{typeof selectedAppointment.patient?.address === 'object' ? (selectedAppointment.patient?.address?.full || [selectedAppointment.patient?.address?.address_detail, selectedAppointment.patient?.address?.ward_name, selectedAppointment.patient?.address?.district_name, selectedAppointment.patient?.address?.province_name].filter(Boolean).join(', ')) : (selectedAppointment.patient?.address || 'N/A')}</p>
                               </div>
                             </div>
                           </div>
@@ -1365,7 +1365,7 @@ export default function DoctorAppointmentsPage() {
                       {/* Full Address */}
                       <div className="mb-4">
                         <p className="text-sm text-gray-600 mb-1">Địa chỉ</p>
-                        <p className="font-medium">{patientEmr.patient_profile?.address || "N/A"}</p>
+                        <p className="font-medium">{typeof patientEmr.patient_profile?.address === 'object' ? (patientEmr.patient_profile?.address?.full || [patientEmr.patient_profile?.address?.address_detail, patientEmr.patient_profile?.address?.ward_name, patientEmr.patient_profile?.address?.district_name, patientEmr.patient_profile?.address?.province_name].filter(Boolean).join(', ')) : (patientEmr.patient_profile?.address || 'N/A')}</p>
                       </div>
 
                       <Divider className="my-4" />

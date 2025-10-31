@@ -136,7 +136,7 @@ export default function PatientDashboard() {
           {profile?.address && (
             <div className="flex items-start gap-3 text-sm">
               <MapPin size={16} className="text-gray-400 mt-1 flex-shrink-0" />
-              <span className="line-clamp-2">{profile.address}</span>
+              <span className="line-clamp-2">{typeof profile.address === 'object' ? (profile.address?.full || [profile.address?.address_detail, profile.address?.ward_name, profile.address?.district_name, profile.address?.province_name].filter(Boolean).join(', ')) : profile.address}</span>
             </div>
           )}
           <Divider className="my-2" />
