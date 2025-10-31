@@ -85,30 +85,37 @@ export default function PaymentPage() {
     setProcessingPayment(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/payment/mock-complete", {
+      
+      // Call VNPay payment initialization API
+      const response = await fetch("http://localhost:8080/api/payment/init", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          appointmentId: parseInt(appointmentId)
+          appointmentId: parseInt(appointmentId),
+          returnUrl: `${window.location.origin}/thanh-toan/callback`
         })
       });
 
       if (response.ok) {
-        toast.success("Thanh toán thành công!");
-        setTimeout(() => {
-          router.push("/thanh-toan/thanh-cong?appointmentId=" + appointmentId);
-        }, 1000);
+        const data = await response.json();
+        // Redirect to VNPay payment gateway
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+        } else {
+          toast.error("Không nhận được link thanh toán từ VNPay");
+          setProcessingPayment(false);
+        }
       } else {
         const error = await response.json();
-        toast.error(error.error || "Thanh toán thất bại");
+        toast.error(error.error || "Không thể khởi tạo thanh toán");
+        setProcessingPayment(false);
       }
     } catch (error) {
       console.error("Payment error:", error);
       toast.error("Lỗi kết nối server");
-    } finally {
       setProcessingPayment(false);
     }
   };
@@ -158,8 +165,17 @@ export default function PaymentPage() {
           <Divider />
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-semibold text-blue-900 mb-2">Phương thức thanh toán</h4>
-            <p className="text-sm text-blue-800">Chuyển khoản ngân hàng qua QR Code</p>
-            <p className="text-xs text-blue-600 mt-1">Được cung cấp bởi SePay</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-8 bg-white rounded border flex items-center justify-center">
+                  <span className="text-xs font-bold text-blue-600">VNPAY</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Cổng thanh toán VNPay</p>
+                  <p className="text-xs text-blue-700">ATM / Visa / MasterCard / QR Code</p>
+                </div>
+              </div>
+            </div>
           </div>
         </CardBody>
       </Card>
@@ -172,7 +188,7 @@ export default function PaymentPage() {
             <div>
               <h4 className="font-semibold text-green-900">Thanh toán an toàn</h4>
               <p className="text-sm text-green-800 mt-1">
-                Giao dịch được mã hóa và bảo mật bởi SePay
+                Giao dịch được mã hóa và bảo mật bởi VNPay - Cổng thanh toán hàng đầu Việt Nam
               </p>
             </div>
           </div>

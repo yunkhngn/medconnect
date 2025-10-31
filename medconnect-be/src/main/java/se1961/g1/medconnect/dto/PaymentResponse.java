@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SePayCheckoutResponse {
+public class PaymentResponse {
     private String checkoutUrl;
     private String orderId;
     private String invoiceNumber;
