@@ -3,38 +3,104 @@ import AgoraRTC from "agora-rtc-sdk-ng";
 
 const APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID;
 
-export default function AgoraVideoCall({ channel, token, uid, localVideoRef, remoteVideoRef, muted = false, camOff = false, onLeave, onRemoteVideoChange }) {
+export default function AgoraVideoCall({ channel, token, uid, localVideoRef, remoteVideoRef, muted = false, camOff = false, onLeave, onRemoteVideoChange, autoJoin = true, onJoinReady }) {
   const joinedRef = useRef(false);
   const clientRef = useRef(null);
   const localTracksRef = useRef([]);
   const remoteTracksRef = useRef([]);
+  const creatingTracksRef = useRef(false);
   // TODO: Optionally nhận callback để truyền trạng thái overlay remote lên parent
 
   useEffect(() => {
     clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    // Nếu là chế độ pre-join (autoJoin=false): tạo preview sớm không cần join
+    if (!autoJoin) {
+      (async () => {
+        const tracks = await createLocalTracksWithFallback();
+        const v = tracks.find(t => t.trackMediaType === 'video');
+        if (v) {
+          if (remoteVideoRef && remoteVideoRef.current) v.play(remoteVideoRef.current); // preview lớn
+          if (localVideoRef && localVideoRef.current) v.play(localVideoRef.current);   // preview nhỏ
+        }
+      })();
+    }
+    if (typeof onJoinReady === 'function') {
+      onJoinReady(() => join());
+    }
     return () => {
       leave();
     }; // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
-    if (!joinedRef.current && APP_ID && channel && token && (uid !== undefined && uid !== null)) {
+    if (autoJoin && !joinedRef.current && APP_ID && channel && token && (uid !== undefined && uid !== null)) {
       join();
     }
     // eslint-disable-next-line
-  }, [APP_ID, channel, token, uid]);
+  }, [APP_ID, channel, token, uid, autoJoin]);
 
   useEffect(() => {
-    if (localTracksRef.current[0]) {
-      localTracksRef.current[0].setEnabled(!muted);
+    const audio = localTracksRef.current.find((t) => t.trackMediaType === 'audio');
+    if (audio) {
+      audio.setEnabled(!muted);
     }
   }, [muted]);
 
   useEffect(() => {
-    if (localTracksRef.current[1]) {
-      localTracksRef.current[1].setEnabled(!camOff);
+    const video = localTracksRef.current.find((t) => t.trackMediaType === 'video');
+    if (video) {
+      video.setEnabled(!camOff);
+    }
+    // Nếu người dùng bật camera nhưng hiện chưa có video track, thử tạo/publish lại
+    if (!camOff && joinedRef.current) {
+      const hasVideo = localTracksRef.current.some((t) => t.trackMediaType === 'video');
+      if (!hasVideo) {
+        ensureLocalVideoTrack();
+      }
     }
   }, [camOff]);
+
+  function sleep(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+  async function createLocalTracksWithFallback() {
+    if (creatingTracksRef.current) return localTracksRef.current;
+    creatingTracksRef.current = true;
+    let audioTrack = null, videoTrack = null;
+    // Try 2 rounds: both together, then individually; with a short retry
+    for (let attempt = 0; attempt < 2 && (!audioTrack || !videoTrack); attempt++) {
+      try {
+        const [a, v] = await AgoraRTC.createMicrophoneAndCameraTracks();
+        audioTrack = a; videoTrack = v;
+      } catch (err) {
+        // Fallback to individual creation
+        try { if (!audioTrack) audioTrack = await AgoraRTC.createMicrophoneAudioTrack(); } catch {}
+        try { if (!videoTrack) videoTrack = await AgoraRTC.createCameraVideoTrack(); } catch {}
+        if (!audioTrack && !videoTrack) {
+          await sleep(400);
+        }
+      }
+    }
+    const tracks = [audioTrack, videoTrack].filter(Boolean);
+    localTracksRef.current = tracks;
+    creatingTracksRef.current = false;
+    return tracks;
+  }
+
+  async function ensureLocalVideoTrack() {
+    try {
+      const client = clientRef.current;
+      const existingVideo = localTracksRef.current.find((t) => t.getTrack && t.getTrack().kind === 'video');
+      if (existingVideo) return existingVideo;
+      const videoTrack = await AgoraRTC.createCameraVideoTrack();
+      localTracksRef.current = [...localTracksRef.current, videoTrack];
+      if (localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
+      try { await client.publish([videoTrack]); } catch (e) { console.warn('[Agora] publish video retry failed:', e); }
+      return videoTrack;
+    } catch (e) {
+      console.warn('[Agora] ensureLocalVideoTrack failed:', e);
+      return null;
+    }
+  }
 
   async function join() {
     if (!APP_ID || !channel || !token || uid === undefined || uid === null) {
@@ -43,53 +109,55 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
     }
     const client = clientRef.current;
     await client.join(APP_ID, channel, token, uid);
-    // Cho phép join kể cả không có thiết bị đầu vào
-    let audioTrack = null, videoTrack = null, tracks = [];
-    try {
-      [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-    } catch (err) {
-      console.warn('Lỗi tạo track audio/cam:', err?.message || err);
-      // Thử audio riêng
-      try { audioTrack = await AgoraRTC.createMicrophoneAudioTrack(); } catch {}
-      // Thử video riêng
-      try { videoTrack = await AgoraRTC.createCameraVideoTrack(); } catch {}
-    }
-    tracks = [audioTrack, videoTrack].filter(Boolean);
-    localTracksRef.current = tracks;
+    // Cho phép join kể cả không có thiết bị đầu vào, có retry
+    const tracks = await createLocalTracksWithFallback();
+    const videoTrack = tracks.find(t => t.trackMediaType === 'video');
     if (videoTrack && localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
     if (tracks.length > 0) {
-      await client.publish(tracks);
+      try { await client.publish(tracks); } catch (e) { console.warn('[Agora] publish failed:', e); }
     }
     joinedRef.current = true;
     // Khi join xong, subscribe lại remote
     client.remoteUsers.forEach(async (user) => {
       if (user.hasVideo) {
-        await client.subscribe(user, "video");
-        if (remoteVideoRef && remoteVideoRef.current) {
-          user.videoTrack.play(remoteVideoRef.current);
-          remoteTracksRef.current = [user.videoTrack];
-          if (onRemoteVideoChange) onRemoteVideoChange(true);
-        }
+        try {
+          await client.subscribe(user, "video");
+          if (remoteVideoRef && remoteVideoRef.current) {
+            user.videoTrack.play(remoteVideoRef.current);
+            remoteTracksRef.current = [user.videoTrack];
+            if (onRemoteVideoChange) onRemoteVideoChange(true);
+          }
+        } catch(e) { console.warn('[Agora] subscribe video (late) failed:', e); }
       }
       if (user.hasAudio) {
-        await client.subscribe(user, "audio");
-        user.audioTrack.play();
+        try {
+          await client.subscribe(user, "audio");
+          user.audioTrack.play();
+        } catch(e) { console.warn('[Agora] subscribe audio (late) failed:', e); }
       }
     });
     // Lắng nghe user-published
     client.on("user-published", async (user, mediaType) => {
-      await client.subscribe(user, mediaType);
-      if (mediaType === "video" && remoteVideoRef && remoteVideoRef.current) {
-        user.videoTrack.play(remoteVideoRef.current);
-        remoteTracksRef.current = [user.videoTrack];
-        if (onRemoteVideoChange) onRemoteVideoChange(true);
-      }
-      if (mediaType === "audio") {
-        user.audioTrack.play();
+      try {
+        await client.subscribe(user, mediaType);
+        if (mediaType === "video" && remoteVideoRef && remoteVideoRef.current) {
+          user.videoTrack.play(remoteVideoRef.current);
+          remoteTracksRef.current = [user.videoTrack];
+          if (onRemoteVideoChange) onRemoteVideoChange(true);
+        }
+        if (mediaType === "audio") {
+          user.audioTrack.play();
+        }
+      } catch (e) {
+        console.warn('[Agora] subscribe on published failed:', e);
       }
     });
     client.on("user-unpublished", (user, mediaType) => {
       if (mediaType === "video" && onRemoteVideoChange) onRemoteVideoChange(false);
+    });
+    // Khi remote rời phòng thì coi như không còn video
+    client.on("user-left", () => {
+      if (onRemoteVideoChange) onRemoteVideoChange(false);
     });
     // TODO: (extension) listen for remote track mute/unmute for overlay
   }

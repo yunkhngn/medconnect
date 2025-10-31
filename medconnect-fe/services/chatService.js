@@ -7,23 +7,34 @@ export function roomCollection(roomId) {
 
 export async function sendChatMessage(roomId, { senderId, senderName, senderRole, text }) {
   if (!text || !roomId) return;
-  await addDoc(roomCollection(roomId), {
-    senderId: senderId || null,
-    senderName: senderName || null,
-    senderRole: senderRole || null,
-    text,
-    createdAt: serverTimestamp(),
-  });
+  try {
+    await addDoc(roomCollection(roomId), {
+      senderId: senderId || null,
+      senderName: senderName || null,
+      senderRole: senderRole || null,
+      text,
+      createdAt: serverTimestamp(),
+    });
+  } catch (e) {
+    console.error("[Firestore] sendChatMessage error:", e);
+    throw e;
+  }
 }
 
 export function subscribeRoomMessages(roomId, cb) {
   if (!roomId) return () => {};
   const q = query(roomCollection(roomId), orderBy("createdAt", "asc"));
-  return onSnapshot(q, (snap) => {
-    const items = [];
-    snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
-    cb(items);
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      const items = [];
+      snap.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+      cb(items);
+    },
+    (error) => {
+      console.error("[Firestore] subscribeRoomMessages error:", error);
+    }
+  );
 }
 
 

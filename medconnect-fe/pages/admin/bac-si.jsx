@@ -113,7 +113,7 @@ const Doctor = () => {
       }));
       // Exclude soft-deleted doctors
       setDoctors(mapped.filter((d) => d.status === 'active'));
-      setIsLoading(false);
+        setIsLoading(false);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       setIsLoading(false);

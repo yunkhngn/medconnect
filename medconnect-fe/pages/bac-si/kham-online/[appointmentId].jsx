@@ -39,11 +39,19 @@ export default function DoctorOnlineExamRoom() {
   const remoteVideoRef = useRef(null);
 
   useEffect(() => {
-    if (appointmentId) {
-      fetchAppointmentDetails();
-      const unsub = subscribeRoomMessages(appointmentId, setChatMessages);
-      return () => unsub && unsub();
-    }
+    if (!appointmentId) return;
+    fetchAppointmentDetails();
+    // Chỉ subscribe Firestore sau khi user đã đăng nhập để tránh lỗi PERMISSION
+    let unsubFS = null;
+    const stopAuth = auth.onAuthStateChanged((u) => {
+      if (u && !unsubFS) {
+        unsubFS = subscribeRoomMessages(appointmentId, setChatMessages);
+      }
+    });
+    return () => {
+      stopAuth && stopAuth();
+      unsubFS && unsubFS();
+    };
   }, [appointmentId]);
 
   useEffect(() => {
@@ -201,7 +209,7 @@ export default function DoctorOnlineExamRoom() {
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
             {/* Nếu partner chưa vào (remote chưa có stream) thì hiện thông báo */}
-            {!appointment || !showChat ? null : (
+            {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
                   Đang đợi kết nối với Bệnh nhân

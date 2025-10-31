@@ -41,11 +41,19 @@ export default function PatientOnlineExamRoom() {
   const remoteVideoRef = useRef(null);
 
   useEffect(() => {
-    if (appointmentId) {
-      fetchAppointmentDetails();
-      const unsub = subscribeRoomMessages(appointmentId, setChatMessages);
-      return () => unsub && unsub();
-    }
+    if (!appointmentId) return;
+    fetchAppointmentDetails();
+    // Chỉ subscribe sau khi user đã đăng nhập để tránh lỗi PERMISSION
+    let unsubFS = null;
+    const stopAuth = auth.onAuthStateChanged((u) => {
+      if (u && !unsubFS) {
+        unsubFS = subscribeRoomMessages(appointmentId, setChatMessages);
+      }
+    });
+    return () => {
+      stopAuth && stopAuth();
+      unsubFS && unsubFS();
+    };
   }, [appointmentId]);
 
   useEffect(() => {
@@ -161,7 +169,6 @@ export default function PatientOnlineExamRoom() {
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
-            {/* Nếu doctor chưa vào hoặc chưa có remote stream thì hiện thông báo */}
             {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
@@ -325,6 +332,7 @@ export default function PatientOnlineExamRoom() {
           muted={muted}
           camOff={camOff}
           onRemoteVideoChange={setHasRemoteVideo}
+          /* autoJoin = default true */
         />
       )}
     </div>
