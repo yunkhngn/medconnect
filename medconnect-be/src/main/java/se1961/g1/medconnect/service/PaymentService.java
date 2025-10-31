@@ -129,9 +129,9 @@ public class PaymentService {
                 String fieldName = fieldNames.get(i);
                 String fieldValue = params.get(fieldName);
                 if (fieldValue != null && !fieldValue.isEmpty()) {
-                    hashData.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII));
+                    hashData.append(URLEncoder.encode(fieldName, StandardCharsets.UTF_8));
                     hashData.append('=');
-                    hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
+                    hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.UTF_8));
                     if (i != fieldNames.size() - 1) {
                         hashData.append('&');
                     }
@@ -164,9 +164,9 @@ public class PaymentService {
         for (String key : keys) {
             String value = params.get(key);
             if (query.length() > 0) query.append('&');
-            query.append(URLEncoder.encode(key, StandardCharsets.US_ASCII))
+            query.append(URLEncoder.encode(key, StandardCharsets.UTF_8))
                     .append('=')
-                    .append(URLEncoder.encode(value, StandardCharsets.US_ASCII));
+                    .append(URLEncoder.encode(value, StandardCharsets.UTF_8));
         }
         return query.toString();
     }
