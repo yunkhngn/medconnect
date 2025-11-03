@@ -96,6 +96,7 @@ export default function EditEMRPage() {
   const [medicationInput, setMedicationInput] = useState("");
   const [idPhotoUrl, setIdPhotoUrl] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [errors, setErrors] = useState({});
   const { getProvinceName, getDistrictName, getWardName } = useAddressData();
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export default function EditEMRPage() {
       setLoading(true);
       return;
     }
-    
+
     if (!user) {
       toast.error("Vui lòng đăng nhập");
       router.push("/dang-nhap");
@@ -222,7 +223,7 @@ export default function EditEMRPage() {
     // Validate aspect ratio 3:4
     const img = new Image();
     img.src = URL.createObjectURL(file);
-    
+
     img.onload = async () => {
       const aspectRatio = img.width / img.height;
       const expectedRatio = 3 / 4;
@@ -269,9 +270,87 @@ export default function EditEMRPage() {
     };
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // HSBA-02: Tên trống
+    if (!profile.full_name || profile.full_name.trim().length === 0) {
+      newErrors.full_name = "Vui lòng nhập họ và tên";
+    } else if (profile.full_name.length > 100) {
+      newErrors.full_name = "Tối đa 100 ký tự";
+    }
+
+    // HSBA-04: Ngày sinh tương lai
+    if (!profile.dob) {
+      newErrors.dob = "Vui lòng chọn ngày sinh";
+    } else {
+      const dob = new Date(profile.dob);
+      const today = new Date(new Date().toISOString().split("T")[0]);
+      if (dob > today) newErrors.dob = "Ngày sinh không hợp lệ";
+      const age = today.getFullYear() - dob.getFullYear();
+      if (age < 12) newErrors.dob = "Tuổi phải ít nhất 12 tuổi";
+    }
+
+    // Giới tính bắt buộc
+    if (!profile.gender) newErrors.gender = "Vui lòng chọn giới tính";
+
+    // HSBA-08: Nhóm máu
+    if (!profile.blood_type || profile.blood_type === "") {
+      newErrors.blood_type = "Vui lòng chọn nhóm máu";
+    }
+
+    // HSBA-05: CCCD
+    if (profile.citizenship && !/^\d{12}$/.test(profile.citizenship)) {
+      newErrors.citizenship = "Căn cước công dân phải gồm 12 chữ số";
+    }
+
+    // HSBA-07: Email sai định dạng
+    if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
+      newErrors.email = "Email không hợp lệ";
+    }
+
+    // HSBA-06: SĐT không hợp lệ
+    if (profile.phone && !/^0\d{9}$/.test(profile.phone)) {
+      newErrors.phone = "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0";
+    }
+
+    // HSBA-09: BHYT quá hạn
+    if (profile.insurance_number) {
+      if (!/^[A-Z]{2}\d{13}$/i.test(profile.insurance_number)) {
+        newErrors.insurance_number = "Mã BHYT không hợp lệ (2 chữ + 13 số)";
+      }
+      if (!profile.insurance_valid_to) {
+        newErrors.insurance_valid_to = "Vui lòng nhập ngày hết hạn BHYT";
+      } else {
+        const validTo = new Date(profile.insurance_valid_to);
+        const today = new Date(new Date().toISOString().split("T")[0]);
+        if (validTo < today)
+          newErrors.insurance_valid_to = "Ngày hết hạn phải từ hôm nay trở đi";
+      }
+    }
+
+    // Liên hệ khẩn cấp
+    if (profile.emergency_contact_phone && !/^0\d{9}$/.test(profile.emergency_contact_phone)) {
+      newErrors.emergency_contact_phone = "Số điện thoại liên hệ khẩn cấp không hợp lệ";
+    }
+    if (profile.emergency_contact_phone && !profile.emergency_contact_name?.trim()) {
+      newErrors.emergency_contact_name = "Vui lòng nhập tên người liên hệ khẩn cấp";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+
   const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
+      return;
+    }
+
+    // Validate trước khi lưu
+    if (!validateForm()) {
+      toast.error("Vui lòng kiểm tra lại các trường bị lỗi");
       return;
     }
 
@@ -533,31 +612,39 @@ export default function EditEMRPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Họ và tên"
+              label="Họ và tên *"
+              placeholder="Nguyễn Văn A"
               value={profile.full_name}
               onValueChange={(v) => setProfile({ ...profile, full_name: v })}
               variant="bordered"
               labelPlacement="outside"
               startContent={<User className="text-default-400" size={20} />}
+              isRequired
+              isInvalid={!!errors.full_name}
+              errorMessage={errors.full_name}
             />
             <Input
               type="date"
-              label="Ngày sinh"
+              label="Ngày sinh *"
               value={profile.dob}
               onValueChange={(v) => setProfile({ ...profile, dob: v })}
               variant="bordered"
               labelPlacement="outside"
               startContent={<Calendar className="text-default-400" size={20} />}
+              isRequired
+              isInvalid={!!errors.dob}
+              errorMessage={errors.dob}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select
-              label="Giới tính"
+              label="Giới tính *"
               selectedKeys={[profile.gender]}
               onSelectionChange={(keys) => setProfile({ ...profile, gender: Array.from(keys)[0] })}
               variant="bordered"
               labelPlacement="outside"
+              isRequired
             >
               {genderOptions.map((opt) => (
                 <SelectItem key={opt.key}>{opt.label}</SelectItem>
@@ -570,21 +657,27 @@ export default function EditEMRPage() {
               onSelectionChange={(keys) => setProfile({ ...profile, blood_type: Array.from(keys)[0] })}
               variant="bordered"
               labelPlacement="outside"
+              isInvalid={!!errors.blood_type}
+            // heroui Select có thể không có errorMessage prop — nếu có thì thêm, nếu không, hiển thị lỗi bằng text nhỏ
             >
               {bloodTypeOptions.map((opt) => (
                 <SelectItem key={opt.key}>{opt.label}</SelectItem>
               ))}
             </Select>
+            {errors.blood_type && <p className="mt-1 text-sm text-red-600">{errors.blood_type}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="CCCD"
+              placeholder="001234567890"
               value={profile.citizenship}
               onValueChange={(v) => setProfile({ ...profile, citizenship: v })}
               variant="bordered"
               labelPlacement="outside"
               startContent={<IdCard className="text-default-400" size={20} />}
+              isInvalid={!!errors.citizenship}
+              errorMessage={errors.citizenship}
             />
             <Input
               type="email"
@@ -594,17 +687,22 @@ export default function EditEMRPage() {
               variant="bordered"
               labelPlacement="outside"
               startContent={<Mail className="text-default-400" size={20} />}
+              isInvalid={!!errors.email}
+              errorMessage={errors.email}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Số điện thoại"
+              placeholder="0912 345 678"
               value={profile.phone}
               onValueChange={(v) => setProfile({ ...profile, phone: v })}
               variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}
+              isInvalid={!!errors.phone}
+              errorMessage={errors.phone}
             />
             <Input
               label="Địa chỉ chi tiết (tùy chọn)"
@@ -675,6 +773,9 @@ export default function EditEMRPage() {
             onValueChange={(v) => setProfile({ ...profile, insurance_valid_to: v })}
             variant="bordered"
             labelPlacement="outside"
+            description="Ngày hết hạn thẻ BHYT"
+            isInvalid={!!errors.insurance_valid_to}
+            errorMessage={errors.insurance_valid_to}
           />
 
           <Divider className="my-4" />
@@ -691,11 +792,14 @@ export default function EditEMRPage() {
             <Input
               type="tel"
               label="Số điện thoại"
+              placeholder="0912 345 678"
               value={profile.emergency_contact_phone}
               onValueChange={(v) => setProfile({ ...profile, emergency_contact_phone: v })}
               variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}
+              isInvalid={!!errors.emergency_contact_phone}
+              errorMessage={errors.emergency_contact_phone}
             />
             <Input
               label="Quan hệ"

@@ -279,9 +279,18 @@ public class AdminController {
     public ResponseEntity<?> createDoctor(@RequestBody DoctorDTO dto) {
         try {
             Doctor saved = doctorService.addDoctor(dto);
-            return ResponseEntity.ok(saved);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Tạo bác sĩ thành công");
+            response.put("data", mapDoctorToResponse(saved));
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
     }
 
@@ -289,10 +298,43 @@ public class AdminController {
     public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody DoctorDTO dto) {
         try {
             Doctor updated = doctorService.updateDoctor(id, dto);
-            return ResponseEntity.ok(updated);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Cập nhật bác sĩ thành công");
+            response.put("data", mapDoctorToResponse(updated));
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
+    }
+    
+    private Map<String, Object> mapDoctorToResponse(Doctor doctor) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", doctor.getUserId());
+        response.put("name", doctor.getName());
+        response.put("email", doctor.getEmail());
+        response.put("phone", doctor.getPhone());
+        response.put("userId", doctor.getUserId());
+        response.put("status", doctor.getStatus());
+        response.put("experienceYears", doctor.getExperienceYears());
+        response.put("educationLevel", doctor.getEducationLevel());
+        response.put("bio", doctor.getBio());
+        response.put("clinicAddress", doctor.getClinicAddress());
+        response.put("provinceCode", doctor.getProvinceCode());
+        response.put("districtCode", doctor.getDistrictCode());
+        response.put("wardCode", doctor.getWardCode());
+        
+        if (doctor.getSpeciality() != null) {
+            response.put("specialty", doctor.getSpeciality().getName());
+            response.put("specialityId", doctor.getSpeciality().getSpecialityId());
+        }
+        
+        return response;
     }
 
 

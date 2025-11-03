@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdminFrame, Grid } from '@/components/layouts/';
+import { useToast } from '@/hooks/useToast';
+import ToastNotification from '@/components/ui/ToastNotification';
+import { doctorAPI } from '@/services/api';
 import {
   Table,
   TableHeader,
@@ -27,18 +30,10 @@ import {
   Pagination,
 } from '@heroui/react';
 
-// API Configuration
-const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
-  ENDPOINTS: {
-    GET_DOCTORS: '/admin/doctor/all',
-    DELETE_DOCTOR: (id) => `/admin/doctor/${id}`,
-  },
-};
-
 const Doctor = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { user } = useAuth();
+  const toast = useToast();
   const [doctors, setDoctors] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,109 +42,125 @@ const Doctor = () => {
   const [currentDoctor, setCurrentDoctor] = useState(null);
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
+  const [specialties, setSpecialties] = useState([
+    { value: 'all', label: 'Tất cả chuyên khoa' }
+  ]);
 
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    licenseId: '',
+    name: '',
+    email: '',
     phone: '',
-    specialization: '',
-    userId: '',
+    specialityId: '',
+    experienceYears: 0,
+    educationLevel: '',
+    bio: '',
   });
 
-  const specialties = [
-    { value: 'all', label: 'Tất cả chuyên khoa' },
-    { value: 'tim-mach', label: 'Tim mạch' },
-    { value: 'noi-khoa', label: 'Nội khoa' },
-    { value: 'ngoai-khoa', label: 'Ngoại khoa' },
-    { value: 'nhi-khoa', label: 'Nhi khoa' },
-    { value: 'san-phu-khoa', label: 'Sản phụ khoa' },
-  ];
-
-  // Mock data - replace with API call
-  const mockDoctors = [
-    {
-      id: 1,
-      firstName: 'Nguyễn Văn',
-      lastName: 'A',
-      licenseId: 'BS-12345',
-      phone: '0901234567',
-      specialization: 'tim-mach',
-      userId: 101,
-      status: 'active',
-      avatar: '/assets/homepage/mockup-avatar.jpg',
-    },
-    // Add more mock doctors...
-  ];
-
   useEffect(() => {
-    fetchDoctors();
-  }, []);
+    if (user) {
+      fetchDoctors();
+      fetchSpecialties();
+    }
+  }, [user]);
 
   useEffect(() => {
     filterDoctors();
   }, [searchQuery, selectedSpecialty, doctors]);
 
+  // Fetch specialties
+  const fetchSpecialties = async () => {
+    try {
+      const data = await doctorAPI.getAllSpecialties(user);
+      // Map backend {id, name, description} to UI {value, label}
+      const mapped = [
+        { value: 'all', label: 'Tất cả chuyên khoa' },
+        ...(data || []).map(s => ({
+          value: s.id.toString(),
+          label: s.name
+        }))
+      ];
+      setSpecialties(mapped);
+    } catch (error) {
+      console.error('Error fetching specialties:', error);
+    }
+  };
+
   // API Functions
   const fetchDoctors = async () => {
     setIsLoading(true);
     try {
-      const token = user ? await user.getIdToken() : null;
-      const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_DOCTORS, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (!response.ok) throw new Error('Failed to fetch doctors');
-      const data = await response.json();
-      // Map backend -> UI
+      const data = await doctorAPI.getAllDoctors(user);
+      console.log('Raw data from API:', data);
       const mapped = (data || []).map((d) => ({
         id: d.id,
         name: d.name,
+        email: d.email,
         phone: d.phone,
         licenseId: d.licenseId,
         specializationLabel: d.specialty,
         userId: d.userId,
         avatar: d.avatar,
         status: (d.status || 'ACTIVE').toLowerCase(),
+        experienceYears: d.experienceYears,
+        educationLevel: d.educationLevel,
+        bio: d.bio,
+        clinicAddress: d.clinicAddress,
+        provinceCode: d.provinceCode,
+        districtCode: d.districtCode,
+        wardCode: d.wardCode,
       }));
-      // Exclude soft-deleted doctors
-      setDoctors(mapped.filter((d) => d.status === 'active'));
-        setIsLoading(false);
+      console.log('Mapped doctors:', mapped);
+      // Show all doctors (including newly created ones)
+      setDoctors(mapped);
     } catch (error) {
       console.error('Error fetching doctors:', error);
+      toast.error('Không thể tải danh sách bác sĩ');
+    } finally {
       setIsLoading(false);
     }
   };
 
   const createDoctor = async () => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.CREATE_DOCTOR, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        specialityId: parseInt(formData.specialityId),
+        experienceYears: formData.experienceYears,
+        educationLevel: formData.educationLevel,
+        bio: formData.bio,
+      };
       
-      const newDoctor = { ...formData, id: Date.now(), status: 'active', avatar: '/assets/homepage/mockup-avatar.jpg' };
-      setDoctors([...doctors, newDoctor]);
+      await doctorAPI.createDoctor(payload, user);
+      toast.success('Tạo bác sĩ thành công');
+      await fetchDoctors();
       resetForm();
     } catch (error) {
       console.error('Error creating doctor:', error);
+      toast.error(error.message || 'Không thể tạo bác sĩ');
     }
   };
 
   const updateDoctor = async () => {
     try {
-      // TODO: Replace with actual API call
-      // await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.UPDATE_DOCTOR(currentDoctor.id), {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        specialityId: parseInt(formData.specialityId),
+        experienceYears: formData.experienceYears,
+        educationLevel: formData.educationLevel,
+        bio: formData.bio,
+      };
       
-      setDoctors(doctors.map(d => d.id === currentDoctor.id ? { ...d, ...formData } : d));
+      await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
+      toast.success('Cập nhật bác sĩ thành công');
+      await fetchDoctors();
       resetForm();
     } catch (error) {
       console.error('Error updating doctor:', error);
+      toast.error(error.message || 'Không thể cập nhật bác sĩ');
     }
   };
 
@@ -157,18 +168,12 @@ const Doctor = () => {
     if (!confirm('Bạn có chắc muốn xóa bác sĩ này?')) return;
     
     try {
-      const token = user ? await user.getIdToken() : null;
-      const resp = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.DELETE_DOCTOR(id), {
-        method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
-      });
-      if (!resp.ok) {
-        const msg = await resp.text();
-        throw new Error(msg || 'Delete failed');
-      }
-      setDoctors((prev) => prev.filter(d => d.id !== id));
+      await doctorAPI.deleteDoctor(id, user);
+      toast.success('Xóa bác sĩ thành công');
+      await fetchDoctors();
     } catch (error) {
       console.error('Error deleting doctor:', error);
+      toast.error('Không thể xóa bác sĩ');
     }
   };
 
@@ -183,9 +188,14 @@ const Doctor = () => {
     }
 
     if (selectedSpecialty !== 'all') {
-      filtered = filtered.filter((d) =>
-        (d.specializationLabel || '').toLowerCase().includes(selectedSpecialty.replace('-', ' '))
-      );
+      filtered = filtered.filter((d) => {
+        // Match by specialty ID or name
+        const specialtyMatch = specialties.find(s => s.value === selectedSpecialty);
+        if (specialtyMatch && specialtyMatch.label) {
+          return (d.specializationLabel || '').toLowerCase().includes(specialtyMatch.label.toLowerCase());
+        }
+        return false;
+      });
     }
 
     setFilteredDoctors(filtered);
@@ -193,13 +203,20 @@ const Doctor = () => {
 
   const handleEdit = (doctor) => {
     setCurrentDoctor(doctor);
+    
+    // Find specialty ID from specialty name
+    const specialty = specialties.find(s => 
+      s.label.toLowerCase() === (doctor.specializationLabel || '').toLowerCase()
+    );
+    
     setFormData({
-      firstName: doctor.firstName,
-      lastName: doctor.lastName,
-      licenseId: doctor.licenseId,
-      phone: doctor.phone,
-      specialization: doctor.specialization,
-      userId: doctor.userId,
+      name: doctor.name || '',
+      email: doctor.email || '',
+      phone: doctor.phone || '',
+      specialityId: specialty?.value || '',
+      experienceYears: doctor.experienceYears || 0,
+      educationLevel: doctor.educationLevel || '',
+      bio: doctor.bio || '',
     });
     onOpen();
   };
@@ -212,12 +229,13 @@ const Doctor = () => {
 
   const resetForm = () => {
     setFormData({
-      firstName: '',
-      lastName: '',
-      licenseId: '',
+      name: '',
+      email: '',
       phone: '',
-      specialization: '',
-      userId: '',
+      specialityId: '',
+      experienceYears: 0,
+      educationLevel: '',
+      bio: '',
     });
   };
 
@@ -389,34 +407,43 @@ const Doctor = () => {
               <ModalBody>
                 <div className="grid grid-cols-2 gap-4">
                   <Input
-                    label="Họ"
-                    placeholder="Nguyễn Văn"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    label="Họ và tên"
+                    placeholder="BS. Nguyễn Văn An"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="col-span-2"
+                    isRequired
                   />
                   <Input
-                    label="Tên"
-                    placeholder="A"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  />
-                  <Input
-                    label="Chứng chỉ hành nghề"
-                    placeholder="BS-12345"
-                    value={formData.licenseId}
-                    onChange={(e) => setFormData({ ...formData, licenseId: e.target.value })}
+                    label="Email"
+                    type="email"
+                    placeholder="doctor@medconnect.vn"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    isRequired
+                    isDisabled={currentDoctor !== null}
+                    description={currentDoctor ? "Email không thể thay đổi" : ""}
                   />
                   <Input
                     label="Số điện thoại"
                     placeholder="0901234567"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    isRequired
+                  />
+                  <Input
+                    label="Số năm kinh nghiệm"
+                    type="number"
+                    placeholder="5"
+                    value={formData.experienceYears}
+                    onChange={(e) => setFormData({ ...formData, experienceYears: parseInt(e.target.value) || 0 })}
                   />
                   <Select
                     label="Chuyên khoa"
                     placeholder="Chọn chuyên khoa"
-                    selectedKeys={formData.specialization ? [formData.specialization] : []}
-                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                    selectedKeys={formData.specialityId ? [formData.specialityId] : []}
+                    onChange={(e) => setFormData({ ...formData, specialityId: e.target.value })}
+                    isRequired
                   >
                     {specialties.slice(1).map((item) => (
                       <SelectItem key={item.value} value={item.value}>
@@ -425,12 +452,21 @@ const Doctor = () => {
                     ))}
                   </Select>
                   <Input
-                    label="User ID"
-                    type="number"
-                    placeholder="101"
-                    value={formData.userId}
-                    onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                    label="Trình độ học vấn"
+                    placeholder="Tiến sĩ Y khoa, Thạc sĩ..."
+                    value={formData.educationLevel}
+                    onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
                   />
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-2">Giới thiệu bản thân</label>
+                    <textarea
+                      placeholder="Tôi là bác sĩ tim mạch..."
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      className="w-full min-h-[100px] p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows="4"
+                    />
+                  </div>
                 </div>
               </ModalBody>
               <ModalFooter>
@@ -451,6 +487,7 @@ const Doctor = () => {
           )}
         </ModalContent>
       </Modal>
+      <ToastNotification />
     </AdminFrame>
   );
 };

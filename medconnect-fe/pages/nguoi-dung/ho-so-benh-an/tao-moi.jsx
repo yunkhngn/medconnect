@@ -82,6 +82,8 @@ export default function CreateEMRPage() {
       telemedicine: false,
     },
   });
+  const [errors, setErrors] = useState({});
+
 
   const [allergyInput, setAllergyInput] = useState("");
   const [conditionInput, setConditionInput] = useState("");
@@ -93,7 +95,7 @@ export default function CreateEMRPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (!user) {
       toast.error("Vui lòng đăng nhập");
       router.push("/dang-nhap");
@@ -116,10 +118,10 @@ export default function CreateEMRPage() {
             gender: patientData.gender || "Nam",
             blood_type: patientData.bloodType || "",
             address: patientData.address || "",
-          address_detail: "",
-          province_code: null,
-          district_code: null,
-          ward_code: null,
+            address_detail: "",
+            province_code: null,
+            district_code: null,
+            ward_code: null,
             phone: patientData.phone || "",
             email: patientData.email || "",
             insurance_number: patientData.socialInsurance || "",
@@ -187,7 +189,7 @@ export default function CreateEMRPage() {
     // Validate aspect ratio 3:4
     const img = new Image();
     img.src = URL.createObjectURL(file);
-    
+
     img.onload = async () => {
       const aspectRatio = img.width / img.height;
       const expectedRatio = 3 / 4;
@@ -234,14 +236,96 @@ export default function CreateEMRPage() {
     };
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Họ tên
+    if (!profile.full_name || profile.full_name.trim().length < 2) {
+      newErrors.full_name = "Vui lòng nhập họ và tên hợp lệ";
+    } else if (profile.full_name.length > 100) {
+      newErrors.full_name = "Tối đa 100 ký tự";
+    }
+
+    // Ngày sinh
+    if (!profile.dob) {
+      newErrors.dob = "Vui lòng chọn ngày sinh";
+    } else {
+      const dob = new Date(profile.dob);
+      const today = new Date(new Date().toISOString().split("T")[0]);
+      if (dob > today) newErrors.dob = "Ngày sinh không hợp lệ";
+      const age = today.getFullYear() - dob.getFullYear();
+      if (age < 12) newErrors.dob = "Tuổi phải ít nhất 12 tuổi";
+    }
+
+    // Giới tính
+    if (!profile.gender) {
+      newErrors.gender = "Vui lòng chọn giới tính";
+    }
+
+    // Nhóm máu (HSBA-08)
+    if (!profile.blood_type || profile.blood_type === "") {
+      newErrors.blood_type = "Vui lòng chọn nhóm máu";
+    }
+
+    // CCCD (HSBA-05)
+    if (profile.citizenship) {
+      if (!/^\d{12}$/.test(profile.citizenship)) {
+        newErrors.citizenship = "Căn cước công dân phải gồm 12 chữ số";
+      }
+    }
+
+    // Email (HSBA-07)
+    if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
+      newErrors.email = "Email không hợp lệ";
+    }
+
+    // Số điện thoại (HSBA-06)
+    if (profile.phone) {
+      if (!/^0\d{9}$/.test(profile.phone)) {
+        newErrors.phone = "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0";
+      }
+    }
+
+    // BHYT format + hết hạn (HSBA-09)
+    if (profile.insurance_number) {
+      if (!/^[A-Z]{2}\d{13}$/i.test(profile.insurance_number)) {
+        newErrors.insurance_number = "Mã BHYT không hợp lệ (gồm 2 chữ + 13 số)";
+      }
+      if (!profile.insurance_valid_to) {
+        newErrors.insurance_valid_to = "Vui lòng nhập ngày hết hạn BHYT";
+      } else {
+        const today = new Date(new Date().toISOString().split("T")[0]);
+        const validTo = new Date(profile.insurance_valid_to);
+        if (validTo < today)
+          newErrors.insurance_valid_to = "Ngày hết hạn phải từ hôm nay trở đi";
+      }
+    }
+
+    // Liên hệ khẩn cấp
+    if (profile.emergency_contact_phone) {
+      if (!/^0\d{9}$/.test(profile.emergency_contact_phone)) {
+        newErrors.emergency_contact_phone =
+          "Số điện thoại liên hệ khẩn cấp không hợp lệ";
+      }
+      if (!profile.emergency_contact_name?.trim()) {
+        newErrors.emergency_contact_name =
+          "Vui lòng nhập tên người liên hệ khẩn cấp";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+
   const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
       return;
     }
 
-    if (!profile.full_name || !profile.dob || !profile.gender) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+    if (!validateForm()) {
+      toast.error("Vui lòng kiểm tra lại các trường bị lỗi");
       return;
     }
 
@@ -399,54 +483,46 @@ export default function CreateEMRPage() {
         <CardBody className="p-4">
           <h4 className="font-semibold text-sm mb-2">Tiến trình</h4>
           <div className="space-y-2 text-xs">
-            <div 
-              className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                currentStep >= 1 ? "text-teal-600" : "text-gray-400"
-              }`}
+            <div
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${currentStep >= 1 ? "text-teal-600" : "text-gray-400"
+                }`}
               onClick={() => setCurrentStep(1)}
             >
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                currentStep >= 1 ? "bg-teal-600 text-white" : "bg-gray-200"
-              }`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${currentStep >= 1 ? "bg-teal-600 text-white" : "bg-gray-200"
+                }`}>
                 {currentStep > 1 ? "✓" : "1"}
               </div>
               <span>Thông tin cơ bản</span>
             </div>
-            <div 
-              className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                currentStep >= 2 ? "text-teal-600" : "text-gray-400"
-              }`}
+            <div
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${currentStep >= 2 ? "text-teal-600" : "text-gray-400"
+                }`}
               onClick={() => setCurrentStep(2)}
             >
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                currentStep >= 2 ? "bg-teal-600 text-white" : "bg-gray-200"
-              }`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${currentStep >= 2 ? "bg-teal-600 text-white" : "bg-gray-200"
+                }`}>
                 {currentStep > 2 ? "✓" : "2"}
               </div>
               <span>Bảo hiểm & Liên hệ</span>
             </div>
-            <div 
-              className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                currentStep >= 3 ? "text-teal-600" : "text-gray-400"
-              }`}
+            <div
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${currentStep >= 3 ? "text-teal-600" : "text-gray-400"
+                }`}
               onClick={() => setCurrentStep(3)}
             >
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                currentStep >= 3 ? "bg-teal-600 text-white" : "bg-gray-200"
-              }`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${currentStep >= 3 ? "bg-teal-600 text-white" : "bg-gray-200"
+                }`}>
                 {currentStep > 3 ? "✓" : "3"}
               </div>
               <span>Tiền sử y tế</span>
             </div>
-            <div 
-              className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                currentStep >= 4 ? "text-teal-600" : "text-gray-400"
-              }`}
+            <div
+              className={`flex items-center gap-2 cursor-pointer transition-colors ${currentStep >= 4 ? "text-teal-600" : "text-gray-400"
+                }`}
               onClick={() => setCurrentStep(4)}
             >
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                currentStep >= 4 ? "bg-teal-600 text-white" : "bg-gray-200"
-              }`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${currentStep >= 4 ? "bg-teal-600 text-white" : "bg-gray-200"
+                }`}>
                 {currentStep > 4 ? "✓" : "4"}
               </div>
               <span>Xác nhận & Tạo</span>
@@ -508,460 +584,486 @@ export default function CreateEMRPage() {
                   </div>
                 </div>
               </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Họ và tên *"
-              placeholder="Nguyễn Văn A"
-              value={profile.full_name}
-              onValueChange={(v) => setProfile({ ...profile, full_name: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<User className="text-default-400" size={20} />}
-              isRequired
-            />
-            <Input
-              type="date"
-              label="Ngày sinh *"
-              value={profile.dob}
-              onValueChange={(v) => setProfile({ ...profile, dob: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Calendar className="text-default-400" size={20} />}
-              isRequired
-            />
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Họ và tên *"
+                  placeholder="Nguyễn Văn A"
+                  value={profile.full_name}
+                  onValueChange={(v) => setProfile({ ...profile, full_name: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<User className="text-default-400" size={20} />}
+                  isRequired
+                  isInvalid={!!errors.full_name}
+                  errorMessage={errors.full_name}
+                />
+                <Input
+                  type="date"
+                  label="Ngày sinh *"
+                  value={profile.dob}
+                  onValueChange={(v) => setProfile({ ...profile, dob: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Calendar className="text-default-400" size={20} />}
+                  isRequired
+                  isInvalid={!!errors.dob}
+                  errorMessage={errors.dob}
+                />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Giới tính *"
-              selectedKeys={[profile.gender]}
-              onSelectionChange={(keys) => setProfile({ ...profile, gender: Array.from(keys)[0] })}
-              variant="bordered"
-              labelPlacement="outside"
-              isRequired
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label="Giới tính *"
+                  selectedKeys={[profile.gender]}
+                  onSelectionChange={(keys) => setProfile({ ...profile, gender: Array.from(keys)[0] })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  isRequired
+                >
+                  {genderOptions.map((opt) => (
+                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </Select>
+                <Select
+                  label="Nhóm máu"
+                  placeholder="Chọn nhóm máu"
+                  selectedKeys={profile.blood_type ? [profile.blood_type] : []}
+                  onSelectionChange={(keys) => setProfile({ ...profile, blood_type: Array.from(keys)[0] })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  isInvalid={!!errors.blood_type}
+                // heroui Select có thể không có errorMessage prop — nếu có thì thêm, nếu không, hiển thị lỗi bằng text nhỏ
+                >
+                  {bloodTypeOptions.map((opt) => (
+                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </Select>
+                {errors.blood_type && <p className="mt-1 text-sm text-red-600">{errors.blood_type}</p>}
+
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="CCCD"
+                  placeholder="001234567890"
+                  value={profile.citizenship}
+                  onValueChange={(v) => setProfile({ ...profile, citizenship: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<IdCard className="text-default-400" size={20} />}
+                  isInvalid={!!errors.citizenship}
+                  errorMessage={errors.citizenship}
+                />
+
+                <Input
+                  type="email"
+                  label="Email"
+                  value={profile.email}
+                  onValueChange={(v) => setProfile({ ...profile, email: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Mail className="text-default-400" size={20} />}
+                  isInvalid={!!errors.email}
+                  errorMessage={errors.email}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Số điện thoại"
+                  placeholder="0912 345 678"
+                  value={profile.phone}
+                  onValueChange={(v) => setProfile({ ...profile, phone: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Phone className="text-default-400" size={20} />}
+                  isInvalid={!!errors.phone}
+                  errorMessage={errors.phone}
+                />
+
+                <Input
+                  label="Địa chỉ chi tiết (tùy chọn)"
+                  placeholder="Số nhà, tên đường, tòa nhà..."
+                  value={profile.address_detail}
+                  onValueChange={(v) => setProfile({ ...profile, address_detail: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<MapPin className="text-default-400" size={20} />}
+                />
+              </div>
+
+              {/* Province/District/Ward */}
+              <AddressSelector
+                provinceCode={profile.province_code}
+                districtCode={profile.district_code}
+                wardCode={profile.ward_code}
+                onProvinceChange={(code) => setProfile(prev => ({ ...prev, province_code: code || null, district_code: null, ward_code: null }))}
+                onDistrictChange={(code) => setProfile(prev => ({ ...prev, district_code: code || null, ward_code: null }))}
+                onWardChange={(code) => setProfile(prev => ({ ...prev, ward_code: code || null }))}
+                required={false}
+                isInvalid={!!errors.address}
+                errorMessage={errors.address}
+              />
+
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  label="Nghề nghiệp"
+                  placeholder="VD: Giáo viên"
+                  value={profile.occupation}
+                  onValueChange={(v) => setProfile({ ...profile, occupation: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Briefcase className="text-default-400" size={20} />}
+                />
+                <Input
+                  label="Dân tộc"
+                  value={profile.ethnicity}
+                  onValueChange={(v) => setProfile({ ...profile, ethnicity: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                />
+                <Input
+                  label="Nơi làm việc"
+                  placeholder="Công ty/Cơ quan"
+                  value={profile.workplace}
+                  onValueChange={(v) => setProfile({ ...profile, workplace: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                />
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Navigation */}
+          <div className="flex gap-4 justify-end">
+            <Button
+              variant="light"
+              startContent={<ArrowLeft size={18} />}
+              onPress={() => router.back()}
             >
-              {genderOptions.map((opt) => (
-                <SelectItem key={opt.key}>{opt.label}</SelectItem>
-              ))}
-            </Select>
-            <Select
-              label="Nhóm máu"
-              placeholder="Chọn nhóm máu"
-              selectedKeys={profile.blood_type ? [profile.blood_type] : []}
-              onSelectionChange={(keys) => setProfile({ ...profile, blood_type: Array.from(keys)[0] })}
-              variant="bordered"
-              labelPlacement="outside"
+              Quay lại
+            </Button>
+            <Button
+              color="primary"
+              onPress={() => setCurrentStep(2)}
             >
-              {bloodTypeOptions.map((opt) => (
-                <SelectItem key={opt.key}>{opt.label}</SelectItem>
-              ))}
-            </Select>
+              Tiếp theo
+            </Button>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="CCCD"
-              placeholder="001234567890"
-              value={profile.citizenship}
-              onValueChange={(v) => setProfile({ ...profile, citizenship: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<IdCard className="text-default-400" size={20} />}
-            />
-            <Input
-              type="email"
-              label="Email"
-              value={profile.email}
-              onValueChange={(v) => setProfile({ ...profile, email: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Mail className="text-default-400" size={20} />}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Số điện thoại"
-              placeholder="0912 345 678"
-              value={profile.phone}
-              onValueChange={(v) => setProfile({ ...profile, phone: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Phone className="text-default-400" size={20} />}
-            />
-            <Input
-              label="Địa chỉ chi tiết (tùy chọn)"
-              placeholder="Số nhà, tên đường, tòa nhà..."
-              value={profile.address_detail}
-              onValueChange={(v) => setProfile({ ...profile, address_detail: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<MapPin className="text-default-400" size={20} />}
-            />
-          </div>
-
-          {/* Province/District/Ward */}
-          <AddressSelector
-            provinceCode={profile.province_code}
-            districtCode={profile.district_code}
-            wardCode={profile.ward_code}
-            onProvinceChange={(code) => setProfile(prev => ({ ...prev, province_code: code || null, district_code: null, ward_code: null }))}
-            onDistrictChange={(code) => setProfile(prev => ({ ...prev, district_code: code || null, ward_code: null }))}
-            onWardChange={(code) => setProfile(prev => ({ ...prev, ward_code: code || null }))}
-            required={false}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              label="Nghề nghiệp"
-              placeholder="VD: Giáo viên"
-              value={profile.occupation}
-              onValueChange={(v) => setProfile({ ...profile, occupation: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Briefcase className="text-default-400" size={20} />}
-            />
-            <Input
-              label="Dân tộc"
-              value={profile.ethnicity}
-              onValueChange={(v) => setProfile({ ...profile, ethnicity: v })}
-              variant="bordered"
-              labelPlacement="outside"
-            />
-            <Input
-              label="Nơi làm việc"
-              placeholder="Công ty/Cơ quan"
-              value={profile.workplace}
-              onValueChange={(v) => setProfile({ ...profile, workplace: v })}
-              variant="bordered"
-              labelPlacement="outside"
-            />
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex gap-4 justify-end">
-        <Button 
-          variant="light" 
-          startContent={<ArrowLeft size={18} />} 
-          onPress={() => router.back()}
-        >
-          Quay lại
-        </Button>
-        <Button 
-          color="primary" 
-          onPress={() => setCurrentStep(2)}
-        >
-          Tiếp theo
-        </Button>
-      </div>
         </>
       )}
 
       {/* Step 2: Insurance & Emergency Contact */}
       {currentStep === 2 && (
         <>
-      <Card>
-        <CardHeader>
-          <h3 className="text-xl font-semibold flex items-center gap-2">
-            <Shield size={24} className="text-blue-600" />
-            Bảo hiểm & Liên hệ khẩn cấp
-          </h3>
-        </CardHeader>
-        <Divider />
-        <CardBody className="space-y-4">
-          <BHYTInput
-            value={profile.insurance_number}
-            onChange={(v) => setProfile({ ...profile, insurance_number: v })}
-          />
+          <Card>
+            <CardHeader>
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <Shield size={24} className="text-blue-600" />
+                Bảo hiểm & Liên hệ khẩn cấp
+              </h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-4">
+              <BHYTInput
+                value={profile.insurance_number}
+                onChange={(v) => setProfile({ ...profile, insurance_number: v })}
+              />
 
-          <Input
-            type="date"
-            label="BHYT hết hạn"
-            value={profile.insurance_valid_to}
-            onValueChange={(v) => setProfile({ ...profile, insurance_valid_to: v })}
-            variant="bordered"
-            labelPlacement="outside"
-            description="Ngày hết hạn thẻ BHYT"
-          />
+              <Input
+                type="date"
+                label="BHYT hết hạn"
+                value={profile.insurance_valid_to}
+                onValueChange={(v) => setProfile({ ...profile, insurance_valid_to: v })}
+                variant="bordered"
+                labelPlacement="outside"
+                description="Ngày hết hạn thẻ BHYT"
+                isInvalid={!!errors.insurance_valid_to}
+                errorMessage={errors.insurance_valid_to}
+              />
 
-          <Divider className="my-4" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              label="Người liên hệ khẩn cấp"
-              placeholder="Nguyễn Văn B"
-              value={profile.emergency_contact_name}
-              onValueChange={(v) => setProfile({ ...profile, emergency_contact_name: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<User className="text-default-400" size={20} />}
-            />
-            <Input
-              type="tel"
-              label="Số điện thoại"
-              placeholder="0912 345 678"
-              value={profile.emergency_contact_phone}
-              onValueChange={(v) => setProfile({ ...profile, emergency_contact_phone: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Phone className="text-default-400" size={20} />}
-            />
-            <Input
-              label="Quan hệ"
-              placeholder="VD: Vợ/Chồng, Con"
-              value={profile.emergency_contact_relationship}
-              onValueChange={(v) => setProfile({ ...profile, emergency_contact_relationship: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<UsersIcon className="text-default-400" size={20} />}
-            />
-          </div>
+              <Divider className="my-4" />
 
-          <Divider className="my-4" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  label="Người liên hệ khẩn cấp"
+                  placeholder="Nguyễn Văn B"
+                  value={profile.emergency_contact_name}
+                  onValueChange={(v) => setProfile({ ...profile, emergency_contact_name: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<User className="text-default-400" size={20} />}
+                />
+                <Input
+                  type="tel"
+                  label="Số điện thoại"
+                  placeholder="0912 345 678"
+                  value={profile.emergency_contact_phone}
+                  onValueChange={(v) => setProfile({ ...profile, emergency_contact_phone: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Phone className="text-default-400" size={20} />}
+                  isInvalid={!!errors.emergency_contact_phone}
+                  errorMessage={errors.emergency_contact_phone}
+                />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Đối tượng"
-              selectedKeys={[profile.patient_type]}
-              onSelectionChange={(keys) => setProfile({ ...profile, patient_type: Array.from(keys)[0] })}
-              variant="bordered"
-              labelPlacement="outside"
+                <Input
+                  label="Quan hệ"
+                  placeholder="VD: Vợ/Chồng, Con"
+                  value={profile.emergency_contact_relationship}
+                  onValueChange={(v) => setProfile({ ...profile, emergency_contact_relationship: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<UsersIcon className="text-default-400" size={20} />}
+                />
+              </div>
+
+              <Divider className="my-4" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label="Đối tượng"
+                  selectedKeys={[profile.patient_type]}
+                  onSelectionChange={(keys) => setProfile({ ...profile, patient_type: Array.from(keys)[0] })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                >
+                  {patientTypeOptions.map((opt) => (
+                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </Select>
+                <Select
+                  label="Nguồn giới thiệu"
+                  selectedKeys={[profile.referral_source]}
+                  onSelectionChange={(keys) => setProfile({ ...profile, referral_source: Array.from(keys)[0] })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                >
+                  {referralOptions.map((opt) => (
+                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </Select>
+              </div>
+
+              {profile.referral_source === "medical" && (
+                <Input
+                  label="Chẩn đoán nơi giới thiệu"
+                  placeholder="Chẩn đoán từ cơ sở y tế trước"
+                  value={profile.referral_diagnosis}
+                  onValueChange={(v) => setProfile({ ...profile, referral_diagnosis: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                />
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Navigation */}
+          <div className="flex gap-4 justify-between">
+            <Button
+              variant="light"
+              startContent={<ArrowLeft size={18} />}
+              onPress={() => setCurrentStep(1)}
             >
-              {patientTypeOptions.map((opt) => (
-                <SelectItem key={opt.key}>{opt.label}</SelectItem>
-              ))}
-            </Select>
-            <Select
-              label="Nguồn giới thiệu"
-              selectedKeys={[profile.referral_source]}
-              onSelectionChange={(keys) => setProfile({ ...profile, referral_source: Array.from(keys)[0] })}
-              variant="bordered"
-              labelPlacement="outside"
+              Quay lại
+            </Button>
+            <Button
+              color="primary"
+              onPress={() => setCurrentStep(3)}
             >
-              {referralOptions.map((opt) => (
-                <SelectItem key={opt.key}>{opt.label}</SelectItem>
-              ))}
-            </Select>
+              Tiếp theo
+            </Button>
           </div>
-
-          {profile.referral_source === "medical" && (
-            <Input
-              label="Chẩn đoán nơi giới thiệu"
-              placeholder="Chẩn đoán từ cơ sở y tế trước"
-              value={profile.referral_diagnosis}
-              onValueChange={(v) => setProfile({ ...profile, referral_diagnosis: v })}
-              variant="bordered"
-              labelPlacement="outside"
-            />
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex gap-4 justify-between">
-        <Button 
-          variant="light" 
-          startContent={<ArrowLeft size={18} />} 
-          onPress={() => setCurrentStep(1)}
-        >
-          Quay lại
-        </Button>
-        <Button 
-          color="primary" 
-          onPress={() => setCurrentStep(3)}
-        >
-          Tiếp theo
-        </Button>
-      </div>
         </>
       )}
 
       {/* Step 3: Medical History */}
       {currentStep === 3 && (
         <>
-      <Card>
-        <CardHeader>
-          <h3 className="text-xl font-semibold flex items-center gap-2">
-            <Heart size={24} className="text-red-600" />
-            Tiền sử y tế
-          </h3>
-        </CardHeader>
-        <Divider />
-        <CardBody className="space-y-4">
-          {/* Allergies */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Dị ứng</label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                placeholder="VD: Penicillin, Tôm, Sữa..."
-                value={allergyInput}
-                onValueChange={setAllergyInput}
-                onKeyPress={(e) => e.key === "Enter" && handleAddItem("allergy")}
-                variant="bordered"
-              />
-              <Button color="primary" onPress={() => handleAddItem("allergy")} isIconOnly>
-                <Plus size={18} />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {profile.allergies.map((item, index) => (
-                <Chip
-                  key={index}
-                  onClose={() => handleRemoveItem("allergies", index)}
-                  variant="flat"
-                  color="danger"
-                >
-                  {item}
-                </Chip>
-              ))}
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <Heart size={24} className="text-red-600" />
+                Tiền sử y tế
+              </h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-4">
+              {/* Allergies */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Dị ứng</label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="VD: Penicillin, Tôm, Sữa..."
+                    value={allergyInput}
+                    onValueChange={setAllergyInput}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddItem("allergy")}
+                    variant="bordered"
+                  />
+                  <Button color="primary" onPress={() => handleAddItem("allergy")} isIconOnly>
+                    <Plus size={18} />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.allergies.map((item, index) => (
+                    <Chip
+                      key={index}
+                      onClose={() => handleRemoveItem("allergies", index)}
+                      variant="flat"
+                      color="danger"
+                    >
+                      {item}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
 
-          {/* Chronic Conditions */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Bệnh mạn tính</label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                placeholder="VD: Tiểu đường, Cao huyết áp..."
-                value={conditionInput}
-                onValueChange={setConditionInput}
-                onKeyPress={(e) => e.key === "Enter" && handleAddItem("condition")}
-                variant="bordered"
-              />
-              <Button color="primary" onPress={() => handleAddItem("condition")} isIconOnly>
-                <Plus size={18} />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {profile.chronic_conditions.map((item, index) => (
-                <Chip
-                  key={index}
-                  onClose={() => handleRemoveItem("chronic_conditions", index)}
-                  variant="flat"
-                  color="warning"
-                >
-                  {item}
-                </Chip>
-              ))}
-            </div>
-          </div>
+              {/* Chronic Conditions */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Bệnh mạn tính</label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="VD: Tiểu đường, Cao huyết áp..."
+                    value={conditionInput}
+                    onValueChange={setConditionInput}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddItem("condition")}
+                    variant="bordered"
+                  />
+                  <Button color="primary" onPress={() => handleAddItem("condition")} isIconOnly>
+                    <Plus size={18} />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.chronic_conditions.map((item, index) => (
+                    <Chip
+                      key={index}
+                      onClose={() => handleRemoveItem("chronic_conditions", index)}
+                      variant="flat"
+                      color="warning"
+                    >
+                      {item}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
 
-          {/* Current Medications */}
-          <div>
-            <label className="text-sm font-medium mb-2 block">Thuốc đang dùng</label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                placeholder="VD: Aspirin 100mg hàng ngày..."
-                value={medicationInput}
-                onValueChange={setMedicationInput}
-                onKeyPress={(e) => e.key === "Enter" && handleAddItem("medication")}
-                variant="bordered"
-              />
-              <Button color="primary" onPress={() => handleAddItem("medication")} isIconOnly>
-                <Plus size={18} />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {profile.medications.map((item, index) => (
-                <Chip
-                  key={index}
-                  onClose={() => handleRemoveItem("medications", index)}
-                  variant="flat"
-                  color="primary"
-                >
-                  {item}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+              {/* Current Medications */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Thuốc đang dùng</label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="VD: Aspirin 100mg hàng ngày..."
+                    value={medicationInput}
+                    onValueChange={setMedicationInput}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddItem("medication")}
+                    variant="bordered"
+                  />
+                  <Button color="primary" onPress={() => handleAddItem("medication")} isIconOnly>
+                    <Plus size={18} />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.medications.map((item, index) => (
+                    <Chip
+                      key={index}
+                      onClose={() => handleRemoveItem("medications", index)}
+                      variant="flat"
+                      color="primary"
+                    >
+                      {item}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            </CardBody>
+          </Card>
 
-      {/* Navigation */}
-      <div className="flex gap-4 justify-between">
-        <Button 
-          variant="light" 
-          startContent={<ArrowLeft size={18} />} 
-          onPress={() => setCurrentStep(2)}
-        >
-          Quay lại
-        </Button>
-        <Button 
-          color="primary" 
-          onPress={() => setCurrentStep(4)}
-        >
-          Tiếp theo
-        </Button>
-      </div>
+          {/* Navigation */}
+          <div className="flex gap-4 justify-between">
+            <Button
+              variant="light"
+              startContent={<ArrowLeft size={18} />}
+              onPress={() => setCurrentStep(2)}
+            >
+              Quay lại
+            </Button>
+            <Button
+              color="primary"
+              onPress={() => setCurrentStep(4)}
+            >
+              Tiếp theo
+            </Button>
+          </div>
         </>
       )}
 
       {/* Step 4: Consents & Submit */}
       {currentStep === 4 && (
         <>
-      <Card>
-        <CardHeader>
-          <h3 className="text-xl font-semibold flex items-center gap-2">
-            <AlertCircle size={24} className="text-orange-600" />
-            Đồng ý & Cam kết
-          </h3>
-        </CardHeader>
-        <Divider />
-        <CardBody className="space-y-4">
-          <Checkbox
-            isSelected={profile.consents.privacy}
-            onValueChange={(v) =>
-              setProfile({ ...profile, consents: { ...profile.consents, privacy: v } })
-            }
-          >
-            <span className="text-sm">
-              Tôi đồng ý cho phép MedConnect lưu trữ và sử dụng thông tin y tế của tôi theo{" "}
-              <a href="#" className="text-blue-600 underline">
-                chính sách bảo mật
-              </a>
-            </span>
-          </Checkbox>
+          <Card>
+            <CardHeader>
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <AlertCircle size={24} className="text-orange-600" />
+                Đồng ý & Cam kết
+              </h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-4">
+              <Checkbox
+                isSelected={profile.consents.privacy}
+                onValueChange={(v) =>
+                  setProfile({ ...profile, consents: { ...profile.consents, privacy: v } })
+                }
+              >
+                <span className="text-sm">
+                  Tôi đồng ý cho phép MedConnect lưu trữ và sử dụng thông tin y tế của tôi theo{" "}
+                  <a href="#" className="text-blue-600 underline">
+                    chính sách bảo mật
+                  </a>
+                </span>
+              </Checkbox>
 
-          <Checkbox
-            isSelected={profile.consents.telemedicine}
-            onValueChange={(v) =>
-              setProfile({ ...profile, consents: { ...profile.consents, telemedicine: v } })
-            }
-          >
-            <span className="text-sm">
-              Tôi đồng ý tham gia dịch vụ khám bệnh từ xa (telemedicine) khi cần thiết
-            </span>
-          </Checkbox>
+              <Checkbox
+                isSelected={profile.consents.telemedicine}
+                onValueChange={(v) =>
+                  setProfile({ ...profile, consents: { ...profile.consents, telemedicine: v } })
+                }
+              >
+                <span className="text-sm">
+                  Tôi đồng ý tham gia dịch vụ khám bệnh từ xa (telemedicine) khi cần thiết
+                </span>
+              </Checkbox>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-            <p className="text-sm text-yellow-800">
-              <strong>Lưu ý:</strong> Vui lòng kiểm tra kỹ thông tin trước khi tạo hồ sơ. Một số thông tin
-              không thể chỉnh sửa sau khi tạo.
-            </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Lưu ý:</strong> Vui lòng kiểm tra kỹ thông tin trước khi tạo hồ sơ. Một số thông tin
+                  không thể chỉnh sửa sau khi tạo.
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4 justify-between">
+            <Button
+              variant="light"
+              startContent={<ArrowLeft size={18} />}
+              onPress={() => setCurrentStep(3)}
+            >
+              Quay lại
+            </Button>
+            <Button
+              color="primary"
+              startContent={<Save size={18} />}
+              onPress={handleSubmit}
+              isLoading={saving}
+            >
+              Tạo hồ sơ bệnh án
+            </Button>
           </div>
-        </CardBody>
-      </Card>
-
-      {/* Action Buttons */}
-      <div className="flex gap-4 justify-between">
-        <Button 
-          variant="light" 
-          startContent={<ArrowLeft size={18} />} 
-          onPress={() => setCurrentStep(3)}
-        >
-          Quay lại
-        </Button>
-        <Button
-          color="primary"
-          startContent={<Save size={18} />}
-          onPress={handleSubmit}
-          isLoading={saving}
-        >
-          Tạo hồ sơ bệnh án
-        </Button>
-      </div>
         </>
       )}
     </div>

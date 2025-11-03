@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class PaymentInitRequest {
+public class PaymentRequest {
     private Long appointmentId;
     private String returnUrl; // Base URL for callbacks
 }

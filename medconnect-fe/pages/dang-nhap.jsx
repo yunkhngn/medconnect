@@ -54,6 +54,7 @@ export default function MedConnectLogin() {
     try {
       setIsLoading(true);
       const idToken = await user.getIdToken();
+      console.log(idToken);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: "POST",
@@ -137,7 +138,6 @@ export default function MedConnectLogin() {
 
   const handleEmailLogin = async (e) => {
   e.preventDefault();
-
   if (!email || !password) {
     showMessage("Vui lòng nhập đầy đủ thông tin!", "error");
     return;
