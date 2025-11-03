@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
+import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
@@ -38,10 +39,32 @@ export default function DoctorOnlineExamRoom() {
   const remoteVideoRef = useRef(null);
 
   useEffect(() => {
-    if (appointmentId) {
-      fetchAppointmentDetails();
-    }
+    if (!appointmentId) return;
+    fetchAppointmentDetails();
+    // Chỉ subscribe Firestore sau khi user đã đăng nhập để tránh lỗi PERMISSION
+    let unsubFS = null;
+    const stopAuth = auth.onAuthStateChanged((u) => {
+      if (u && !unsubFS) {
+        unsubFS = subscribeRoomMessages(appointmentId, setChatMessages);
+      }
+    });
+    return () => {
+      stopAuth && stopAuth();
+      unsubFS && unsubFS();
+    };
   }, [appointmentId]);
+
+  // Presence: bác sĩ online khi phòng đang ONGOING; rời sẽ cleanup nếu cả 2 out
+  useEffect(() => {
+    if (!appointmentId) return;
+    if (appointment && appointment.status === 'ONGOING') {
+      setPresence(appointmentId, 'doctor', true);
+      return () => {
+        setPresence(appointmentId, 'doctor', false);
+        cleanupRoomIfEmpty(appointmentId);
+      };
+    }
+  }, [appointmentId, appointment?.status]);
 
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -102,17 +125,17 @@ export default function DoctorOnlineExamRoom() {
     return `${mm}:${ss}`;
   };
 
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      const newMessage = {
-        id: Date.now(),
-        sender: 'doctor',
-        message: chatMessage.trim(),
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, newMessage]);
-      setChatMessage("");
-    }
+  const handleSendMessage = async () => {
+    const text = chatMessage.trim();
+    if (!text) return;
+    setChatMessage("");
+    const user = auth.currentUser;
+    await sendChatMessage(appointmentId, {
+      senderId: user?.uid,
+      senderName: user?.displayName || "Bác sĩ",
+      senderRole: "doctor",
+      text,
+    });
   };
 
   const handleStartAppointment = async () => {
@@ -198,7 +221,7 @@ export default function DoctorOnlineExamRoom() {
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
             {/* Nếu partner chưa vào (remote chưa có stream) thì hiện thông báo */}
-            {!appointment || !showChat ? null : (
+            {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
                   Đang đợi kết nối với Bệnh nhân
@@ -256,16 +279,16 @@ export default function DoctorOnlineExamRoom() {
             <Divider/>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'doctor' ? 'justify-end' : 'justify-start'}`}>
+                <div key={msg.id} className={`flex ${msg.senderRole === 'doctor' ? 'justify-end' : 'justify-start'}`}>
                   <Card 
                     shadow="none" 
                     className={`max-w-[80%] ${
-                      msg.sender === 'doctor' 
+                      msg.senderRole === 'doctor' 
                         ? 'bg-blue-50' 
                         : 'bg-gray-50'
                     }`}
                   >
-                    <CardBody className="p-3 text-sm">{msg.message}</CardBody>
+                    <CardBody className="p-3 text-sm">{msg.text}</CardBody>
                   </Card>
                 </div>
               ))}

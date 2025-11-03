@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
+import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
@@ -40,10 +41,32 @@ export default function PatientOnlineExamRoom() {
   const remoteVideoRef = useRef(null);
 
   useEffect(() => {
-    if (appointmentId) {
-      fetchAppointmentDetails();
-    }
+    if (!appointmentId) return;
+    fetchAppointmentDetails();
+    // Chỉ subscribe sau khi user đã đăng nhập để tránh lỗi PERMISSION
+    let unsubFS = null;
+    const stopAuth = auth.onAuthStateChanged((u) => {
+      if (u && !unsubFS) {
+        unsubFS = subscribeRoomMessages(appointmentId, setChatMessages);
+      }
+    });
+    return () => {
+      stopAuth && stopAuth();
+      unsubFS && unsubFS();
+    };
   }, [appointmentId]);
+
+  // Presence: bệnh nhân online khi phòng đang ONGOING; rời sẽ cleanup nếu cả 2 out
+  useEffect(() => {
+    if (!appointmentId) return;
+    if (appointment && appointment.status === 'ONGOING') {
+      setPresence(appointmentId, 'patient', true);
+      return () => {
+        setPresence(appointmentId, 'patient', false);
+        cleanupRoomIfEmpty(appointmentId);
+      };
+    }
+  }, [appointmentId, appointment?.status]);
 
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
@@ -107,17 +130,17 @@ export default function PatientOnlineExamRoom() {
     return `${mm}:${ss}`;
   };
 
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      const newMessage = {
-        id: Date.now(),
-        sender: 'patient',
-        message: chatMessage.trim(),
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, newMessage]);
-      setChatMessage("");
-    }
+  const handleSendMessage = async () => {
+    const text = chatMessage.trim();
+    if (!text) return;
+    setChatMessage("");
+    const user = auth.currentUser;
+    await sendChatMessage(appointmentId, {
+      senderId: user?.uid,
+      senderName: user?.displayName || "Bệnh nhân",
+      senderRole: "patient",
+      text,
+    });
   };
 
   // Đợi loading hoặc chưa có appointment/status
@@ -158,7 +181,6 @@ export default function PatientOnlineExamRoom() {
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
-            {/* Nếu doctor chưa vào hoặc chưa có remote stream thì hiện thông báo */}
             {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
@@ -210,9 +232,9 @@ export default function PatientOnlineExamRoom() {
             <Divider/>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'patient' ? 'justify-end' : 'justify-start'}`}>
-                  <Card shadow="none" className={`max-w-[80%] ${msg.sender === 'patient' ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                    <CardBody className="p-3 text-sm">{msg.message}</CardBody>
+                <div key={msg.id} className={`flex ${msg.senderRole === 'patient' ? 'justify-end' : 'justify-start'}`}>
+                  <Card shadow="none" className={`max-w-[80%] ${msg.senderRole === 'patient' ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                    <CardBody className="p-3 text-sm">{msg.text}</CardBody>
                   </Card>
                 </div>
               ))}
@@ -322,6 +344,7 @@ export default function PatientOnlineExamRoom() {
           muted={muted}
           camOff={camOff}
           onRemoteVideoChange={setHasRemoteVideo}
+          /* autoJoin = default true */
         />
       )}
     </div>
