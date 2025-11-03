@@ -61,19 +61,41 @@ export default function DoctorOnlineExamList() {
       if (!user) return;
       
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/doctor?type=ONLINE`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Lấy appointments từ 1 năm trước đến 1 năm sau để bao gồm cả quá khứ
+      const today = new Date();
+      const oneYearAgo = new Date(today);
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      const oneYearLater = new Date(today);
+      oneYearLater.setFullYear(today.getFullYear() + 1);
+      
+      const startDate = oneYearAgo.toISOString().split('T')[0];
+      const endDate = oneYearLater.toISOString().split('T')[0];
+      
+      const response = await fetch(
+        `http://localhost:8080/api/appointments/doctor?startDate=${startDate}&endDate=${endDate}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
       
       if (response.ok) {
         const data = await response.json();
-        setAppointments(data || []);
+        // Filter chỉ lấy appointments ONLINE
+        const onlineAppointments = (data || []).filter(apt => 
+          apt.type === 'ONLINE' || apt.type === 'Online'
+        );
+        setAppointments(onlineAppointments);
+        console.log('[Doctor Online] Fetched appointments:', onlineAppointments.length, 'online out of', data?.length || 0, 'total');
+      } else {
+        console.error('[Doctor Online] Failed to fetch:', response.status, response.statusText);
+        setAppointments([]);
       }
     } catch (error) {
-      console.error("Failed to fetch online appointments:", error);
+      console.error("[Doctor Online] Failed to fetch online appointments:", error);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
