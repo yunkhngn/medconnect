@@ -30,4 +30,50 @@ public class FirebaseService {
         FirebaseToken decodedToken = getDecodedToken(token);
         return decodedToken.getUid();
     }
+
+    /**
+     * Create Firebase user account (Admin creates for doctor)
+     * @param email User email
+     * @param password Initial password (typically phone number)
+     * @param displayName User display name
+     * @return Firebase UID
+     */
+    public String createFirebaseUser(String email, String password, String displayName) throws Exception {
+        try {
+            UserRecord.CreateRequest request = new UserRecord.CreateRequest()
+                    .setEmail(email)
+                    .setPassword(password)
+                    .setDisplayName(displayName)
+                    .setEmailVerified(false);
+
+            UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
+            return userRecord.getUid();
+        } catch (Exception e) {
+            throw new Exception("Không thể tạo tài khoản Firebase: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update Firebase user password
+     */
+    public void updateFirebaseUserPassword(String uid, String newPassword) throws Exception {
+        try {
+            UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(uid)
+                    .setPassword(newPassword);
+            FirebaseAuth.getInstance().updateUser(request);
+        } catch (Exception e) {
+            throw new Exception("Không thể cập nhật mật khẩu Firebase: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete Firebase user account
+     */
+    public void deleteFirebaseUser(String uid) throws Exception {
+        try {
+            FirebaseAuth.getInstance().deleteUser(uid);
+        } catch (Exception e) {
+            throw new Exception("Không thể xóa tài khoản Firebase: " + e.getMessage());
+        }
+    }
 }

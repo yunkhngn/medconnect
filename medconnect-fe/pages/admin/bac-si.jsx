@@ -38,6 +38,7 @@ const Doctor = () => {
   const [filteredDoctors, setFilteredDoctors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');  // New filter for status
   const [isLoading, setIsLoading] = useState(false);
   const [currentDoctor, setCurrentDoctor] = useState(null);
   const [page, setPage] = useState(1);
@@ -54,6 +55,7 @@ const Doctor = () => {
     experienceYears: 0,
     educationLevel: '',
     bio: '',
+    status: 'ACTIVE',  // Add status field
   });
 
   useEffect(() => {
@@ -65,7 +67,7 @@ const Doctor = () => {
 
   useEffect(() => {
     filterDoctors();
-  }, [searchQuery, selectedSpecialty, doctors]);
+  }, [searchQuery, selectedSpecialty, selectedStatus, doctors]);
 
   // Fetch specialties
   const fetchSpecialties = async () => {
@@ -100,7 +102,7 @@ const Doctor = () => {
         specializationLabel: d.specialty,
         userId: d.userId,
         avatar: d.avatar,
-        status: (d.status || 'ACTIVE').toLowerCase(),
+        status: (d.status || 'ACTIVE'),  // Keep original case for proper filtering
         experienceYears: d.experienceYears,
         educationLevel: d.educationLevel,
         bio: d.bio,
@@ -130,6 +132,7 @@ const Doctor = () => {
         experienceYears: formData.experienceYears,
         educationLevel: formData.educationLevel,
         bio: formData.bio,
+        status: formData.status,  // Add status
       };
       
       await doctorAPI.createDoctor(payload, user);
@@ -152,6 +155,7 @@ const Doctor = () => {
         experienceYears: formData.experienceYears,
         educationLevel: formData.educationLevel,
         bio: formData.bio,
+        status: formData.status,  // Add status
       };
       
       await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
@@ -198,6 +202,10 @@ const Doctor = () => {
       });
     }
 
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter((d) => (d.status || 'ACTIVE').toUpperCase() === selectedStatus);
+    }
+
     setFilteredDoctors(filtered);
   };
 
@@ -217,6 +225,7 @@ const Doctor = () => {
       experienceYears: doctor.experienceYears || 0,
       educationLevel: doctor.educationLevel || '',
       bio: doctor.bio || '',
+      status: doctor.status || 'ACTIVE',  // Add status
     });
     onOpen();
   };
@@ -236,6 +245,7 @@ const Doctor = () => {
       experienceYears: 0,
       educationLevel: '',
       bio: '',
+      status: 'ACTIVE',  // Add default status
     });
   };
 
@@ -276,18 +286,32 @@ const Doctor = () => {
 
       <div>
         <h3 className="text-lg font-semibold mb-4">Bộ lọc</h3>
-        <Select
-          label="Chuyên khoa"
-          placeholder="Chọn chuyên khoa"
-          selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
-          onChange={(e) => setSelectedSpecialty(e.target.value)}
-        >
-          {specialties.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </Select>
+        <div className="space-y-3">
+          <Select
+            label="Trạng thái"
+            placeholder="Chọn trạng thái"
+            selectedKeys={selectedStatus ? [selectedStatus] : []}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+          >
+            <SelectItem key="all" value="all">Tất cả</SelectItem>
+            <SelectItem key="PENDING" value="PENDING">Chờ duyệt</SelectItem>
+            <SelectItem key="ACTIVE" value="ACTIVE">Đang hoạt động</SelectItem>
+            <SelectItem key="INACTIVE" value="INACTIVE">Không hoạt động</SelectItem>
+          </Select>
+          
+          <Select
+            label="Chuyên khoa"
+            placeholder="Chọn chuyên khoa"
+            selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
+            onChange={(e) => setSelectedSpecialty(e.target.value)}
+          >
+            {specialties.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
       </div>
     </div>
   );
@@ -353,8 +377,18 @@ const Doctor = () => {
                 <p className="text-sm text-gray-500">#{doctor.userId}</p>
               </TableCell>
               <TableCell>
-                <Chip color={doctor.status === 'active' ? 'success' : 'default'} size="sm">
-                  {doctor.status === 'active' ? 'Hoạt động' : 'Tạm ngưng'}
+                <Chip 
+                  color={
+                    doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'success' : 
+                    doctor.status === 'PENDING' ? 'warning' : 
+                    'default'
+                  } 
+                  size="sm"
+                >
+                  {doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'Hoạt động' : 
+                   doctor.status === 'PENDING' ? 'Chờ duyệt' :
+                   doctor.status === 'INACTIVE' ? 'Không hoạt động' :
+                   'Tạm ngưng'}
                 </Chip>
               </TableCell>
               <TableCell>
@@ -457,6 +491,16 @@ const Doctor = () => {
                     value={formData.educationLevel}
                     onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
                   />
+                  <Select
+                    label="Trạng thái tài khoản"
+                    placeholder="Chọn trạng thái"
+                    selectedKeys={formData.status ? [formData.status] : []}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  >
+                    <SelectItem key="ACTIVE" value="ACTIVE">Hoạt động</SelectItem>
+                    <SelectItem key="PENDING" value="PENDING">Chờ duyệt</SelectItem>
+                    <SelectItem key="INACTIVE" value="INACTIVE">Không hoạt động</SelectItem>
+                  </Select>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Giới thiệu bản thân</label>
                     <textarea
