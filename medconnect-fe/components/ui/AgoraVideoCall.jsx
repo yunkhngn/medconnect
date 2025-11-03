@@ -9,10 +9,15 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
   const localTracksRef = useRef([]);
   const remoteTracksRef = useRef([]);
   const creatingTracksRef = useRef(false);
+  const watchdogRef = useRef(null);
   // TODO: Optionally nhận callback để truyền trạng thái overlay remote lên parent
 
   useEffect(() => {
     clientRef.current = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+    const client = clientRef.current;
+    client.on("connection-state-change", (cur, prev, reason) => {
+      console.log("[Agora] connection-state-change:", prev, "->", cur, "reason:", reason);
+    });
     // Nếu là chế độ pre-join (autoJoin=false): tạo preview sớm không cần join
     if (!autoJoin) {
       (async () => {
@@ -29,6 +34,10 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
     }
     return () => {
       leave();
+      if (watchdogRef.current) {
+        clearInterval(watchdogRef.current);
+        watchdogRef.current = null;
+      }
     }; // eslint-disable-next-line
   }, []);
 
@@ -86,6 +95,21 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
     return tracks;
   }
 
+  async function ensureLocalAudioTrack() {
+    try {
+      const client = clientRef.current;
+      const existing = localTracksRef.current.find((t) => t.trackMediaType === 'audio');
+      if (existing) return existing;
+      const track = await AgoraRTC.createMicrophoneAudioTrack();
+      localTracksRef.current = [...localTracksRef.current, track];
+      try { await client.publish([track]); } catch (e) { console.warn('[Agora] publish audio retry failed:', e); }
+      return track;
+    } catch (e) {
+      console.warn('[Agora] ensureLocalAudioTrack failed:', e);
+      return null;
+    }
+  }
+
   async function ensureLocalVideoTrack() {
     try {
       const client = clientRef.current;
@@ -108,15 +132,55 @@ export default function AgoraVideoCall({ channel, token, uid, localVideoRef, rem
       return;
     }
     const client = clientRef.current;
-    await client.join(APP_ID, channel, token, uid);
+    console.log("[Agora] joining:", { APP_ID: !!APP_ID, channel, uid, tokenLen: token?.length });
+    try {
+      await client.join(APP_ID, channel, token, uid);
+      console.log("[Agora] joined successfully");
+    } catch (e) {
+      console.error("[Agora] join failed:", e);
+      return;
+    }
     // Cho phép join kể cả không có thiết bị đầu vào, có retry
     const tracks = await createLocalTracksWithFallback();
     const videoTrack = tracks.find(t => t.trackMediaType === 'video');
-    if (videoTrack && localVideoRef && localVideoRef.current) videoTrack.play(localVideoRef.current);
+    if (videoTrack && localVideoRef && localVideoRef.current) {
+      // ensure element mounted
+      setTimeout(() => {
+        try { videoTrack.play(localVideoRef.current); } catch (e) { console.warn('[Agora] local video play error', e); }
+      }, 60);
+    }
     if (tracks.length > 0) {
-      try { await client.publish(tracks); } catch (e) { console.warn('[Agora] publish failed:', e); }
+      try { await client.publish(tracks); console.log('[Agora] published local tracks:', tracks.map(t=>t.trackMediaType)); } catch (e) { console.warn('[Agora] publish failed:', e); }
     }
     joinedRef.current = true;
+
+    // Watchdog: re-subscribe remote tracks if any appear later
+    if (!watchdogRef.current) {
+      watchdogRef.current = setInterval(async () => {
+        const client = clientRef.current;
+        if (!client) return;
+        for (const user of client.remoteUsers) {
+          try {
+            if (user.videoTrack && remoteVideoRef?.current) {
+              user.videoTrack.play(remoteVideoRef.current);
+              if (onRemoteVideoChange) onRemoteVideoChange(true);
+            } else if (user.hasVideo) {
+              await client.subscribe(user, 'video');
+              if (user.videoTrack && remoteVideoRef?.current) {
+                user.videoTrack.play(remoteVideoRef.current);
+                if (onRemoteVideoChange) onRemoteVideoChange(true);
+              }
+            }
+            if (user.hasAudio && !user.audioTrack) {
+              await client.subscribe(user, 'audio');
+              user.audioTrack?.play?.();
+            }
+          } catch (e) {
+            // ignore transient errors
+          }
+        }
+      }, 2000);
+    }
     // Khi join xong, subscribe lại remote
     client.remoteUsers.forEach(async (user) => {
       if (user.hasVideo) {

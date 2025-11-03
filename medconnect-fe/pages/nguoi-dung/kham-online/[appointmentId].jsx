@@ -25,11 +25,16 @@ export default function PatientOnlineExamRoom() {
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isDoctorInfoOpen, onOpen: onDoctorInfoOpen, onOpenChange: onDoctorInfoOpenChange } = useDisclosure();
   const [agoraToken, setAgoraToken] = useState("");
+  const [tokenError, setTokenError] = useState("");
   const [agoraUid, setAgoraUid] = useState(() => {
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-      return window.crypto.getRandomValues(new Uint32Array(1))[0];
-    } else {
-      return Math.floor(Math.random() * 1000000);
+    try {
+      if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+        const n = window.crypto.getRandomValues(new Uint32Array(1))[0];
+        return String(n);
+      }
+      return String(Math.floor(Math.random() * 1000000));
+    } catch {
+      return String(Math.floor(Math.random() * 1000000));
     }
   });
   const [remoteMuted, setRemoteMuted] = useState(false);
@@ -74,16 +79,27 @@ export default function PatientOnlineExamRoom() {
   }, []);
 
   useEffect(() => {
-    if (appointment && appointment.status === 'ONGOING') {
+    if (appointment) {
       const fetchToken = async () => {
-        const tokenResp = await fetch(
-          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
-        );
-        if (tokenResp.ok) {
-          const data = await tokenResp.json();
-          setAgoraToken(data.token);
-        } else {
+        try {
+          const user = auth.currentUser;
+          const idToken = await user?.getIdToken?.();
+          const tokenResp = await fetch(
+            `/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+          );
+          if (tokenResp.ok) {
+            const data = await tokenResp.json();
+            setAgoraToken(data.token);
+            setTokenError("");
+          } else {
+            console.warn('[Patient] Failed to fetch Agora token:', tokenResp.status);
+            setAgoraToken("");
+            setTokenError(`Không lấy được token (HTTP ${tokenResp.status})`);
+          }
+        } catch (e) {
+          console.error('[Patient] Error fetching Agora token:', e);
           setAgoraToken("");
+          setTokenError('Không lấy được token. Vui lòng thử lại');
         }
       };
       fetchToken();
@@ -210,6 +226,11 @@ export default function PatientOnlineExamRoom() {
               <Button size="sm" variant="flat" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={16}/> }>Chat</Button>
             </div>
           </div>
+          {tokenError && (
+            <div className="absolute left-0 right-0 top-16 px-4 flex justify-center z-20">
+              <div className="bg-red-600 text-white text-sm px-3 py-2 rounded-md shadow">{tokenError}</div>
+            </div>
+          )}
           {/* Controls bottom - mute/tắt cam/leave giống doctor */}
           <div className="absolute left-0 right-0 bottom-0 pb-6 flex items-center justify-center">
             <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full px-4 py-3 ring-1 ring-white/20 shadow-lg">
@@ -334,19 +355,18 @@ export default function PatientOnlineExamRoom() {
       </Modal>
 
       {/* Agora logic inject video + audio vào UI layout này */}
-      {agoraToken && appointmentId && (
-        <AgoraVideoCall
-          channel={appointmentId}
-          token={agoraToken}
-          uid={agoraUid}
-          localVideoRef={localVideoRef}
-          remoteVideoRef={remoteVideoRef}
-          muted={muted}
-          camOff={camOff}
-          onRemoteVideoChange={setHasRemoteVideo}
-          /* autoJoin = default true */
-        />
-      )}
+      <AgoraVideoCall
+        channel={appointmentId}
+        token={agoraToken}
+        uid={agoraUid}
+        localVideoRef={localVideoRef}
+        remoteVideoRef={remoteVideoRef}
+        muted={muted}
+        camOff={camOff}
+        onRemoteVideoChange={setHasRemoteVideo}
+        /* autoJoin = default true */
+        autoJoin={!!agoraToken}
+      />
     </div>
   );
 }
