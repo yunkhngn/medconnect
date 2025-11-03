@@ -338,7 +338,7 @@ export default function DoctorOnlineExamList() {
                       color="primary"
                       size="sm"
                       className="flex-1"
-                      onPress={(e) => { e.stopPropagation(); handleStartExam(appointment.id); }}
+                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
                     >
                       Xác nhận & Bắt đầu
                     </Button>
@@ -348,7 +348,7 @@ export default function DoctorOnlineExamList() {
                       color="success"
                       size="sm"
                       className="flex-1"
-                      onPress={(e) => { e.stopPropagation(); handleStartExam(appointment.id); }}
+                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
                     >
                       Bắt đầu khám
                     </Button>
@@ -358,7 +358,7 @@ export default function DoctorOnlineExamList() {
                       color="warning"
                       size="sm"
                       className="flex-1"
-                      onPress={(e) => { e.stopPropagation(); handleStartExam(appointment.id); }}
+                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
                     >
                       Tiếp tục khám
                     </Button>
@@ -368,7 +368,7 @@ export default function DoctorOnlineExamList() {
                       color="default"
                       size="sm"
                       className="flex-1"
-                      onPress={(e) => { e.stopPropagation(); handleStartExam(appointment.id); }}
+                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
                     >
                       Xem lại
                     </Button>

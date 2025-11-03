@@ -322,7 +322,7 @@ export default function PatientOnlineExamList() {
                           color="success"
                           size="sm"
                           className="flex-1"
-                          onPress={(e) => { e.stopPropagation(); handleJoinExam(appointment.id); }}
+                          onPress={(e) => { e?.stopPropagation?.(); handleJoinExam(appointment.id); }}
                         >
                           Tham gia khám
                         </Button>
@@ -332,7 +332,7 @@ export default function PatientOnlineExamList() {
                           color="warning"
                           size="sm"
                           className="flex-1"
-                          onPress={(e) => { e.stopPropagation(); handleJoinExam(appointment.id); }}
+                          onPress={(e) => { e?.stopPropagation?.(); handleJoinExam(appointment.id); }}
                         >
                           Tiếp tục khám
                         </Button>
@@ -342,7 +342,7 @@ export default function PatientOnlineExamList() {
                           color="default"
                           size="sm"
                           className="flex-1"
-                          onPress={(e) => { e.stopPropagation(); handleJoinExam(appointment.id); }}
+                          onPress={(e) => { e?.stopPropagation?.(); handleJoinExam(appointment.id); }}
                         >
                           Xem lại
                         </Button>
