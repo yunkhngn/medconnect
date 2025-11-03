@@ -61,7 +61,17 @@ export default function PatientOnlineExamList() {
       
       if (response.ok) {
         const data = await response.json();
-        setAppointments(data || []);
+        // Normalize to expected shape for UI
+        const normalized = (data || []).map((apt) => {
+          const doctor = apt.doctor || {};
+          return {
+            ...apt,
+            doctorName: apt.doctorName || doctor.doctorName || doctor.name || '',
+            doctorAvatar: apt.doctorAvatar || doctor.doctorAvatar || doctor.avatar || '',
+            specialty: apt.specialty || doctor.specialty || doctor.specialization || '',
+          };
+        });
+        setAppointments(normalized);
       }
     } catch (error) {
       console.error("Failed to fetch online appointments:", error);
@@ -71,8 +81,10 @@ export default function PatientOnlineExamList() {
   };
 
   const filteredAppointments = appointments.filter(apt => {
-    const matchesSearch = apt.doctorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         apt.specialty?.toLowerCase().includes(searchQuery.toLowerCase());
+    const doctorName = (apt.doctorName || apt.doctor?.doctorName || apt.doctor?.name || '').toLowerCase();
+    const specialty = (apt.specialty || apt.doctor?.specialty || apt.doctor?.specialization || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
+    const matchesSearch = doctorName.includes(query) || specialty.includes(query);
     const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -105,6 +117,24 @@ export default function PatientOnlineExamList() {
       date: date.toLocaleDateString('vi-VN'),
       time: date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     };
+  };
+
+  const slotToRange = (slot) => {
+    const map = {
+      SLOT_1: '07:30 - 08:00',
+      SLOT_2: '08:15 - 08:45',
+      SLOT_3: '09:00 - 09:30',
+      SLOT_4: '09:45 - 10:15',
+      SLOT_5: '10:30 - 11:00',
+      SLOT_6: '11:15 - 11:45',
+      SLOT_7: '13:00 - 13:30',
+      SLOT_8: '13:45 - 14:15',
+      SLOT_9: '14:30 - 15:00',
+      SLOT_10: '15:15 - 15:45',
+      SLOT_11: '16:00 - 16:30',
+      SLOT_12: '16:45 - 17:15',
+    };
+    return map[slot] || '';
   };
 
   const handleJoinExam = (appointmentId) => {
@@ -221,7 +251,8 @@ export default function PatientOnlineExamList() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredAppointments.map((appointment) => {
-                const { date, time } = formatDateTime(appointment.appointmentDate);
+                const { date } = formatDateTime(appointment.appointmentDate);
+                const time = slotToRange(appointment.slot) || formatDateTime(appointment.appointmentDate).time;
                 return (
                   <Card
                     key={appointment.id}

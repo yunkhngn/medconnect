@@ -138,6 +138,34 @@ export default function DoctorOnlineExamList() {
     };
   };
 
+  // Normalize and prettify reason field from backend which may be:
+  // - plain string
+  // - JSON string { reason: string|null, attachments: [] }
+  // - null/empty
+  const formatReason = (raw) => {
+    if (!raw) return "Không có thông tin";
+    // If it's already an object (unlikely here), handle gracefully
+    if (typeof raw === 'object') {
+      const r = raw.reason ?? raw.text ?? '';
+      return r || "Không có thông tin";
+    }
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const obj = JSON.parse(trimmed);
+          const text = obj?.reason || '';
+          if (text) return String(text);
+          return "Không có thông tin";
+        } catch {
+          // fall through to show as plain text
+        }
+      }
+      return trimmed || "Không có thông tin";
+    }
+    return "Không có thông tin";
+  };
+
   const handleStartExam = (appointmentId) => {
     router.push(`/bac-si/kham-online/${appointmentId}`);
   };
@@ -300,7 +328,7 @@ export default function DoctorOnlineExamList() {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
                   <p className="text-sm text-gray-600 line-clamp-2">
-                    {appointment.reason || "Không có thông tin"}
+                    {formatReason(appointment.reason)}
                   </p>
                 </div>
 
@@ -399,7 +427,7 @@ export default function DoctorOnlineExamList() {
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
                 <p className="text-sm text-gray-600 line-clamp-3">
-                  {selectedAppointment.reason || "Không có thông tin"}
+                  {formatReason(selectedAppointment.reason)}
                 </p>
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Đơn thuốc</h4>
