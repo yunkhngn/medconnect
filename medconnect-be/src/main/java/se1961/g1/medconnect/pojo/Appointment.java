@@ -12,7 +12,13 @@ import se1961.g1.medconnect.enums.Slot;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "Appointment")
+@Table(
+    name = "Appointment",
+    uniqueConstraints = {
+        // Prevent a patient from booking multiple doctors in the same date and slot
+        @UniqueConstraint(name = "uk_patient_date_slot", columnNames = {"patient_id", "date", "slot"})
+    }
+)
 @Getter
 @Setter
 public class Appointment {

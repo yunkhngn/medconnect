@@ -190,15 +190,35 @@ public class AppointmentService {
         }
         System.out.println("[createAppointment] Type parsed: " + type);
         
-        // 5. Check if slot is available
+        // 5. Check if slot is available for this doctor
         List<String> availableSlots = getAvailableSlots(request.getDoctorId(), request.getDate());
         if (!availableSlots.contains(slot.name())) {
-            System.out.println("[createAppointment] ❌ Slot not available!");
+            System.out.println("[createAppointment] ❌ Slot not available for this doctor!");
             throw new Exception("Slot is not available");
         }
-        System.out.println("[createAppointment] ✅ Slot is available");
+        System.out.println("[createAppointment] ✅ Slot is available for this doctor");
         
-        // 6. Create appointment
+        // 6. Check if patient already has an appointment in the same date and slot with another doctor
+        List<Appointment> conflictingAppointments = appointmentRepository.findByPatientAndDateAndSlot(
+            patient, request.getDate(), slot);
+        
+        // Filter out cancelled and denied appointments (they don't count as conflicts)
+        List<Appointment> activeConflicts = conflictingAppointments.stream()
+            .filter(a -> a.getStatus() != AppointmentStatus.CANCELLED 
+                      && a.getStatus() != AppointmentStatus.DENIED)
+            .collect(Collectors.toList());
+        
+        if (!activeConflicts.isEmpty()) {
+            System.out.println("[createAppointment] ❌ Patient already has an appointment in this slot!");
+            Appointment conflict = activeConflicts.get(0);
+            String conflictDoctorName = conflict.getDoctor() != null ? conflict.getDoctor().getName() : "Unknown";
+            System.out.println("[createAppointment] Conflicting appointment ID: " + conflict.getAppointmentId() 
+                + ", Doctor: " + conflictDoctorName + ", Status: " + conflict.getStatus());
+            throw new Exception("Bạn đã có lịch hẹn trong khung giờ này với bác sĩ " + conflictDoctorName + ". Không thể đặt lịch trùng khung giờ với nhiều bác sĩ.");
+        }
+        System.out.println("[createAppointment] ✅ No conflict with patient's other appointments");
+        
+        // 8. Create appointment
         Appointment appointment = new Appointment();
         appointment.setPatient(patient);
         appointment.setDoctor(doctor);
@@ -211,7 +231,7 @@ public class AppointmentService {
         System.out.println("[createAppointment] Doctor set in appointment: " + appointment.getDoctor().getName());
         System.out.println("[createAppointment] Doctor user_id in appointment: " + appointment.getDoctor().getUserId());
         
-        // 7. Save
+        // 9. Save
         Appointment saved = appointmentRepository.save(appointment);
         
         System.out.println("[createAppointment] ✅ Appointment created!");
