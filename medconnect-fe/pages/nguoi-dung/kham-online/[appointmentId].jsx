@@ -41,6 +41,8 @@ export default function PatientOnlineExamRoom() {
   const [remoteCamOff, setRemoteCamOff] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [remoteConnected, setRemoteConnected] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Video refs cho injection của Agora
   const localVideoRef = useRef(null);
@@ -65,9 +67,40 @@ export default function PatientOnlineExamRoom() {
   // Poll appointment status when ONGOING to detect when doctor finishes
   useEffect(() => {
     if (!appointmentId || !appointment || appointment.status !== 'ONGOING') return;
-    const pollInterval = setInterval(() => {
-      fetchAppointmentDetails();
-    }, 3000); // Check every 3 seconds
+    
+    // Use a ref to track the current status to avoid stale closures
+    let currentStatus = appointment.status;
+    
+    const pollInterval = setInterval(async () => {
+      // Fetch without setting loading state to avoid reload
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+        const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Only update if status actually changed to avoid unnecessary re-renders
+          if (data.status !== currentStatus) {
+            currentStatus = data.status;
+            setAppointment(prev => {
+              // Only update if status changed
+              if (prev?.status !== data.status) {
+                return data;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch appointment details:", error);
+      }
+    }, 5000); // Check every 5 seconds (reduced frequency to avoid reload)
     return () => clearInterval(pollInterval);
   }, [appointmentId, appointment?.status]);
 
@@ -86,6 +119,34 @@ export default function PatientOnlineExamRoom() {
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Handle fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -113,6 +174,24 @@ export default function PatientOnlineExamRoom() {
     fetchToken();
   }, [appointmentId, agoraUid]);
 
+  // Handle completed appointment countdown
+  useEffect(() => {
+    if (appointment?.status === 'FINISHED' || appointment?.status === 'COMPLETED') {
+      setCountdown(10); // Reset countdown when status changes to FINISHED
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            router.push('/nguoi-dung/kham-online');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [appointment?.status, router]);
+
   const fetchAppointmentDetails = async () => {
     try {
       setLoading(true);
@@ -131,14 +210,20 @@ export default function PatientOnlineExamRoom() {
         const data = await response.json();
         setAppointment(data);
 
-        setChatMessages([
-          {
-            id: 1,
-            sender: 'patient',
-            message: 'Xin chào bác sĩ, tôi đã sẵn sàng cho cuộc khám.',
-            timestamp: new Date()
+        // Only set initial chat message if chatMessages is empty
+        setChatMessages(prev => {
+          if (prev.length === 0) {
+            return [
+              {
+                id: 1,
+                sender: 'patient',
+                message: 'Xin chào bác sĩ, tôi đã sẵn sàng cho cuộc khám.',
+                timestamp: new Date()
+              }
+            ];
           }
-        ]);
+          return prev;
+        });
       }
     } catch (error) {
       console.error("Failed to fetch appointment details:", error);
@@ -203,26 +288,6 @@ export default function PatientOnlineExamRoom() {
   const apptDateObj = appointment?.appointmentDate ? new Date(appointment.appointmentDate) : (appointment?.date ? new Date(appointment.date) : null);
   const apptDateStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleDateString('vi-VN') : '—';
   const apptTimeStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—';
-
-  // Handle completed appointment
-  const [countdown, setCountdown] = useState(10);
-
-  useEffect(() => {
-    if (appointment?.status === 'FINISHED' || appointment?.status === 'COMPLETED') {
-      setCountdown(10); // Reset countdown when status changes to FINISHED
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            router.push('/nguoi-dung/kham-online');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [appointment?.status, router]);
 
   if (appointment.status === 'FINISHED' || appointment.status === 'COMPLETED') {
     return (
@@ -318,7 +383,7 @@ export default function PatientOnlineExamRoom() {
             <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md rounded-full px-4 py-3 border border-white/30 shadow-lg">
               <Button isIconOnly variant="bordered" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff className="w-5 h-5"/> : <Mic className="w-5 h-5"/>}</Button>
               <Button isIconOnly variant="bordered" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff className="w-5 h-5"/> : <Video className="w-5 h-5"/>}</Button>
-              <Button color="danger" variant="bordered" onPress={()=>window.location.href='/nguoi-dung/kham-online'} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-6 text-white">Rời phòng</Button>
+              <Button color="danger" variant="bordered" onPress={()=>router.push('/nguoi-dung/kham-online')} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-6 text-white">Rời phòng</Button>
             </div>
           </div>
         </div>

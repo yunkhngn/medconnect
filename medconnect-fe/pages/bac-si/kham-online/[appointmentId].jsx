@@ -40,6 +40,7 @@ export default function DoctorOnlineExamRoom() {
   });
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [remoteConnected, setRemoteConnected] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // EMR compact UI (similar style to test form) - keep hooks at top level
   const [emr, setEmr] = useState({ 
     chief_complaint: "", 
@@ -104,6 +105,34 @@ export default function DoctorOnlineExamRoom() {
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Handle fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
   }, []);
 
   // Load draft when available
@@ -231,34 +260,59 @@ export default function DoctorOnlineExamRoom() {
           console.log('[EMR] Modal not open or no appointment');
           return;
         }
-        const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? appointment?.patient?.id ?? appointment?.patient?.userId ?? null;
-        console.log('[EMR] Fetching for patientUserId:', patientUserId, 'appointment:', appointment);
-        if (!patientUserId) {
-          console.warn('[EMR] No patientUserId found');
-          return;
-        }
         setEmrLoading(true); setEmrError("");
         const user = auth.currentUser; if (!user) return;
         const token = await user.getIdToken();
-        // Use entries endpoint for simpler parsing
-        const url = `http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`;
-        console.log('[EMR] Fetching from:', url);
-        const res = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-        });
-        console.log('[EMR] Response status:', res.status);
-        if (!res.ok) {
-          if (res.status === 404) {
-            console.log('[EMR] No record found (404)');
-            setEmrEntries([]);
-            setEmrError("");
-            return;
+        
+        // Try multiple strategies: first by appointment, then by patient
+        let data = [];
+        
+        // Strategy 1: Fetch by appointment ID
+        try {
+          const appointmentUrl = `http://localhost:8080/api/medical-records/appointment/${appointmentId}`;
+          console.log('[EMR] Trying appointment endpoint:', appointmentUrl);
+          const appointmentRes = await fetch(appointmentUrl, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          if (appointmentRes.ok) {
+            const appointmentData = await appointmentRes.json();
+            console.log('[EMR] Appointment endpoint response:', appointmentData);
+            // If single object, wrap in array
+            if (appointmentData && !Array.isArray(appointmentData)) {
+              data = [appointmentData];
+            } else if (Array.isArray(appointmentData)) {
+              data = appointmentData;
+            }
           }
-          throw new Error(`HTTP ${res.status}`);
+        } catch (e) {
+          console.log('[EMR] Appointment endpoint failed, trying patient endpoint:', e);
         }
-        const data = await res.json();
-        console.log('[EMR] Entries:', data);
-        setEmrEntries(Array.isArray(data) ? data : []);
+        
+        // Strategy 2: If no data from appointment, try patient endpoint
+        if (data.length === 0) {
+          const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? appointment?.patient?.id ?? appointment?.patient?.userId ?? null;
+          console.log('[EMR] Fetching for patientUserId:', patientUserId);
+          if (patientUserId) {
+            const patientUrl = `http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`;
+            console.log('[EMR] Trying patient endpoint:', patientUrl);
+            const patientRes = await fetch(patientUrl, {
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            });
+            if (patientRes.ok) {
+              const patientData = await patientRes.json();
+              console.log('[EMR] Patient endpoint response:', patientData);
+              data = Array.isArray(patientData) ? patientData : [];
+            } else if (patientRes.status === 404) {
+              console.log('[EMR] No record found (404)');
+              data = [];
+            } else {
+              throw new Error(`HTTP ${patientRes.status}`);
+            }
+          }
+        }
+        
+        console.log('[EMR] Final entries:', data);
+        setEmrEntries(data);
       } catch (e) {
         console.error('[EMR] Fetch error:', e);
         setEmrEntries([]);
@@ -269,7 +323,7 @@ export default function DoctorOnlineExamRoom() {
     };
     fetchEmr();
     // eslint-disable-next-line
-  }, [isPatientInfoOpen, appointment]);
+  }, [isPatientInfoOpen, appointment, appointmentId]);
 
   useEffect(() => {
     if (!appointmentId || !agoraUid) return;
@@ -507,7 +561,7 @@ export default function DoctorOnlineExamRoom() {
               </div>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto pr-2">
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />}>Toàn màn hình</Button>
+              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />} onPress={toggleFullscreen}>Toàn màn hình</Button>
             </div>
           </div>
           {tokenError && (
@@ -718,20 +772,103 @@ export default function DoctorOnlineExamRoom() {
                 {!emrLoading && emrError && <div className="text-sm text-red-600">{emrError}</div>}
                 {!emrLoading && !emrError && (
                   emrEntries.length > 0 ? (
-                    <div className="max-h-56 overflow-auto space-y-2">
+                    <div className="max-h-96 overflow-y-auto space-y-4">
                       {emrEntries.map((e, idx) => {
-                        const diagnosis = e?.assessment_plan?.final_diagnosis || [];
-                        const primaryDiag = diagnosis.length > 0 ? diagnosis[0] : null;
-                        const diagText = primaryDiag?.text || primaryDiag || e?.reason_for_visit || 'Chưa có chẩn đoán';
-                        const icdCodes = diagnosis.map(d => d?.icd10 || d?.code || d).filter(Boolean);
-                        const date = e?.encounter?.started_at || e?.visit_date || e?.date || '';
-                        const dateStr = date ? (new Date(date).toLocaleDateString('vi-VN') || date) : '';
+                        // Parse diagnosis from various possible structures
+                        const diagnosis = e?.assessment_plan?.final_diagnosis || e?.diagnosis || [];
+                        const primaryDiag = Array.isArray(diagnosis) && diagnosis.length > 0 
+                          ? (diagnosis[0]?.text || diagnosis[0]?.primary || diagnosis[0]) 
+                          : (typeof diagnosis === 'string' ? diagnosis : null);
+                        const diagText = primaryDiag || e?.chief_complaint || e?.reason_for_visit || 'Chưa có chẩn đoán';
+                        
+                        // Get ICD codes
+                        const icdCodes = Array.isArray(diagnosis) 
+                          ? diagnosis.map(d => d?.icd10 || d?.code || d).filter(Boolean)
+                          : (e?.icd_codes || []);
+                        
+                        // Get secondary diagnosis
+                        const secondaryDiag = e?.diagnosis?.secondary || e?.secondary || [];
+                        
+                        // Get prescriptions
+                        const prescriptions = e?.prescriptions || e?.medications || [];
+                        
+                        // Get vital signs
+                        const vitalSigns = e?.vital_signs || {};
+                        
+                        // Get notes
+                        const notes = e?.notes || e?.note || '';
+                        
+                        // Get date
+                        const date = e?.encounter?.started_at || e?.visit_date || e?.date || e?.visit_id?.replace('V', '');
+                        const dateStr = date ? (isNaN(Date.parse(date)) ? date : new Date(date).toLocaleDateString('vi-VN')) : '';
+                        
                         return (
-                          <div key={idx} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="text-sm font-medium">{diagText}</div>
-                            {icdCodes.length > 0 && <div className="text-xs text-gray-600 mt-1">ICD-10: {icdCodes.join(', ')}</div>}
-                            {dateStr && <div className="text-xs text-gray-500 mt-1">{dateStr}</div>}
-                            {e?.reason_for_visit && <div className="text-xs text-gray-700 mt-1">Lý do: {e.reason_for_visit}</div>}
+                          <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                            {dateStr && (
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{dateStr}</div>
+                            )}
+                            
+                            {/* Diagnosis */}
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900 mb-1">Chẩn đoán</div>
+                              <div className="text-sm text-gray-700">{diagText}</div>
+                              {icdCodes.length > 0 && (
+                                <div className="text-xs text-gray-600 mt-1">ICD-10: {icdCodes.join(', ')}</div>
+                              )}
+                              {secondaryDiag.length > 0 && (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Chẩn đoán phụ: {secondaryDiag.map(d => typeof d === 'string' ? d : d?.text || d).join(', ')}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Vital Signs */}
+                            {Object.keys(vitalSigns).length > 0 && (
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900 mb-1">Dấu hiệu sinh tồn</div>
+                                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                  {vitalSigns.temperature && <div>Nhiệt độ: {vitalSigns.temperature} °C</div>}
+                                  {vitalSigns.blood_pressure && <div>Huyết áp: {vitalSigns.blood_pressure} mmHg</div>}
+                                  {vitalSigns.heart_rate && <div>Nhịp tim: {vitalSigns.heart_rate} bpm</div>}
+                                  {vitalSigns.oxygen_saturation && <div>SpO2: {vitalSigns.oxygen_saturation} %</div>}
+                                  {vitalSigns.weight && <div>Cân nặng: {vitalSigns.weight} kg</div>}
+                                  {vitalSigns.height && <div>Chiều cao: {vitalSigns.height} cm</div>}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Prescriptions */}
+                            {prescriptions.length > 0 && (
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900 mb-1">Đơn thuốc</div>
+                                <div className="space-y-2">
+                                  {prescriptions.map((med, medIdx) => (
+                                    <div key={medIdx} className="text-xs text-gray-700 border-l-2 border-blue-300 pl-2 py-1">
+                                      <div className="font-medium">{med.name || med.medication_name}</div>
+                                      {med.dosage && <div>Liều lượng: {med.dosage}</div>}
+                                      {med.frequency && <div>Tần suất: {med.frequency}</div>}
+                                      {med.duration && <div>Thời gian: {med.duration}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Notes */}
+                            {notes && (
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900 mb-1">Ghi chú</div>
+                                <div className="text-xs text-gray-700 whitespace-pre-line">{notes}</div>
+                              </div>
+                            )}
+                            
+                            {/* Reason for visit */}
+                            {e?.reason_for_visit && e.reason_for_visit !== diagText && (
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900 mb-1">Lý do khám</div>
+                                <div className="text-xs text-gray-700">{e.reason_for_visit}</div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
