@@ -325,12 +325,24 @@ export default function MedConnectRegister() {
 
                     <div className="flex items-center justify-center">
                       <SocialLogin
-                        onSuccess={async (user) => {
-                          // For social login, attempt to send displayName/email to backend as well
-                          await sendFirebaseTokenToBackend(user, {
-                            name: user.displayName || "",
-                            email: user.email || ""
-                          });
+                        onSuccess={(user, token, data) => {
+                          if (data) {
+                            showMessage(data.message || "Đăng ký thành công!", "success");
+                            setTimeout(() => {
+                              if (data.isNewUser) {
+                                router.push("/dang-nhap?message=registration_success");
+                              } else {
+                                // Already existing user, redirect to role dashboard
+                                router.push("/");
+                              }
+                            }, 1500);
+                          } else {
+                            // Fallback to original flow
+                            sendFirebaseTokenToBackend(user, {
+                              name: user.displayName || "",
+                              email: user.email || ""
+                            });
+                          }
                         }}
                         onError={(msg) => showMessage(msg, "error")}
                       />

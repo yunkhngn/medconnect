@@ -10,6 +10,7 @@ import se1961.g1.medconnect.dto.PaymentRequest;
 import se1961.g1.medconnect.dto.PaymentResponse;
 import se1961.g1.medconnect.enums.PaymentStatus;
 import se1961.g1.medconnect.pojo.Appointment;
+import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Patient;
 import se1961.g1.medconnect.pojo.Payment;
 import se1961.g1.medconnect.repository.AppointmentRepository;
@@ -47,11 +48,7 @@ public class PaymentService {
     private String vnpPayUrl;
 
     @Value("${vnpay.returnUrl}")
-    private String vnpReturnUrl;
-    
-    private static final double CONSULTATION_FEE = 200000.0; // 200,000 VND
-
-    public PaymentResponse initiatePayment(String firebaseUid, PaymentRequest request) throws Exception {
+    private String vnpReturnUrl;    public PaymentResponse initiatePayment(String firebaseUid, PaymentRequest request) throws Exception {
         // Get appointment
         Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
                 .orElseThrow(() -> new Exception("Appointment not found"));
@@ -67,6 +64,9 @@ public class PaymentService {
             throw new Exception("Appointment already paid");
         }
         
+        // Calculate consultation fee based on appointment type and doctor's speciality
+        double consultationFee = calculateConsultationFee(appointment);
+
         // Create or update payment record
         Payment payment;
         if (existingPayment.isPresent()) {
@@ -75,7 +75,7 @@ public class PaymentService {
             payment = new Payment();
             payment.setAppointment(appointment);
             payment.setPatient(appointment.getPatient());
-            payment.setAmount(CONSULTATION_FEE);
+            payment.setAmount(consultationFee);
             payment.setGatewayName("VNPAY");
             payment.setPaymentMethod("BANK_TRANSFER");
         }
@@ -99,7 +99,7 @@ public class PaymentService {
         vnpParams.put("vnp_OrderInfo", payment.getDescription());
         vnpParams.put("vnp_OrderType", "other");
         vnpParams.put("vnp_Locale", "vn");
-        vnpParams.put("vnp_ReturnUrl", vnpReturnUrl);
+        vnpParams.put("vnp_ReturnUrl", request.getReturnUrl() != null ? request.getReturnUrl() : vnpReturnUrl);
         vnpParams.put("vnp_IpAddr", "127.0.0.1");
         vnpParams.put("vnp_CreateDate", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
 
@@ -211,6 +211,35 @@ public class PaymentService {
     public List<Payment> getPaymentsByPatient(String firebaseUid) {
         Patient patient = patientRepository.findByFirebaseUid(firebaseUid).orElse(null);
         return paymentRepository.findByPatient(patient);
+    }
+
+    /**
+     * Calculate consultation fee based on appointment type and doctor's speciality
+     */
+    private double calculateConsultationFee(Appointment appointment) {
+        try {
+            // Get doctor's speciality
+            Doctor doctor = appointment.getDoctor();
+            if (doctor == null || doctor.getSpeciality() == null) {
+                // Fallback to default fee if no speciality found
+                return 200000.0; // Default 200k VND
+            }
+
+            // Get price based on appointment type
+            if (appointment.getType() == se1961.g1.medconnect.enums.AppointmentType.ONLINE) {
+                return doctor.getSpeciality().getOnlinePrice() != null 
+                    ? doctor.getSpeciality().getOnlinePrice().doubleValue()
+                    : 200000.0; // Default online price
+            } else {
+                return doctor.getSpeciality().getOfflinePrice() != null 
+                    ? doctor.getSpeciality().getOfflinePrice().doubleValue()
+                    : 300000.0; // Default offline price
+            }
+        } catch (Exception e) {
+            // Log error and return default fee
+            System.err.println("Error calculating consultation fee: " + e.getMessage());
+            return 200000.0; // Safe default
+        }
     }
 }
 

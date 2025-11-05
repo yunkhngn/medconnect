@@ -2,9 +2,12 @@ import React, { useState } from "react";
 import { Button } from "@heroui/react";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
+import { useRouter } from "next/router";
+import { getRoleRedirectPath } from "@/utils/roleRedirect";
 
-export default function SocialLoginButtons({ onSuccess, onError }) {
+export default function SocialLoginButtons({ onSuccess, onError, autoRedirect = false }) {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const getFriendlyError = (err, providerName) => {
     if (!err) return `${providerName} login failed.`;
@@ -22,10 +25,13 @@ export default function SocialLoginButtons({ onSuccess, onError }) {
       const result = await signInWithPopup(auth, provider);
 
       if (!result?.user) throw new Error(`${providerName} login aborted.`);
+      
       const user = result.user;
       const token = await user.getIdToken();
 
-      if (onSuccess) onSuccess(user, token);
+      // Automatically handle login/register with backend
+      await handleBackendAuthentication(user, token, providerName);
+
     } catch (err) {
       console.warn(`${providerName} login error:`, err);
 
@@ -47,6 +53,96 @@ export default function SocialLoginButtons({ onSuccess, onError }) {
       if (onError) onError(msg);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleBackendAuthentication = async (user, token, providerName) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      
+      // First, try login
+      const loginResponse = await fetch(`${apiUrl}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+        if (loginResponse.ok) {
+          // User exists - login successful
+          const loginData = await loginResponse.json();
+          const userRole = loginData.role || loginData.data?.role;
+          
+          if (autoRedirect && userRole) {
+            // Auto redirect to role dashboard
+            const redirectPath = getRoleRedirectPath(userRole);
+            router.push(redirectPath);
+          } else if (onSuccess) {
+            onSuccess(user, token, { 
+              isNewUser: false, 
+              role: userRole,
+              message: "Đăng nhập thành công!"
+            });
+          }
+          return;
+        }      // If login failed with 404 (user not found), try register
+      if (loginResponse.status === 404) {
+        const registerResponse = await fetch(`${apiUrl}/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: user.displayName || user.email?.split('@')[0] || 'User',
+            email: user.email,
+            phone: user.phoneNumber || '',
+            role: 'PATIENT' // Default role for social registration
+          }),
+        });
+
+        if (registerResponse.ok) {
+          // Registration successful
+          const registerData = await registerResponse.json();
+          
+          if (autoRedirect) {
+            // Auto redirect to patient dashboard for new users
+            router.push('/nguoi-dung/trang-chu');
+          } else if (onSuccess) {
+            onSuccess(user, token, { 
+              isNewUser: true, 
+              role: 'PATIENT',
+              message: "Tài khoản mới đã được tạo thành công!"
+            });
+          }
+          return;
+        } else {
+          // Registration failed
+          const errorData = await registerResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || `Đăng ký thất bại từ ${providerName}`);
+        }
+      }
+
+      // Other login errors
+      const errorData = await loginResponse.json().catch(() => ({}));
+      throw new Error(errorData.message || `Đăng nhập ${providerName} thất bại`);
+
+    } catch (error) {
+      console.error(`Backend ${providerName} authentication error:`, error);
+      
+      // Clean up Firebase user on backend error
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.delete();
+        } catch (delErr) {
+          console.warn("Failed to delete Firebase user after backend error:", delErr);
+        }
+      }
+      
+      if (onError) {
+        onError(error.message || `Lỗi kết nối máy chủ khi đăng nhập ${providerName}`);
+      }
     }
   };
 

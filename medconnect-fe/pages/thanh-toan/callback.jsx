@@ -9,65 +9,76 @@ export default function PaymentCallback() {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!router.isReady || !user) return;
+    if (!router.isReady) return;
     
-    const verifyPayment = async () => {
+    const processCallback = () => {
       const queryParams = router.query;
+      console.log("Payment callback params:", queryParams);
       
-      // Check VNPay response code
-      const responseCode = queryParams.vnp_ResponseCode;
-      const transactionStatus = queryParams.vnp_TransactionStatus;
+      // Extract VNPay parameters
+      const {
+        vnp_ResponseCode,
+        vnp_TransactionStatus,
+        vnp_TxnRef,
+        vnp_Amount,
+        vnp_OrderInfo,
+        vnp_PayDate,
+        vnp_BankCode,
+        vnp_TransactionNo,
+        appointmentId
+      } = queryParams;
 
       // VNPay response codes:
       // 00: Success
       // 24: Customer cancelled transaction
       // Others: Failed
       
-      if (responseCode === "24" || transactionStatus === "02") {
+      if (vnp_ResponseCode === "24" || vnp_TransactionStatus === "02") {
         // Payment cancelled by user
-        router.replace("/thanh-toan/da-huy");
+        const cancelUrl = `/thanh-toan/da-huy?${new URLSearchParams({
+          vnp_TxnRef: vnp_TxnRef || '',
+          vnp_ResponseCode: vnp_ResponseCode || '',
+          appointmentId: appointmentId || ''
+        }).toString()}`;
+        router.replace(cancelUrl);
         return;
       }
 
-      try {
-        // Get JWT token
-        const token = await user.getIdToken();
+      if (vnp_ResponseCode === "00" && vnp_TransactionStatus === "00") {
+        // Payment successful
+        const successUrl = `/thanh-toan/thanh-cong?${new URLSearchParams({
+          vnp_TxnRef: vnp_TxnRef || '',
+          vnp_Amount: vnp_Amount || '',
+          vnp_OrderInfo: vnp_OrderInfo || '',
+          vnp_PayDate: vnp_PayDate || '',
+          vnp_BankCode: vnp_BankCode || '',
+          vnp_TransactionNo: vnp_TransactionNo || '',
+          vnp_ResponseCode: vnp_ResponseCode || '',
+          appointmentId: appointmentId || '',
+          status: 'PAID'
+        }).toString()}`;
         
-        // Build query string from URL params
-        const queryString = new URLSearchParams(queryParams).toString();
+        console.log("Redirecting to success page:", successUrl);
+        router.replace(successUrl);
+      } else {
+        // Payment failed
+        const errorUrl = `/thanh-toan/that-bai?${new URLSearchParams({
+          vnp_TxnRef: vnp_TxnRef || '',
+          vnp_ResponseCode: vnp_ResponseCode || '',
+          vnp_TransactionStatus: vnp_TransactionStatus || '',
+          vnp_OrderInfo: vnp_OrderInfo || '',
+          appointmentId: appointmentId || '',
+          errorMessage: 'Giao dịch không thành công'
+        }).toString()}`;
         
-        // Call backend to verify payment
-        const response = await fetch(
-          `http://localhost:8080/api/payment/confirm?${queryString}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.success && responseCode === "00") {
-            // Payment successful
-            router.replace("/thanh-toan/thanh-cong");
-          } else {
-            // Payment failed
-            router.replace("/thanh-toan/that-bai");
-          }
-        } else {
-          // Server error
-          router.replace("/thanh-toan/that-bai");
-        }
-      } catch (error) {
-        console.error("Payment verification error:", error);
-        router.replace("/thanh-toan/that-bai");
+        console.log("Redirecting to error page:", errorUrl);
+        router.replace(errorUrl);
       }
     };
 
-    verifyPayment();
-  }, [router.isReady, router.query, user]);
+    // Add small delay to ensure router is fully ready
+    setTimeout(processCallback, 100);
+  }, [router.isReady, router.query]);
 
   return (
     <PatientFrame>

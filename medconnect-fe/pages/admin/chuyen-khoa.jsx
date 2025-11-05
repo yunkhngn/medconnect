@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AdminFrame, Grid } from '@/components/layouts/';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/router';
 import {
   Table,
   TableHeader,
@@ -36,6 +38,8 @@ const API_CONFIG = {
 
 const ChuyenKhoa = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const [specialties, setSpecialties] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -54,53 +58,51 @@ const ChuyenKhoa = () => {
 
   const [errors, setErrors] = useState({});
 
-  const mockData = [
-    { 
-      id: 1, 
-      name: 'Nội tổng quát', 
-      description: 'Khám và điều trị các bệnh nội khoa tổng hợp', 
-      onlinePrice: 250000,
-      offlinePrice: 400000 
-    },
-    { 
-      id: 2, 
-      name: 'Da liễu', 
-      description: 'Chẩn đoán và điều trị các bệnh về da', 
-      onlinePrice: 180000,
-      offlinePrice: 300000 
-    },
-    { 
-      id: 3, 
-      name: 'Răng - Hàm - Mặt', 
-      description: 'Chuyên khoa điều trị và thẩm mỹ răng miệng', 
-      onlinePrice: 200000,
-      offlinePrice: 400000 
-    },
-  ];
-
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.push("/dang-nhap");
+      return;
+    }
     fetchSpecialties();
-  }, []);
+  }, [user, authLoading]);
 
   useEffect(() => {
     filterData();
   }, [searchQuery, specialties]);
 
+  const getAuthHeaders = async () => {
+    if (!user) return {};
+    try {
+      const token = await user.getIdToken();
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return {};
+    }
+  };
+
   const fetchSpecialties = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GET_SPECIALTIES}`);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GET_SPECIALTIES}`, {
+        headers
+      });
+      
       if (response.ok) {
         const data = await response.json();
         setSpecialties(data);
       } else {
-        // Fallback to mock data if API fails
-        setSpecialties(mockData);
+        console.error('Failed to fetch specialties:', response.status);
+        setSpecialties([]);
       }
     } catch (error) {
       console.error('Error fetching specialties:', error);
-      // Fallback to mock data
-      setSpecialties(mockData);
+      setSpecialties([]);
     } finally {
       setIsLoading(false);
     }
@@ -141,34 +143,25 @@ const ChuyenKhoa = () => {
         offlinePrice: parseInt(formData.offlinePrice)
       };
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CREATE_SPECIALTY}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 
       if (response.ok) {
         const newData = await response.json();
         setSpecialties([...specialties, newData]);
+        resetForm();
       } else {
-        // Fallback for demo
-        const newData = { id: Date.now(), ...payload };
-        setSpecialties([...specialties, newData]);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to create specialty:', errorData);
+        alert('Không thể tạo chuyên khoa. Vui lòng thử lại.');
       }
-      resetForm();
     } catch (error) {
       console.error('Error creating specialty:', error);
-      // Fallback for demo
-      const newData = { 
-        id: Date.now(), 
-        ...formData, 
-        onlinePrice: parseInt(formData.onlinePrice),
-        offlinePrice: parseInt(formData.offlinePrice)
-      };
-      setSpecialties([...specialties, newData]);
-      resetForm();
+      alert('Lỗi kết nối server. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -186,32 +179,25 @@ const ChuyenKhoa = () => {
         offlinePrice: parseInt(formData.offlinePrice)
       };
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.UPDATE_SPECIALTY(current.id)}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 
       if (response.ok) {
         const updatedData = await response.json();
         setSpecialties(specialties.map((s) => (s.id === current.id ? updatedData : s)));
+        resetForm();
       } else {
-        // Fallback for demo
-        setSpecialties(specialties.map((s) => (s.id === current.id ? { ...s, ...payload } : s)));
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to update specialty:', errorData);
+        alert('Không thể cập nhật chuyên khoa. Vui lòng thử lại.');
       }
-      resetForm();
     } catch (error) {
       console.error('Error updating specialty:', error);
-      // Fallback for demo
-      setSpecialties(specialties.map((s) => (s.id === current.id ? { 
-        ...s, 
-        ...formData, 
-        onlinePrice: parseInt(formData.onlinePrice),
-        offlinePrice: parseInt(formData.offlinePrice)
-      } : s)));
-      resetForm();
+      alert('Lỗi kết nối server. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -222,20 +208,22 @@ const ChuyenKhoa = () => {
     
     setIsLoading(true);
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DELETE_SPECIALTY(id)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
       });
 
       if (response.ok) {
         setSpecialties(specialties.filter((s) => s.id !== id));
       } else {
-        // Fallback for demo
-        setSpecialties(specialties.filter((s) => s.id !== id));
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to delete specialty:', errorData);
+        alert('Không thể xóa chuyên khoa. Vui lòng thử lại.');
       }
     } catch (error) {
       console.error('Error deleting specialty:', error);
-      // Fallback for demo  
-      setSpecialties(specialties.filter((s) => s.id !== id));
+      alert('Lỗi kết nối server. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -302,6 +290,22 @@ const ChuyenKhoa = () => {
   }, [page, filtered]);
 
   const pages = Math.ceil(filtered.length / rowsPerPage);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <AdminFrame title="Quản Lý Chuyên Khoa">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Spinner size="lg" label="Đang tải..." />
+        </div>
+      </AdminFrame>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    return null;
+  }
 
   const leftPanel = (
     <div className="space-y-6">
