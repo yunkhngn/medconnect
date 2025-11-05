@@ -98,6 +98,31 @@ export default function DatLichKham() {
     return monday;
   });
   const [weeklyAvailable, setWeeklyAvailable] = useState({}); // { 'YYYY-MM-DD': [slotIds] }
+  const [consultationFee, setConsultationFee] = useState(0);
+
+  // Calculate consultation fee based on selected doctor and appointment type
+  const calculateFee = (doctor, type) => {
+    if (!doctor) return 0;
+
+    if (type === "ONLINE") {
+      return doctor.onlinePrice || 200000; // Default online price
+    } else {
+      return doctor.offlinePrice || 300000; // Default offline price
+    }
+  };
+
+  // Update fee when doctor or appointment type changes
+  useEffect(() => {
+    if (selectedDoctor) {
+      const fee = calculateFee(selectedDoctor, appointmentType);
+      setConsultationFee(fee);
+    }
+  }, [selectedDoctor, appointmentType]);
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN').format(price) + ' VND';
+  };
+
   // Map (Geoapify) for preview doctor
   const [mapUrl, setMapUrl] = useState("");
   const [embedUrl, setEmbedUrl] = useState("");
@@ -611,6 +636,14 @@ export default function DatLichKham() {
               <div className="flex items-center gap-2">
                 {appointmentType === "ONLINE" ? <Video size={16} className="text-teal-600" /> : <MapPin size={16} className="text-teal-600" />}
                 <span>Hình thức: <strong>{appointmentType === "ONLINE" ? "Khám online" : "Khám tại phòng khám"}</strong></span>
+              </div>
+            )}
+            {consultationFee > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">Phí khám:</span>
+                </div>
+                <span className="text-lg font-bold text-green-600">{formatPrice(consultationFee)}</span>
               </div>
             )}
           </CardBody>

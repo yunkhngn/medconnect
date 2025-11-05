@@ -40,8 +40,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/appointments/doctor/*/available-slots").permitAll()
                 .requestMatchers("/api/appointments/doctor/{doctorId}/available-slots").permitAll()
-                .requestMatchers("/api/specialities/**").permitAll()
-                .requestMatchers("/api/payment/ipn").permitAll() // webhook
+                .requestMatchers("/api/specialties/**").permitAll()
+                .requestMatchers("/api/specialities/**").permitAll() // backward compatibility
+                .requestMatchers("/api/payment/ipn").permitAll() // VNPay webhook
+                .requestMatchers("/api/payment/confirm").permitAll() // VNPay callback  
                 .requestMatchers("/doctor/dashboard/all").permitAll() // public list of doctors for booking
 
                 // Avatar & media

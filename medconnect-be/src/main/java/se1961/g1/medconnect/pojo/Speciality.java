@@ -35,6 +35,12 @@ public class Speciality {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "online_price")
+    private Integer onlinePrice;
+
+    @Column(name = "offline_price")
+    private Integer offlinePrice;
     
     // Relationship: One Speciality has Many Doctors
     @OneToMany(mappedBy = "speciality", fetch = FetchType.LAZY)

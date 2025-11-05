@@ -12,5 +12,11 @@ import java.util.Optional;
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
     @Query("SELECT d FROM Doctor d WHERE d.firebaseUid = :uid")
     Optional<Doctor> findByFirebaseUid(@Param("uid") String uid);
+    
+    /**
+     * Count doctors by speciality ID
+     */
+    long countBySpecialitySpecialityId(Integer specialityId);
+    
 //    List<Appointment> findAppointments(Doctor doctor);
 }

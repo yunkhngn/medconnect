@@ -27,6 +27,7 @@ export default function PaymentPage() {
   const [appointment, setAppointment] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [consultationFee, setConsultationFee] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -39,6 +40,27 @@ export default function PaymentPage() {
       fetchAppointmentAndPayment();
     }
   }, [user, authLoading, appointmentId]);
+
+  // Calculate consultation fee based on appointment type and doctor's speciality
+  const calculateConsultationFee = (appointment) => {
+    if (!appointment || !appointment.doctor || !appointment.doctor.speciality) {
+      console.warn("Missing appointment/doctor/speciality data, using default price");
+      return 200000; // Default fallback
+    }
+
+    // Get price based on appointment type and doctor's speciality
+    const speciality = appointment.doctor.speciality;
+    
+    if (appointment.type === "ONLINE") {
+      return speciality.onlinePrice || 200000;
+    } else {
+      return speciality.offlinePrice || 300000;
+    }
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN').format(price) + ' VND';
+  };
 
   const fetchAppointmentAndPayment = async () => {
     setLoading(true);
@@ -53,6 +75,10 @@ export default function PaymentPage() {
       if (aptResponse.ok) {
         const aptData = await aptResponse.json();
         setAppointment(aptData);
+        
+        // Calculate consultation fee based on appointment data
+        const fee = calculateConsultationFee(aptData);
+        setConsultationFee(fee);
       } else {
         toast.error("Không tìm thấy lịch hẹn");
         router.push("/nguoi-dung/lich-hen");
@@ -66,12 +92,21 @@ export default function PaymentPage() {
 
       if (paymentResponse.ok) {
         const paymentData = await paymentResponse.json();
+        console.log("Payment status response:", paymentData);
         setPaymentStatus(paymentData);
         
-        if (paymentData.hasPaid) {
+        // Check for different possible structures of payment response
+        const isPaid = paymentData.hasPaid || 
+                      paymentData.status === "PAID" || 
+                      (paymentData.success && paymentData.status === "PAID");
+        
+        if (isPaid) {
           toast.success("Lịch hẹn này đã được thanh toán");
           setTimeout(() => router.push("/nguoi-dung/lich-hen"), 2000);
         }
+      } else {
+        console.log("Payment status check failed:", paymentResponse.status);
+        // Don't show error for payment status check failure as it might be normal for unpaid appointments
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -95,27 +130,35 @@ export default function PaymentPage() {
         },
         body: JSON.stringify({
           appointmentId: parseInt(appointmentId),
-          returnUrl: `${window.location.origin}/thanh-toan/callback`
+          returnUrl: `${window.location.origin}/thanh-toan/callback?appointmentId=${appointmentId}`
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Redirect to VNPay payment gateway
+        console.log("Payment init response:", data);
+        
+        // Check for checkoutUrl in response
         if (data.checkoutUrl) {
-          window.location.href = data.checkoutUrl;
+          toast.success("Đang chuyển hướng đến VNPay...");
+          // Small delay to show toast message
+          setTimeout(() => {
+            window.location.href = data.checkoutUrl;
+          }, 1000);
         } else {
+          console.error("No checkoutUrl in response:", data);
           toast.error("Không nhận được link thanh toán từ VNPay");
           setProcessingPayment(false);
         }
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Không thể khởi tạo thanh toán");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Payment init failed:", response.status, errorData);
+        toast.error(errorData.message || errorData.error || "Không thể khởi tạo thanh toán");
         setProcessingPayment(false);
       }
     } catch (error) {
       console.error("Payment error:", error);
-      toast.error("Lỗi kết nối server");
+      toast.error("Lỗi kết nối server. Vui lòng thử lại.");
       setProcessingPayment(false);
     }
   };
@@ -158,9 +201,27 @@ export default function PaymentPage() {
         </CardHeader>
         <Divider />
         <CardBody className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Phí khám bệnh:</span>
-            <span className="text-2xl font-bold text-teal-600">200,000 VND</span>
+          {/* Fee breakdown */}
+          <div className="space-y-3">
+            {appointment?.doctor?.speciality && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Chuyên khoa:</span>
+                  <span className="font-medium">{appointment.doctor.speciality.name}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <span className="text-gray-600">Hình thức:</span>
+                  <span className="font-medium">
+                    {appointment.type === "ONLINE" ? "Khám trực tuyến" : "Khám tại phòng khám"}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Phí khám bệnh:</span>
+              <span className="text-2xl font-bold text-teal-600">{formatPrice(consultationFee)}</span>
+            </div>
           </div>
           <Divider />
           <div className="bg-blue-50 p-4 rounded-lg">
@@ -258,10 +319,27 @@ export default function PaymentPage() {
       <Card className="border-2 border-teal-500">
         <CardBody className="p-6">
           <h3 className="text-xl font-semibold mb-4">Xác nhận thanh toán</h3>
+          
+          {/* Payment breakdown */}
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-600">Tổng thanh toán:</span>
-              <span className="text-3xl font-bold text-teal-600">200,000 VND</span>
+            {appointment?.doctor?.speciality && (
+              <div className="space-y-2 mb-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Chuyên khoa {appointment.doctor.speciality.name}:</span>
+                  <span className="font-medium">{appointment.type === "ONLINE" ? "Khám trực tuyến" : "Khám tại phòng khám"}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Phí dịch vụ:</span>
+                  <span className="font-medium">{formatPrice(consultationFee)}</span>
+                </div>
+              </div>
+            )}
+            
+            <Divider className="my-3" />
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700 font-medium">Tổng thanh toán:</span>
+              <span className="text-3xl font-bold text-teal-600">{formatPrice(consultationFee)}</span>
             </div>
           </div>
 

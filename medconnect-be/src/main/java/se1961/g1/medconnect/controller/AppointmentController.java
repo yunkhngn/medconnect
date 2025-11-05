@@ -107,6 +107,18 @@ public class AppointmentController {
                 doctorInfo.put("phone", appointment.getDoctor().getPhone());
                 doctorInfo.put("specialization", appointment.getDoctor().getSpeciality() != null 
                     ? appointment.getDoctor().getSpeciality().getName() : null);
+                
+                // Include full speciality information with pricing
+                if (appointment.getDoctor().getSpeciality() != null) {
+                    Map<String, Object> specialityInfo = new HashMap<>();
+                    specialityInfo.put("id", appointment.getDoctor().getSpeciality().getSpecialityId());
+                    specialityInfo.put("name", appointment.getDoctor().getSpeciality().getName());
+                    specialityInfo.put("description", appointment.getDoctor().getSpeciality().getDescription());
+                    specialityInfo.put("onlinePrice", appointment.getDoctor().getSpeciality().getOnlinePrice());
+                    specialityInfo.put("offlinePrice", appointment.getDoctor().getSpeciality().getOfflinePrice());
+                    doctorInfo.put("speciality", specialityInfo);
+                }
+                
                 doctorInfo.put("avatar", appointment.getDoctor().getAvatarUrl());
                 response.put("doctor", doctorInfo);
             }
@@ -155,6 +167,18 @@ public class AppointmentController {
                         doctor.put("phone", appointment.getDoctor().getPhone());
                         doctor.put("specialization", appointment.getDoctor().getSpeciality() != null 
                             ? appointment.getDoctor().getSpeciality().getName() : null);
+                        
+                        // Include full speciality information with pricing
+                        if (appointment.getDoctor().getSpeciality() != null) {
+                            Map<String, Object> specialityInfo = new HashMap<>();
+                            specialityInfo.put("id", appointment.getDoctor().getSpeciality().getSpecialityId());
+                            specialityInfo.put("name", appointment.getDoctor().getSpeciality().getName());
+                            specialityInfo.put("description", appointment.getDoctor().getSpeciality().getDescription());
+                            specialityInfo.put("onlinePrice", appointment.getDoctor().getSpeciality().getOnlinePrice());
+                            specialityInfo.put("offlinePrice", appointment.getDoctor().getSpeciality().getOfflinePrice());
+                            doctor.put("speciality", specialityInfo);
+                        }
+                        
                         doctor.put("avatar", appointment.getDoctor().getAvatarUrl());
                         apt.put("doctor", doctor);
                     }
