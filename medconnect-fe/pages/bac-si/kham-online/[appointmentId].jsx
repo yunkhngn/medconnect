@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Button, Card, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
+import { Button, Card, CardBody, Avatar, Input, Divider, Chip, Textarea, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send } from "lucide-react";
 import { useRouter } from "next/router";
 import { parseReason } from "@/utils/appointmentUtils";
@@ -19,7 +19,8 @@ export default function DoctorOnlineExamRoom() {
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
-  const [showChat, setShowChat] = useState(true);
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'emr'
+  const [unread, setUnread] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
@@ -39,6 +40,15 @@ export default function DoctorOnlineExamRoom() {
   });
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [remoteConnected, setRemoteConnected] = useState(false);
+  // EMR compact UI (similar style to test form) - keep hooks at top level
+  const [emr, setEmr] = useState({ chief_complaint: "", diagnosis_primary: "", icd_codes: [], notes: "" });
+  const [icdQuery, setIcdQuery] = useState("");
+  const [icdResults, setIcdResults] = useState([]);
+  const [icdLoading, setIcdLoading] = useState(false);
+  const [icdError,   setIcdError]   = useState("");
+  const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
+  const [medicationInput, setMedicationInput] = useState({ name: "", dosage: "", frequency: "", duration: "" });
+  const draftKey = typeof window !== 'undefined' && appointmentId ? `emr_draft_${appointmentId}` : null;
 
   // refs video call
   const localVideoRef = useRef(null);
@@ -51,7 +61,14 @@ export default function DoctorOnlineExamRoom() {
     let unsubFS = null;
     const stopAuth = auth.onAuthStateChanged((u) => {
       if (u && !unsubFS) {
-        unsubFS = subscribeRoomMessages(appointmentId, setChatMessages);
+        unsubFS = subscribeRoomMessages(appointmentId, (items)=>{
+          // count unread when not on chat tab and message from patient
+          const last = items[items.length - 1];
+          if (last && last.senderRole === 'patient' && activeTab !== 'chat') {
+            setUnread((c)=>c+1);
+          }
+          setChatMessages(items);
+        });
       }
     });
     return () => {
@@ -76,6 +93,43 @@ export default function DoctorOnlineExamRoom() {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Load draft when available
+  useEffect(() => {
+    try {
+      if (draftKey) {
+        const raw = localStorage.getItem(draftKey);
+        if (raw) setEmr(prev => ({ ...prev, ...JSON.parse(raw) }));
+      }
+    } catch {}
+    // eslint-disable-next-line
+  }, [draftKey]);
+
+  const saveEmrDraft = () => {
+    try { if (draftKey) localStorage.setItem(draftKey, JSON.stringify(emr)); } catch {}
+  };
+
+  // ICD-10 search effect (must be before any early returns)
+  useEffect(() => {
+    if (!icdQuery || icdQuery.trim().length < 2) { setIcdResults([]); setIcdLoading(false); setIcdError(""); return; }
+    const t = setTimeout(async () => {
+      try {
+        setIcdLoading(true); setIcdError("");
+        const resp = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(icdQuery)}&maxList=15`);
+        if (!resp.ok) throw new Error(String(resp.status));
+        const data = await resp.json();
+        const codes = data?.[2] || [];
+        const names = data?.[3] || [];
+        setIcdResults(codes.map((c, i) => ({ code: c, name: names[i] })));
+      } catch (e) {
+        setIcdResults([]);
+        setIcdError("Không lấy được gợi ý");
+      } finally {
+        setIcdLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [icdQuery]);
 
   useEffect(() => {
     if (!appointmentId || !agoraUid) return;
@@ -144,12 +198,14 @@ export default function DoctorOnlineExamRoom() {
     if (!text) return;
     setChatMessage("");
     const user = auth.currentUser;
-    await sendChatMessage(appointmentId, {
-      senderId: user?.uid,
-      senderName: user?.displayName || "Bác sĩ",
-      senderRole: "doctor",
-      text,
-    });
+    if (text) {
+      await sendChatMessage(appointmentId, {
+        senderId: user?.uid,
+        senderName: user?.displayName || "Bác sĩ",
+        senderRole: "doctor",
+        text,
+      });
+    }
   };
 
   const handleStartAppointment = async () => {
@@ -177,6 +233,33 @@ export default function DoctorOnlineExamRoom() {
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
+      // Persist EMR draft before finishing (best-effort)
+      try {
+        const raw = draftKey ? localStorage.getItem(draftKey) : null;
+        const draft = raw ? JSON.parse(raw) : null;
+        const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? null;
+        if (draft && patientUserId) {
+          const medicalEntry = {
+            visit_id: `V${Date.now()}`,
+            visit_date: new Date().toISOString().split('T')[0],
+            visit_time: new Date().toTimeString().slice(0,5),
+            visit_type: 'online',
+            doctor_name: user?.displayName || '',
+            doctor_id: user?.uid || '',
+            chief_complaint: draft.chief_complaint || '',
+            diagnosis: { primary: draft.diagnosis_primary || '', icd_codes: draft.icd_codes || [], secondary: draft.secondary || [] },
+            vital_signs: draft.vital_signs || {},
+            prescriptions: draft.prescriptions || [],
+            notes: draft.notes || ''
+          };
+          await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ entry: medicalEntry })
+          });
+          if (draftKey) localStorage.removeItem(draftKey);
+        }
+      } catch {}
       const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/finish`, {
         method: 'PATCH',
         headers: {
@@ -225,6 +308,12 @@ export default function DoctorOnlineExamRoom() {
   );
 
   const { reasonText, attachments } = parseReason(appointment.reason);
+  
+  // Derive names/avatars for header (doctor view)
+  const selfName = auth.currentUser?.displayName || appointment?.doctorName || 'Bác sĩ';
+  const selfAvatar = auth.currentUser?.photoURL || appointment?.doctorAvatar || undefined;
+  const partnerName = appointment?.patientName || appointment?.patient?.name || 'Bệnh nhân';
+  const partnerAvatar = appointment?.patientAvatar || appointment?.patient?.avatar || undefined;
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
@@ -259,13 +348,11 @@ export default function DoctorOnlineExamRoom() {
             <div className="pointer-events-auto flex items-center gap-3">
               <Chip color="primary" variant="flat">Phiên khám online • Bác sĩ</Chip>
               <Chip variant="flat">{formatTime(seconds)}</Chip>
-              <Button
-                size="sm"
-                variant="flat"
-                color="default"
-                onPress={onPatientInfoOpen}
-                startContent={<User size={16} />}
-              >Thông tin bệnh nhân</Button>
+              <Button size="sm" variant="flat" color="default" onPress={onPatientInfoOpen} startContent={<User size={16} />}>Thông tin bệnh nhân</Button>
+              <div className="ml-2 bg-white/10 rounded-full p-1">
+                <button className={`px-3 py-1 text-sm rounded-full ${activeTab==='chat'?'bg-white/80 text-black':'text-white/80'}`} onClick={()=>{setActiveTab('chat'); setUnread(0);}}>Chat {unread>0 && <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold bg-red-600 text-white rounded-full">{unread}</span>}</button>
+                <button className={`ml-1 px-3 py-1 text-sm rounded-full ${activeTab==='emr'?'bg-white/80 text-black':'text-white/80'}`} onClick={()=>setActiveTab('emr')}>Ghi khám</button>
+              </div>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto pr-2">
               <Button size="sm" variant="flat" startContent={<Maximize2 size={16} />}>Toàn màn hình</Button>
@@ -290,49 +377,157 @@ export default function DoctorOnlineExamRoom() {
         </div>
 
         {/* Right: Chat panel (4/12 width) */}
-        {showChat && (
-          <div className="w-[380px] h-full bg-white border-l border-gray-200 flex flex-col">
-            <div className="p-4 flex items-center gap-3">
-              <Avatar name={appointment.patientName} size="sm"/>
-              <div>
-                <p className="font-semibold">{appointment.patientName}</p>
-                <p className="text-xs text-gray-500">Đang kết nối…</p>
+        <div className="w-[420px] h-full bg-gray-50 flex flex-col">
+          {activeTab==='chat' ? (
+            <>
+            {/* Header trạng thái kết nối + avatar bệnh nhân */}
+            <div className="p-4 flex items-center bg-gray-50/50">
+              <div className="flex items-center gap-3">
+                <Avatar src={partnerAvatar} name={partnerName} size="sm"/>
+                <div className="flex flex-col">
+                  <p className="font-semibold">{partnerName}</p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`inline-block w-2 h-2 rounded-full ${remoteConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                    <span className="text-gray-600">{remoteConnected ? 'Đã kết nối' : 'Đang kết nối…'}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <Divider/>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.senderRole === 'doctor' ? 'justify-end' : 'justify-start'}`}>
-                  <Card 
-                    shadow="none" 
-                    className={`max-w-[80%] ${
-                      msg.senderRole === 'doctor' 
-                        ? 'bg-blue-50' 
-                        : 'bg-gray-50'
-                    }`}
-                  >
-                    <CardBody className="p-3 text-sm">{msg.text}</CardBody>
-                  </Card>
+                  <div className={`max-w-[80%] rounded-2xl ${msg.senderRole === 'doctor' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'} px-4 py-2.5`}>
+                    <div className="text-sm whitespace-pre-wrap break-words">{msg.text}</div>
+                  </div>
                 </div>
               ))}
             </div>
-            <Divider/>
-            <div className="p-3 flex gap-2 border-t mt-auto">
+            <div className="p-4 flex gap-2 items-center bg-gray-50/50">
               <Input 
                 placeholder="Nhập tin nhắn…" 
                 className="flex-1"
+                variant="flat"
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               />
               <Button color="primary" onPress={handleSendMessage}><Send size={16} /></Button>
             </div>
-            {/* footer mới: nút Kết thúc khám */}
-            <div className="w-full px-4 py-3 border-t bg-gray-50 flex justify-end">
-              <Button color="danger" onPress={handleEndAppointment} className="font-semibold">Kết thúc khám</Button>
+            <div className="w-full px-4 py-3 bg-gray-50/50 flex justify-end"><Button color="danger" onPress={handleEndAppointment} className="font-semibold">Kết thúc khám</Button></div>
+            </>
+          ) : (
+            <div className="flex-1 h-full overflow-y-auto bg-white">
+              <div className="p-6 space-y-8">
+                {/* Ghi chú đưa lên đầu, rộng hơn */}
+                <Textarea
+                  label="Ghi chú phiên khám"
+                  placeholder="Ghi chú tổng quan, tóm tắt triệu chứng, diễn biến..."
+                  value={emr.notes}
+                  onValueChange={(v)=>setEmr(prev=>({...prev, notes: v}))}
+                  variant="bordered"
+                  minRows={10}
+                  labelPlacement="outside"
+                />
+                <div className="grid grid-cols-1 gap-3">
+                  <Input
+                    label="Lý do khám"
+                    placeholder="VD: Đau đầu, ho, sốt..."
+                    value={emr.chief_complaint}
+                    onValueChange={(v)=>setEmr(prev=>({...prev, chief_complaint: v}))}
+                    variant="bordered"
+                    labelPlacement="outside"
+                  />
+                  <Input
+                    label="Chẩn đoán chính"
+                    placeholder="VD: Viêm họng cấp"
+                    value={emr.diagnosis_primary}
+                    onValueChange={(v)=>setEmr(prev=>({...prev, diagnosis_primary: v}))}
+                    variant="bordered"
+                    labelPlacement="outside"
+                  />
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Tìm nhanh ICD-10</label>
+                    <div className="relative">
+                      <Input
+                        placeholder="Gõ tên bệnh hoặc mã (≥2 ký tự)"
+                        value={icdQuery}
+                        onValueChange={setIcdQuery}
+                        variant="bordered"
+                      />
+                      {(icdLoading || icdResults.length>0 || icdError) && (
+                        <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-auto rounded-md border border-gray-200 bg-white z-10 shadow-sm">
+                          {icdLoading && <div className="px-3 py-2 text-sm text-gray-500">Đang tải...</div>}
+                          {!icdLoading && icdError && <div className="px-3 py-2 text-sm text-red-600">{icdError}</div>}
+                          {!icdLoading && !icdError && icdResults.map((it, idx)=> (
+                            <button key={idx} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setEmr(prev=>({...prev, icd_codes:[...prev.icd_codes, it.code]})); setIcdQuery(""); }}>
+                              <span className="font-semibold mr-2">{it.code}</span>
+                              <span className="text-gray-700">{it.name}</span>
+                            </button>
+                          ))}
+                          {!icdLoading && !icdError && icdResults.length===0 && icdQuery.trim().length>=2 && (
+                            <div className="px-3 py-2 text-sm text-gray-500">Không có gợi ý</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {emr.icd_codes.length>0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {emr.icd_codes.map((code, i)=> (
+                          <Chip key={i} variant="flat" color="primary" onClose={()=>setEmr(prev=>({...prev, icd_codes: prev.icd_codes.filter((_,idx)=>idx!==i)}))}>{code}</Chip>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Chẩn đoán phụ */}
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Chẩn đoán phụ</label>
+                    <div className="flex gap-2">
+                      <Input placeholder="VD: Viêm amidan" value={secondaryDiagnosis} onValueChange={setSecondaryDiagnosis} variant="bordered" />
+                      <Button variant="flat" onPress={()=>{ if(secondaryDiagnosis.trim()){ setEmr(prev=>({...prev, secondary:[...prev.secondary, secondaryDiagnosis.trim()]})); setSecondaryDiagnosis(""); } }}>Thêm</Button>
+                    </div>
+                    {emr.secondary?.length>0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">{emr.secondary.map((d,i)=>(<Chip key={i} onClose={()=>setEmr(prev=>({...prev, secondary: prev.secondary.filter((_,idx)=>idx!==i)}))} variant="flat" color="secondary">{d}</Chip>))}</div>
+                    )}
+                  </div>
+                </div>
+                {/* Sinh hiệu tự đo */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input label="Nhiệt độ (°C)" placeholder="VD: 37.5" value={emr.vital_signs?.temperature||""} onValueChange={(v)=>setEmr(prev=>({...prev, vital_signs:{...prev.vital_signs, temperature:v}}))} variant="bordered" labelPlacement="outside" />
+                  <Input label="Huyết áp (mmHg)" placeholder="VD: 120/80" value={emr.vital_signs?.blood_pressure||""} onValueChange={(v)=>setEmr(prev=>({...prev, vital_signs:{...prev.vital_signs, blood_pressure:v}}))} variant="bordered" labelPlacement="outside" />
+                  <Input label="Nhịp tim (bpm)" placeholder="VD: 72" value={emr.vital_signs?.heart_rate||""} onValueChange={(v)=>setEmr(prev=>({...prev, vital_signs:{...prev.vital_signs, heart_rate:v}}))} variant="bordered" labelPlacement="outside" />
+                  <Input label="SpO2 (%)" placeholder="VD: 98" value={emr.vital_signs?.oxygen_saturation||""} onValueChange={(v)=>setEmr(prev=>({...prev, vital_signs:{...prev.vital_signs, oxygen_saturation:v}}))} variant="bordered" labelPlacement="outside" />
+                  <Input label="Cân nặng (kg)" placeholder="VD: 65" value={emr.vital_signs?.weight||""} onValueChange={(v)=>setEmr(prev=>({...prev, vital_signs:{...prev.vital_signs, weight:v}}))} variant="bordered" labelPlacement="outside" />
+                  <Input label="Chiều cao (cm)" placeholder="VD: 170" value={emr.vital_signs?.height||""} onValueChange={(v)=>setEmr(prev=>({...prev, vital_signs:{...prev.vital_signs, height:v}}))} variant="bordered" labelPlacement="outside" />
+                </div>
+                {/* Đơn thuốc */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input label="Tên thuốc" placeholder="VD: Paracetamol" value={medicationInput.name} onValueChange={(v)=>setMedicationInput(prev=>({...prev, name:v}))} variant="bordered" />
+                  <Input label="Liều lượng" placeholder="VD: 500mg" value={medicationInput.dosage} onValueChange={(v)=>setMedicationInput(prev=>({...prev, dosage:v}))} variant="bordered" />
+                  <Input label="Tần suất" placeholder="VD: 3 lần/ngày" value={medicationInput.frequency} onValueChange={(v)=>setMedicationInput(prev=>({...prev, frequency:v}))} variant="bordered" />
+                  <Input label="Thời gian" placeholder="VD: 5 ngày" value={medicationInput.duration} onValueChange={(v)=>setMedicationInput(prev=>({...prev, duration:v}))} variant="bordered" />
+                  <div className="md:col-span-2"><Button variant="flat" onPress={()=>{ if(medicationInput.name.trim()){ setEmr(prev=>({...prev, prescriptions:[...prev.prescriptions, medicationInput]})); setMedicationInput({ name:"", dosage:"", frequency:"", duration:"" }); } }}>Thêm thuốc</Button></div>
+                  {emr.prescriptions?.length>0 && (
+                    <div className="md:col-span-2 space-y-2">
+                      {emr.prescriptions.map((m,i)=> (
+                        <div key={i} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                          <div className="text-sm text-gray-700">{m.name} • {m.dosage} • {m.frequency} • {m.duration}</div>
+                          <Button size="sm" variant="light" color="danger" onPress={()=>setEmr(prev=>({...prev, prescriptions: prev.prescriptions.filter((_,idx)=>idx!==i)}))}>Xóa</Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="bordered" onPress={()=>{ setEmr({ chief_complaint:"", diagnosis_primary:"", secondary:[], icd_codes:[], notes:"", vital_signs:{ temperature:"", blood_pressure:"", heart_rate:"", oxygen_saturation:"", weight:"", height:"" }, prescriptions:[] }); }}>Xóa</Button>
+                  <Button color="primary" onPress={saveEmrDraft}>Lưu tạm</Button>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       {/* Patient Info Modal (vẫn giữ nguyên) */}
       <Modal isOpen={isPatientInfoOpen} onOpenChange={onPatientInfoOpenChange} size="2xl">

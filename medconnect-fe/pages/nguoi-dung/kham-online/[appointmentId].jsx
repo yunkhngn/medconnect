@@ -149,12 +149,14 @@ export default function PatientOnlineExamRoom() {
     if (!text) return;
     setChatMessage("");
     const user = auth.currentUser;
-    await sendChatMessage(appointmentId, {
-      senderId: user?.uid,
-      senderName: user?.displayName || "Bệnh nhân",
-      senderRole: "patient",
-      text,
-    });
+    if (text) {
+      await sendChatMessage(appointmentId, {
+        senderId: user?.uid,
+        senderName: user?.displayName || "Bệnh nhân",
+        senderRole: "patient",
+        text,
+      });
+    }
   };
 
   // Đợi loading hoặc chưa có appointment/status
@@ -186,6 +188,12 @@ export default function PatientOnlineExamRoom() {
   );
 
   const { reasonText, attachments } = parseReason(appointment.reason);
+  // Derive names/avatars for header (patient view)
+  const selfName = auth.currentUser?.displayName || appointment?.patientName || 'Bạn';
+  const selfAvatar = auth.currentUser?.photoURL || appointment?.patientAvatar || undefined;
+  const rawDoctorName = appointment?.doctorName || appointment?.doctor?.name || 'Bác sĩ';
+  const partnerName = /^\s*BS\.?/i.test(rawDoctorName) ? rawDoctorName : `BS. ${rawDoctorName}`;
+  const partnerAvatar = appointment?.doctorAvatar || appointment?.doctor?.avatar || undefined;
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
@@ -242,27 +250,31 @@ export default function PatientOnlineExamRoom() {
         </div>
         {/* Right: Chat and modal info... (unchanged)*/}
         {showChat && (
-          <div className="w-[380px] h-full bg-white border-l border-gray-200 flex flex-col">
-            <div className="p-4 flex items-center gap-3">
-              <Avatar name={appointment.doctorName} size="sm"/>
-              <div>
-                <p className="font-semibold">BS. {appointment.doctorName}</p>
-                <p className="text-xs text-gray-500">Đang kết nối…</p>
+          <div className="w-[380px] h-full bg-gray-50 flex flex-col">
+            {/* Header trạng thái kết nối + avatar bác sĩ */}
+            <div className="p-4 flex items-center bg-gray-50/50">
+              <div className="flex items-center gap-3">
+                <Avatar src={partnerAvatar} name={partnerName} size="sm"/>
+                <div className="flex flex-col">
+                  <p className="font-semibold">{partnerName}</p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`inline-block w-2 h-2 rounded-full ${remoteConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                    <span className="text-gray-600">{remoteConnected ? 'Đã kết nối' : 'Đang kết nối…'}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <Divider/>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {chatMessages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.senderRole === 'patient' ? 'justify-end' : 'justify-start'}`}>
-                  <Card shadow="none" className={`max-w-[80%] ${msg.senderRole === 'patient' ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                    <CardBody className="p-3 text-sm">{msg.text}</CardBody>
-                  </Card>
+                  <div className={`max-w-[80%] rounded-2xl ${msg.senderRole === 'patient' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'} px-4 py-2.5`}>
+                    <div className="text-sm whitespace-pre-wrap break-words">{msg.text}</div>
+                  </div>
                 </div>
               ))}
             </div>
-            <Divider/>
-            <div className="p-3 flex gap-2">
-              <Input placeholder="Nhập tin nhắn…" className="flex-1" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
+            <div className="p-4 flex gap-2 items-center bg-gray-50/50">
+              <Input placeholder="Nhập tin nhắn…" className="flex-1" variant="flat" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
               <Button color="success" onPress={handleSendMessage}><Send size={16} /></Button>
             </div>
           </div>
