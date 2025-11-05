@@ -162,8 +162,11 @@ export default function DoctorProfile() {
           ...data,
           // Ensure speciality_id is properly set
           speciality_id: data.speciality_id || data.specialityId || prev.speciality_id,
-          // Ensure experience_years doesn't get lost
-          experience_years: data.experience_years !== undefined ? data.experience_years : prev.experience_years
+          // Map snake_case from backend to camelCase for state
+          experienceYears: data.experience_years !== undefined ? String(data.experience_years) : prev.experienceYears || "",
+          experience_years: data.experience_years !== undefined ? data.experience_years : prev.experience_years,
+          educationLevel: data.education_level !== undefined ? data.education_level : prev.educationLevel || "",
+          education_level: data.education_level !== undefined ? data.education_level : prev.education_level
         }));
 
         // Fetch avatar from backend API
@@ -293,8 +296,8 @@ export default function DoctorProfile() {
       const payload = {
         phone: doctor.phone,
         speciality_id: doctor.speciality_id,
-        experience_years: doctor.experience_years || 0,
-        education_level: doctor.education_level || "",
+        experience_years: doctor.experienceYears ? Number(doctor.experienceYears) : (doctor.experience_years || 0),
+        education_level: doctor.educationLevel || doctor.education_level || "",
         bio: doctor.bio || "",
         clinic_address: doctor.clinic_address || "",
         province_code: doctor.province_code,

@@ -44,11 +44,27 @@ const AuthGuard = ({ children }) => {
             );
 
             if (!response.ok) {
+              // If user just signed up, they might not have role yet - allow access to sign up page
+              if (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap") {
+                console.log('[AuthGuard] User just signed up, allowing access to sign up/login page');
+                setAuthorized(true);
+                setChecking(false);
+                return;
+              }
               throw new Error("Failed to fetch role");
             }
 
             const data = await response.json();
             const userRole = data.role?.toLowerCase();
+            
+            // If no role yet (just signed up), allow access to sign up/login page
+            if (!userRole && (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap")) {
+              console.log('[AuthGuard] User has no role yet, allowing access to sign up/login page');
+              setAuthorized(true);
+              setChecking(false);
+              return;
+            }
+            
             const dashboardPath = getRoleDashboard(userRole);
 
             console.log('[AuthGuard] Redirecting logged-in user to:', dashboardPath);
@@ -57,6 +73,13 @@ const AuthGuard = ({ children }) => {
               return;
             }
           } catch (error) {
+            // If user just signed up, allow access to sign up page
+            if (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap") {
+              console.log('[AuthGuard] Error fetching role but on sign up page, allowing access');
+              setAuthorized(true);
+              setChecking(false);
+              return;
+            }
             console.error("[AuthGuard] Error fetching role for redirect:", error);
           }
         }
@@ -94,11 +117,30 @@ const AuthGuard = ({ children }) => {
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch role");
+          // If user just signed up and doesn't have role yet, allow access to sign up/login pages
+          if (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap") {
+            console.log('[AuthGuard] User just signed up, no role yet, allowing access');
+            setAuthorized(true);
+            setChecking(false);
+            return;
+          }
+          // For other routes, treat as error but don't throw to allow graceful handling
+          console.warn('[AuthGuard] Failed to fetch role, but allowing access on public routes');
+          setAuthorized(true);
+          setChecking(false);
+          return;
         }
 
         const data = await response.json();
         const userRole = data.role?.toLowerCase();
+
+        // If no role yet (just signed up), allow access to sign up/login pages
+        if (!userRole && (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap")) {
+          console.log('[AuthGuard] User has no role yet, allowing access to sign up/login page');
+          setAuthorized(true);
+          setChecking(false);
+          return;
+        }
 
         console.log('[AuthGuard] User role:', userRole, 'Required:', rule.roles);
 

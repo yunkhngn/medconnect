@@ -501,13 +501,11 @@ export default function DoctorDashboard() {
         {/* Today's Appointments */}
         <Card className="shadow-sm">
           <CardHeader>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Clock size={18} className="text-teal-600" />
-                Lịch hẹn hôm nay
-              </h3>
-              <p className="text-sm text-gray-500">{todayAppointments.length} lịch hẹn</p>
-                </div>
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-teal-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Lịch hẹn hôm nay</h3>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">{todayAppointments.length} lịch hẹn</p>
           </CardHeader>
           <Divider />
           <CardBody className="p-0 max-h-96 overflow-y-auto">
@@ -519,30 +517,30 @@ export default function DoctorDashboard() {
             ) : (
               <div className="divide-y">
                 {todayAppointments.map((apt) => (
-                  <div key={apt.appointmentId} className="p-3 hover:bg-gray-50">
+                  <div key={apt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-10 rounded bg-teal-500" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
+                      <div className="w-1 h-12 rounded bg-teal-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Clock size={14} className="text-teal-600" />
-                            <span className="text-sm font-semibold">{SLOT_TIMES[apt.slot]}</span>
+                            <Clock size={14} className="text-teal-600 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-900">{SLOT_TIMES[apt.slot]}</span>
                           </div>
-                          <div className="flex gap-2">
-                            <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold">
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold text-xs">
                               {getStatusText(apt.status)}
                             </Chip>
                             {apt.type === "ONLINE" && (
-                              <Chip size="sm" color="secondary" variant="flat">Online</Chip>
+                              <Chip size="sm" color="secondary" variant="flat" className="text-xs">Online</Chip>
                             )}
                           </div>
                         </div>
                         <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
                       </div>
                     </div>
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
             )}
           </CardBody>
         </Card>
@@ -550,13 +548,11 @@ export default function DoctorDashboard() {
         {/* Upcoming Appointments */}
         <Card className="shadow-sm">
           <CardHeader>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar size={18} className="text-blue-600" />
-                Lịch hẹn sắp tới
-              </h3>
-              <p className="text-sm text-gray-500">5 ngày tới</p>
+            <div className="flex items-center gap-2">
+              <Calendar size={18} className="text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Lịch hẹn sắp tới</h3>
             </div>
+            <p className="text-sm text-gray-500 mt-1">5 ngày tới</p>
           </CardHeader>
           <Divider />
           <CardBody className="p-0 max-h-96 overflow-y-auto">
@@ -568,33 +564,33 @@ export default function DoctorDashboard() {
             ) : (
               <div className="divide-y">
                 {upcomingAppointments.map((apt) => (
-                  <div key={apt.appointmentId} className="p-3 hover:bg-gray-50">
+                  <div key={apt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-10 rounded bg-blue-500" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} className="text-blue-600" />
-                            <span className="text-sm font-semibold">
+                      <div className="w-1 h-12 rounded bg-blue-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Calendar size={14} className="text-blue-600 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-900">
                               {new Date(apt.date).toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' })}
                             </span>
                             <span className="text-sm text-gray-600">• {SLOT_TIMES[apt.slot]}</span>
                           </div>
-                          <div className="flex gap-2">
-                            <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold">
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold text-xs">
                               {getStatusText(apt.status)}
                             </Chip>
                             {apt.type === "ONLINE" && (
-                              <Chip size="sm" color="secondary" variant="flat">Online</Chip>
+                              <Chip size="sm" color="secondary" variant="flat" className="text-xs">Online</Chip>
                             )}
                           </div>
                         </div>
                         <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
-              </div>
-            </div>
-          </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-        </div>
+              </div>
             )}
           </CardBody>
         </Card>
