@@ -312,8 +312,15 @@ export default function DoctorOnlineExamRoom() {
   // Derive names/avatars for header (doctor view)
   const selfName = auth.currentUser?.displayName || appointment?.doctorName || 'Bác sĩ';
   const selfAvatar = auth.currentUser?.photoURL || appointment?.doctorAvatar || undefined;
-  const partnerName = appointment?.patientName || appointment?.patient?.name || 'Bệnh nhân';
-  const partnerAvatar = appointment?.patientAvatar || appointment?.patient?.avatar || undefined;
+  const partnerName = appointment?.patientName || appointment?.patient?.name || appointment?.patient?.fullName || 'Bệnh nhân';
+  const partnerAvatar = appointment?.patientAvatar || appointment?.patient?.avatar || appointment?.patient?.photoUrl || undefined;
+
+  // Patient info modal: robust fallbacks
+  const patientPhone = appointment?.patientPhone || appointment?.patient?.phone || appointment?.patient?.phoneNumber || '';
+  const patientEmail = appointment?.patientEmail || appointment?.patient?.email || '';
+  const apptDateObj = appointment?.appointmentDate ? new Date(appointment.appointmentDate) : (appointment?.date ? new Date(appointment.date) : null);
+  const apptDateStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleDateString('vi-VN') : '—';
+  const apptTimeStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : (appointment?.appointmentTime || appointment?.time || '—');
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
@@ -536,9 +543,9 @@ export default function DoctorOnlineExamRoom() {
           <ModalBody>
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <Avatar src={appointment.patientAvatar} name={appointment.patientName} size="lg" className="ring-2 ring-blue-100" />
+                <Avatar src={partnerAvatar} name={partnerName} size="lg" className="ring-2 ring-blue-100" />
                 <div>
-                  <h3 className="text-xl font-semibold">{appointment.patientName}</h3>
+                  <h3 className="text-xl font-semibold">{partnerName}</h3>
                   <p className="text-gray-600">Bệnh nhân</p>
                 </div>
               </div>
@@ -546,18 +553,18 @@ export default function DoctorOnlineExamRoom() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">{appointment.patientPhone || "Chưa cập nhật"}</span>
+                  <span className="text-sm">{patientPhone || "Chưa cập nhật"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">{appointment.patientEmail}</span>
+                  <span className="text-sm">{patientEmail || ""}</span>
                 </div>
               </div>
               <Divider />
               <div className="space-y-3">
                 <h4 className="font-semibold">Chi tiết cuộc hẹn</h4>
-                <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-500" /><span className="text-sm">{new Date(appointment.appointmentDate).toLocaleDateString('vi-VN')}</span></div>
-                <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /><span className="text-sm">{new Date(appointment.appointmentDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-500" /><span className="text-sm">{apptDateStr}</span></div>
+                <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /><span className="text-sm">{apptTimeStr}</span></div>
                 <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-500" /><span className="text-sm">Khám online</span></div>
               </div>
               <Divider />
