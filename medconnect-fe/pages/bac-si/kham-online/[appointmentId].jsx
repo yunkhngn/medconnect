@@ -38,6 +38,7 @@ export default function DoctorOnlineExamRoom() {
     }
   });
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [remoteConnected, setRemoteConnected] = useState(false);
 
   // refs video call
   const localVideoRef = useRef(null);
@@ -77,32 +78,29 @@ export default function DoctorOnlineExamRoom() {
   }, []);
 
   useEffect(() => {
-    if (appointment) {
-      const fetchToken = async () => {
-        try {
-          const user = auth.currentUser;
-          const idToken = await user?.getIdToken?.();
-          const tokenResp = await fetch(
-            `/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
-          );
+    if (!appointmentId || !agoraUid) return;
+    const fetchToken = async () => {
+      try {
+        const tokenResp = await fetch(
+          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+        );
         if (tokenResp.ok) {
           const data = await tokenResp.json();
           setAgoraToken(data.token);
-            setTokenError("");
+          setTokenError("");
         } else {
           console.warn('[Doctor] Failed to fetch Agora token:', tokenResp.status);
           setAgoraToken("");
-            setTokenError(`Không lấy được token (HTTP ${tokenResp.status})`);
+          setTokenError(`Không lấy được token (HTTP ${tokenResp.status})`);
         }
-        } catch (e) {
-          console.error('[Doctor] Error fetching Agora token:', e);
-          setAgoraToken("");
-          setTokenError('Không lấy được token. Vui lòng thử lại');
-        }
-      };
-      fetchToken();
-    }
-  }, [appointment, appointmentId, agoraUid]);
+      } catch (e) {
+        console.error('[Doctor] Error fetching Agora token:', e);
+        setAgoraToken("");
+        setTokenError('Không lấy được token. Vui lòng thử lại');
+      }
+    };
+    fetchToken();
+  }, [appointmentId, agoraUid]);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -239,9 +237,11 @@ export default function DoctorOnlineExamRoom() {
             {/* Nếu partner chưa vào (remote chưa có stream) thì hiện thông báo */}
             {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
-                  Đang đợi kết nối với Bệnh nhân
-                </span>
+                {remoteConnected ? (
+                  <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">Bệnh nhân đang tắt camera</span>
+                ) : (
+                  <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">Đang đợi kết nối với Bệnh nhân</span>
+                )}
               </div>
             )}
           </div>
@@ -250,6 +250,8 @@ export default function DoctorOnlineExamRoom() {
           <div className="absolute right-5 top-5 w-56 aspect-video rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
             <div ref={localVideoRef} className="absolute inset-0 rounded-xl overflow-hidden" />
             <span className="absolute bottom-2 left-2 text-xs text-white/70">Doctor preview</span>
+            {muted && <MicOff className="absolute top-2 right-2 text-red-400 w-6 h-6" />}
+            {camOff && <VideoOff className="absolute top-2 right-10 text-red-400 w-6 h-6" />}
           </div>
 
           {/* Top bar giống bệnh nhân */}
@@ -398,6 +400,7 @@ export default function DoctorOnlineExamRoom() {
         muted={muted}
         camOff={camOff}
         onRemoteVideoChange={setHasRemoteVideo}
+        onRemotePresenceChange={setRemoteConnected}
         autoJoin={!!agoraToken}
       />
     </div>

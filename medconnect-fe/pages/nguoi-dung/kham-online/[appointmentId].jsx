@@ -40,6 +40,7 @@ export default function PatientOnlineExamRoom() {
   const [remoteMuted, setRemoteMuted] = useState(false);
   const [remoteCamOff, setRemoteCamOff] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [remoteConnected, setRemoteConnected] = useState(false);
 
   // Video refs cho injection của Agora
   const localVideoRef = useRef(null);
@@ -79,32 +80,29 @@ export default function PatientOnlineExamRoom() {
   }, []);
 
   useEffect(() => {
-    if (appointment) {
-      const fetchToken = async () => {
-        try {
-          const user = auth.currentUser;
-          const idToken = await user?.getIdToken?.();
-          const tokenResp = await fetch(
-            `/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
-          );
-          if (tokenResp.ok) {
-            const data = await tokenResp.json();
-            setAgoraToken(data.token);
-            setTokenError("");
-          } else {
-            console.warn('[Patient] Failed to fetch Agora token:', tokenResp.status);
-            setAgoraToken("");
-            setTokenError(`Không lấy được token (HTTP ${tokenResp.status})`);
-          }
-        } catch (e) {
-          console.error('[Patient] Error fetching Agora token:', e);
+    if (!appointmentId || !agoraUid) return;
+    const fetchToken = async () => {
+      try {
+        const tokenResp = await fetch(
+          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+        );
+        if (tokenResp.ok) {
+          const data = await tokenResp.json();
+          setAgoraToken(data.token);
+          setTokenError("");
+        } else {
+          console.warn('[Patient] Failed to fetch Agora token:', tokenResp.status);
           setAgoraToken("");
-          setTokenError('Không lấy được token. Vui lòng thử lại');
+          setTokenError(`Không lấy được token (HTTP ${tokenResp.status})`);
         }
-      };
-      fetchToken();
-    }
-  }, [appointment, appointmentId, agoraUid]);
+      } catch (e) {
+        console.error('[Patient] Error fetching Agora token:', e);
+        setAgoraToken("");
+        setTokenError('Không lấy được token. Vui lòng thử lại');
+      }
+    };
+    fetchToken();
+  }, [appointmentId, agoraUid]);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -199,9 +197,11 @@ export default function PatientOnlineExamRoom() {
             <div ref={remoteVideoRef} className="w-full h-full" />
             {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">
-                  Đang đợi kết nối với Bác sĩ
-                </span>
+                {remoteConnected ? (
+                  <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">Bác sĩ đang tắt camera</span>
+                ) : (
+                  <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">Đang đợi kết nối với Bác sĩ</span>
+                )}
               </div>
             )}
           </div>
@@ -364,6 +364,7 @@ export default function PatientOnlineExamRoom() {
         muted={muted}
         camOff={camOff}
         onRemoteVideoChange={setHasRemoteVideo}
+        onRemotePresenceChange={setRemoteConnected}
         /* autoJoin = default true */
         autoJoin={!!agoraToken}
       />
