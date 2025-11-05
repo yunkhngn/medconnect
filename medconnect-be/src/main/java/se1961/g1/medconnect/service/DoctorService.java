@@ -3,6 +3,7 @@ package se1961.g1.medconnect.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import se1961.g1.medconnect.dto.AppointmentDTO;
+import se1961.g1.medconnect.dto.DoctorApplicationDTO;
 import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.enums.Role;
 import se1961.g1.medconnect.pojo.Doctor;
@@ -23,6 +24,8 @@ public class DoctorService {
     private SpecialityRepository specialityRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private FirebaseService firebaseService;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
         return doctorRepository.findByFirebaseUid(uid);
@@ -53,14 +56,25 @@ public class DoctorService {
             throw new RuntimeException("Số điện thoại đã được sử dụng");
         }
         
+        String firebaseUid;
+        try {
+            // Create Firebase account with phone as initial password
+            firebaseUid = firebaseService.createFirebaseUser(
+                dto.getEmail(),
+                dto.getPhone(), // Use phone as initial password
+                dto.getName()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Không thể tạo tài khoản Firebase: " + e.getMessage());
+        }
+        
         // Create Doctor (which extends User, so it is also a User)
         Doctor doctor = new Doctor();
         doctor.setEmail(dto.getEmail());
         doctor.setName(dto.getName());
         doctor.setPhone(dto.getPhone());
         doctor.setRole(Role.DOCTOR);
-        // Generate a placeholder Firebase UID for admin-created doctors
-        doctor.setFirebaseUid("admin-created-" + System.currentTimeMillis());
+        doctor.setFirebaseUid(firebaseUid); // Use real Firebase UID
         
         mapDtoToDoctor(dto, doctor);
         return doctorRepository.save(doctor);
@@ -122,5 +136,56 @@ public class DoctorService {
         } else {
             doctor.setSpeciality(null);
         }
+    }
+
+    /**
+     * Create doctor from application form (without Firebase initially)
+     * Firebase account will be created by Admin when approving
+     * Status: PENDING by default
+     */
+    public Doctor createDoctorFromApplication(DoctorApplicationDTO dto) {
+        // Validate email uniqueness
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new RuntimeException("Email đã được sử dụng");
+        }
+
+        // Validate phone uniqueness
+        if (userRepository.findByPhone(dto.getPhone()).isPresent()) {
+            throw new RuntimeException("Số điện thoại đã được sử dụng");
+        }
+
+        // Create Doctor entity (includes User data via inheritance)
+        Doctor doctor = new Doctor();
+        
+        // User info
+        doctor.setName(dto.getFullName());
+        doctor.setEmail(dto.getEmail());
+        doctor.setPhone(dto.getPhone());
+        doctor.setRole(Role.DOCTOR);
+        
+        // Generate temporary firebase_uid placeholder
+        // Admin will update this with real Firebase UID when approving
+        doctor.setFirebaseUid("pending-" + System.currentTimeMillis());
+        
+        // Note: No password stored in DB - using Firebase Authentication
+        // When admin approves, they will create Firebase account with:
+        // - Email: dto.getEmail()
+        // - Password: dto.getPhone() (or auto-generated)
+        
+        // Doctor-specific info
+        doctor.setStatus(se1961.g1.medconnect.enums.DoctorStatus.PENDING);  // Default PENDING for applications
+        doctor.setExperienceYears(dto.getExperience());
+        doctor.setEducationLevel(dto.getEducation());
+        doctor.setBio(dto.getBio());
+        doctor.setClinicAddress(dto.getClinicAddress());
+        
+        // Set specialty
+        if (dto.getSpecialtyId() != null) {
+            Speciality speciality = specialityRepository.findById(dto.getSpecialtyId())
+                    .orElseThrow(() -> new RuntimeException("Chuyên khoa không tồn tại"));
+            doctor.setSpeciality(speciality);
+        }
+        
+        return doctorRepository.save(doctor);
     }
 }

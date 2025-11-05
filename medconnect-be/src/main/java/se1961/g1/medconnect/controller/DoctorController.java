@@ -53,6 +53,26 @@ public class DoctorController {
             doctorData.put("district_code", doctor.getDistrictCode());
             doctorData.put("ward_code", doctor.getWardCode());
             
+            // Add pricing information from speciality
+            if (doctor.getSpeciality() != null) {
+                Integer onlinePrice = doctor.getSpeciality().getOnlinePrice();
+                Integer offlinePrice = doctor.getSpeciality().getOfflinePrice();
+                
+                if (onlinePrice != null && offlinePrice != null) {
+                    String priceRange = String.format("%,d - %,d VND", onlinePrice, offlinePrice);
+                    doctorData.put("priceRange", priceRange);
+                } else {
+                    doctorData.put("priceRange", "Liên hệ");
+                }
+                
+                doctorData.put("onlinePrice", onlinePrice);
+                doctorData.put("offlinePrice", offlinePrice);
+            } else {
+                doctorData.put("priceRange", "Liên hệ");
+                doctorData.put("onlinePrice", null);
+                doctorData.put("offlinePrice", null);
+            }
+            
             // Get license number from active license
             License activeLicense = doctor.getActiveLicense();
             doctorData.put("licenseId", activeLicense != null ? activeLicense.getLicenseNumber() : null);

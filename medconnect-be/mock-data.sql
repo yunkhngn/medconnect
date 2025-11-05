@@ -7,7 +7,7 @@ USE MedConnect;
 GO
 
 -- ============================================
--- STEP 1: Clear all existing data (in correct order due to foreign keys)
+-- STEP 1: Clear all existing data 
 -- ============================================
 
 PRINT 'Clearing existing data...';
@@ -101,17 +101,17 @@ PRINT 'Inserting Specialities...';
 -- Bật IDENTITY_INSERT để insert ID explicit (MSSQL requirement)
 SET IDENTITY_INSERT speciality ON;
 
-INSERT INTO speciality (speciality_id, name, description, created_at, updated_at) VALUES
-(1, N'Tim mạch', N'Chuyên khoa tim mạch, điều trị các bệnh về tim và mạch máu', GETDATE(), GETDATE()),
-(2, N'Nội khoa', N'Chuyên khoa nội tổng quát, điều trị các bệnh nội khoa', GETDATE(), GETDATE()),
-(3, N'Nhi khoa', N'Chuyên khoa nhi, chăm sóc sức khỏe trẻ em', GETDATE(), GETDATE()),
-(4, N'Da liễu', N'Chuyên khoa da liễu, điều trị các bệnh về da', GETDATE(), GETDATE()),
-(5, N'Tai mũi họng', N'Chuyên khoa tai mũi họng, điều trị các bệnh về tai, mũi, họng', GETDATE(), GETDATE()),
-(6, N'Mắt', N'Chuyên khoa mắt, điều trị các bệnh về mắt', GETDATE(), GETDATE()),
-(7, N'Răng hàm mặt', N'Chuyên khoa răng hàm mặt, điều trị các bệnh về răng', GETDATE(), GETDATE()),
-(8, N'Thần kinh', N'Chuyên khoa thần kinh, điều trị các bệnh về thần kinh', GETDATE(), GETDATE()),
-(9, N'Sản phụ khoa', N'Chuyên khoa sản phụ khoa, chăm sóc sức khỏe phụ nữ', GETDATE(), GETDATE()),
-(10, N'Chỉnh hình', N'Chuyên khoa chỉnh hình, điều trị các bệnh về xương khớp', GETDATE(), GETDATE());
+INSERT INTO speciality (speciality_id, name, description, online_price, offline_price, created_at, updated_at) VALUES
+(1, N'Tim mạch', N'Chuyên khoa tim mạch, điều trị các bệnh về tim và mạch máu', 300000, 500000, GETDATE(), GETDATE()),
+(2, N'Nội khoa', N'Chuyên khoa nội tổng quát, điều trị các bệnh nội khoa', 250000, 400000, GETDATE(), GETDATE()),
+(3, N'Nhi khoa', N'Chuyên khoa nhi, chăm sóc sức khỏe trẻ em', 200000, 350000, GETDATE(), GETDATE()),
+(4, N'Da liễu', N'Chuyên khoa da liễu, điều trị các bệnh về da', 180000, 300000, GETDATE(), GETDATE()),
+(5, N'Tai mũi họng', N'Chuyên khoa tai mũi họng, điều trị các bệnh về tai, mũi, họng', 220000, 380000, GETDATE(), GETDATE()),
+(6, N'Mắt', N'Chuyên khoa mắt, điều trị các bệnh về mắt', 250000, 420000, GETDATE(), GETDATE()),
+(7, N'Răng hàm mặt', N'Chuyên khoa răng hàm mặt, điều trị các bệnh về răng', 200000, 400000, GETDATE(), GETDATE()),
+(8, N'Thần kinh', N'Chuyên khoa thần kinh, điều trị các bệnh về thần kinh', 350000, 600000, GETDATE(), GETDATE()),
+(9, N'Sản phụ khoa', N'Chuyên khoa sản phụ khoa, chăm sóc sức khỏe phụ nữ', 280000, 480000, GETDATE(), GETDATE()),
+(10, N'Chỉnh hình', N'Chuyên khoa chỉnh hình, điều trị các bệnh về xương khớp', 320000, 550000, GETDATE(), GETDATE());
 
 -- Tắt IDENTITY_INSERT sau khi xong
 SET IDENTITY_INSERT speciality OFF;

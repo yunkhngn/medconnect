@@ -335,7 +335,16 @@ export default function MedConnectLogin() {
                     <Divider className="my-2" />
                     <div className="flex items-center justify-center">
                       <SocialLoginButtons
-                        onSuccess={(user) => finalizeLogin(user)}
+                        autoRedirect={true}
+                        onSuccess={(user, token, data) => {
+                          if (data) {
+                            showMessage(data.message || "Đăng nhập thành công!", "success");
+                            setTimeout(() => setRedirect(true), 500);
+                          } else {
+                            // Fallback to original flow if data not provided
+                            finalizeLogin(user);
+                          }
+                        }}
                         onError={(msg) => showMessage(msg, "error")}
                       />
                     </div>

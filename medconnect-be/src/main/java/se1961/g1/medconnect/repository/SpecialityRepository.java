@@ -34,5 +34,10 @@ public interface SpecialityRepository extends JpaRepository<Speciality, Integer>
      * Check if speciality exists by name
      */
     boolean existsByName(String name);
+    
+    /**
+     * Check if speciality exists by name excluding current ID (for update validation)
+     */
+    boolean existsByNameAndSpecialityIdNot(String name, Integer specialityId);
 }
 

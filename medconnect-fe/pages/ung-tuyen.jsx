@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardBody, CardHeader, Input, Button, Textarea, Select, SelectItem, Chip, Divider } from "@heroui/react";
 import { Default } from "@/components/layouts/";
 import { useRouter } from "next/router";
 import Float from "@/components/ui/Float";
+import SimpleCaptcha from "@/components/ui/SimpleCaptcha";
 import Image from "next/image";
 import { DollarSign, Clock, Building, TrendingUp, Users, BookOpen } from "lucide-react";
 
@@ -11,6 +12,7 @@ const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api',
   ENDPOINTS: {
     SUBMIT_APPLICATION: '/doctor-applications',
+    GET_SPECIALTIES: '/specialities',
   },
 };
 
@@ -30,19 +32,40 @@ export default function DoctorApplication() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [specialties, setSpecialties] = useState([]);
+  const [isLoadingSpecialties, setIsLoadingSpecialties] = useState(true);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
-  const specialties = [
-    { value: "tim-mach", label: "Tim mạch" },
-    { value: "noi-khoa", label: "Nội khoa" },
-    { value: "ngoai-khoa", label: "Ngoại khoa" },
-    { value: "nhi-khoa", label: "Nhi khoa" },
-    { value: "san-phu-khoa", label: "Sản phụ khoa" },
-    { value: "than-kinh", label: "Thần kinh" },
-    { value: "da-lieu", label: "Da liễu" },
-    { value: "mat", label: "Mắt" },
-    { value: "tai-mui-hong", label: "Tai mũi họng" },
-    { value: "khac", label: "Khác" }
-  ];
+  // Fetch specialties from backend
+  useEffect(() => {
+    const fetchSpecialties = async () => {
+      setIsLoadingSpecialties(true);
+      try {
+        const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_SPECIALTIES);
+        if (response.ok) {
+          const data = await response.json();
+          // Transform backend data to match frontend format
+          const transformedData = data.map(item => ({
+            value: item.id.toString(),
+            label: item.name
+          }));
+          setSpecialties(transformedData);
+        } else {
+          console.error("Failed to fetch specialties");
+          // Fallback to empty array
+          setSpecialties([]);
+        }
+      } catch (error) {
+        console.error("Error fetching specialties:", error);
+        // Fallback to empty array
+        setSpecialties([]);
+      } finally {
+        setIsLoadingSpecialties(false);
+      }
+    };
+
+    fetchSpecialties();
+  }, []);
 
   const showMessage = (text, type) => {
     setMessage({ text, type });
@@ -65,29 +88,30 @@ export default function DoctorApplication() {
       return;
     }
 
+    if (!isCaptchaVerified) {
+      showMessage("Vui lòng xác nhận mã CAPTCHA!", "error");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Prepare JSON data for API
+      // Prepare JSON data for API (match backend DTO)
       const applicationData = {
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        specialty: formData.specialty,
+        specialtyId: parseInt(formData.specialty),  // Send as specialtyId (number)
         experience: parseInt(formData.experience) || 0,
         education: formData.education,
         certifications: formData.certifications,
         bio: formData.bio,
         clinicAddress: formData.clinicAddress,
-        workingHours: formData.workingHours,
-        applicationDate: new Date().toISOString(),
-        status: "pending"
+        workingHours: formData.workingHours
       };
 
-      // TODO: Replace with actual API call
       console.log("Submitting application data:", applicationData);
       
-      // Mock API call
       const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.SUBMIT_APPLICATION, {
         method: "POST",
         headers: {
@@ -96,17 +120,22 @@ export default function DoctorApplication() {
         body: JSON.stringify(applicationData),
       });
 
-      if (response.ok) {
-        showMessage("Đơn ứng tuyển đã được gửi thành công! Chúng tôi sẽ liên hệ với bạn sớm.", "success");
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        showMessage(
+          result.data.note || "Đơn ứng tuyển đã được gửi thành công! Chúng tôi sẽ liên hệ với bạn sớm.", 
+          "success"
+        );
         setTimeout(() => {
           router.push("/");
-        }, 2000);
+        }, 3000);
       } else {
-        throw new Error("Gửi đơn thất bại");
+        throw new Error(result.message || "Gửi đơn thất bại");
       }
     } catch (error) {
       console.error("Submission error:", error);
-      showMessage("Có lỗi xảy ra. Vui lòng thử lại sau.", "error");
+      showMessage(error.message || "Có lỗi xảy ra. Vui lòng thử lại sau.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -235,11 +264,12 @@ export default function DoctorApplication() {
                           isRequired
                           label="Chuyên khoa"
                           name="specialty"
-                          placeholder="Chọn chuyên khoa"
+                          placeholder={isLoadingSpecialties ? "Đang tải..." : "Chọn chuyên khoa"}
                           selectedKeys={formData.specialty ? [formData.specialty] : []}
                           onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
                           labelPlacement="outside"
                           size="sm"
+                          isDisabled={isLoadingSpecialties}
                         >
                           {specialties.map((specialty) => (
                             <SelectItem key={specialty.value} value={specialty.value}>
@@ -326,6 +356,14 @@ export default function DoctorApplication() {
                       </div>
                     </div>
 
+                    <Divider className="bg-gray-200" />
+
+                    {/* CAPTCHA Verification */}
+                    <div className="space-y-3 sm:space-y-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Xác thực</h3>
+                      <SimpleCaptcha onVerify={setIsCaptchaVerified} />
+                    </div>
+
                     {/* Submit Button */}
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                       <Button
@@ -333,6 +371,7 @@ export default function DoctorApplication() {
                         color="primary"
                         size="lg"
                         isLoading={isLoading}
+                        isDisabled={!isCaptchaVerified}
                         className="flex-1"
                       >
                         {isLoading ? "Đang gửi..." : "Gửi đơn ứng tuyển"}
