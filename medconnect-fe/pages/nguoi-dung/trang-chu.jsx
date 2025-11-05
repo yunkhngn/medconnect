@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 
 
 export default function PatientDashboard() {
@@ -371,7 +372,7 @@ export default function PatientDashboard() {
                         <div>
                           <p className="font-semibold">{apt.doctor?.name}</p>
                           <p className="text-sm text-gray-600">{apt.specialty}</p>
-                          <p className="text-sm text-gray-500 mt-1">{apt.reason}</p>
+                          <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{formatReasonForDisplay(apt.reason)}</p>
                         </div>
                     </div>
                       <div className="text-right">

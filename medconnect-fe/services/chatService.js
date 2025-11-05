@@ -21,6 +21,8 @@ export async function sendChatMessage(roomId, { senderId, senderName, senderRole
   }
 }
 
+// Image messaging removed per request; text-only chat remains
+
 export function subscribeRoomMessages(roomId, cb) {
   if (!roomId) return () => {};
   const q = query(roomCollection(roomId), orderBy("createdAt", "asc"));

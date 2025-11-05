@@ -43,6 +43,15 @@ const menuItems = [
         </svg>
       ),
       href: '/nguoi-dung/kham-online',
+    },
+    {
+      label: 'Khám offline',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v4a1 1 0 001 1h3m10-5V3m-4 4V3m-4 4V3m-4 4h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z" />
+        </svg>
+      ),
+      href: '/nguoi-dung/kham-offline',
     }
   ];
 

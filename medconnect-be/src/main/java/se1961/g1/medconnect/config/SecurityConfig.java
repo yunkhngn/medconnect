@@ -72,7 +72,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/email/**").authenticated()
 
                 // PERMIT VIDEO CALL TOKEN API!
-                .requestMatchers("/api/agora/token").permitAll()
+                .requestMatchers("/api/agora/**").permitAll()
 
                 // Appointments
                 .requestMatchers("/api/appointments/my").authenticated()
@@ -95,6 +95,12 @@ public class SecurityConfig {
             .addFilterBefore(firebaseFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    // As an extra safeguard, completely ignore security filters for Agora token endpoints
+    @Bean
+    public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers("/api/agora/**");
     }
 
     @Bean

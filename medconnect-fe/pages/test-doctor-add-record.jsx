@@ -58,6 +58,8 @@ export default function TestDoctorAddRecord() {
   // Temp inputs
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
   const [icdCode, setIcdCode] = useState("");
+  const [icdQuery, setIcdQuery] = useState("");
+  const [icdResults, setIcdResults] = useState([]);
   const [medicationInput, setMedicationInput] = useState({
     name: "",
     dosage: "",
@@ -71,6 +73,25 @@ export default function TestDoctorAddRecord() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Debounced ICD-10 search using NIH Clinical Tables API
+  useEffect(() => {
+    if (!icdQuery) { setIcdResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const resp = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(icdQuery)}&maxList=20`);
+        const data = await resp.json();
+        // data format: [numFound, terms, codes, names]
+        const codes = data?.[2] || [];
+        const names = data?.[3] || [];
+        const items = codes.map((c, i) => ({ code: c, name: names[i] }));
+        setIcdResults(items);
+      } catch (e) {
+        setIcdResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [icdQuery]);
 
   const handleAddSecondaryDiagnosis = () => {
     if (secondaryDiagnosis.trim()) {
@@ -243,7 +264,7 @@ export default function TestDoctorAddRecord() {
   return (
     <>
       <ToastNotification toast={toast} />
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
           <Button
@@ -467,6 +488,23 @@ export default function TestDoctorAddRecord() {
                     Thêm
                   </Button>
                 </div>
+                <Input
+                  placeholder="Tìm nhanh ICD-10 (gõ tên bệnh hoặc mã)"
+                  value={icdQuery}
+                  onValueChange={setIcdQuery}
+                  variant="bordered"
+                  className="mb-2"
+                />
+                {icdResults.length > 0 && (
+                  <div className="max-h-56 overflow-auto rounded-lg border border-gray-200">
+                    {icdResults.map((it, idx) => (
+                      <button key={idx} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setIcdCode(it.code); setIcdQuery(""); }}>
+                        <span className="font-semibold mr-2">{it.code}</span>
+                        <span className="text-gray-700">{it.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {record.diagnosis.icd_codes.map((code, idx) => (
                     <Chip key={idx} variant="flat" color="primary">
@@ -563,7 +601,7 @@ export default function TestDoctorAddRecord() {
                 value={record.notes}
                 onValueChange={(v) => setRecord({...record, notes: v})}
                 variant="bordered"
-                minRows={4}
+                minRows={8}
               />
             </CardBody>
           </Card>

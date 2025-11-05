@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import Grid from "@/components/layouts/Grid";
-import { Calendar, Stethoscope, Search, Clock, Phone, Mail, Video, MapPin } from "lucide-react";
-import { Button, Card, CardBody, CardHeader, Divider, Input, Chip, Select, SelectItem } from "@heroui/react";
+import { Calendar, Stethoscope, Search, Clock, Phone, Mail, Video, MapPin, User } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Divider, Input, Chip, Select, SelectItem, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { auth } from "@/lib/firebase";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -31,6 +32,11 @@ export default function OfflineExamListPage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
+  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [rxLoading, setRxLoading] = useState(false);
+  const [prescription, setPrescription] = useState(null);
+  const [medicalRecord, setMedicalRecord] = useState(null);
 
   const counts = {
     pending: appointments.filter(a => a.status === "PENDING").length,
@@ -86,6 +92,111 @@ export default function OfflineExamListPage() {
     };
     load();
   }, [user, selectedDate, status, q]);
+
+  const openAppointmentModal = async (apt) => {
+    setSelectedAppointment(apt);
+    setPrescription(null);
+    setMedicalRecord(null);
+    onOpen();
+    try {
+      setRxLoading(true);
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      
+      // Get patientUserId from appointment
+      const patientUserId = apt.patientUserId || apt.patientId || apt.patient?.id || apt.patient?.userId;
+      
+      if (patientUserId) {
+        // Fetch medical record entries for this patient
+        const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (resp.ok) {
+          const entries = await resp.json();
+          let matchingEntry = null;
+          
+          if (Array.isArray(entries) && entries.length > 0) {
+            // First, try to match by appointment_id (most accurate)
+            matchingEntry = entries.find(entry => {
+              const entryApptId = entry.appointment_id || entry.appointmentId;
+              const aptId = apt.appointmentId || apt.id;
+              return entryApptId && String(entryApptId) === String(aptId);
+            });
+            
+            // If no appointment_id match, try to match by date + time
+            if (!matchingEntry && apt.date) {
+              const aptDate = new Date(apt.date);
+              const aptDateStr = aptDate.toISOString().split('T')[0];
+              
+              // Try exact date match first
+              const exactDateMatches = entries.filter(entry => {
+                if (!entry.visit_date) return false;
+                const visitDate = new Date(entry.visit_date);
+                const visitDateStr = visitDate.toISOString().split('T')[0];
+                return visitDateStr === aptDateStr;
+              });
+              
+              if (exactDateMatches.length === 1) {
+                matchingEntry = exactDateMatches[0];
+              } else if (exactDateMatches.length > 1) {
+                // Multiple entries on same date - find the one closest to appointment time
+                const slotTime = SLOT_TIMES[apt.slot];
+                if (slotTime) {
+                  const [startTime] = slotTime.split(' - ');
+                  const [aptHour, aptMinute] = startTime.split(':').map(Number);
+                  const aptTimeMinutes = aptHour * 60 + aptMinute;
+                  
+                  const entriesWithTimeDiff = exactDateMatches
+                    .filter(entry => entry.visit_time)
+                    .map(entry => {
+                      const [visitHour, visitMinute] = entry.visit_time.split(':').map(Number);
+                      const visitTimeMinutes = visitHour * 60 + visitMinute;
+                      const timeDiff = Math.abs(aptTimeMinutes - visitTimeMinutes);
+                      return { ...entry, timeDiff };
+                    })
+                    .sort((a, b) => a.timeDiff - b.timeDiff);
+                  
+                  if (entriesWithTimeDiff.length > 0 && entriesWithTimeDiff[0].timeDiff <= 240) {
+                    matchingEntry = entriesWithTimeDiff[0];
+                  } else {
+                    matchingEntry = exactDateMatches[0];
+                  }
+                } else {
+                  matchingEntry = exactDateMatches[0];
+                }
+              }
+            }
+          }
+          
+          if (matchingEntry) {
+            setMedicalRecord(matchingEntry);
+            const meds = matchingEntry.prescriptions || [];
+            setPrescription({
+              medications: Array.isArray(meds) ? meds : [],
+              note: matchingEntry.notes || ""
+            });
+          } else {
+            setMedicalRecord(null);
+            setPrescription(null);
+          }
+        } else if (resp.status === 404) {
+          setMedicalRecord(null);
+          setPrescription(null);
+        } else {
+          setMedicalRecord(null);
+          setPrescription(null);
+        }
+      }
+    } catch (e) {
+      console.error('[Modal] Error fetching medical record:', e);
+      setMedicalRecord(null);
+      setPrescription(null);
+    } finally {
+      setRxLoading(false);
+    }
+  };
 
   const leftChildren = (
     <div className="space-y-6">
@@ -179,7 +290,7 @@ export default function OfflineExamListPage() {
             const slotText = SLOT_TIMES[apt.slot] || apt.slot;
             const isPending = apt.status === "PENDING";
             return (
-            <Card key={apt.appointmentId} className={`hover:shadow-md transition rounded-2xl border-2 ${isPending ? 'border-yellow-300' : 'border-gray-200'}`}>
+            <Card key={apt.appointmentId} className={`hover:shadow-md transition rounded-2xl ${isPending ? 'border-4 border-yellow-400' : 'border-2 border-gray-200'}`}>
               <CardBody className="p-5">
                 {/* Header with profile picture, name, and status tags */}
                 <div className="flex items-start gap-4 mb-4">
@@ -189,9 +300,9 @@ export default function OfflineExamListPage() {
                       className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-400" 
                       alt="avatar"
                     />
-                            </div>
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{apt.patient?.name || 'Bệnh nhân'}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{apt.patient?.name || 'Bệnh nhân'}</h3>
                     <div className="flex items-center gap-2 flex-wrap">
                       {getStatusChip(apt.status)}
                       {apt.type === "ONLINE" ? (
@@ -199,47 +310,49 @@ export default function OfflineExamListPage() {
                       ) : (
                         <Chip size="sm" variant="flat" color="default" startContent={<MapPin size={12}/>}>Tại phòng khám</Chip>
                       )}
-                          </div>
-                        </div>
-                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Details grid - 2 columns */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   {/* Left column */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Calendar size={16} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Ngày khám</p>
-                      <p className="font-semibold text-gray-900">{new Date(apt.date).toLocaleDateString('vi-VN')}</p>
-                    </div>
-                  </div>
-                  {/* Right column */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Clock size={16} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Giờ khám</p>
-                      <p className="font-semibold text-gray-900">{slotText}</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Calendar size={16} className="text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-500">Ngày khám</p>
+                        <p className="font-bold text-gray-900">{new Date(apt.date).toLocaleDateString('vi-VN')}</p>
                       </div>
                     </div>
-                  {/* Phone */}
-                  {apt.patient?.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone size={16} className="text-gray-400" />
-                      <span className="text-gray-700">{apt.patient.phone}</span>
-                    </div>
-                  )}
-                  {/* Email */}
-                  {apt.patient?.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail size={16} className="text-gray-400" />
-                      <span className="text-gray-700 truncate">{apt.patient.email}</span>
-                    </div>
-                  )}
+                    {apt.patient?.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-700">{apt.patient.phone}</span>
+                      </div>
+                    )}
                   </div>
+                  {/* Right column */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Clock size={16} className="text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-500">Giờ khám</p>
+                        <p className="font-bold text-gray-900">{slotText}</p>
+                      </div>
+                    </div>
+                    {apt.patient?.email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-700 truncate">{apt.patient.email}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Reason section with orange background */}
                 {pr.text && (
@@ -253,47 +366,85 @@ export default function OfflineExamListPage() {
                 )}
 
                 {/* Action buttons */}
-                <div className="flex gap-2 pt-2 border-t border-gray-200">
+                <Divider className="my-4" />
+                <div className="flex gap-2">
                   {apt.status === "PENDING" ? (
-                    <>
-                      <Button 
-                        size="sm" 
-                        color="primary" 
-                        variant="flat"
-                        startContent={<Stethoscope size={16}/>}
-                        onClick={() => router.push(`/bac-si/kham-offline/${apt.appointmentId}`)}
-                      >
-                        Xác nhận
-                      </Button>
-                    </>
+                    <Button 
+                      size="sm" 
+                      color="primary" 
+                      className="flex-1"
+                      startContent={<Stethoscope size={16}/>}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const appointmentId = apt.appointmentId || apt.id;
+                        if (appointmentId) {
+                          router.push(`/bac-si/kham-offline/${appointmentId}`);
+                        }
+                      }}
+                    >
+                      Xác nhận
+                    </Button>
                   ) : apt.status === "CONFIRMED" || apt.status === "ONGOING" ? (
                     <Button 
                       size="sm" 
                       color="primary" 
+                      className="flex-1"
                       startContent={<Stethoscope size={16}/>}
-                      onClick={() => router.push(`/bac-si/kham-offline/${apt.appointmentId}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const appointmentId = apt.appointmentId || apt.id;
+                        if (appointmentId) {
+                          router.push(`/bac-si/kham-offline/${appointmentId}`);
+                        }
+                      }}
                     >
                       Bắt đầu khám
                     </Button>
                   ) : apt.status === "FINISHED" ? (
-                    <Button 
-                      size="sm" 
-                      color="warning" 
-                      variant="flat"
-                      startContent={<Stethoscope size={16}/>}
-                      onClick={() => router.push(`/bac-si/kham-offline/${apt.appointmentId}`)}
-                    >
-                      Cập nhật
-                    </Button>
+                    <>
+                      <Button 
+                        size="sm" 
+                        color="default" 
+                        variant="flat"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAppointmentModal(apt);
+                        }}
+                      >
+                        Xem lại
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        color="warning" 
+                        variant="flat"
+                        startContent={<Stethoscope size={16}/>}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const appointmentId = apt.appointmentId || apt.id;
+                          if (appointmentId) {
+                            router.push(`/bac-si/kham-offline/${appointmentId}`);
+                          } else {
+                            console.error('Appointment ID not found:', apt);
+                          }
+                        }}
+                      >
+                        Cập nhật
+                      </Button>
+                    </>
                   ) : null}
                   <Button 
                     size="sm" 
                     variant="flat"
-                    onClick={() => router.push(`/bac-si/lich-hen`)}
+                    color="default"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/bac-si/lich-hen`);
+                    }}
                   >
                     Xem lịch
                   </Button>
-          </div>
+                </div>
               </CardBody>
             </Card>
           );})}
@@ -305,6 +456,174 @@ export default function OfflineExamListPage() {
   return (
     <DoctorFrame title="Khám offline">
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+
+      {/* Modal for prescription or details */}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl" scrollBehavior="inside">
+        <ModalContent className="max-h-[90vh]">
+          <ModalHeader className="flex flex-col gap-1">
+            {selectedAppointment?.patient?.name || selectedAppointment?.patientName || "Chi tiết cuộc hẹn"}
+          </ModalHeader>
+          <ModalBody className="overflow-y-auto max-h-[calc(90vh-120px)]">
+            {rxLoading ? (
+              <div className="text-center py-8">
+                <p>Đang tải thông tin...</p>
+              </div>
+            ) : selectedAppointment ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <User className="w-4 h-4" />
+                  <span>Bệnh nhân: {selectedAppointment.patient?.name || selectedAppointment.patientName || "Chưa có"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  <span>Ngày khám: {new Date(selectedAppointment.date).toLocaleDateString('vi-VN')}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock className="w-4 h-4" />
+                  <span>Giờ khám: {SLOT_TIMES[selectedAppointment.slot] || selectedAppointment.slot}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Phone className="w-4 h-4" />
+                  <span>Số điện thoại: {selectedAppointment.patient?.phone || "Chưa có"}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail className="w-4 h-4" />
+                  <span>Email: {selectedAppointment.patient?.email || "Chưa có"}</span>
+                </div>
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
+                <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">
+                  {medicalRecord?.chief_complaint || formatReasonForDisplay(selectedAppointment.reason) || "Không có thông tin"}
+                </p>
+                
+                {medicalRecord && (
+                  <>
+                    {medicalRecord.diagnosis && (
+                      <>
+                        <Divider className="my-4" />
+                        <h4 className="text-sm font-medium text-gray-700">Chẩn đoán</h4>
+                        <div className="pl-4">
+                          {typeof medicalRecord.diagnosis === 'string' ? (
+                            <p className="text-sm text-gray-600 break-words whitespace-pre-line">{medicalRecord.diagnosis}</p>
+                          ) : (
+                            <>
+                              {medicalRecord.diagnosis.primary && (
+                                <p className="text-sm text-gray-600 mb-2 break-words">
+                                  <span className="font-semibold">Chẩn đoán chính:</span> {medicalRecord.diagnosis.primary}
+                                </p>
+                              )}
+                              {medicalRecord.diagnosis.icd_codes && Array.isArray(medicalRecord.diagnosis.icd_codes) && medicalRecord.diagnosis.icd_codes.length > 0 && (
+                                <p className="text-sm text-gray-600 mb-2 break-words">
+                                  <span className="font-semibold">Mã ICD-10:</span> {medicalRecord.diagnosis.icd_codes.join(", ")}
+                                </p>
+                              )}
+                              {medicalRecord.diagnosis.secondary && Array.isArray(medicalRecord.diagnosis.secondary) && medicalRecord.diagnosis.secondary.length > 0 && (
+                                <p className="text-sm text-gray-600 break-words">
+                                  <span className="font-semibold">Chẩn đoán phụ:</span> {medicalRecord.diagnosis.secondary.join(", ")}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    
+                    {medicalRecord.vital_signs && Object.keys(medicalRecord.vital_signs).length > 0 && (
+                      <>
+                        <Divider className="my-4" />
+                        <h4 className="text-sm font-medium text-gray-700">Dấu hiệu sinh tồn</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 break-words pl-4">
+                          {medicalRecord.vital_signs.temperature && (
+                            <div className="break-words">Nhiệt độ: {medicalRecord.vital_signs.temperature} °C</div>
+                          )}
+                          {medicalRecord.vital_signs.blood_pressure && (
+                            <div className="break-words">Huyết áp: {medicalRecord.vital_signs.blood_pressure} mmHg</div>
+                          )}
+                          {medicalRecord.vital_signs.heart_rate && (
+                            <div className="break-words">Nhịp tim: {medicalRecord.vital_signs.heart_rate} bpm</div>
+                          )}
+                          {medicalRecord.vital_signs.oxygen_saturation && (
+                            <div className="break-words">SpO2: {medicalRecord.vital_signs.oxygen_saturation} %</div>
+                          )}
+                          {medicalRecord.vital_signs.weight && (
+                            <div className="break-words">Cân nặng: {medicalRecord.vital_signs.weight} kg</div>
+                          )}
+                          {medicalRecord.vital_signs.height && (
+                            <div className="break-words">Chiều cao: {medicalRecord.vital_signs.height} cm</div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+                
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Đơn thuốc</h4>
+                {medicalRecord?.prescriptions && Array.isArray(medicalRecord.prescriptions) && medicalRecord.prescriptions.length > 0 ? (
+                  <div className="space-y-2 pl-4">
+                    {medicalRecord.prescriptions.map((med, index) => {
+                      const medName = med.name || med.medication || med.medicine_name || "Tên thuốc không xác định";
+                      const dosage = med.dosage || med.dose || "";
+                      const unit = med.unit || "";
+                      const frequency = med.frequency || "";
+                      const duration = med.duration || "";
+                      
+                      return (
+                        <div key={index} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 py-1 break-words">
+                          <div className="font-semibold break-words mb-1">{medName}</div>
+                          {dosage && (
+                            <div className="break-words pl-4 text-gray-600">Liều lượng: {dosage} {unit}</div>
+                          )}
+                          {frequency && (
+                            <div className="break-words pl-4 text-gray-600">Tần suất: {frequency}</div>
+                          )}
+                          {duration && (
+                            <div className="break-words pl-4 text-gray-600">Thời gian: {duration}</div>
+                          )}
+                          {med.instructions && (
+                            <div className="break-words pl-4 text-xs text-gray-500 mt-1 whitespace-pre-line">{med.instructions}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : prescription?.medications && prescription.medications.length > 0 ? (
+                  <div className="space-y-2 pl-4">
+                    {prescription.medications.map((med, index) => (
+                      <div key={index} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 py-1 break-words">
+                        <div className="font-semibold break-words">{med.name}</div>
+                        {med.dosage && <div className="break-words">Liều lượng: {med.dosage}</div>}
+                        {med.frequency && <div className="break-words">Tần suất: {med.frequency}</div>}
+                        {med.duration && <div className="break-words">Thời gian: {med.duration}</div>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 pl-4 italic">Chưa có đơn thuốc</p>
+                )}
+                
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Ghi chú</h4>
+                {medicalRecord?.notes ? (
+                  <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">{medicalRecord.notes}</p>
+                ) : prescription?.note ? (
+                  <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">{prescription.note}</p>
+                ) : (
+                  <p className="text-sm text-gray-400 pl-4 italic">Không có ghi chú</p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">Chọn một cuộc hẹn để xem chi tiết.</div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" variant="flat" onPress={onClose}>
+              Đóng
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </DoctorFrame>
   );
 }
+

@@ -30,6 +30,13 @@ public class AppointmentController {
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
+    private Map<String, Object> normalizeReason(String reason) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("reason", reason != null ? reason : "");
+        r.put("attachments", new java.util.ArrayList<>());
+        return r;
+    }
+    
     /**
      * Helper method to build patient info with ID photo from EMR
      */
@@ -96,7 +103,7 @@ public class AppointmentController {
             response.put("slot", appointment.getSlot().name());
             response.put("type", appointment.getType().name());
             response.put("createdAt", appointment.getCreatedAt());
-            response.put("reason", appointment.getReason());
+            response.put("reason", normalizeReason(appointment.getReason()));
             
             // Doctor details
             if (appointment.getDoctor() != null) {
@@ -125,7 +132,10 @@ public class AppointmentController {
             
             // Patient details (with ID photo from EMR)
             if (appointment.getPatient() != null) {
-                response.put("patient", buildPatientInfo(appointment.getPatient()));
+                Map<String, Object> patientInfo = buildPatientInfo(appointment.getPatient());
+                response.put("patient", patientInfo);
+                response.put("patientUserId", appointment.getPatient().getUserId());
+                response.put("patientId", appointment.getPatient().getUserId());
             }
             
             return ResponseEntity.ok(response);
@@ -138,24 +148,42 @@ public class AppointmentController {
      * Get my appointments (Patient)
      */
     @GetMapping("/my")
-    public ResponseEntity<?> getMyAppointments(Authentication authentication) {
+    public ResponseEntity<?> getMyAppointments(
+            Authentication authentication,
+            @RequestParam(required = false) String type) {
         try {
             String firebaseUid = (String) authentication.getPrincipal();
-            System.out.println("[AppointmentController] /api/appointments/my for firebaseUid=" + firebaseUid);
+            System.out.println("[AppointmentController] /api/appointments/my for firebaseUid=" + firebaseUid + ", type=" + type);
             List<Appointment> appointments = appointmentService.getAppointmentsByPatientFirebaseUid(firebaseUid);
             System.out.println("[AppointmentController] Found " + appointments.size() + " appointments for patient");
+            
+            // Filter by type if provided
+            if (type != null && !type.isEmpty()) {
+                try {
+                    se1961.g1.medconnect.enums.AppointmentType appointmentType = 
+                        se1961.g1.medconnect.enums.AppointmentType.valueOf(type.toUpperCase());
+                    appointments = appointments.stream()
+                        .filter(apt -> apt.getType() == appointmentType)
+                        .toList();
+                    System.out.println("[AppointmentController] After type filter (" + type + "): " + appointments.size() + " appointments");
+                } catch (IllegalArgumentException e) {
+                    System.out.println("[AppointmentController] Invalid type: " + type);
+                }
+            }
             
             // Convert to safe response format
             List<Map<String, Object>> response = appointments.stream()
                 .map(appointment -> {
                     Map<String, Object> apt = new HashMap<>();
+                    apt.put("id", appointment.getAppointmentId());
                     apt.put("appointmentId", appointment.getAppointmentId());
                     apt.put("status", appointment.getStatus().name());
                     apt.put("date", appointment.getDate().toString());
+                    apt.put("appointmentDate", appointment.getDate().toString());
                     apt.put("slot", appointment.getSlot().name());
                     apt.put("type", appointment.getType().name());
                     apt.put("createdAt", appointment.getCreatedAt());
-                    apt.put("reason", appointment.getReason());
+                    apt.put("reason", normalizeReason(appointment.getReason()));
                     
                     // Doctor info
                     if (appointment.getDoctor() != null) {
@@ -163,6 +191,7 @@ public class AppointmentController {
                         doctor.put("id", appointment.getDoctor().getUserId());
                         doctor.put("firebaseUid", appointment.getDoctor().getFirebaseUid());
                         doctor.put("name", appointment.getDoctor().getName());
+                        doctor.put("doctorName", appointment.getDoctor().getName());
                         doctor.put("email", appointment.getDoctor().getEmail());
                         doctor.put("phone", appointment.getDoctor().getPhone());
                         doctor.put("specialization", appointment.getDoctor().getSpeciality() != null 
@@ -180,6 +209,7 @@ public class AppointmentController {
                         }
                         
                         doctor.put("avatar", appointment.getDoctor().getAvatarUrl());
+                        doctor.put("doctorAvatar", appointment.getDoctor().getAvatarUrl());
                         apt.put("doctor", doctor);
                     }
                     
@@ -200,18 +230,25 @@ public class AppointmentController {
     @GetMapping("/doctor")
     public ResponseEntity<?> getDoctorAppointments(
             Authentication authentication,
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         try {
             String firebaseUid = (String) authentication.getPrincipal();
-            System.out.println("[AppointmentController] Get doctor appointments for firebaseUid: " + firebaseUid);
+            System.out.println("[AppointmentController] Get doctor appointments for firebaseUid: " + firebaseUid + ", type=" + type);
             
-            if (startDate == null) {
-                startDate = LocalDate.now();
-            }
-            if (endDate == null) {
-                endDate = startDate.plusDays(30);
+            // For online appointments, get ALL (past + future), otherwise use default range
+            if (type != null && type.equalsIgnoreCase("ONLINE")) {
+                startDate = LocalDate.now().minusYears(1); // 1 year ago
+                endDate = LocalDate.now().plusYears(1); // 1 year ahead
+            } else {
+                if (startDate == null) {
+                    startDate = LocalDate.now().minusMonths(1); // Include past month
+                }
+                if (endDate == null) {
+                    endDate = startDate.plusDays(60); // 60 days ahead
+                }
             }
             
             System.out.println("[AppointmentController] Date range: " + startDate + " to " + endDate);
@@ -219,23 +256,46 @@ public class AppointmentController {
             List<Appointment> appointments = appointmentService.getAppointmentsByDoctorFirebaseUid(
                     firebaseUid, startDate, endDate);
             
-            System.out.println("[AppointmentController] Found " + appointments.size() + " appointments");
+            System.out.println("[AppointmentController] Found " + appointments.size() + " appointments before type filter");
+            
+            // Filter by type if provided
+            if (type != null && !type.isEmpty()) {
+                try {
+                    se1961.g1.medconnect.enums.AppointmentType appointmentType = 
+                        se1961.g1.medconnect.enums.AppointmentType.valueOf(type.toUpperCase());
+                    appointments = appointments.stream()
+                        .filter(apt -> apt.getType() == appointmentType)
+                        .toList();
+                    System.out.println("[AppointmentController] After type filter (" + type + "): " + appointments.size() + " appointments");
+                } catch (IllegalArgumentException e) {
+                    System.out.println("[AppointmentController] Invalid type: " + type);
+                }
+            }
             
             // Convert to safe response format
             List<Map<String, Object>> response = appointments.stream()
                 .map(appointment -> {
                     Map<String, Object> apt = new HashMap<>();
+                    apt.put("id", appointment.getAppointmentId());
                     apt.put("appointmentId", appointment.getAppointmentId());
                     apt.put("status", appointment.getStatus().name());
                     apt.put("date", appointment.getDate().toString());
+                    apt.put("appointmentDate", appointment.getDate().toString());
                     apt.put("slot", appointment.getSlot().name());
                     apt.put("type", appointment.getType().name());
                     apt.put("createdAt", appointment.getCreatedAt());
-                    apt.put("reason", appointment.getReason());
+                    apt.put("reason", normalizeReason(appointment.getReason()));
                     
                     // Patient info (with ID photo from EMR)
                     if (appointment.getPatient() != null) {
-                        apt.put("patient", buildPatientInfo(appointment.getPatient()));
+                        Map<String, Object> patientInfo = buildPatientInfo(appointment.getPatient());
+                        apt.put("patient", patientInfo);
+                        apt.put("patientUserId", appointment.getPatient().getUserId());
+                        apt.put("patientId", appointment.getPatient().getUserId());
+                        apt.put("patientName", patientInfo.get("name"));
+                        apt.put("patientEmail", patientInfo.get("email"));
+                        apt.put("patientPhone", patientInfo.get("phone"));
+                        apt.put("patientAvatar", patientInfo.get("avatar"));
                     }
                     
                     return apt;
@@ -244,6 +304,8 @@ public class AppointmentController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.out.println("[AppointmentController] Error in /doctor: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

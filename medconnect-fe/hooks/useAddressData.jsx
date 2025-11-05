@@ -15,7 +15,7 @@ export const useAddressData = () => {
   });
   const [error, setError] = useState(null);
 
-  const API_BASE = 'https://provinces.open-api.vn/api';
+  const API_BASE = process.env.NEXT_PUBLIC_PROVINCES_API_BASE || 'https://provinces.open-api.vn/api';
 
   // Fetch all provinces (on mount)
   useEffect(() => {
@@ -26,7 +26,8 @@ export const useAddressData = () => {
     setLoading(prev => ({ ...prev, provinces: true }));
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/p/`);
+      // List all provinces: root endpoint with depth
+      const response = await fetch(`${API_BASE}/?depth=1`);
       if (!response.ok) throw new Error('Failed to fetch provinces');
       const data = await response.json();
       setProvinces(data);

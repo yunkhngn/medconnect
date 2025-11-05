@@ -31,4 +31,19 @@ public class AgoraTokenUtil {
                 0
         );
     }
+
+    // Build token using userAccount (string) to avoid int overflow with large UIDs
+    public static String buildTokenWithAccount(String channelName, String userAccount, int expireSeconds) {
+        System.out.println("APP_ID=" + APP_ID + " | CERTIFICATE=" + APP_CERTIFICATE);
+        RtcTokenBuilder2 tokenBuilder = new RtcTokenBuilder2();
+        return tokenBuilder.buildTokenWithUserAccount(
+                APP_ID,
+                APP_CERTIFICATE,
+                channelName,
+                userAccount,
+                RtcTokenBuilder2.Role.ROLE_PUBLISHER,
+                expireSeconds,
+                0
+        );
+    }
 }
