@@ -29,19 +29,46 @@ export function parseReason(reason) {
     // If reason is a string
     if (typeof reason === 'string') {
       const trimmed = reason.trim();
+      // Early return for empty strings
+      if (!trimmed) {
+        return { reasonText: '', attachments: [] };
+      }
+      
       // If it looks like JSON, try to parse
       if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
         try {
           const parsed = JSON.parse(trimmed);
           let reasonText = "";
           const reasonValue = parsed?.reason ?? parsed?.text;
-          if (reasonValue != null && reasonValue !== 'null' && typeof reasonValue !== 'object') {
+          
+          // Handle nested JSON strings (double-encoded)
+          if (typeof reasonValue === 'string' && reasonValue.trim().startsWith('{')) {
+            try {
+              const nestedParsed = JSON.parse(reasonValue);
+              const nestedReasonValue = nestedParsed?.reason ?? nestedParsed?.text;
+              if (nestedReasonValue != null && nestedReasonValue !== 'null' && typeof nestedReasonValue !== 'object') {
+                reasonText = String(nestedReasonValue).trim();
+              }
+            } catch {
+              // If nested parsing fails, try regex extraction
+              const match = reasonValue.match(/"reason"\s*:\s*"([^"]+)"/);
+              if (match) {
+                reasonText = match[1].trim();
+              }
+            }
+          } else if (reasonValue != null && reasonValue !== 'null' && typeof reasonValue !== 'object') {
             reasonText = String(reasonValue).trim();
           }
+          
           const attachments = Array.isArray(parsed?.attachments) ? parsed.attachments : [];
           return { reasonText, attachments };
         } catch {
-          // If JSON parsing fails, treat as plain text
+          // If JSON parsing fails, try regex extraction as fallback
+          const match = trimmed.match(/"reason"\s*:\s*"([^"]+)"/);
+          if (match) {
+            return { reasonText: match[1].trim(), attachments: [] };
+          }
+          // If regex also fails, treat as plain text
           return { reasonText: trimmed, attachments: [] };
         }
       }
@@ -70,6 +97,20 @@ export function parseReason(reason) {
  * @returns {string} - Formatted reason text with attachment info
  */
 export function formatReasonForDisplay(reason, includeLabel = false) {
+  // Handle null/undefined
+  if (reason == null) {
+    return includeLabel ? 'Lý do khám:\n\nKhông rõ' : 'Không rõ';
+  }
+  
+  // If reason is already a readable string (not JSON), return it directly
+  if (typeof reason === 'string' && !reason.trim().startsWith('{') && !reason.trim().startsWith('[')) {
+    const trimmed = reason.trim();
+    if (trimmed) {
+      const displayText = trimmed;
+      return includeLabel ? `Lý do khám:\n\n${displayText}` : displayText;
+    }
+  }
+  
   const parsed = parseReason(reason);
   const { reasonText, attachments } = parsed;
   
@@ -80,6 +121,27 @@ export function formatReasonForDisplay(reason, includeLabel = false) {
   
   // Build the display text
   let displayText = reasonText.trim();
+  
+  // Ensure displayText is not a JSON string (safety check)
+  if (displayText.startsWith('{') && displayText.endsWith('}')) {
+    // Try to parse it one more time
+    try {
+      const reParsed = JSON.parse(displayText);
+      const reasonValue = reParsed?.reason ?? reParsed?.text;
+      if (reasonValue && typeof reasonValue === 'string') {
+        displayText = reasonValue.trim();
+      }
+    } catch {
+      // If parsing fails, try regex extraction
+      const match = displayText.match(/"reason"\s*:\s*"([^"]+)"/);
+      if (match) {
+        displayText = match[1];
+      } else {
+        // Last resort: use a generic message
+        displayText = 'Không rõ';
+      }
+    }
+  }
   
   // Add attachment info if present
   if (attachments && attachments.length > 0) {

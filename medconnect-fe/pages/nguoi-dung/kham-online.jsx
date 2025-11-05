@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Star } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
+import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Star, Plus, Globe } from "lucide-react";
 import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import PatientFrame from "@/components/layouts/Patient/Frame";
@@ -356,7 +356,7 @@ export default function PatientOnlineExamList() {
   const leftChildren = (
     <div className="space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             <Card className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -383,37 +383,92 @@ export default function PatientOnlineExamList() {
             </Card>
           </div>
 
+          {/* Quick Actions Card */}
+          <Card>
+            <CardHeader className="flex gap-3">
+              <Plus className="text-teal-600" size={24} />
+              <h3 className="text-lg font-semibold">Thao tác nhanh</h3>
+            </CardHeader>
+            <Divider />
+            <CardBody>
+              <Button
+                fullWidth
+                color="primary"
+                startContent={<Plus size={18} />}
+                onPress={() => router.push("/nguoi-dung/dat-lich-kham")}
+              >
+                Đặt lịch khám mới
+              </Button>
+            </CardBody>
+          </Card>
+
           {/* Filters */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Bộ lọc
-            </h3>
-            <div className="space-y-4">
+          <Card>
+            <CardHeader className="flex gap-3">
+              <Filter className="text-teal-600" size={24} />
+              <h3 className="text-lg font-semibold">Bộ lọc</h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Tìm kiếm</label>
                 <Input
                   placeholder="Tên bác sĩ, chuyên khoa..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onValueChange={setSearchQuery}
                   startContent={<Search className="w-4 h-4 text-gray-400" />}
                 />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">Trạng thái</label>
                 <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  selectedKeys={statusFilter !== "all" ? [statusFilter] : []}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0];
+                    setStatusFilter(selected || "all");
+                  }}
                 >
-                  <SelectItem key="all" value="all">Tất cả</SelectItem>
-                  <SelectItem key="PENDING" value="PENDING">Chờ xác nhận</SelectItem>
-                  <SelectItem key="CONFIRMED" value="CONFIRMED">Đã xác nhận</SelectItem>
-                  <SelectItem key="ONGOING" value="ONGOING">Đang khám</SelectItem>
-                  <SelectItem key="FINISHED" value="FINISHED">Hoàn thành</SelectItem>
-                  <SelectItem key="CANCELLED" value="CANCELLED">Đã hủy</SelectItem>
+                  <SelectItem key="all">Tất cả</SelectItem>
+                  <SelectItem key="PENDING">Chờ xác nhận</SelectItem>
+                  <SelectItem key="CONFIRMED">Đã xác nhận</SelectItem>
+                  <SelectItem key="ONGOING">Đang khám</SelectItem>
+                  <SelectItem key="FINISHED">Hoàn thành</SelectItem>
+                  <SelectItem key="CANCELLED">Đã hủy</SelectItem>
                 </Select>
               </div>
-            </div>
+            </CardBody>
+          </Card>
+
+          {/* Legend Card */}
+          <Card>
+            <CardHeader className="flex gap-3">
+              <Calendar className="text-teal-600" size={24} />
+              <h3 className="text-lg font-semibold">Chú thích</h3>
+            </CardHeader>
+            <Divider />
+            <CardBody className="space-y-3 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-50 border-2 border-yellow-300 rounded"></div>
+                <span>Chờ xác nhận</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-50 border-2 border-blue-300 rounded"></div>
+                <span>Đã xác nhận</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-50 border-2 border-green-300 rounded"></div>
+                <span>Hoàn thành</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-50 border-2 border-red-300 rounded"></div>
+                <span>Đã hủy</span>
+              </div>
+              <Divider />
+              <div className="flex items-center gap-2">
+                <Globe size={14} className="text-green-600" />
+                <span>Khám online</span>
+              </div>
+            </CardBody>
           </Card>
     </div>
   );
