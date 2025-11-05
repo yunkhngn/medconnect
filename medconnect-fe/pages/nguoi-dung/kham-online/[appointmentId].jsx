@@ -369,7 +369,7 @@ export default function PatientOnlineExamRoom() {
               <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={onDoctorInfoOpen} startContent={<User size={18} />}>Thông tin bác sĩ</Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto pr-2">
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />}>Toàn màn hình</Button>
+              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />} onPress={toggleFullscreen}>Toàn màn hình</Button>
               <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={18}/> }>Chat</Button>
             </div>
           </div>
