@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Video, Hospital, Clock, Star, Shield, Award, Loader2 } from 'lucide-react';
+import { Default } from '@/components/layouts';
+import { Card, CardBody, Divider, Chip, Button } from '@heroui/react';
+import { 
+  Check, Video, Hospital, Clock, Star, Shield, Award, Loader2,
+  Heart, Sparkles, Baby, Ear, Users, Stethoscope, Eye, 
+  Tooth, Brain, Bone, Activity
+} from 'lucide-react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
 import ToastNotification from '@/components/ui/ToastNotification';
+import Float from '@/components/ui/Float';
+import Image from 'next/image';
 
 const PricingPage = () => {
   const [selectedType, setSelectedType] = useState('all');
@@ -38,16 +46,16 @@ const PricingPage = () => {
 
   // Icon mapping for specialties
   const specialtyIcons = {
-    'Tim mạch': '❤️',
-    'Da liễu': '✨',
-    'Nhi khoa': '👶',
-    'Tai mũi họng': '👂',
-    'Sản phụ khoa': '🤰',
-    'Nội khoa': '🩺',
-    'Mắt': '👁️',
-    'Răng hàm mặt': '🦷',
-    'Thần kinh': '🧠',
-    'Chỉnh hình': '🦴'
+    'Tim mạch': Heart,
+    'Da liễu': Sparkles,
+    'Nhi khoa': Baby,
+    'Tai mũi họng': Ear,
+    'Sản phụ khoa': Users,
+    'Nội khoa': Stethoscope,
+    'Mắt': Eye,
+    'Răng hàm mặt': Tooth,
+    'Thần kinh': Brain,
+    'Chỉnh hình': Bone
   };
 
   useEffect(() => {
@@ -63,18 +71,21 @@ const PricingPage = () => {
         const data = await response.json();
         
         // Transform data and add additional fields
-        const transformedData = data.map((specialty, index) => ({
-          id: specialty.id,
-          name: specialty.name,
-          icon: specialtyIcons[specialty.name] || '🩺',
-          inPersonPrice: specialty.offlinePrice || 300000,
-          onlinePrice: specialty.onlinePrice || 200000,
-          duration: '30-45 phút',
-          rating: (4.5 + Math.random() * 0.4).toFixed(1), // Random rating between 4.5-4.9
-          doctors: Math.floor(Math.random() * 15) + 8, // Random 8-22 doctors
-          popular: index < 3, // First 3 are popular
-          features: getFeaturesBySpecialty(specialty.name)
-        }));
+        const transformedData = data.map((specialty, index) => {
+          const IconComponent = specialtyIcons[specialty.name] || Stethoscope;
+          return {
+            id: specialty.id,
+            name: specialty.name,
+            IconComponent: IconComponent,
+            inPersonPrice: specialty.offlinePrice ?? null,
+            onlinePrice: specialty.onlinePrice ?? null,
+            duration: '30-45 phút',
+            rating: (4.5 + Math.random() * 0.4).toFixed(1),
+            doctors: Math.floor(Math.random() * 15) + 8,
+            popular: index < 3,
+            features: getFeaturesBySpecialty(specialty.name)
+          };
+        });
         
         setSpecializations(transformedData);
       } else {
@@ -143,7 +154,6 @@ const PricingPage = () => {
       return;
     }
     
-    // Redirect to doctor search with specialty filter
     router.push(`/tim-bac-si?specialty=${encodeURIComponent(specialtyName)}`);
   };
 
@@ -155,186 +165,233 @@ const PricingPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Đang tải bảng giá...</p>
+      <Default title="Bảng Giá - MedConnect">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Đang tải bảng giá...</p>
+          </div>
         </div>
-      </div>
+      </Default>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <ToastNotification toast={toast} />
-      
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-green-500 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Bảng Giá Dịch Vụ Khám Bệnh
-            </h1>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Chăm sóc sức khỏe chất lượng cao với mức giá minh bạch, hợp lý
-            </p>
-          </div>
+    <Default title="Bảng Giá - MedConnect">
+      <div className="min-h-screen relative overflow-hidden">
+        <ToastNotification toast={toast} />
+        
+        {/* Background with blur */}
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/cover.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+          <div className="absolute inset-0 bg-blue-500/5"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>
         </div>
-      </div>
 
-      {/* Benefits Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {benefits.map((benefit, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform duration-300">
-              <div className="text-blue-600 mb-3">{benefit.icon}</div>
-              <h3 className="font-bold text-gray-900 mb-2">{benefit.title}</h3>
-              <p className="text-sm text-gray-600">{benefit.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+        {/* Content */}
+        <div className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Back Button */}
+            <Float>
+              <Button 
+                variant="light" 
+                className="mb-6 bg-white/80 backdrop-blur-sm"
+                onClick={() => router.back()}
+                startContent={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                }
+              >
+                Quay lại
+              </Button>
+            </Float>
 
-      {/* Filter Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <div className="flex justify-center space-x-4">
-          <button
-            onClick={() => setSelectedType('all')}
-            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
-              selectedType === 'all'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Tất cả chuyên khoa
-          </button>
-          <button
-            onClick={() => setSelectedType('popular')}
-            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 ${
-              selectedType === 'popular'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Phổ biến nhất
-          </button>
-        </div>
-      </div>
-
-      {/* Pricing Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredSpecializations.map((spec) => (
-            <div
-              key={spec.id}
-              className="bg-white rounded-2xl shadow-xl overflow-hidden transform hover:scale-105 transition-all duration-300 relative"
-            >
-              {spec.popular && (
-                <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full z-10">
-                  PHỔ BIẾN
-                </div>
-              )}
-              
-              <div className="bg-gradient-to-br from-blue-500 to-green-400 p-6 text-white">
-                <div className="text-5xl mb-3">{spec.icon}</div>
-                <h3 className="text-2xl font-bold mb-2">{spec.name}</h3>
-                <div className="flex items-center space-x-4 text-sm">
-                  <div className="flex items-center">
-                    <Star className="w-4 h-4 fill-current mr-1" />
-                    <span>{spec.rating}</span>
-                  </div>
-                  <div>{spec.doctors} bác sĩ</div>
-                  <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    <span>{spec.duration}</span>
-                  </div>
-                </div>
+            {/* Header */}
+            <Float variant="fadeInUp" delay={0.1}>
+              <div className="text-center mb-12">
+                <Chip color="primary" variant="flat" className="mb-4 bg-white/90 backdrop-blur-sm">
+                  Giá cả minh bạch, công khai
+                </Chip>
+                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                  Bảng Giá Dịch Vụ Khám Bệnh
+                </h1>
+                <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+                  Chăm sóc sức khỏe chất lượng cao với mức giá minh bạch, hợp lý
+                </p>
               </div>
+            </Float>
 
-              <div className="p-6">
-                {/* In-person consultation */}
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      <Hospital className="w-5 h-5 text-blue-600 mr-2" />
-                      <span className="font-semibold text-gray-900">Khám trực tiếp</span>
-                    </div>
+            {/* Benefits Section */}
+            <Float variant="fadeInUp" delay={0.2}>
+              <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-8 md:p-12">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+                    Lợi ích khi sử dụng dịch vụ
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {benefits.map((benefit, index) => (
+                      <Float key={index} variant="fadeInUp" delay={0.3 + index * 0.1}>
+                        <div className="text-center p-4 rounded-lg bg-gray-50 hover:shadow-lg transition-shadow border border-gray-100">
+                          <div className="text-blue-600 mb-3 flex justify-center">{benefit.icon}</div>
+                          <h3 className="font-bold text-gray-900 mb-2">{benefit.title}</h3>
+                          <p className="text-sm text-gray-600">{benefit.desc}</p>
+                        </div>
+                      </Float>
+                    ))}
                   </div>
-                  <div className="text-3xl font-bold text-blue-600">
-                    {spec.inPersonPrice.toLocaleString('vi-VN')}₫
-                  </div>
-                </div>
+                </CardBody>
+              </Card>
+            </Float>
 
-                {/* Online consultation */}
-                <div className="mb-6 p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      <Video className="w-5 h-5 text-green-600 mr-2" />
-                      <span className="font-semibold text-gray-900">Khám online</span>
-                    </div>
+            {/* Pricing Table */}
+            <Float variant="fadeInUp" delay={0.6}>
+              <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl overflow-hidden">
+                <CardBody className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b-2 border-gray-200">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Chuyên khoa</th>
+                          <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Giá online</th>
+                          <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Giá offline</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {filteredSpecializations.map((spec, index) => (
+                          <tr 
+                            key={spec.id} 
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="flex items-center space-x-3">
+                                <spec.IconComponent className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="font-semibold text-gray-900">{spec.name}</span>
+                                    {spec.popular && (
+                                      <Chip size="sm" color="warning" variant="flat" className="text-xs">
+                                        Phổ biến
+                                      </Chip>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
+                                    <div className="flex items-center">
+                                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
+                                      <span>{spec.rating}</span>
+                                    </div>
+                                    <span>{spec.doctors} bác sĩ</span>
+                                    <div className="flex items-center">
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      <span>{spec.duration}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {spec.onlinePrice !== null ? (
+                                <div>
+                                  <div className="flex items-center justify-center space-x-2 mb-1">
+                                    <Video className="w-4 h-4 text-green-600" />
+                                    <span className="text-lg font-bold text-green-600">
+                                      {spec.onlinePrice.toLocaleString('vi-VN')}₫
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">—</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              {spec.inPersonPrice !== null ? (
+                                <div>
+                                  <div className="flex items-center justify-center space-x-2 mb-1">
+                                    <Hospital className="w-4 h-4 text-blue-600" />
+                                    <span className="text-lg font-bold text-blue-600">
+                                      {spec.inPersonPrice.toLocaleString('vi-VN')}₫
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="text-3xl font-bold text-green-600">
-                    {spec.onlinePrice.toLocaleString('vi-VN')}₫
-                  </div>
-                </div>
+                </CardBody>
+              </Card>
+            </Float>
 
-                {/* Features */}
-                <div className="space-y-3 mb-6">
-                  {spec.features.map((feature, index) => (
-                    <div key={index} className="flex items-start">
+            {/* Payment Policy */}
+            <Float variant="fadeInUp" delay={1.2}>
+              <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-8 md:p-12">
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+                    Chính sách thanh toán & Hoàn tiền
+                  </h3>
+                  <div className="space-y-3 text-gray-700">
+                    <div className="flex items-start">
                       <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700 text-sm">{feature}</span>
+                      <span>Thanh toán trước để xác nhận lịch hẹn</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-start">
+                      <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>Hoàn tiền 100% nếu hủy trước 24 giờ</span>
+                    </div>
+                    <div className="flex items-start">
+                      <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>Không hoàn tiền nếu hủy trong vòng 24 giờ trước buổi khám</span>
+                    </div>
+                    <div className="flex items-start">
+                      <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>Hỗ trợ thanh toán qua VNPAY, MoMo, VietQR</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-4 italic">
+                      * Các thông tin y tế được bảo mật theo Nghị định 13/2023/NĐ-CP
+                    </p>
+                  </div>
+                </CardBody>
+              </Card>
+            </Float>
 
-                {/* CTA Button */}
-                <button 
-                  onClick={() => handleBooking(spec.name)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-green-500 hover:from-blue-700 hover:to-green-600 text-white font-bold py-3 rounded-lg transition-all duration-300 transform hover:shadow-lg"
-                >
-                  Đặt lịch ngay
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Additional Info */}
-      <div className="bg-gradient-to-r from-blue-600 to-green-500 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4">Chính sách thanh toán & Hoàn tiền</h2>
-            <div className="max-w-3xl mx-auto space-y-3 text-blue-100">
-              <p>✓ Thanh toán trước để xác nhận lịch hẹn</p>
-              <p>✓ Hoàn tiền 100% nếu hủy trước 24 giờ</p>
-              <p>✓ Không hoàn tiền nếu hủy trong vòng 24 giờ trước buổi khám</p>
-              <p>✓ Hỗ trợ thanh toán qua VNPAY, MoMo, VietQR</p>
-              <p className="text-sm mt-4">* Các thông tin y tế được bảo mật theo Nghị định 13/2023/NĐ-CP</p>
-            </div>
+            {/* Contact Info */}
+            <Float variant="fadeInUp" delay={1.3}>
+              <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-8 md:p-12">
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+                    Bạn cần tư vấn thêm về dịch vụ?
+                  </h3>
+                  <p className="text-gray-700 text-base md:text-lg mb-6 text-center">
+                    Liên hệ với chúng tôi để được hỗ trợ chi tiết
+                  </p>
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={() => router.push('/lien-he')}
+                      color="primary"
+                      size="lg"
+                    >
+                      Liên hệ tư vấn
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            </Float>
           </div>
         </div>
       </div>
-
-      {/* Footer CTA */}
-      <div className="bg-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Bạn cần tư vấn thêm về dịch vụ?
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Liên hệ với chúng tôi để được hỗ trợ chi tiết
-          </p>
-          <button 
-            onClick={() => router.push('/lien-he')}
-            className="bg-gradient-to-r from-blue-600 to-green-500 hover:from-blue-700 hover:to-green-600 text-white font-bold px-8 py-3 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            Liên hệ tư vấn
-          </button>
-        </div>
-      </div>
-    </div>
+    </Default>
   );
 };
 
