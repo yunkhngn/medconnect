@@ -17,10 +17,12 @@ export default function PatientOnlineExamList() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("today");
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+  const { isOpen: isImageModalOpen, onOpen: onImageModalOpen, onOpenChange: onImageModalOpenChange, onClose: onImageModalClose } = useDisclosure();
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     fetchOnlineAppointments();
@@ -499,111 +501,185 @@ export default function PatientOnlineExamList() {
               {filteredAppointments.map((appointment) => {
                 const { date } = formatDateTime(appointment.appointmentDate);
                 const time = slotToRange(appointment.slot) || formatDateTime(appointment.appointmentDate).time;
+                const isPending = appointment.status === "PENDING";
                 return (
                   <Card
                     key={appointment.id}
-                    isPressable
-                    onPress={() => openAppointmentModal(appointment)}
-                    className="p-5 hover:shadow-lg transition-shadow border border-gray-200"
+                    className={`hover:shadow-md transition rounded-2xl ${isPending ? 'border-4 border-yellow-400' : 'border-2 border-gray-200'}`}
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          src={appointment.doctorAvatar}
-                          name={appointment.doctorName}
-                          size="md"
-                          className="ring-2 ring-blue-100"
-                        />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">BS. {appointment.doctorName}</h3>
-                          <p className="text-sm text-gray-500">{appointment.specialty}</p>
+                    <CardBody className="p-5">
+                      {/* Header with profile picture, name, and status tags */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="relative">
+                          <img 
+                            src={appointment.doctorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.doctorName||'BS')}&background=0D9488&color=fff`} 
+                            className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-400" 
+                            alt="avatar"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">BS. {appointment.doctorName}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Chip
+                              size="sm"
+                              variant="flat"
+                              color={getStatusColor(appointment.status)}
+                            >
+                              {getStatusText(appointment.status)}
+                            </Chip>
+                            <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
+                          </div>
                         </div>
                       </div>
-                      <Chip
-                        color={getStatusColor(appointment.status)}
-                        variant="flat"
-                        size="sm"
-                      >
-                        {getStatusText(appointment.status)}
-                      </Chip>
-                    </div>
 
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
-                        <span>{date}</span>
+                      {/* Details grid - 2 columns */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        {/* Left column */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Calendar size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500">Ngày khám</p>
+                              <p className="font-bold text-gray-900">{date}</p>
+                            </div>
+                          </div>
+                          {appointment.doctorPhone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-700">{appointment.doctorPhone}</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Right column */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Clock size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500">Giờ khám</p>
+                              <p className="font-bold text-gray-900">{time}</p>
+                            </div>
+                          </div>
+                          {appointment.doctorEmail && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-700 truncate">{appointment.doctorEmail}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4" />
-                        <span>{time}</span>
+
+                      {/* Reason section */}
+                      <div className="space-y-2 mb-4">
+                        <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
+                        <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
+                          {formatReasonForDisplay(appointment.reason)}
+                        </p>
+                        {(() => {
+                          const { attachments } = parseReason(appointment.reason);
+                          if (attachments && attachments.length > 0) {
+                            return (
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {attachments.map((url, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="relative cursor-pointer group"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedImage(url);
+                                      onImageModalOpen();
+                                    }}
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Attachment ${idx + 1}`}
+                                      className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
+                                      <span className="text-white text-xs opacity-0 group-hover:opacity-100">Xem</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <MapPin className="w-4 h-4" />
-                        <span>Khám online</span>
+
+                      {/* Action buttons */}
+                      <Divider className="my-4" />
+                      <div className="flex gap-2">
+                        {appointment.status === "PENDING" && (
+                          <Button
+                            color="default"
+                            size="sm"
+                            variant="flat"
+                            className="flex-1"
+                            isDisabled
+                          >
+                            Chờ xác nhận
+                          </Button>
+                        )}
+                        {appointment.status === "CONFIRMED" && (
+                          <Button
+                            color="primary"
+                            size="sm"
+                            className="flex-1"
+                            onPress={(e) => { 
+                              e?.stopPropagation?.(); 
+                              handleJoinExam(appointment.id); 
+                            }}
+                          >
+                            Tham gia khám
+                          </Button>
+                        )}
+                        {appointment.status === "ONGOING" && (
+                          <Button
+                            color="warning"
+                            size="sm"
+                            className="flex-1"
+                            onPress={(e) => { 
+                              e?.stopPropagation?.(); 
+                              handleJoinExam(appointment.id); 
+                            }}
+                          >
+                            Tiếp tục khám
+                          </Button>
+                        )}
+                        {appointment.status === "FINISHED" && (
+                          <Button
+                            color="default"
+                            size="sm"
+                            variant="flat"
+                            className="flex-1"
+                            onPress={(e) => { 
+                              e?.stopPropagation?.(); 
+                              openAppointmentModal(appointment); 
+                            }}
+                          >
+                            Xem lại
+                          </Button>
+                        )}
+                        {appointment.status === "CANCELLED" && (
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="flat"
+                            className="flex-1"
+                            isDisabled
+                          >
+                            Đã hủy
+                          </Button>
+                        )}
                       </div>
-                    </div>
-
-                    <Divider className="my-4" />
-
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
-                      <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
-                        {formatReasonForDisplay(appointment.reason)}
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2 mt-4">
-                      {appointment.status === "PENDING" && (
-                        <Button
-                          color="default"
-                          size="sm"
-                          className="flex-1"
-                          isDisabled
-                        >
-                          Chờ bác sĩ xác nhận
-                        </Button>
-                      )}
-                      {appointment.status === "CONFIRMED" && (
-                        <Button
-                          color="success"
-                          size="sm"
-                          className="flex-1"
-                          onPress={(e) => { e?.stopPropagation?.(); handleJoinExam(appointment.id); }}
-                        >
-                          Tham gia khám
-                        </Button>
-                      )}
-                      {appointment.status === "ONGOING" && (
-                        <Button
-                          color="warning"
-                          size="sm"
-                          className="flex-1"
-                          onPress={(e) => { e?.stopPropagation?.(); handleJoinExam(appointment.id); }}
-                        >
-                          Tiếp tục khám
-                        </Button>
-                      )}
-                      {appointment.status === "FINISHED" && (
-                        <Button
-                          color="default"
-                          size="sm"
-                          className="flex-1"
-                          onPress={(e) => { e?.stopPropagation?.(); handleJoinExam(appointment.id); }}
-                        >
-                          Xem lại
-                        </Button>
-                      )}
-                      {appointment.status === "CANCELLED" && (
-                        <Button
-                          color="danger"
-                          size="sm"
-                          className="flex-1"
-                          isDisabled
-                        >
-                          Đã hủy
-                        </Button>
-                      )}
-                    </div>
+                    </CardBody>
                   </Card>
                 );
               })}
@@ -675,8 +751,40 @@ export default function PatientOnlineExamList() {
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
                 <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">
-                  {medicalRecord?.chief_complaint || "Không có thông tin"}
+                  {medicalRecord?.chief_complaint || formatReasonForDisplay(selectedAppointment?.reason) || "Không có thông tin"}
                 </p>
+                {(() => {
+                  const { attachments } = parseReason(selectedAppointment?.reason);
+                  if (attachments && attachments.length > 0) {
+                    return (
+                      <div className="flex flex-wrap gap-2 mt-2 pl-4">
+                        {attachments.map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="relative cursor-pointer group"
+                            onClick={() => {
+                              setSelectedImage(url);
+                              onImageModalOpen();
+                            }}
+                          >
+                            <img
+                              src={url}
+                              alt={`Attachment ${idx + 1}`}
+                              className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
+                              <span className="text-white text-xs opacity-0 group-hover:opacity-100">Xem</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Chẩn đoán</h4>
@@ -823,6 +931,34 @@ export default function PatientOnlineExamList() {
           </ModalBody>
           <ModalFooter>
             <Button color="danger" variant="flat" onPress={onClose}>
+              Đóng
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal isOpen={isImageModalOpen} onOpenChange={onImageModalOpenChange} size="2xl">
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">Xem ảnh</h3>
+          </ModalHeader>
+          <ModalBody>
+            {selectedImage && (
+              <div className="flex justify-center items-center">
+                <img
+                  src={selectedImage}
+                  alt="Preview"
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23ccc"%3EKhông thể tải ảnh%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="default" variant="flat" onPress={onImageModalClose}>
               Đóng
             </Button>
           </ModalFooter>

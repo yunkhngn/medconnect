@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, Card, CardHeader, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea } from "@heroui/react";
-import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Activity, CheckCircle } from "lucide-react";
+import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Activity, CheckCircle, Globe } from "lucide-react";
 import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
@@ -471,105 +471,143 @@ export default function DoctorOnlineExamList() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredAppointments.map((appointment) => {
             const { date, time } = formatDateTime(appointment.appointmentDate);
+            const isPending = appointment.status === "PENDING";
             return (
               <Card
                 key={appointment.id}
-                isPressable
-                onPress={() => openAppointmentModal(appointment)}
-                className="p-5 hover:shadow-lg transition-shadow border border-gray-200"
+                className={`hover:shadow-md transition rounded-2xl ${isPending ? 'border-4 border-yellow-400' : 'border-2 border-gray-200'}`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      src={appointment.patientAvatar}
-                      name={appointment.patientName}
-                      size="md"
-                      className="ring-2 ring-blue-100"
-                    />
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
-                      <p className="text-xs text-gray-500">Bệnh nhân</p>
+                <CardBody className="p-5">
+                  {/* Header with profile picture, name, and status tags */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="relative">
+                      <img 
+                        src={appointment.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.patientName||'BN')}&background=0D9488&color=fff`} 
+                        className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-400" 
+                        alt="avatar"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{appointment.patientName || 'Bệnh nhân'}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Chip
+                          size="sm"
+                          variant="flat"
+                          color={getStatusColor(appointment.status)}
+                        >
+                          {getStatusText(appointment.status)}
+                        </Chip>
+                        <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
+                      </div>
                     </div>
                   </div>
-                  <Chip
-                    color={getStatusColor(appointment.status)}
-                    variant="flat"
-                    size="sm"
-                  >
-                    {getStatusText(appointment.status)}
-                  </Chip>
-                </div>
 
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
-                    <span>{date}</span>
+                  {/* Details grid - 2 columns */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {/* Left column */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Calendar size={16} className="text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-500">Ngày khám</p>
+                          <p className="font-bold text-gray-900">{date}</p>
+                        </div>
+                      </div>
+                      {appointment.patientPhone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-700">{appointment.patientPhone}</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Right column */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Clock size={16} className="text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-500">Giờ khám</p>
+                          <p className="font-bold text-gray-900">{time}</p>
+                        </div>
+                      </div>
+                      {appointment.patientEmail && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-700 truncate">{appointment.patientEmail}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4" />
-                    <span>{time}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Phone className="w-4 h-4" />
-                    <span>{appointment.patientPhone || "Chưa cập nhật"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Mail className="w-4 h-4" />
-                    <span className="truncate">{appointment.patientEmail}</span>
-                  </div>
-                </div>
 
-                <Divider className="my-3" />
+                  {/* Reason section */}
+                  <div className="space-y-2 mb-4">
+                    <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
+                    <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
+                      {formatReasonForDisplay(appointment.reason)}
+                    </p>
+                  </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
-                  <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
-                    {formatReasonForDisplay(appointment.reason)}
-                  </p>
-                </div>
-
-                <div className="flex gap-2 mt-4">
-                  {appointment.status === "PENDING" && (
-                    <Button
-                      color="primary"
-                      size="sm"
-                      className="flex-1"
-                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
-                    >
-                      Xác nhận & Bắt đầu
-                    </Button>
-                  )}
-                  {appointment.status === "CONFIRMED" && (
-                    <Button
-                      color="success"
-                      size="sm"
-                      className="flex-1"
-                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
-                    >
-                      Bắt đầu khám
-                    </Button>
-                  )}
-                  {appointment.status === "ONGOING" && (
-                    <Button
-                      color="warning"
-                      size="sm"
-                      className="flex-1"
-                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
-                    >
-                      Tiếp tục khám
-                    </Button>
-                  )}
-                  {appointment.status === "FINISHED" && (
-                    <Button
-                      color="default"
-                      size="sm"
-                      className="flex-1"
-                      onPress={(e) => { e?.stopPropagation?.(); handleStartExam(appointment.id); }}
-                    >
-                      Xem lại
-                    </Button>
-                  )}
-                </div>
+                  {/* Action buttons */}
+                  <Divider className="my-4" />
+                  <div className="flex gap-2">
+                    {appointment.status === "PENDING" && (
+                      <Button
+                        color="primary"
+                        size="sm"
+                        className="flex-1"
+                        onPress={(e) => { 
+                          e?.stopPropagation?.(); 
+                          handleStartExam(appointment.id); 
+                        }}
+                      >
+                        Xác nhận & Bắt đầu
+                      </Button>
+                    )}
+                    {appointment.status === "CONFIRMED" && (
+                      <Button
+                        color="primary"
+                        size="sm"
+                        className="flex-1"
+                        onPress={(e) => { 
+                          e?.stopPropagation?.(); 
+                          handleStartExam(appointment.id); 
+                        }}
+                      >
+                        Bắt đầu khám
+                      </Button>
+                    )}
+                    {appointment.status === "ONGOING" && (
+                      <Button
+                        color="warning"
+                        size="sm"
+                        className="flex-1"
+                        onPress={(e) => { 
+                          e?.stopPropagation?.(); 
+                          handleStartExam(appointment.id); 
+                        }}
+                      >
+                        Tiếp tục khám
+                      </Button>
+                    )}
+                    {appointment.status === "FINISHED" && (
+                      <Button
+                        color="default"
+                        size="sm"
+                        variant="flat"
+                        className="flex-1"
+                        onPress={(e) => { 
+                          e?.stopPropagation?.(); 
+                          openAppointmentModal(appointment); 
+                        }}
+                      >
+                        Xem lại
+                      </Button>
+                    )}
+                  </div>
+                </CardBody>
               </Card>
             );
           })}

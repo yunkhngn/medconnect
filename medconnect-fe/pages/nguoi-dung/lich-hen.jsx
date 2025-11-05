@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { Calendar, ChevronLeft, ChevronRight, Globe, MapPin, Plus } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Globe, MapPin, Plus, Phone, Mail, Clock, CheckCircle } from "lucide-react";
 import { useRouter } from "next/router";
-import { Button, Card, CardBody, CardHeader, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Chip as UiChip } from "@heroui/react";
+import { Button, Card, CardBody, CardHeader, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Chip as UiChip, Chip } from "@heroui/react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
-import { Chip } from "@heroui/react";
-import { CheckCircle } from "lucide-react";
 
 
 export default function AppointmentsPage() {
@@ -468,24 +466,114 @@ function getSlotData(date, slot) {
               <h3 className="text-lg font-semibold">Lịch sắp tới</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-3">
+            <CardBody className="space-y-4">
               {upcoming.length === 0 && <p className="text-sm text-gray-500">Không có lịch sắp tới</p>}
-              {upcoming.map((a, idx) => (
-              <button key={idx} onClick={() => openAppointmentModal(a)} className="w-full text-left p-5 md:p-6 bg-white rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:bg-gray-50 transition focus:outline-none">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center ring-2 ring-teal-200">
-                      <Calendar className="text-teal-700" size={20} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{new Date(a.date).toLocaleDateString('vi-VN')} • {SLOTS.find(s=>s.id===a.slot)?.time || a.slot}</p>
-                      <p className="text-sm text-gray-600">Bác sĩ: {a.doctor?.name || '—'}</p>
-                    </div>
-                  </div>
-                  <UiChip color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')} variant="solid" className="font-semibold">
-                    {getStatusLabel(a.status)}
-                  </UiChip>
-                </button>
-              ))}
+              {upcoming.map((a, idx) => {
+                const isPending = a.status === "PENDING";
+                const slotTime = SLOTS.find(s=>s.id===a.slot)?.time || a.slot;
+                return (
+                  <Card key={idx} className={`hover:shadow-md transition rounded-2xl ${isPending ? 'border-4 border-yellow-400' : 'border-2 border-gray-200'}`}>
+                    <CardBody className="p-5">
+                      {/* Header with profile picture, name, and status tags */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="relative">
+                          <img 
+                            src={a.doctor?.avatar || a.doctor?.idPhotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.doctor?.name||'BS')}&background=0D9488&color=fff`} 
+                            className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-400" 
+                            alt="avatar"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{a.doctor?.name || 'Bác sĩ'}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <UiChip size="sm" variant="flat" color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')}>
+                              {getStatusLabel(a.status)}
+                            </UiChip>
+                            {a.type === "ONLINE" ? (
+                              <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
+                            ) : (
+                              <Chip size="sm" variant="flat" color="default" startContent={<MapPin size={12}/>}>Tại phòng khám</Chip>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details grid - 2 columns */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        {/* Left column */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Calendar size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500">Ngày khám</p>
+                              <p className="font-bold text-gray-900">{new Date(a.date).toLocaleDateString('vi-VN')}</p>
+                            </div>
+                          </div>
+                          {a.doctor?.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-700">{a.doctor.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Right column */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Clock size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500">Giờ khám</p>
+                              <p className="font-bold text-gray-900">{slotTime}</p>
+                            </div>
+                          </div>
+                          {a.doctor?.email && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-700 truncate">{a.doctor.email}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <Divider className="my-4" />
+                      <div className="flex gap-2">
+                        {a.status === "PENDING" ? (
+                          <Button 
+                            size="sm" 
+                            color="default" 
+                            variant="flat"
+                            className="flex-1"
+                            isDisabled
+                          >
+                            Chờ xác nhận
+                          </Button>
+                        ) : a.status === "CONFIRMED" ? (
+                          <Button 
+                            size="sm" 
+                            color="primary" 
+                            className="flex-1"
+                            onClick={() => router.push(a.type === "ONLINE" ? `/nguoi-dung/kham-online/${a.id || a.appointmentId}` : `/nguoi-dung/kham-offline/${a.id || a.appointmentId}`)}
+                          >
+                            Tham gia khám
+                          </Button>
+                        ) : null}
+                        <Button 
+                          size="sm" 
+                          variant="flat"
+                          color="default"
+                          onClick={() => router.push('/nguoi-dung/lich-hen')}
+                        >
+                          Xem lịch
+                        </Button>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
             </CardBody>
           </Card>
 
@@ -494,22 +582,104 @@ function getSlotData(date, slot) {
               <h3 className="text-lg font-semibold">Lịch đã qua</h3>
             </CardHeader>
             <Divider />
-            <CardBody className="space-y-3">
+            <CardBody className="space-y-4">
               {history.length === 0 && <p className="text-sm text-gray-500">Chưa có lịch đã qua</p>}
-              {history.map((a, idx) => (
-                <button key={idx} onClick={() => openAppointmentModal(a)} className="w-full text-left p-4 bg-white rounded-xl border flex items-center justify-between hover:shadow-sm hover:bg-gray-50 transition focus:outline-none">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
-                      <Calendar className="text-gray-600" size={20} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{new Date(a.date).toLocaleDateString('vi-VN')} • {SLOTS.find(s=>s.id===a.slot)?.time || a.slot}</p>
-                      <p className="text-sm text-gray-600">Bác sĩ: {a.doctor?.name || '—'}</p>
-                    </div>
-                  </div>
-                  <UiChip color={a.status==='FINISHED' ? 'success' : (a.status==='CANCELLED'?'danger':'default')} variant="solid" className="font-semibold">{getStatusLabel(a.status)}</UiChip>
-                </button>
-              ))}
+              {history.map((a, idx) => {
+                const slotTime = SLOTS.find(s=>s.id===a.slot)?.time || a.slot;
+                return (
+                  <Card key={idx} className="hover:shadow-md transition rounded-2xl border-2 border-gray-200">
+                    <CardBody className="p-5">
+                      {/* Header with profile picture, name, and status tags */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="relative">
+                          <img 
+                            src={a.doctor?.avatar || a.doctor?.idPhotoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.doctor?.name||'BS')}&background=0D9488&color=fff`} 
+                            className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-400" 
+                            alt="avatar"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{a.doctor?.name || 'Bác sĩ'}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <UiChip size="sm" variant="flat" color={a.status==='FINISHED' ? 'success' : (a.status==='CANCELLED'?'danger':'default')}>
+                              {getStatusLabel(a.status)}
+                            </UiChip>
+                            {a.type === "ONLINE" ? (
+                              <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
+                            ) : (
+                              <Chip size="sm" variant="flat" color="default" startContent={<MapPin size={12}/>}>Tại phòng khám</Chip>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details grid - 2 columns */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        {/* Left column */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Calendar size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500">Ngày khám</p>
+                              <p className="font-bold text-gray-900">{new Date(a.date).toLocaleDateString('vi-VN')}</p>
+                            </div>
+                          </div>
+                          {a.doctor?.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-700">{a.doctor.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Right column */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Clock size={16} className="text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500">Giờ khám</p>
+                              <p className="font-bold text-gray-900">{slotTime}</p>
+                            </div>
+                          </div>
+                          {a.doctor?.email && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="text-gray-700 truncate">{a.doctor.email}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <Divider className="my-4" />
+                      <div className="flex gap-2">
+                        {a.status === "FINISHED" ? (
+                          <Button 
+                            size="sm" 
+                            color="default" 
+                            variant="flat"
+                            className="flex-1"
+                            onClick={() => openAppointmentModal(a)}
+                          >
+                            Xem lại
+                          </Button>
+                        ) : null}
+                        <Button 
+                          size="sm" 
+                          variant="flat"
+                          color="default"
+                          onClick={() => router.push('/nguoi-dung/lich-hen')}
+                        >
+                          Xem lịch
+                        </Button>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
             </CardBody>
           </Card>
         </>
