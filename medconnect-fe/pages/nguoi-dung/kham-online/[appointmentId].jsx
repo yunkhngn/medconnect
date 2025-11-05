@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Button, Card, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star } from "lucide-react";
+import { Button, Card, CardHeader, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star, CheckCircle, AlertCircle } from "lucide-react";
 import { useRouter } from "next/router";
-import { parseReason } from "@/utils/appointmentUtils";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
 import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
@@ -178,6 +178,23 @@ export default function PatientOnlineExamRoom() {
     </div>
   );
 
+  // Parse reason safely
+  const reasonData = parseReason(appointment.reason);
+  const reasonText = reasonData?.reasonText ? String(reasonData.reasonText) : '';
+  const attachments = Array.isArray(reasonData?.attachments) ? reasonData.attachments : [];
+
+  // Derive doctor info from appointment (with fallbacks)
+  const doctorName = appointment?.doctor?.name || appointment?.doctorName || 'Bác sĩ';
+  const doctorAvatar = appointment?.doctor?.avatar || appointment?.doctorAvatar || undefined;
+  const doctorPhone = appointment?.doctor?.phone || appointment?.doctorPhone || '';
+  const doctorEmail = appointment?.doctor?.email || appointment?.doctorEmail || '';
+  const doctorSpecialty = appointment?.doctor?.specialization || appointment?.doctor?.specialty || appointment?.specialty || '';
+
+  // Parse appointment date safely
+  const apptDateObj = appointment?.appointmentDate ? new Date(appointment.appointmentDate) : (appointment?.date ? new Date(appointment.date) : null);
+  const apptDateStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleDateString('vi-VN') : '—';
+  const apptTimeStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—';
+
   if (appointment.status !== 'ONGOING') return (
     <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
@@ -187,7 +204,6 @@ export default function PatientOnlineExamRoom() {
     </div>
   );
 
-  const { reasonText, attachments } = parseReason(appointment.reason);
   // Derive names/avatars for header (patient view)
   const selfName = auth.currentUser?.displayName || appointment?.patientName || 'Bạn';
   const selfAvatar = auth.currentUser?.photoURL || appointment?.patientAvatar || undefined;
@@ -198,7 +214,118 @@ export default function PatientOnlineExamRoom() {
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
       <div className="flex h-full">
-        {/* Left: Video Area */}
+        {/* Left: Side Panel */}
+        <div className="w-[300px] h-full bg-gray-50 overflow-y-auto border-r border-gray-200">
+          <div className="p-4 space-y-4">
+            {/* Stats Cards */}
+            <div className="space-y-3">
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300">
+                <CardBody className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Thời gian khám</p>
+                      <p className="text-2xl font-bold text-blue-900 mt-1">{formatTime(seconds)}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-blue-300 rounded-full flex items-center justify-center">
+                      <Clock className="text-blue-700" size={20} />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300">
+                <CardBody className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Trạng thái</p>
+                      <p className="text-lg font-bold text-green-900 mt-1">{remoteConnected ? 'Đã kết nối' : 'Chờ kết nối'}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-green-300 rounded-full flex items-center justify-center">
+                      {remoteConnected ? <CheckCircle className="text-green-700" size={20} /> : <AlertCircle className="text-green-700" size={20} />}
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-teal-500 to-teal-600 text-white">
+                <CardBody className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-teal-100 uppercase tracking-wide">Phiên khám</p>
+                      <p className="text-xl font-bold mt-1">Online</p>
+                    </div>
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <Video className="text-white" size={20} />
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+
+            {/* Doctor Quick Info */}
+            <Card>
+              <CardHeader className="flex gap-3 pb-2">
+                <User className="text-teal-600" size={20} />
+                <h3 className="text-sm font-semibold">Thông tin nhanh</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-700">Bác sĩ:</span>
+                  <span className="text-gray-600 truncate">{partnerName}</span>
+                </div>
+                {doctorSpecialty && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-700">Chuyên khoa:</span>
+                    <span className="text-gray-600 truncate">{doctorSpecialty}</span>
+                  </div>
+                )}
+                {doctorPhone && (
+                  <div className="flex items-center gap-2">
+                    <Phone size={12} className="text-gray-400" />
+                    <span className="text-gray-600 truncate">{doctorPhone}</span>
+                  </div>
+                )}
+                {doctorEmail && (
+                  <div className="flex items-center gap-2">
+                    <Mail size={12} className="text-gray-400" />
+                    <span className="text-gray-600 truncate">{doctorEmail}</span>
+                  </div>
+                )}
+                {apptDateStr !== '—' && (
+                  <div className="flex items-center gap-2">
+                    <Calendar size={12} className="text-gray-400" />
+                    <span className="text-gray-600">{apptDateStr} {apptTimeStr}</span>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Legend */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-sm font-semibold text-gray-700">Chú thích</h3>
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span>Đã kết nối</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                  <span>Chờ kết nối</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span>Đang khám</span>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+
+        {/* Center: Video Area */}
         <div className="flex-1 min-w-0 relative bg-black">
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
@@ -225,13 +352,13 @@ export default function PatientOnlineExamRoom() {
           {/* Top bar giống doctor */}
           <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-3">
-              <Chip color="success" variant="flat">Phiên khám online • Bệnh nhân</Chip>
-              <Chip variant="flat">{formatTime(seconds)}</Chip>
-              <Button size="sm" variant="flat" color="default" onPress={onDoctorInfoOpen} startContent={<User size={16} />}>Thông tin bác sĩ</Button>
+              <Chip color="success" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">Phiên khám online • Bệnh nhân</Chip>
+              <Chip variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">{formatTime(seconds)}</Chip>
+              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={onDoctorInfoOpen} startContent={<User size={18} />}>Thông tin bác sĩ</Button>
             </div>
             <div className="flex items-center gap-3 pointer-events-auto pr-2">
-              <Button size="sm" variant="flat" startContent={<Maximize2 size={16} />}>Toàn màn hình</Button>
-              <Button size="sm" variant="flat" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={16}/> }>Chat</Button>
+              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />}>Toàn màn hình</Button>
+              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={18}/> }>Chat</Button>
             </div>
           </div>
           {tokenError && (
@@ -241,10 +368,10 @@ export default function PatientOnlineExamRoom() {
           )}
           {/* Controls bottom - mute/tắt cam/leave giống doctor */}
           <div className="absolute left-0 right-0 bottom-0 pb-6 flex items-center justify-center">
-            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full px-4 py-3 ring-1 ring-white/20 shadow-lg">
-              <Button isIconOnly variant="flat" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/10" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff/> : <Mic/>}</Button>
-              <Button isIconOnly variant="flat" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/10" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff/> : <Video/>}</Button>
-              <Button color="danger" onPress={()=>window.location.href='/nguoi-dung/kham-online'} className="font-semibold ml-6">Rời phòng</Button>
+            <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md rounded-full px-4 py-3 border border-white/30 shadow-lg">
+              <Button isIconOnly variant="bordered" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff className="w-5 h-5"/> : <Mic className="w-5 h-5"/>}</Button>
+              <Button isIconOnly variant="bordered" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff className="w-5 h-5"/> : <Video className="w-5 h-5"/>}</Button>
+              <Button color="danger" variant="bordered" onPress={()=>window.location.href='/nguoi-dung/kham-online'} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-6 text-white">Rời phòng</Button>
             </div>
           </div>
         </div>
@@ -290,15 +417,15 @@ export default function PatientOnlineExamRoom() {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar
-                  src={appointment.doctorAvatar}
-                  name={appointment.doctorName}
+                  src={doctorAvatar}
+                  name={doctorName}
                   size="lg"
                   className="ring-2 ring-blue-100"
                 />
                 <div>
-                  <h3 className="text-xl font-semibold">BS. {appointment.doctorName}</h3>
-                  <p className="text-gray-600">{appointment.specialty}</p>
-                  {appointment.doctorRating && (
+                  <h3 className="text-xl font-semibold">{doctorName}</h3>
+                  {doctorSpecialty && <p className="text-gray-600">{doctorSpecialty}</p>}
+                  {appointment?.doctorRating && (
                     <div className="flex items-center gap-1 mt-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-current" />
                       <span className="text-sm text-gray-600">{appointment.doctorRating}/5</span>
@@ -310,11 +437,11 @@ export default function PatientOnlineExamRoom() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">{appointment.doctorPhone || "Chưa cập nhật"}</span>
+                  <span className="text-sm">{doctorPhone || "Chưa cập nhật"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">{appointment.doctorEmail}</span>
+                  <span className="text-sm">{doctorEmail || "Chưa cập nhật"}</span>
                 </div>
               </div>
               <Divider />
@@ -322,11 +449,11 @@ export default function PatientOnlineExamRoom() {
                 <h4 className="font-semibold">Chi tiết cuộc hẹn</h4>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">{new Date(appointment.appointmentDate).toLocaleDateString('vi-VN')}</span>
+                  <span className="text-sm">{apptDateStr}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">{new Date(appointment.appointmentDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-sm">{apptTimeStr}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-gray-500" />
@@ -336,7 +463,7 @@ export default function PatientOnlineExamRoom() {
               <Divider />
               <div className="space-y-3">
                 <h4 className="font-semibold">Lý do khám của bạn</h4>
-                <p className="text-sm text-gray-700">{reasonText}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-line">{formatReasonForDisplay(appointment.reason)}</p>
                 {attachments && attachments.length > 0 && (
                   <div className="space-y-2">
                     <h5 className="font-medium text-sm">Hình ảnh đính kèm</h5>

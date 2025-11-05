@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useRouter } from "next/router";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -336,11 +337,21 @@ export default function DoctorAppointmentsPage() {
 
   // Extract attached symptom image filenames embedded in reason text
   const parseAttachmentsFromReason = (reason) => {
-    if (!reason || typeof reason !== 'string') return [];
-    const idx = reason.indexOf('Đính kèm');
+    // Handle object or string
+    let reasonStr = '';
+    if (typeof reason === 'object' && reason !== null) {
+      reasonStr = String(reason.reason ?? reason.text ?? '');
+    } else if (typeof reason === 'string') {
+      reasonStr = reason;
+    } else {
+      return [];
+    }
+    
+    if (!reasonStr) return [];
+    const idx = reasonStr.indexOf('Đính kèm');
     if (idx === -1) return [];
     // take substring after 'Đính kèm'
-    const tail = reason.slice(idx);
+    const tail = reasonStr.slice(idx);
     // remove bracket wrappers if any
     const cleaned = tail.replace(/[\[\]]/g, '');
     // split by common delimiters and keep items that look like filenames
@@ -356,12 +367,16 @@ export default function DoctorAppointmentsPage() {
     // Common direct fields
     if (Array.isArray(apt.attachmentUrls)) urls.push(...apt.attachmentUrls);
     if (Array.isArray(apt.attachments)) urls.push(...apt.attachments);
-    // Try reason JSON (new canonical place)
-    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
-      try {
-        const r = JSON.parse(apt.reason);
-        if (Array.isArray(r?.attachments)) urls.push(...r.attachments);
-      } catch {}
+    // Try reason JSON (new canonical place) - handle both object and string
+    if (apt.reason) {
+      if (typeof apt.reason === 'object' && apt.reason !== null) {
+        if (Array.isArray(apt.reason.attachments)) urls.push(...apt.reason.attachments);
+      } else if (typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+        try {
+          const r = JSON.parse(apt.reason);
+          if (Array.isArray(r?.attachments)) urls.push(...r.attachments);
+        } catch {}
+      }
     }
     // Try parse JSON detail
     if (apt.detail && typeof apt.detail === 'string') {
@@ -383,32 +398,22 @@ export default function DoctorAppointmentsPage() {
   };
 
   const getDisplayReason = (apt) => {
-    if (!apt) return '';
-    // Prefer reason as JSON first
-    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
-      try {
-        const j = JSON.parse(apt.reason);
-        if (j?.reason) return j.reason;
-      } catch {}
-    }
-    // Then detail.reason if provided
-    if (apt.detail && typeof apt.detail === 'string') {
-      try {
-        const json = JSON.parse(apt.detail);
-        if (json?.reason) return json.reason;
-      } catch {}
-    }
-    return apt.reason || '';
+    if (!apt) return 'Không rõ';
+    return formatReasonForDisplay(apt.reason);
   };
 
   const getAttachmentNamesFromDetail = (apt) => {
     if (!apt) return [];
-    // Try reason JSON first
-    if (apt.reason && typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
-      try {
-        const j = JSON.parse(apt.reason);
-        if (Array.isArray(j?.attachments)) return j.attachments.slice(0, 6);
-      } catch {}
+    // Try reason JSON first - handle both object and string
+    if (apt.reason) {
+      if (typeof apt.reason === 'object' && apt.reason !== null) {
+        if (Array.isArray(apt.reason.attachments)) return apt.reason.attachments.slice(0, 6);
+      } else if (typeof apt.reason === 'string' && apt.reason.trim().startsWith('{')) {
+        try {
+          const j = JSON.parse(apt.reason);
+          if (Array.isArray(j?.attachments)) return j.attachments.slice(0, 6);
+        } catch {}
+      }
     }
     if (!apt.detail || typeof apt.detail !== 'string') return [];
     try {
@@ -726,7 +731,7 @@ export default function DoctorAppointmentsPage() {
                     {(apt.reason) && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-3">
                         <p className="text-xs text-orange-700 font-medium mb-1">Lý do khám:</p>
-                        <p className="text-sm text-gray-700 mb-2">{getDisplayReason(apt)}</p>
+                        <p className="text-sm text-gray-700 mb-2 whitespace-pre-line">{getDisplayReason(apt)}</p>
                         {/* Real thumbnails if available via URLs */}
                         {extractAttachmentUrls(apt).length > 0 ? (
                           <div className="flex flex-wrap gap-2 mt-1">
@@ -1119,7 +1124,7 @@ export default function DoctorAppointmentsPage() {
                                   <p className="text-sm font-medium text-gray-700">Lý do khám</p>
                         </div>
                                 <div className="text-gray-900 bg-orange-50 p-3 rounded-lg">
-                                  <p className="mb-2">{getDisplayReason(selectedAppointment)}</p>
+                                  <p className="mb-2 whitespace-pre-line">{getDisplayReason(selectedAppointment)}</p>
                                   {/* Thumbnails if backend returns URLs */}
                                   {extractAttachmentUrls(selectedAppointment).length > 0 ? (
                                     <div className="flex flex-wrap gap-2">
@@ -1554,7 +1559,9 @@ export default function DoctorAppointmentsPage() {
                                 {(record.chief_complaint || record.reason) && (
                                   <div>
                                     <p className="text-xs text-gray-600 mb-1">Lý do khám</p>
-                                    <p className="text-sm bg-orange-50 p-2 rounded">{record.chief_complaint || record.reason}</p>
+                                    <p className="text-sm bg-orange-50 p-2 rounded whitespace-pre-line">
+                                      {record.chief_complaint || formatReasonForDisplay(record.reason)}
+                                    </p>
                     </div>
                   )}
 

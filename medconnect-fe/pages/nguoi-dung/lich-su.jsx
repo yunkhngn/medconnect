@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Clock, Calendar, User, Globe, MapPin, Filter } from 'lucide-react';
 import PatientFrame from "@/components/layouts/Patient/Frame";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 
 export default function AppointmentHistoryPage() {
   const [appointments, setAppointments] = useState([]);
@@ -213,7 +214,7 @@ export default function AppointmentHistoryPage() {
                       {appointment.reason && (
                         <div className="mb-2">
                           <span className="text-sm font-medium text-gray-700">Lý do khám: </span>
-                          <span className="text-sm text-gray-600">{appointment.reason}</span>
+                          <span className="text-sm text-gray-600 whitespace-pre-line">{formatReasonForDisplay(appointment.reason)}</span>
                         </div>
                       )}
 

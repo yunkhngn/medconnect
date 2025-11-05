@@ -10,6 +10,8 @@ import se1961.g1.medconnect.service.MedicalRecordService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/api/medical-records")
@@ -17,6 +19,8 @@ public class MedicalRecordController {
 
     @Autowired
     private MedicalRecordService medicalRecordService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Get my EMR profile (patient)
@@ -124,6 +128,30 @@ public class MedicalRecordController {
             }
             
             return ResponseEntity.ok(record);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Return only entries array from EMR detail for easier consumption by FE
+     */
+    @GetMapping("/patient/{patientUserId}/entries")
+    public ResponseEntity<?> getPatientEntries(@PathVariable Long patientUserId) {
+        try {
+            MedicalRecord record = medicalRecordService.getByPatientUserId(patientUserId);
+            if (record == null || record.getDetail() == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "No medical record found"));
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> emr = objectMapper.readValue(record.getDetail(), Map.class);
+            Object entries = emr.get("medical_records");
+            if (!(entries instanceof List<?>)) {
+                entries = new ArrayList<>();
+            }
+            return ResponseEntity.ok(entries);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", e.getMessage()));

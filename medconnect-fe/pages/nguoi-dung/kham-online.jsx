@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import { auth } from "@/lib/firebase";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 
 export default function PatientOnlineExamList() {
   const router = useRouter();
@@ -301,8 +302,8 @@ export default function PatientOnlineExamList() {
 
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {appointment.reason || "Không có thông tin"}
+                      <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
+                        {formatReasonForDisplay(appointment.reason)}
                       </p>
                     </div>
 

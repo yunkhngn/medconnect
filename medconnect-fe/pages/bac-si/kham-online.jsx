@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea } from "@heroui/react";
-import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter } from "lucide-react";
+import { Button, Card, CardHeader, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea } from "@heroui/react";
+import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Activity, CheckCircle } from "lucide-react";
 import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import { auth } from "@/lib/firebase";
+import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 
 export default function DoctorOnlineExamList() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function DoctorOnlineExamList() {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null); // {medications:[{name,dose,frequency,duration,note}], note}
+  const [medicalRecord, setMedicalRecord] = useState(null); // Full medical record entry
 
   useEffect(() => {
     fetchOnlineAppointments();
@@ -27,27 +29,132 @@ export default function DoctorOnlineExamList() {
   const openAppointmentModal = async (apt) => {
     setSelectedAppointment(apt);
     setPrescription(null);
+    setMedicalRecord(null);
     onOpen();
     try {
       setRxLoading(true);
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
-      const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        // Normalize structure
-        const meds = data.medications || data.medicines || [];
-        setPrescription({
-          medications: Array.isArray(meds) ? meds : [],
-          note: data.note || data.notes || ""
+      
+      // Get patientUserId from appointment
+      const patientUserId = apt.patientUserId || apt.patientId || apt.patient?.id || apt.patient?.userId;
+      
+      if (patientUserId) {
+        // Fetch medical record entries for this patient
+        const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
+        
+        if (resp.ok) {
+          const entries = await resp.json();
+          let matchingEntry = null;
+          
+          console.log('[Modal] Fetching medical record for appointment:', {
+            appointmentId: apt.id || apt.appointmentId,
+            appointmentDate: apt.appointmentDate,
+            entriesCount: Array.isArray(entries) ? entries.length : 0
+          });
+          
+          if (Array.isArray(entries) && entries.length > 0) {
+            // First, try to match by appointment_id (most accurate)
+            matchingEntry = entries.find(entry => {
+              const entryApptId = entry.appointment_id || entry.appointmentId;
+              const aptId = apt.id || apt.appointmentId;
+              const match = entryApptId && String(entryApptId) === String(aptId);
+              if (match) console.log('[Modal] Matched by appointment_id:', entryApptId);
+              return match;
+            });
+            
+            // If no appointment_id match, try to match by date + time (more strict)
+            if (!matchingEntry && apt.appointmentDate) {
+              const aptDate = new Date(apt.appointmentDate);
+              const aptDateStr = aptDate.toISOString().split('T')[0];
+              const aptDateTime = aptDate.getTime();
+              
+              // Try exact date match first
+              const exactDateMatches = entries.filter(entry => {
+                if (!entry.visit_date) return false;
+                const visitDate = new Date(entry.visit_date);
+                const visitDateStr = visitDate.toISOString().split('T')[0];
+                return visitDateStr === aptDateStr;
+              });
+              
+              if (exactDateMatches.length === 1) {
+                // Only one entry on this date - safe to use
+                matchingEntry = exactDateMatches[0];
+                console.log('[Modal] Matched by exact date (unique):', aptDateStr);
+              } else if (exactDateMatches.length > 1) {
+                // Multiple entries on same date - need to be more careful
+                // Try to match by time if available
+                const aptHour = aptDate.getHours();
+                const aptMinute = aptDate.getMinutes();
+                
+                matchingEntry = exactDateMatches.find(entry => {
+                  if (entry.visit_time) {
+                    const [visitHour, visitMinute] = entry.visit_time.split(':').map(Number);
+                    const timeDiff = Math.abs((aptHour * 60 + aptMinute) - (visitHour * 60 + visitMinute));
+                    // Within 30 minutes tolerance
+                    return timeDiff <= 30;
+                  }
+                  return false;
+                });
+                
+                if (matchingEntry) {
+                  console.log('[Modal] Matched by exact date + time:', aptDateStr);
+                } else {
+                  // Multiple entries same date but no time match - can't determine which one
+                  // Don't show any record to avoid confusion
+                  console.log('[Modal] Multiple entries on same date, no time match - skipping');
+                  matchingEntry = null;
+                }
+              }
+            }
+            
+            // No fallback to most recent - only show if we have a confident match
+          }
+          
+          if (matchingEntry) {
+            console.log('[Modal] Setting medical record:', matchingEntry);
+            setMedicalRecord(matchingEntry);
+            // Extract prescription info
+            const meds = matchingEntry.prescriptions || [];
+            setPrescription({
+              medications: Array.isArray(meds) ? meds : [],
+              note: matchingEntry.notes || ""
+            });
+          } else {
+            console.log('[Modal] No medical record found');
+            setMedicalRecord(null);
+            setPrescription(null);
+          }
+        } else if (resp.status === 404) {
+          // No medical records found
+          setMedicalRecord(null);
+          setPrescription(null);
+        } else {
+          setMedicalRecord(null);
+          setPrescription(null);
+        }
       } else {
-        setPrescription(null);
+        // Fallback: try old endpoint
+        const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const meds = data.medications || data.medicines || [];
+          setPrescription({
+            medications: Array.isArray(meds) ? meds : [],
+            note: data.note || data.notes || ""
+          });
+        } else {
+          setPrescription(null);
+        }
       }
-    } catch {
+    } catch (e) {
+      console.error('[Modal] Error fetching medical record:', e);
+      setMedicalRecord(null);
       setPrescription(null);
     } finally {
       setRxLoading(false);
@@ -138,32 +245,11 @@ export default function DoctorOnlineExamList() {
     };
   };
 
-  // Normalize and prettify reason field from backend which may be:
-  // - plain string
-  // - JSON string { reason: string|null, attachments: [] }
-  // - null/empty
-  const formatReason = (raw) => {
-    if (!raw) return "Không có thông tin";
-    // If it's already an object (unlikely here), handle gracefully
-    if (typeof raw === 'object') {
-      const r = raw.reason ?? raw.text ?? '';
-      return r || "Không có thông tin";
-    }
-    if (typeof raw === 'string') {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        try {
-          const obj = JSON.parse(trimmed);
-          const text = obj?.reason || '';
-          if (text) return String(text);
-          return "Không có thông tin";
-        } catch {
-          // fall through to show as plain text
-        }
-      }
-      return trimmed || "Không có thông tin";
-    }
-    return "Không có thông tin";
+  // Helper to get display text from reason (parse and extract text)
+  const getReasonText = (raw) => {
+    const parsed = parseReason(raw);
+    const text = parsed?.reasonText;
+    return (text && typeof text === 'string' && text.trim()) ? text : "Không rõ";
   };
 
   const handleStartExam = (appointmentId) => {
@@ -193,65 +279,138 @@ export default function DoctorOnlineExamList() {
 
   const leftChildren = (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Video className="w-5 h-5 text-blue-600" />
+      {/* Quick Stats - Multiple Cards */}
+      <div className="grid grid-cols-1 gap-3">
+        {/* Pending */}
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-300">
+          <CardBody className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-yellow-700 uppercase tracking-wide">Chờ xác nhận</p>
+                <p className="text-3xl font-bold text-yellow-900 mt-1">
+                  {appointments.filter(apt => apt.status === "PENDING").length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-300 rounded-full flex items-center justify-center">
+                <Clock className="text-yellow-700" size={24} />
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Tổng cuộc hẹn</p>
-              <p className="text-2xl font-bold text-gray-900">{appointments.length}</p>
-            </div>
-          </div>
+          </CardBody>
         </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Clock className="w-5 h-5 text-green-600" />
+
+        {/* Confirmed */}
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300">
+          <CardBody className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Đã xác nhận</p>
+                <p className="text-3xl font-bold text-blue-900 mt-1">
+                  {appointments.filter(apt => apt.status === "CONFIRMED").length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-300 rounded-full flex items-center justify-center">
+                <CheckCircle className="text-blue-700" size={24} />
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Đang chờ</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {appointments.filter(apt => apt.status === "PENDING").length}
-              </p>
+          </CardBody>
+        </Card>
+
+        {/* Finished */}
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300">
+          <CardBody className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Hoàn thành</p>
+                <p className="text-3xl font-bold text-green-900 mt-1">
+                  {appointments.filter(apt => apt.status === "FINISHED").length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-300 rounded-full flex items-center justify-center">
+                <Activity className="text-green-700" size={24} />
+              </div>
             </div>
-          </div>
+          </CardBody>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Filter className="w-5 h-5" />
-          Bộ lọc
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Tìm kiếm</label>
-            <Input
-              placeholder="Tên bệnh nhân, email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              startContent={<Search className="w-4 h-4 text-gray-400" />}
-            />
+      {/* Total Appointments */}
+      <Card className="bg-gradient-to-br from-teal-500 to-teal-600 text-white">
+        <CardBody className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-teal-100 uppercase tracking-wide">Tổng lịch hẹn</p>
+              <p className="text-4xl font-bold mt-1">{appointments.length}</p>
+            </div>
+            <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+              <Calendar className="text-white" size={28} />
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Trạng thái</label>
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <SelectItem key="all" value="all">Tất cả</SelectItem>
-              <SelectItem key="PENDING" value="PENDING">Chờ xác nhận</SelectItem>
-              <SelectItem key="CONFIRMED" value="CONFIRMED">Đã xác nhận</SelectItem>
-              <SelectItem key="ONGOING" value="ONGOING">Đang khám</SelectItem>
-              <SelectItem key="FINISHED" value="FINISHED">Hoàn thành</SelectItem>
-              <SelectItem key="CANCELLED" value="CANCELLED">Đã hủy</SelectItem>
-            </Select>
+        </CardBody>
+      </Card>
+
+      {/* Filters Card */}
+      <Card>
+        <CardHeader className="flex gap-3">
+          <Search className="text-teal-600" size={24} />
+          <h3 className="text-lg font-semibold">Tìm kiếm & Lọc</h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-3">
+          <Input
+            placeholder="Tìm theo tên bệnh nhân..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            startContent={<Search size={18} className="text-gray-400" />}
+            classNames={{
+              input: "text-sm",
+              inputWrapper: "border-2 border-gray-200 hover:border-teal-400"
+            }}
+          />
+          <Select
+            label="Trạng thái"
+            selectedKeys={statusFilter !== "all" ? [statusFilter] : []}
+            onSelectionChange={(keys) => {
+              const selected = Array.from(keys)[0];
+              setStatusFilter(selected || "all");
+            }}
+            classNames={{
+              trigger: "border-2 border-gray-200 hover:border-teal-400"
+            }}
+          >
+            <SelectItem key="all">Tất cả</SelectItem>
+            <SelectItem key="PENDING">Chờ xác nhận</SelectItem>
+            <SelectItem key="CONFIRMED">Đã xác nhận</SelectItem>
+            <SelectItem key="ONGOING">Đang khám</SelectItem>
+            <SelectItem key="FINISHED">Hoàn thành</SelectItem>
+            <SelectItem key="CANCELLED">Đã hủy</SelectItem>
+          </Select>
+        </CardBody>
+      </Card>
+
+      {/* Legend */}
+      <Card>
+        <CardHeader>
+          <h3 className="text-sm font-semibold text-gray-700">Chú thích</h3>
+        </CardHeader>
+        <Divider />
+        <CardBody className="space-y-2 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <span>Chờ xác nhận</span>
           </div>
-        </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <span>Đã xác nhận</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span>Hoàn thành</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+            <span>Đang khám</span>
+          </div>
+        </CardBody>
       </Card>
     </div>
   );
@@ -327,8 +486,8 @@ export default function DoctorOnlineExamList() {
 
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {formatReason(appointment.reason)}
+                  <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
+                    {formatReasonForDisplay(appointment.reason)}
                   </p>
                 </div>
 
@@ -388,12 +547,12 @@ export default function DoctorOnlineExamList() {
 
       {/* Modal for prescription or details */}
       {/* Render at root of component return via Portal inside DoctorFrame */}
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl" scrollBehavior="inside">
+        <ModalContent className="max-h-[90vh]">
           <ModalHeader className="flex flex-col gap-1">
             {selectedAppointment?.patientName || "Chi tiết cuộc hẹn"}
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="overflow-y-auto max-h-[calc(90vh-120px)]">
             {rxLoading ? (
               <div className="text-center py-8">
                 <p>Đang tải thông tin...</p>
@@ -426,12 +585,77 @@ export default function DoctorOnlineExamList() {
                 </div>
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
-                <p className="text-sm text-gray-600 line-clamp-3">
-                  {formatReason(selectedAppointment.reason)}
+                <p className="text-sm text-gray-600 whitespace-pre-line break-words">
+                  {medicalRecord?.chief_complaint || formatReasonForDisplay(selectedAppointment.reason) || "Không có thông tin"}
                 </p>
+                
+                {medicalRecord && (
+                  <>
+                    {medicalRecord.diagnosis && (
+                      <>
+                        <Divider className="my-4" />
+                        <h4 className="text-sm font-medium text-gray-700">Chẩn đoán</h4>
+                        {medicalRecord.diagnosis.primary && (
+                          <p className="text-sm text-gray-600 mb-2 break-words">
+                            <span className="font-semibold">Chẩn đoán chính:</span> {medicalRecord.diagnosis.primary}
+                          </p>
+                        )}
+                        {medicalRecord.diagnosis.icd_codes && Array.isArray(medicalRecord.diagnosis.icd_codes) && medicalRecord.diagnosis.icd_codes.length > 0 && (
+                          <p className="text-sm text-gray-600 mb-2 break-words">
+                            <span className="font-semibold">Mã ICD-10:</span> {medicalRecord.diagnosis.icd_codes.join(", ")}
+                          </p>
+                        )}
+                        {medicalRecord.diagnosis.secondary && Array.isArray(medicalRecord.diagnosis.secondary) && medicalRecord.diagnosis.secondary.length > 0 && (
+                          <p className="text-sm text-gray-600 break-words">
+                            <span className="font-semibold">Chẩn đoán phụ:</span> {medicalRecord.diagnosis.secondary.join(", ")}
+                          </p>
+                        )}
+                      </>
+                    )}
+                    
+                    {medicalRecord.vital_signs && Object.keys(medicalRecord.vital_signs).length > 0 && (
+                      <>
+                        <Divider className="my-4" />
+                        <h4 className="text-sm font-medium text-gray-700">Dấu hiệu sinh tồn</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 break-words">
+                          {medicalRecord.vital_signs.temperature && (
+                            <div className="break-words">Nhiệt độ: {medicalRecord.vital_signs.temperature} °C</div>
+                          )}
+                          {medicalRecord.vital_signs.blood_pressure && (
+                            <div className="break-words">Huyết áp: {medicalRecord.vital_signs.blood_pressure} mmHg</div>
+                          )}
+                          {medicalRecord.vital_signs.heart_rate && (
+                            <div className="break-words">Nhịp tim: {medicalRecord.vital_signs.heart_rate} bpm</div>
+                          )}
+                          {medicalRecord.vital_signs.oxygen_saturation && (
+                            <div className="break-words">SpO2: {medicalRecord.vital_signs.oxygen_saturation} %</div>
+                          )}
+                          {medicalRecord.vital_signs.weight && (
+                            <div className="break-words">Cân nặng: {medicalRecord.vital_signs.weight} kg</div>
+                          )}
+                          {medicalRecord.vital_signs.height && (
+                            <div className="break-words">Chiều cao: {medicalRecord.vital_signs.height} cm</div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+                
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Đơn thuốc</h4>
-                {prescription?.medications && prescription.medications.length > 0 ? (
+                {medicalRecord?.prescriptions && Array.isArray(medicalRecord.prescriptions) && medicalRecord.prescriptions.length > 0 ? (
+                  <div className="space-y-2">
+                    {medicalRecord.prescriptions.map((med, index) => (
+                      <div key={index} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 py-1 break-words">
+                        <div className="font-semibold break-words">{med.name}</div>
+                        {med.dosage && <div className="break-words">Liều lượng: {med.dosage}</div>}
+                        {med.frequency && <div className="break-words">Tần suất: {med.frequency}</div>}
+                        {med.duration && <div className="break-words">Thời gian: {med.duration}</div>}
+                      </div>
+                    ))}
+                  </div>
+                ) : prescription?.medications && prescription.medications.length > 0 ? (
                   <div className="space-y-2">
                     {prescription.medications.map((med, index) => (
                       <div key={index} className="flex items-center justify-between text-sm text-gray-600">
@@ -445,8 +669,8 @@ export default function DoctorOnlineExamList() {
                 )}
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Ghi chú</h4>
-                <p className="text-sm text-gray-600 line-clamp-3">
-                  {prescription?.note || "Không có ghi chú"}
+                <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
+                  {medicalRecord?.notes || prescription?.note || "Không có ghi chú"}
                 </p>
               </div>
             ) : (

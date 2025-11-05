@@ -8,32 +8,88 @@
  * @returns {object} - Object with reasonText and attachments array
  */
 export function parseReason(reason) {
+  // Handle null/undefined
+  if (reason == null) {
+    return { reasonText: '', attachments: [] };
+  }
+
   try {
-    // If reason is a string that looks like JSON
-    if (typeof reason === 'string' && reason.trim().startsWith('{')) {
-      const parsed = JSON.parse(reason);
-      const reasonText = parsed?.reason || parsed?.text || "";
-      const attachments = Array.isArray(parsed?.attachments) ? parsed.attachments : [];
-      return { reasonText, attachments };
-    }
-    
-    // If reason is already an object
+    // If reason is already an object (backend might return object directly)
     if (typeof reason === 'object' && reason !== null) {
-      const reasonText = reason.reason || reason.text || "";
+      let reasonText = "";
+      const reasonValue = reason.reason ?? reason.text;
+      // Only extract if it's a valid string/number (not null, not object)
+      if (reasonValue != null && reasonValue !== 'null' && typeof reasonValue !== 'object') {
+        reasonText = String(reasonValue).trim();
+      }
       const attachments = Array.isArray(reason.attachments) ? reason.attachments : [];
       return { reasonText, attachments };
     }
+
+    // If reason is a string
+    if (typeof reason === 'string') {
+      const trimmed = reason.trim();
+      // If it looks like JSON, try to parse
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          let reasonText = "";
+          const reasonValue = parsed?.reason ?? parsed?.text;
+          if (reasonValue != null && reasonValue !== 'null' && typeof reasonValue !== 'object') {
+            reasonText = String(reasonValue).trim();
+          }
+          const attachments = Array.isArray(parsed?.attachments) ? parsed.attachments : [];
+          return { reasonText, attachments };
+        } catch {
+          // If JSON parsing fails, treat as plain text
+          return { reasonText: trimmed, attachments: [] };
+        }
+      }
+      // If it's not JSON, treat as plain text
+      return { reasonText: trimmed, attachments: [] };
+    }
     
-    // Fallback: treat as plain text
+    // Fallback: convert to string
     return { 
-      reasonText: typeof reason === 'string' ? reason : '', 
+      reasonText: String(reason), 
       attachments: [] 
     };
   } catch (error) {
-    // If JSON parsing fails, treat as plain text
+    // If anything fails, return empty
     return { 
-      reasonText: typeof reason === 'string' ? reason : '', 
+      reasonText: '', 
       attachments: [] 
     };
   }
+}
+
+/**
+ * Format appointment reason for display
+ * @param {string|object} reason - The reason field from appointment
+ * @param {boolean} includeLabel - Whether to include "Lý do khám:" label (default: false)
+ * @returns {string} - Formatted reason text with attachment info
+ */
+export function formatReasonForDisplay(reason, includeLabel = false) {
+  const parsed = parseReason(reason);
+  const { reasonText, attachments } = parsed;
+  
+  // If no reason text, return fallback
+  if (!reasonText || !reasonText.trim()) {
+    return includeLabel ? 'Lý do khám:\n\nKhông rõ' : 'Không rõ';
+  }
+  
+  // Build the display text
+  let displayText = reasonText.trim();
+  
+  // Add attachment info if present
+  if (attachments && attachments.length > 0) {
+    displayText += ' (có đính kèm ảnh)';
+  }
+  
+  // Add label if requested
+  if (includeLabel) {
+    return `Lý do khám:\n\n${displayText}`;
+  }
+  
+  return displayText;
 }

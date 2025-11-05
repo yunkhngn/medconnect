@@ -30,6 +30,13 @@ public class AppointmentController {
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     
+    private Map<String, Object> normalizeReason(String reason) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("reason", reason != null ? reason : "");
+        r.put("attachments", new java.util.ArrayList<>());
+        return r;
+    }
+    
     /**
      * Helper method to build patient info with ID photo from EMR
      */
@@ -96,7 +103,7 @@ public class AppointmentController {
             response.put("slot", appointment.getSlot().name());
             response.put("type", appointment.getType().name());
             response.put("createdAt", appointment.getCreatedAt());
-            response.put("reason", appointment.getReason());
+            response.put("reason", normalizeReason(appointment.getReason()));
             
             // Doctor details
             if (appointment.getDoctor() != null) {
@@ -113,7 +120,10 @@ public class AppointmentController {
             
             // Patient details (with ID photo from EMR)
             if (appointment.getPatient() != null) {
-                response.put("patient", buildPatientInfo(appointment.getPatient()));
+                Map<String, Object> patientInfo = buildPatientInfo(appointment.getPatient());
+                response.put("patient", patientInfo);
+                response.put("patientUserId", appointment.getPatient().getUserId());
+                response.put("patientId", appointment.getPatient().getUserId());
             }
             
             return ResponseEntity.ok(response);
@@ -161,7 +171,7 @@ public class AppointmentController {
                     apt.put("slot", appointment.getSlot().name());
                     apt.put("type", appointment.getType().name());
                     apt.put("createdAt", appointment.getCreatedAt());
-                    apt.put("reason", appointment.getReason());
+                    apt.put("reason", normalizeReason(appointment.getReason()));
                     
                     // Doctor info
                     if (appointment.getDoctor() != null) {
@@ -252,12 +262,14 @@ public class AppointmentController {
                     apt.put("slot", appointment.getSlot().name());
                     apt.put("type", appointment.getType().name());
                     apt.put("createdAt", appointment.getCreatedAt());
-                    apt.put("reason", appointment.getReason());
+                    apt.put("reason", normalizeReason(appointment.getReason()));
                     
                     // Patient info (with ID photo from EMR)
                     if (appointment.getPatient() != null) {
                         Map<String, Object> patientInfo = buildPatientInfo(appointment.getPatient());
                         apt.put("patient", patientInfo);
+                        apt.put("patientUserId", appointment.getPatient().getUserId());
+                        apt.put("patientId", appointment.getPatient().getUserId());
                         apt.put("patientName", patientInfo.get("name"));
                         apt.put("patientEmail", patientInfo.get("email"));
                         apt.put("patientPhone", patientInfo.get("phone"));
