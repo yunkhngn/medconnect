@@ -64,21 +64,61 @@ export default function HoSoBenhAn() {
       
       try {
         const token = await user.getIdToken();
-        const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+        const userId = user.uid;
+
+        // Fetch profile first
+        const profileResponse = await fetch("http://localhost:8080/api/medical-records/my-profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[HoSoBenhAn] EMR data loaded:', data);
-          setEmrData(data);
+        let profileData = null;
+        if (profileResponse.ok) {
+          profileData = await profileResponse.json();
+          console.log('[HoSoBenhAn] Profile data loaded:', profileData);
+        } else if (profileResponse.status !== 404) {
+          console.warn('[HoSoBenhAn] Failed to load profile:', profileResponse.status);
+        }
+
+        // Fetch medical record entries
+        const entriesResponse = await fetch(`http://localhost:8080/api/medical-records/patient/${userId}/entries`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        let entries = [];
+        if (entriesResponse.ok) {
+          entries = await entriesResponse.json();
+          console.log('[HoSoBenhAn] Entries loaded:', entries?.length || 0, 'entries');
+        } else if (entriesResponse.status !== 404) {
+          console.warn('[HoSoBenhAn] Failed to load entries:', entriesResponse.status);
+        }
+
+        // Merge data: if we have profile, use it and add entries to medical_records
+        if (profileData) {
+          const detail = parseDetail(profileData.detail) || {};
+          // Merge entries into medical_records
+          if (Array.isArray(entries) && entries.length > 0) {
+            detail.medical_records = entries;
+            // Update the detail string in profileData
+            profileData.detail = JSON.stringify(detail);
+          } else if (!detail.medical_records) {
+            // If no entries and no existing medical_records, set empty array
+            detail.medical_records = [];
+            profileData.detail = JSON.stringify(detail);
+          }
+          setEmrData(profileData);
           setError(null);
-        } else if (response.status === 404) {
-          console.log('[HoSoBenhAn] No EMR found (404)');
-          setError("Chưa có hồ sơ bệnh án");
+        } else if (Array.isArray(entries) && entries.length > 0) {
+          // If no profile but have entries, create a minimal structure
+          setEmrData({
+            detail: JSON.stringify({
+              patient_profile: {},
+              medical_history: {},
+              medical_records: entries
+            })
+          });
+          setError(null);
         } else {
-          console.log('[HoSoBenhAn] Failed to load EMR:', response.status);
-          setError("Không thể tải hồ sơ bệnh án");
+          setError("Chưa có hồ sơ bệnh án");
         }
       } catch (err) {
         console.error('[HoSoBenhAn] Error fetching EMR:', err);

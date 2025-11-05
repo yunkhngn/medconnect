@@ -20,6 +20,7 @@ export default function PatientOnlineExamList() {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null);
+  const [medicalRecord, setMedicalRecord] = useState(null);
 
   useEffect(() => {
     fetchOnlineAppointments();
@@ -28,22 +29,211 @@ export default function PatientOnlineExamList() {
   const openAppointmentModal = async (apt) => {
     setSelectedAppointment(apt);
     setPrescription(null);
+    setMedicalRecord(null);
     onOpen();
     try {
       setRxLoading(true);
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
-      const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const meds = data.medications || data.medicines || [];
-        setPrescription({ medications: Array.isArray(meds) ? meds : [], note: data.note || data.notes || "" });
+      
+      // Fetch appointment details to get full patient info
+      let aptData = null;
+      try {
+        const aptResp = await fetch(`http://localhost:8080/api/appointments/${apt.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (aptResp.ok) {
+          aptData = await aptResp.json();
+          console.log('[Patient Modal] Fetched appointment details:', aptData);
+          console.log('[Patient Modal] Patient from aptData:', aptData.patient);
+          
+          // Merge aptData into apt for use below
+          apt = { ...apt, ...aptData };
+        }
+      } catch (aptErr) {
+        console.error('[Patient Modal] Error fetching appointment details:', aptErr);
       }
-    } catch {}
-    finally { setRxLoading(false); }
+      
+      // Update selectedAppointment with full details (from aptData or apt)
+      const updatedAppointment = {
+        ...apt,
+        ...(aptData || {}),
+        patientName: aptData?.patient?.name || aptData?.patientName || apt.patientName || apt.patient?.name || auth.currentUser?.displayName,
+        patientPhone: aptData?.patient?.phone || aptData?.patientPhone || apt.patientPhone || apt.patient?.phone,
+        patientEmail: aptData?.patient?.email || aptData?.patientEmail || apt.patientEmail || apt.patient?.email || auth.currentUser?.email,
+        patientAddress: aptData?.patient?.address || aptData?.patientAddress || apt.patientAddress || apt.patient?.address,
+        patient: aptData?.patient || apt.patient
+      };
+      
+      console.log('[Patient Modal] Updated appointment:', updatedAppointment);
+      setSelectedAppointment(updatedAppointment);
+      
+      // Get patientUserId from appointment
+      const patientUserId = apt.patientUserId || apt.patientId || apt.patient?.id || apt.patient?.userId;
+      
+      if (patientUserId) {
+        // Fetch medical record entries for this patient
+        const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (resp.ok) {
+          const entries = await resp.json();
+          let matchingEntry = null;
+          
+          console.log('[Patient Modal] Fetching medical record for appointment:', {
+            appointmentId: apt.id || apt.appointmentId,
+            appointmentDate: apt.appointmentDate,
+            entriesCount: Array.isArray(entries) ? entries.length : 0
+          });
+          
+          if (Array.isArray(entries) && entries.length > 0) {
+            // First, try to match by appointment_id (most accurate)
+            matchingEntry = entries.find(entry => {
+              const entryApptId = entry.appointment_id || entry.appointmentId;
+              const aptId = apt.id || apt.appointmentId;
+              const match = entryApptId && String(entryApptId) === String(aptId);
+              if (match) console.log('[Patient Modal] Matched by appointment_id:', entryApptId);
+              return match;
+            });
+            
+            // If no appointment_id match, try to match by visit_id timestamp (if appointment date is close)
+            if (!matchingEntry && apt.appointmentDate) {
+              const aptDate = new Date(apt.appointmentDate);
+              const aptDateStr = aptDate.toISOString().split('T')[0];
+              const aptDateTime = aptDate.getTime();
+              
+              // Try to match by visit_id timestamp - extract timestamp from visit_id (format: V{timestamp})
+              const entriesWithTimestamp = entries
+                .filter(entry => {
+                  if (!entry.visit_id || !entry.visit_id.startsWith('V')) return false;
+                  const visitTimestamp = parseInt(entry.visit_id.substring(1));
+                  if (isNaN(visitTimestamp)) return false;
+                  
+                  // Check if visit timestamp is within 24 hours of appointment date
+                  const timeDiff = Math.abs(visitTimestamp - aptDateTime);
+                  const hoursDiff = timeDiff / (1000 * 60 * 60);
+                  return hoursDiff <= 24; // Within 24 hours
+                })
+                .map(entry => {
+                  const visitTimestamp = parseInt(entry.visit_id.substring(1));
+                  const timeDiff = Math.abs(visitTimestamp - aptDateTime);
+                  return { ...entry, timeDiff };
+                })
+                .sort((a, b) => a.timeDiff - b.timeDiff); // Closest first
+              
+              if (entriesWithTimestamp.length > 0) {
+                matchingEntry = entriesWithTimestamp[0];
+                const hoursDiff = (matchingEntry.timeDiff / (1000 * 60 * 60)).toFixed(1);
+                console.log('[Patient Modal] Matched by visit_id timestamp (diff:', hoursDiff, 'hours)');
+              }
+            }
+            
+            // If still no match, try to match by date + time
+            if (!matchingEntry && apt.appointmentDate) {
+              const aptDate = new Date(apt.appointmentDate);
+              const aptDateStr = aptDate.toISOString().split('T')[0];
+              const aptHour = aptDate.getHours();
+              const aptMinute = aptDate.getMinutes();
+              const aptTimeMinutes = aptHour * 60 + aptMinute;
+              
+              // Try exact date match first
+              const exactDateMatches = entries.filter(entry => {
+                if (!entry.visit_date) return false;
+                const visitDate = new Date(entry.visit_date);
+                const visitDateStr = visitDate.toISOString().split('T')[0];
+                return visitDateStr === aptDateStr;
+              });
+              
+              if (exactDateMatches.length === 1) {
+                // Only one entry on this date - safe to use
+                matchingEntry = exactDateMatches[0];
+                console.log('[Patient Modal] Matched by exact date (unique):', aptDateStr);
+              } else if (exactDateMatches.length > 1) {
+                // Multiple entries on same date - find the one closest to appointment time
+                // Sort by time difference and pick the closest one
+                const entriesWithTimeDiff = exactDateMatches
+                  .filter(entry => entry.visit_time) // Only entries with time
+                  .map(entry => {
+                    const [visitHour, visitMinute] = entry.visit_time.split(':').map(Number);
+                    const visitTimeMinutes = visitHour * 60 + visitMinute;
+                    const timeDiff = Math.abs(aptTimeMinutes - visitTimeMinutes);
+                    return { ...entry, timeDiff };
+                  })
+                  .sort((a, b) => a.timeDiff - b.timeDiff);
+                
+                if (entriesWithTimeDiff.length > 0) {
+                  // Use the closest one if within 4 hours (to avoid matching wrong appointment)
+                  const closest = entriesWithTimeDiff[0];
+                  if (closest.timeDiff <= 240) { // 4 hours = 240 minutes
+                    matchingEntry = closest;
+                    console.log('[Patient Modal] Matched by exact date + closest time (diff:', closest.timeDiff, 'min):', aptDateStr);
+                  } else {
+                    console.log('[Patient Modal] Closest entry time diff too large:', closest.timeDiff, 'min - skipping');
+                  }
+                } else {
+                  // No entries with time - use the first one (fallback)
+                  matchingEntry = exactDateMatches[0];
+                  console.log('[Patient Modal] Multiple entries same date, no time info - using first entry');
+                }
+              }
+            }
+            
+            // No fallback to most recent - only show if we have a confident match
+          }
+          
+          if (matchingEntry) {
+            console.log('[Patient Modal] Setting medical record:', matchingEntry);
+            console.log('[Patient Modal] Medical record keys:', Object.keys(matchingEntry));
+            console.log('[Patient Modal] chief_complaint:', matchingEntry.chief_complaint);
+            console.log('[Patient Modal] diagnosis:', matchingEntry.diagnosis);
+            console.log('[Patient Modal] vital_signs:', matchingEntry.vital_signs);
+            console.log('[Patient Modal] prescriptions:', matchingEntry.prescriptions);
+            console.log('[Patient Modal] notes:', matchingEntry.notes);
+            setMedicalRecord(matchingEntry);
+            // Extract prescription info
+            const meds = matchingEntry.prescriptions || [];
+            setPrescription({
+              medications: Array.isArray(meds) ? meds : [],
+              note: matchingEntry.notes || ""
+            });
+          } else {
+            console.log('[Patient Modal] No medical record found');
+            setMedicalRecord(null);
+            setPrescription(null);
+          }
+        } else if (resp.status === 404) {
+          // No medical records found
+          setMedicalRecord(null);
+          setPrescription(null);
+        } else {
+          setMedicalRecord(null);
+          setPrescription(null);
+        }
+      } else {
+        // Fallback: try old endpoint
+        const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const meds = data.medications || data.medicines || [];
+          setPrescription({
+            medications: Array.isArray(meds) ? meds : [],
+            note: data.note || data.notes || ""
+          });
+        } else {
+          setPrescription(null);
+        }
+      }
+    } catch (e) {
+      console.error('[Patient Modal] Error fetching medical record:', e);
+      setMedicalRecord(null);
+      setPrescription(null);
+    } finally {
+      setRxLoading(false);
+    }
   };
 
   const fetchOnlineAppointments = async () => {
@@ -372,41 +562,205 @@ export default function PatientOnlineExamList() {
     <PatientFrame title="Khám online">
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl" scrollBehavior="inside">
+        <ModalContent className="max-h-[90vh]">
           <ModalHeader className="flex flex-col gap-1">
-            {selectedAppointment ? `Khám với BS. ${selectedAppointment.doctorName}` : "Chi tiết cuộc hẹn"}
+            {selectedAppointment ? (selectedAppointment.patientName || auth.currentUser?.displayName || "Chi tiết cuộc hẹn") : "Chi tiết cuộc hẹn"}
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="overflow-y-auto max-h-[calc(90vh-120px)]">
             {rxLoading ? (
               <div className="text-center py-8">Đang tải thông tin...</div>
             ) : selectedAppointment ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>Ngày: {formatDateTime(selectedAppointment.appointmentDate).date}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock className="w-4 h-4" />
-                  <span>Giờ: {formatDateTime(selectedAppointment.appointmentDate).time}</span>
-                </div>
-                <Divider />
-                <h4 className="text-sm font-medium text-gray-700">Đơn thuốc</h4>
-                {prescription?.medications && prescription.medications.length > 0 ? (
-                  <div className="space-y-2">
-                    {prescription.medications.map((med, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm text-gray-600">
-                        <span>{med.name}</span>
-                        <span>{med.dose} {med.unit}</span>
+                {(() => {
+                  const patientName = selectedAppointment.patientName || 
+                    selectedAppointment.patient?.name || 
+                    auth.currentUser?.displayName || 
+                    "Chưa có";
+                  const patientPhone = selectedAppointment.patientPhone || 
+                    selectedAppointment.patient?.phone || 
+                    "Chưa có";
+                  const patientEmail = selectedAppointment.patientEmail || 
+                    selectedAppointment.patient?.email || 
+                    auth.currentUser?.email || 
+                    "Chưa có";
+                  const patientAddress = selectedAppointment.patientAddress || 
+                    selectedAppointment.patient?.address || 
+                    "Chưa có";
+                  
+                  return (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <User className="w-4 h-4" />
+                        <span>Bệnh nhân: {patientName}</span>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        <span>Ngày khám: {formatDateTime(selectedAppointment.appointmentDate).date}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Clock className="w-4 h-4" />
+                        <span>Giờ khám: {formatDateTime(selectedAppointment.appointmentDate).time}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Phone className="w-4 h-4" />
+                        <span>Số điện thoại: {patientPhone}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Mail className="w-4 h-4" />
+                        <span>Email: {patientEmail}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span>Địa chỉ: {patientAddress}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
+                <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">
+                  {medicalRecord?.chief_complaint || "Không có thông tin"}
+                </p>
+                
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Chẩn đoán</h4>
+                {medicalRecord?.diagnosis ? (
+                  <div className="pl-4">
+                    {typeof medicalRecord.diagnosis === 'string' ? (
+                      <p className="text-sm text-gray-600 break-words whitespace-pre-line">{medicalRecord.diagnosis}</p>
+                    ) : (
+                      <>
+                        {medicalRecord.diagnosis.primary && (
+                          <p className="text-sm text-gray-600 mb-2 break-words">
+                            <span className="font-semibold">Chẩn đoán chính:</span> {medicalRecord.diagnosis.primary}
+                          </p>
+                        )}
+                        {medicalRecord.diagnosis.icd_codes && Array.isArray(medicalRecord.diagnosis.icd_codes) && medicalRecord.diagnosis.icd_codes.length > 0 && (
+                          <p className="text-sm text-gray-600 mb-2 break-words">
+                            <span className="font-semibold">Mã ICD-10:</span> {medicalRecord.diagnosis.icd_codes.join(", ")}
+                          </p>
+                        )}
+                        {medicalRecord.diagnosis.secondary && Array.isArray(medicalRecord.diagnosis.secondary) && medicalRecord.diagnosis.secondary.length > 0 && (
+                          <p className="text-sm text-gray-600 break-words">
+                            <span className="font-semibold">Chẩn đoán phụ:</span> {medicalRecord.diagnosis.secondary.join(", ")}
+                          </p>
+                        )}
+                        {!medicalRecord.diagnosis.primary && 
+                         (!medicalRecord.diagnosis.icd_codes || medicalRecord.diagnosis.icd_codes.length === 0) && 
+                         (!medicalRecord.diagnosis.secondary || medicalRecord.diagnosis.secondary.length === 0) && (
+                          <p className="text-sm text-gray-400 italic">Không có thông tin</p>
+                        )}
+                      </>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Chưa có đơn thuốc</p>
+                  <p className="text-sm text-gray-400 italic pl-4">Không có thông tin</p>
                 )}
-                <Divider />
+                
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Dấu hiệu sinh tồn</h4>
+                {medicalRecord?.vital_signs && Object.keys(medicalRecord.vital_signs).length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 break-words pl-4">
+                    {medicalRecord.vital_signs.temperature && (
+                      <div className="break-words">Nhiệt độ: {medicalRecord.vital_signs.temperature} °C</div>
+                    )}
+                    {medicalRecord.vital_signs.blood_pressure && (
+                      <div className="break-words">Huyết áp: {medicalRecord.vital_signs.blood_pressure} mmHg</div>
+                    )}
+                    {medicalRecord.vital_signs.heart_rate && (
+                      <div className="break-words">Nhịp tim: {medicalRecord.vital_signs.heart_rate} bpm</div>
+                    )}
+                    {medicalRecord.vital_signs.oxygen_saturation && (
+                      <div className="break-words">SpO2: {medicalRecord.vital_signs.oxygen_saturation} %</div>
+                    )}
+                    {medicalRecord.vital_signs.weight && (
+                      <div className="break-words">Cân nặng: {medicalRecord.vital_signs.weight} kg</div>
+                    )}
+                    {medicalRecord.vital_signs.height && (
+                      <div className="break-words">Chiều cao: {medicalRecord.vital_signs.height} cm</div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic pl-4">Không có thông tin</p>
+                )}
+                
+                <Divider className="my-4" />
+                <h4 className="text-sm font-medium text-gray-700">Đơn thuốc</h4>
+                {(() => {
+                  // Check medicalRecord.prescriptions first (priority)
+                  if (medicalRecord?.prescriptions && Array.isArray(medicalRecord.prescriptions) && medicalRecord.prescriptions.length > 0) {
+                    return (
+                      <div className="space-y-2 pl-4">
+                        {medicalRecord.prescriptions.map((med, index) => (
+                          <div key={index} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 py-1 break-words">
+                            <div className="font-semibold break-words mb-1">{med.name || "Tên thuốc không xác định"}</div>
+                            {med.dosage && (
+                              <div className="break-words pl-4 text-gray-600">Liều lượng: {med.dosage}</div>
+                            )}
+                            {med.frequency && (
+                              <div className="break-words pl-4 text-gray-600">Tần suất: {med.frequency}</div>
+                            )}
+                            {med.duration && (
+                              <div className="break-words pl-4 text-gray-600">Thời gian: {med.duration}</div>
+                            )}
+                            {!med.dosage && !med.frequency && !med.duration && (
+                              <div className="text-gray-400 text-xs pl-4 italic">Không có thông tin chi tiết</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                  
+                  // Fallback to prescription.medications
+                  if (prescription?.medications && Array.isArray(prescription.medications) && prescription.medications.length > 0) {
+                    return (
+                      <div className="space-y-2 pl-4">
+                        {prescription.medications.map((med, index) => {
+                          const medName = med.name || med.medication || med.medicine_name || "Tên thuốc không xác định";
+                          const dosage = med.dosage || med.dose || "";
+                          const unit = med.unit || "";
+                          const frequency = med.frequency || "";
+                          const duration = med.duration || "";
+                          
+                          return (
+                            <div key={index} className="text-sm text-gray-600 border-l-2 border-blue-200 pl-3 py-1 break-words">
+                              <div className="font-semibold break-words mb-1">{medName}</div>
+                              {dosage && (
+                                <div className="break-words pl-4 text-gray-600">Liều lượng: {dosage} {unit}</div>
+                              )}
+                              {frequency && (
+                                <div className="break-words pl-4 text-gray-600">Tần suất: {frequency}</div>
+                              )}
+                              {duration && (
+                                <div className="break-words pl-4 text-gray-600">Thời gian: {duration}</div>
+                              )}
+                              {med.instructions && (
+                                <div className="break-words pl-4 text-xs text-gray-500 mt-1 whitespace-pre-line">{med.instructions}</div>
+                              )}
+                              {!dosage && !frequency && !duration && !med.instructions && (
+                                <div className="text-gray-400 text-xs pl-4 italic">Không có thông tin chi tiết</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  
+                  // No prescriptions found
+                  return <p className="text-sm text-gray-500 pl-4">Không có đơn thuốc</p>;
+                })()}
+                <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Ghi chú</h4>
-                <p className="text-sm text-gray-600">{prescription?.note || "Không có ghi chú"}</p>
+                {(medicalRecord?.notes || prescription?.note) ? (
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap break-words pl-4">
+                    {medicalRecord?.notes || prescription?.note}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400 pl-4 italic">Không có ghi chú</p>
+                )}
               </div>
             ) : (
               <div className="text-center py-8">Chọn một cuộc hẹn để xem chi tiết.</div>

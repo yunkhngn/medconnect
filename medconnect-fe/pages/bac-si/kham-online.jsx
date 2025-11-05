@@ -66,11 +66,45 @@ export default function DoctorOnlineExamList() {
               return match;
             });
             
-            // If no appointment_id match, try to match by date + time (more strict)
+            // If no appointment_id match, try to match by visit_id timestamp (if appointment date is close)
             if (!matchingEntry && apt.appointmentDate) {
               const aptDate = new Date(apt.appointmentDate);
               const aptDateStr = aptDate.toISOString().split('T')[0];
               const aptDateTime = aptDate.getTime();
+              
+              // Try to match by visit_id timestamp - extract timestamp from visit_id (format: V{timestamp})
+              const entriesWithTimestamp = entries
+                .filter(entry => {
+                  if (!entry.visit_id || !entry.visit_id.startsWith('V')) return false;
+                  const visitTimestamp = parseInt(entry.visit_id.substring(1));
+                  if (isNaN(visitTimestamp)) return false;
+                  
+                  // Check if visit timestamp is within 24 hours of appointment date
+                  const timeDiff = Math.abs(visitTimestamp - aptDateTime);
+                  const hoursDiff = timeDiff / (1000 * 60 * 60);
+                  return hoursDiff <= 24; // Within 24 hours
+                })
+                .map(entry => {
+                  const visitTimestamp = parseInt(entry.visit_id.substring(1));
+                  const timeDiff = Math.abs(visitTimestamp - aptDateTime);
+                  return { ...entry, timeDiff };
+                })
+                .sort((a, b) => a.timeDiff - b.timeDiff); // Closest first
+              
+              if (entriesWithTimestamp.length > 0) {
+                matchingEntry = entriesWithTimestamp[0];
+                const hoursDiff = (matchingEntry.timeDiff / (1000 * 60 * 60)).toFixed(1);
+                console.log('[Modal] Matched by visit_id timestamp (diff:', hoursDiff, 'hours)');
+              }
+            }
+            
+            // If still no match, try to match by date + time
+            if (!matchingEntry && apt.appointmentDate) {
+              const aptDate = new Date(apt.appointmentDate);
+              const aptDateStr = aptDate.toISOString().split('T')[0];
+              const aptHour = aptDate.getHours();
+              const aptMinute = aptDate.getMinutes();
+              const aptTimeMinutes = aptHour * 60 + aptMinute;
               
               // Try exact date match first
               const exactDateMatches = entries.filter(entry => {
@@ -85,28 +119,31 @@ export default function DoctorOnlineExamList() {
                 matchingEntry = exactDateMatches[0];
                 console.log('[Modal] Matched by exact date (unique):', aptDateStr);
               } else if (exactDateMatches.length > 1) {
-                // Multiple entries on same date - need to be more careful
-                // Try to match by time if available
-                const aptHour = aptDate.getHours();
-                const aptMinute = aptDate.getMinutes();
-                
-                matchingEntry = exactDateMatches.find(entry => {
-                  if (entry.visit_time) {
+                // Multiple entries on same date - find the one closest to appointment time
+                // Sort by time difference and pick the closest one
+                const entriesWithTimeDiff = exactDateMatches
+                  .filter(entry => entry.visit_time) // Only entries with time
+                  .map(entry => {
                     const [visitHour, visitMinute] = entry.visit_time.split(':').map(Number);
-                    const timeDiff = Math.abs((aptHour * 60 + aptMinute) - (visitHour * 60 + visitMinute));
-                    // Within 30 minutes tolerance
-                    return timeDiff <= 30;
-                  }
-                  return false;
-                });
+                    const visitTimeMinutes = visitHour * 60 + visitMinute;
+                    const timeDiff = Math.abs(aptTimeMinutes - visitTimeMinutes);
+                    return { ...entry, timeDiff };
+                  })
+                  .sort((a, b) => a.timeDiff - b.timeDiff);
                 
-                if (matchingEntry) {
-                  console.log('[Modal] Matched by exact date + time:', aptDateStr);
+                if (entriesWithTimeDiff.length > 0) {
+                  // Use the closest one if within 4 hours (to avoid matching wrong appointment)
+                  const closest = entriesWithTimeDiff[0];
+                  if (closest.timeDiff <= 240) { // 4 hours = 240 minutes
+                    matchingEntry = closest;
+                    console.log('[Modal] Matched by exact date + closest time (diff:', closest.timeDiff, 'min):', aptDateStr);
+                  } else {
+                    console.log('[Modal] Closest entry time diff too large:', closest.timeDiff, 'min - skipping');
+                  }
                 } else {
-                  // Multiple entries same date but no time match - can't determine which one
-                  // Don't show any record to avoid confusion
-                  console.log('[Modal] Multiple entries on same date, no time match - skipping');
-                  matchingEntry = null;
+                  // No entries with time - use the first one (fallback)
+                  matchingEntry = exactDateMatches[0];
+                  console.log('[Modal] Multiple entries same date, no time info - using first entry');
                 }
               }
             }

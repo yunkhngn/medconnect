@@ -62,6 +62,15 @@ export default function PatientOnlineExamRoom() {
     };
   }, [appointmentId]);
 
+  // Poll appointment status when ONGOING to detect when doctor finishes
+  useEffect(() => {
+    if (!appointmentId || !appointment || appointment.status !== 'ONGOING') return;
+    const pollInterval = setInterval(() => {
+      fetchAppointmentDetails();
+    }, 3000); // Check every 3 seconds
+    return () => clearInterval(pollInterval);
+  }, [appointmentId, appointment?.status]);
+
   // Presence: bệnh nhân online khi phòng đang ONGOING; rời sẽ cleanup nếu cả 2 out
   useEffect(() => {
     if (!appointmentId) return;
@@ -195,6 +204,55 @@ export default function PatientOnlineExamRoom() {
   const apptDateStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleDateString('vi-VN') : '—';
   const apptTimeStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—';
 
+  // Handle completed appointment
+  const [countdown, setCountdown] = useState(10);
+
+  useEffect(() => {
+    if (appointment?.status === 'FINISHED' || appointment?.status === 'COMPLETED') {
+      setCountdown(10); // Reset countdown when status changes to FINISHED
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            router.push('/nguoi-dung/kham-online');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [appointment?.status, router]);
+
+  if (appointment.status === 'FINISHED' || appointment.status === 'COMPLETED') {
+    return (
+      <div className="w-screen h-screen bg-gradient-to-br from-green-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="mb-6">
+            <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-16 h-16 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Phiên khám đã hoàn thành</h2>
+            <p className="text-gray-600">Cảm ơn bạn đã sử dụng dịch vụ khám online của chúng tôi</p>
+          </div>
+          <div className="space-y-4">
+            <Button 
+              color="primary" 
+              size="lg" 
+              className="w-full font-semibold"
+              onPress={() => router.push('/nguoi-dung/kham-online')}
+            >
+              Quay về danh sách
+            </Button>
+            <p className="text-sm text-gray-500">
+              Tự động quay về sau {countdown} giây...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (appointment.status !== 'ONGOING') return (
     <div className="w-screen h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
@@ -214,118 +272,7 @@ export default function PatientOnlineExamRoom() {
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
       <div className="flex h-full">
-        {/* Left: Side Panel */}
-        <div className="w-[300px] h-full bg-gray-50 overflow-y-auto border-r border-gray-200">
-          <div className="p-4 space-y-4">
-            {/* Stats Cards */}
-            <div className="space-y-3">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300">
-                <CardBody className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Thời gian khám</p>
-                      <p className="text-2xl font-bold text-blue-900 mt-1">{formatTime(seconds)}</p>
-                    </div>
-                    <div className="w-10 h-10 bg-blue-300 rounded-full flex items-center justify-center">
-                      <Clock className="text-blue-700" size={20} />
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300">
-                <CardBody className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Trạng thái</p>
-                      <p className="text-lg font-bold text-green-900 mt-1">{remoteConnected ? 'Đã kết nối' : 'Chờ kết nối'}</p>
-                    </div>
-                    <div className="w-10 h-10 bg-green-300 rounded-full flex items-center justify-center">
-                      {remoteConnected ? <CheckCircle className="text-green-700" size={20} /> : <AlertCircle className="text-green-700" size={20} />}
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-teal-500 to-teal-600 text-white">
-                <CardBody className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-teal-100 uppercase tracking-wide">Phiên khám</p>
-                      <p className="text-xl font-bold mt-1">Online</p>
-                    </div>
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                      <Video className="text-white" size={20} />
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            </div>
-
-            {/* Doctor Quick Info */}
-            <Card>
-              <CardHeader className="flex gap-3 pb-2">
-                <User className="text-teal-600" size={20} />
-                <h3 className="text-sm font-semibold">Thông tin nhanh</h3>
-              </CardHeader>
-              <Divider />
-              <CardBody className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-700">Bác sĩ:</span>
-                  <span className="text-gray-600 truncate">{partnerName}</span>
-                </div>
-                {doctorSpecialty && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-700">Chuyên khoa:</span>
-                    <span className="text-gray-600 truncate">{doctorSpecialty}</span>
-                  </div>
-                )}
-                {doctorPhone && (
-                  <div className="flex items-center gap-2">
-                    <Phone size={12} className="text-gray-400" />
-                    <span className="text-gray-600 truncate">{doctorPhone}</span>
-                  </div>
-                )}
-                {doctorEmail && (
-                  <div className="flex items-center gap-2">
-                    <Mail size={12} className="text-gray-400" />
-                    <span className="text-gray-600 truncate">{doctorEmail}</span>
-                  </div>
-                )}
-                {apptDateStr !== '—' && (
-                  <div className="flex items-center gap-2">
-                    <Calendar size={12} className="text-gray-400" />
-                    <span className="text-gray-600">{apptDateStr} {apptTimeStr}</span>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-
-            {/* Legend */}
-            <Card>
-              <CardHeader>
-                <h3 className="text-sm font-semibold text-gray-700">Chú thích</h3>
-              </CardHeader>
-              <Divider />
-              <CardBody className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span>Đã kết nối</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                  <span>Chờ kết nối</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>Đang khám</span>
-                </div>
-              </CardBody>
-            </Card>
-          </div>
-        </div>
-
-        {/* Center: Video Area */}
+        {/* Video Area - Full width */}
         <div className="flex-1 min-w-0 relative bg-black">
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
