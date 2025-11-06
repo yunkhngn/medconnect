@@ -198,6 +198,14 @@ public class PaymentService {
         } else {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setGatewayResponse(vnpResponse.toString());
+
+            // If payment failed/cancelled, auto-cancel the appointment so doctors cannot confirm it
+            Appointment appointment = payment.getAppointment();
+            if (appointment != null) {
+                appointment.setStatus(se1961.g1.medconnect.enums.AppointmentStatus.CANCELLED);
+                appointmentRepository.save(appointment);
+            }
+
             paymentRepository.save(payment);
         }
 

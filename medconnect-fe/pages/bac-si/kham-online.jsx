@@ -21,10 +21,31 @@ export default function DoctorOnlineExamList() {
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null); // {medications:[{name,dose,frequency,duration,note}], note}
   const [medicalRecord, setMedicalRecord] = useState(null); // Full medical record entry
+  const [paymentByAptId, setPaymentByAptId] = useState({});
 
   useEffect(() => {
     fetchOnlineAppointments();
   }, []);
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const user = auth.currentUser; if (!user) return;
+        const token = await user.getIdToken();
+        const ids = (appointments||[]).map(a=>a.id||a.appointmentId).filter(Boolean);
+        const results = await Promise.all(ids.map(async (id)=>{
+          try {
+            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!resp.ok) return [id, { hasPaid: false }];
+            const data = await resp.json();
+            return [id, { hasPaid: !!(data.hasPaid || data.status==='PAID'), status: data.status||'UNPAID' }];
+          } catch { return [id, { hasPaid: false }]; }
+        }));
+        setPaymentByAptId(Object.fromEntries(results));
+      } catch {}
+    };
+    if (appointments.length) loadPayments();
+  }, [appointments]);
 
   const openAppointmentModal = async (apt) => {
     setSelectedAppointment(apt);
@@ -472,6 +493,7 @@ export default function DoctorOnlineExamList() {
           {filteredAppointments.map((appointment) => {
             const { date, time } = formatDateTime(appointment.appointmentDate);
             const isPending = appointment.status === "PENDING";
+            const payInfo = paymentByAptId[appointment.id];
             return (
               <Card
                 key={appointment.id}
@@ -498,6 +520,11 @@ export default function DoctorOnlineExamList() {
                           {getStatusText(appointment.status)}
                         </Chip>
                         <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
+                        {typeof payInfo !== 'undefined' && (
+                          <Chip size="sm" variant="flat" color={payInfo?.hasPaid ? 'success' : 'warning'}>
+                            {payInfo?.hasPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                          </Chip>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -554,17 +581,30 @@ export default function DoctorOnlineExamList() {
                   <Divider className="my-4" />
                   <div className="flex gap-2">
                     {appointment.status === "PENDING" && (
-                      <Button
-                        color="primary"
-                        size="sm"
-                        className="flex-1"
-                        onPress={(e) => { 
-                          e?.stopPropagation?.(); 
-                          handleStartExam(appointment.id); 
-                        }}
-                      >
-                        Xác nhận & Bắt đầu
-                      </Button>
+                      payInfo?.hasPaid ? (
+                        <Button
+                          color="primary"
+                          size="sm"
+                          className="flex-1"
+                          onPress={(e) => { 
+                            e?.stopPropagation?.(); 
+                            handleStartExam(appointment.id); 
+                          }}
+                        >
+                          Xác nhận & Bắt đầu
+                        </Button>
+                      ) : (
+                        <Button
+                          color="default"
+                          size="sm"
+                          variant="flat"
+                          className="flex-1"
+                          isDisabled
+                          title="Chưa thanh toán — không thể xác nhận"
+                        >
+                          Chưa thanh toán
+                        </Button>
+                      )
                     )}
                     {appointment.status === "CONFIRMED" && (
                       <Button
