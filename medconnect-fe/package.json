@@ -25,6 +25,7 @@
     "@heroui/theme": "2.4.22",
     "@nextui-org/react": "^2.6.11",
     "@react-aria/visually-hidden": "3.8.27",
+    "@svgr/webpack": "^8.1.0",
     "agora-rtc-sdk-ng": "^4.24.0",
     "clsx": "2.1.1",
     "firebase": "^12.3.0",
