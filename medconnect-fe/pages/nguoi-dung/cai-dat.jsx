@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Save, Upload, User, Mail, Phone, MapPin, Heart, Calendar, Users, IdCard, Shield, Droplet, Lock, Key } from "lucide-react";
+
+import { Save, Upload, User, Mail, Phone, MapPin, Heart, Calendar, Users, IdCard, Shield, Droplet, Lock, Key, Eye, EyeClosed } from "lucide-react";
 import {
   Input,
   Select,
@@ -60,6 +61,8 @@ export default function PatientProfileWithFrame() {
     dateOfBirth: "",
     emergencyContactPhone: "",
     citizenship: "",
+    socialInsurance: "",
+    insuranceValidTo: "",
   });
 
   // Security states
@@ -171,7 +174,7 @@ export default function PatientProfileWithFrame() {
     }
 
     // Validate số điện thoại
-    const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+    const phoneRegex = /^(0|\+84)[0,1,2,3,4,5,6,8,9]{9}$/;
     if (!patient.phone || !phoneRegex.test(patient.phone)) {
       setErrors(prev => ({ ...prev, phone: "Số điện thoại không hợp lệ. Nhập đúng định dạng (VD: 0912345678)" }));
       toast.error("Số điện thoại không hợp lệ");
@@ -222,8 +225,32 @@ export default function PatientProfileWithFrame() {
 
     // Validate BHYT if provided
     if (patient.socialInsurance && !isValidBHYT(patient.socialInsurance)) {
+      setErrors(prev => ({ ...prev, socialInsurance: "Mã số BHYT không hợp lệ. Vui lòng kiểm tra lại định dạng." }));
       toast.error("Mã số BHYT không hợp lệ");
       return;
+    } else {
+      setErrors(prev => ({ ...prev, socialInsurance: "" }));
+    }
+
+    // Validate ngày hết hạn BHYT nếu có nhập BHYT
+    if (patient.socialInsurance && patient.insuranceValidTo) {
+      const validToDate = new Date(patient.insuranceValidTo);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to compare only dates
+
+      if (validToDate < today) {
+        setErrors(prev => ({ ...prev, insuranceValidTo: "Thẻ BHYT đã hết hạn. Vui lòng gia hạn thẻ BHYT." }));
+        toast.error("Thẻ BHYT đã hết hạn");
+        return;
+      } else {
+        setErrors(prev => ({ ...prev, insuranceValidTo: "" }));
+      }
+    } else if (patient.socialInsurance && !patient.insuranceValidTo) {
+      setErrors(prev => ({ ...prev, insuranceValidTo: "Vui lòng nhập ngày hết hạn BHYT khi đã có mã số BHYT." }));
+      toast.error("Vui lòng nhập ngày hết hạn BHYT");
+      return;
+    } else {
+      setErrors(prev => ({ ...prev, insuranceValidTo: "" }));
     }
 
     // Validate căn cước công dân (CCCD)
@@ -266,6 +293,25 @@ export default function PatientProfileWithFrame() {
     }
   };
 
+  // Hàm kiểm tra độ mạnh mật khẩu
+  const validatePassword = (password) => {
+    const checks = [
+      { regex: /.{12,}/, message: "Mật khẩu phải có ít nhất 12 ký tự" },
+      { regex: /[A-Z]/, message: "Mật khẩu phải có ít nhất 1 chữ cái viết hoa" },
+      { regex: /[a-z]/, message: "Mật khẩu phải có ít nhất 1 chữ cái viết thường" },
+      { regex: /\d/, message: "Mật khẩu phải có ít nhất 1 chữ số" },
+      { regex: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, message: "Mật khẩu phải có ít nhất 1 ký tự đặc biệt" },
+    ];
+
+    const failed = checks.find((rule) => !rule.regex.test(password));
+    if (failed) {
+      toast.error(`❌ ${failed.message}`);
+      return false;
+    }
+    return true;
+  };
+
+
   const handleChangePassword = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập");
@@ -276,12 +322,9 @@ export default function PatientProfileWithFrame() {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
-
-    if (security.newPassword.length < 6) {
-      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự");
+    if (!validatePassword(security.newPassword)) {
       return;
     }
-
     if (security.newPassword !== security.confirmPassword) {
       toast.error("Mật khẩu mới không khớp");
       return;
@@ -607,22 +650,51 @@ export default function PatientProfileWithFrame() {
         <CardBody className="space-y-4">
           <BHYTInput
             value={patient.socialInsurance || ""}
-            onChange={(v) => setPatient({ ...patient, socialInsurance: v })}
+            onChange={(v) => {
+              setPatient({ ...patient, socialInsurance: v });
+              // Clear error when user types valid BHYT or when field is empty (since BHYT is optional)
+              if (!v || (v && isValidBHYT(v))) {
+                setErrors(prev => ({ ...prev, socialInsurance: "" }));
+              }
+              // If BHYT is cleared, also clear insurance valid to error
+              if (!v) {
+                setErrors(prev => ({ ...prev, insuranceValidTo: "" }));
+              }
+            }}
+            error={errors.socialInsurance}
           />
 
           <Input
             type="date"
             label="BHYT hết hạn"
             value={patient.insuranceValidTo || ""}
-            onValueChange={(v) => setPatient({ ...patient, insuranceValidTo: v })}
+            onValueChange={(v) => {
+              setPatient({ ...patient, insuranceValidTo: v });
+              // Clear error when user selects valid date or clears field
+              if (!v) {
+                setErrors(prev => ({ ...prev, insuranceValidTo: "" }));
+              } else if (v && patient.socialInsurance) {
+                const validToDate = new Date(v);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (validToDate >= today) {
+                  setErrors(prev => ({ ...prev, insuranceValidTo: "" }));
+                }
+              }
+            }}
             variant="bordered"
             labelPlacement="outside"
-            description="Ngày hết hạn thẻ BHYT"
+            description={patient.socialInsurance ? "Ngày hết hạn thẻ BHYT (bắt buộc khi có BHYT)" : "Ngày hết hạn thẻ BHYT"}
             startContent={<Shield className="text-default-400" size={20} />}
             classNames={{
               input: "text-base",
-              inputWrapper: "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
+              inputWrapper: errors.insuranceValidTo
+                ? "border-red-500 focus-within:!border-red-500"
+                : "border-default-200 hover:border-teal-500 focus-within:!border-teal-500"
             }}
+            errorMessage={errors.insuranceValidTo}
+            isInvalid={!!errors.insuranceValidTo}
           />
 
           <Input
@@ -729,69 +801,114 @@ export default function PatientProfileWithFrame() {
         <Divider />
         <CardBody className="space-y-4">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-2">
-            <p className="text-sm text-yellow-800">
-              ⚠️ <strong>Lưu ý:</strong> Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại.
+            <p className="text-sm text-yellow-700">
+              ⚠️ Để đổi mật khẩu, vui lòng nhập mật khẩu hiện tại, mật khẩu mới và xác nhận lại.
+              Mật khẩu mới phải có ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
             </p>
           </div>
 
           <Input
-            type="password"
             label="Mật khẩu hiện tại"
+            type={security.showCurrent ? "text" : "password"}
             placeholder="Nhập mật khẩu hiện tại"
             value={security.currentPassword}
             onValueChange={(v) => setSecurity({ ...security, currentPassword: v })}
             variant="bordered"
             labelPlacement="outside"
-            startContent={<Lock className="text-default-400" size={20} />}
+            startContent={<Key className="text-default-400" size={20} />}
+            endContent={
+              <button
+                type="button"
+                onClick={() =>
+                  setSecurity((prev) => ({ ...prev, showCurrent: !prev.showCurrent }))
+                }
+              >
+                {security.showCurrent ? (
+                  <EyeClosed className="text-default-400" size={20} />
+                ) : (
+                  <Eye className="text-default-400" size={20} />
+                )}
+              </button>
+            }
             classNames={{
               input: "text-base",
-              inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
+              inputWrapper:
+                "border-default-200 hover:border-teal-500 focus-within:!border-teal-500",
             }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              type="password"
-              label="Mật khẩu mới"
-              placeholder="Tối thiểu 6 ký tự"
-              value={security.newPassword}
-              onValueChange={(v) => setSecurity({ ...security, newPassword: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Key className="text-default-400" size={20} />}
-              classNames={{
-                input: "text-base",
-                inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
-              }}
-            />
-            <Input
-              type="password"
-              label="Xác nhận mật khẩu mới"
-              placeholder="Nhập lại mật khẩu mới"
-              value={security.confirmPassword}
-              onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Key className="text-default-400" size={20} />}
-              classNames={{
-                input: "text-base",
-                inputWrapper: "border-default-200 hover:border-red-500 focus-within:!border-red-500"
-              }}
-            />
-          </div>
+          <Input
+            label="Mật khẩu mới"
+            type={security.showNew ? "text" : "password"}
+            placeholder="Nhập mật khẩu mới"
+            value={security.newPassword}
+            onValueChange={(v) => setSecurity({ ...security, newPassword: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<Lock className="text-default-400" size={20} />}
+            endContent={
+              <button
+                type="button"
+                onClick={() =>
+                  setSecurity((prev) => ({ ...prev, showNew: !prev.showNew }))
+                }
+              >
+                {security.showNew ? (
+                  <EyeClosed className="text-default-400" size={20} />
+                ) : (
+                  <Eye className="text-default-400" size={20} />
+                )}
+              </button>
+            }
+            classNames={{
+              input: "text-base",
+              inputWrapper:
+                "border-default-200 hover:border-teal-500 focus-within:!border-teal-500",
+            }}
+          />
+
+          <Input
+            label="Xác nhận mật khẩu mới"
+            type={security.showConfirm ? "text" : "password"}
+            placeholder="Nhập lại mật khẩu mới"
+            value={security.confirmPassword}
+            onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })}
+            variant="bordered"
+            labelPlacement="outside"
+            startContent={<Lock className="text-default-400" size={20} />}
+            endContent={
+              <button
+                type="button"
+                onClick={() =>
+                  setSecurity((prev) => ({ ...prev, showConfirm: !prev.showConfirm }))
+                }
+              >
+                {security.showConfirm ? (
+                  <EyeClosed className="text-default-400" size={20} />
+                ) : (
+                  <Eye className="text-default-400" size={20} />
+                )}
+              </button>
+            }
+            classNames={{
+              input: "text-base",
+              inputWrapper:
+                "border-default-200 hover:border-teal-500 focus-within:!border-teal-500",
+            }}
+          />
 
           <Button
             color="danger"
-            onPress={handleChangePassword}
+            onClick={handleChangePassword}
             isLoading={changingPassword}
-            isDisabled={!security.currentPassword || !security.newPassword || !security.confirmPassword}
-            startContent={<Key size={18} />}
+            startContent={<Save size={18} />}
             className="w-full md:w-auto"
           >
             Đổi mật khẩu
           </Button>
         </CardBody>
       </Card>
+
     </div>
   );
 
