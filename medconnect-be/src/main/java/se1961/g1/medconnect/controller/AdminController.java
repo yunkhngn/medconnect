@@ -89,7 +89,7 @@ public class AdminController {
             
             // Tính tổng doanh thu (chỉ tính payments đã paid)
             List<Payment> paidPayments = paymentRepository.findAll().stream()
-                .filter(p -> "PAID".equals(p.getStatus()))
+                .filter(p -> se1961.g1.medconnect.enums.PaymentStatus.PAID.equals(p.getStatus()))
                 .collect(Collectors.toList());
             double totalRevenue = paidPayments.stream()
                 .mapToDouble(Payment::getAmount)
@@ -463,12 +463,21 @@ public class AdminController {
 
 
     @DeleteMapping("/doctor/{id}")
-    public ResponseEntity<?> deleteDoctor(@PathVariable Long id){
+    public ResponseEntity<Map<String, Object>> deleteDoctor(@PathVariable Long id){
         try{
             doctorService.deleteDoctor(id);
-            return ResponseEntity.ok("Doctor deleted successfully");
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Xóa bác sĩ thành công");
+            
+            return ResponseEntity.ok(response);
         } catch(Exception e){
-            return ResponseEntity.badRequest().body(e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi khi xóa bác sĩ: " + e.getMessage());
+            
+            return ResponseEntity.badRequest().body(error);
         }
     }
 
