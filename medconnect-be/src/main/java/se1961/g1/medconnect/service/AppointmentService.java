@@ -11,10 +11,13 @@ import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Patient;
 import se1961.g1.medconnect.pojo.Schedule;
+import se1961.g1.medconnect.pojo.Payment;
 import se1961.g1.medconnect.repository.AppointmentRepository;
 import se1961.g1.medconnect.repository.DoctorRepository;
 import se1961.g1.medconnect.repository.PatientRepository;
 import se1961.g1.medconnect.repository.ScheduleRepository;
+import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.enums.PaymentStatus;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -36,6 +39,9 @@ public class AppointmentService {
     
     @Autowired
     private ScheduleRepository scheduleRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     // ============================================
     // GET APPOINTMENTS
@@ -276,6 +282,16 @@ public class AppointmentService {
         } catch (IllegalArgumentException e) {
             throw new Exception("Invalid status: " + statusStr);
         }
+        // If attempting to set CONFIRMED, enforce payment requirement
+        if (status == AppointmentStatus.CONFIRMED) {
+            Appointment appointment = getAppointmentById(id)
+                    .orElseThrow(() -> new Exception("Appointment not found"));
+            Payment payment = paymentRepository.findByAppointment(appointment).orElse(null);
+            if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
+                throw new Exception("Cannot set CONFIRMED before successful payment");
+            }
+        }
+
         Appointment updated = updateAppointment(id, status);
         return new AppointmentDTO(updated);
     }
@@ -293,6 +309,12 @@ public class AppointmentService {
         
         if (appointment.getStatus() != AppointmentStatus.PENDING) {
             throw new Exception("Only pending appointments can be confirmed");
+        }
+
+        // Enforce payment requirement: only allow confirm when payment is PAID
+        Payment payment = paymentRepository.findByAppointment(appointment).orElse(null);
+        if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
+            throw new Exception("Appointment cannot be confirmed before successful payment");
         }
         
         appointment.setStatus(AppointmentStatus.CONFIRMED);

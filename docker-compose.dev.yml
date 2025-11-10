@@ -1,0 +1,47 @@
+version: '3.8'
+
+# Development environment configuration
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  db:
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data_dev:/var/opt/mssql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./medconnect-be/createdb.sql:/docker-entrypoint-initdb.d/createdb.sql:ro
+      - ./medconnect-be/mock-data.sql:/docker-entrypoint-initdb.d/mock-data.sql:ro
+
+  be:
+    build:
+      context: ./medconnect-be
+      dockerfile: Dockerfile
+      target: build
+    volumes:
+      - ./medconnect-be:/app
+      - maven_cache:/root/.m2
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+    command: mvn spring-boot:run
+
+  fe:
+    build:
+      context: ./medconnect-fe
+      dockerfile: Dockerfile
+      target: deps
+    volumes:
+      - ./medconnect-fe:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    command: npm run dev
+
+volumes:
+  sqlserver_data_dev:
+    driver: local
+  maven_cache:
+    driver: local
