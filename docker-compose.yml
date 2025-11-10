@@ -4,10 +4,11 @@ services:
   # SQL Server Database
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     container_name: medconnect-db
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=${DB_SA_PASSWORD:-MedConnect@2024}
+      - SA_PASSWORD=${DB_SA_PASSWORD:-MedConnect@2025}
       - MSSQL_PID=Developer
     ports:
       - "1433:1433"
@@ -18,11 +19,11 @@ services:
     networks:
       - medconnect-network
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD:-MedConnect@2024}" -Q "SELECT 1" -C || exit 1
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD:-MedConnect@2025}" -Q "SELECT 1" -C || exit 1
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 20
+      start_period: 60s
     restart: unless-stopped
 
   # Spring Boot Backend
@@ -34,7 +35,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - DB_USER=${DB_USER:-sa}
-      - DB_PASSWORD=${DB_PASSWORD:-MedConnect@2024}
+      - DB_PASSWORD=${DB_PASSWORD:-${DB_SA_PASSWORD:-MedConnect@2025}}
       - SPRING_DATASOURCE_URL=jdbc:sqlserver://db:1433;databaseName=MedConnect;encrypt=true;trustServerCertificate=true
       # Firebase
       - FIREBASE_TYPE=${FIREBASE_TYPE}
@@ -68,6 +69,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        restart: true
     networks:
       - medconnect-network
     restart: unless-stopped
