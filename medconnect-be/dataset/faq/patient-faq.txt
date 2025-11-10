@@ -1,0 +1,137 @@
+# FAQ - Câu hỏi thường gặp dành cho Bệnh nhân
+
+## Đăng ký và Đăng nhập
+
+Q: Làm sao để đăng ký tài khoản?
+A: Vào trang chủ MedConnect > Chọn "Đăng ký" > Nhập email và mật khẩu > Xác nhận email. Bạn cũng có thể đăng ký nhanh qua Google hoặc Facebook.
+
+Q: Tôi quên mật khẩu, phải làm sao?
+A: Chọn "Quên mật khẩu" ở trang đăng nhập > Nhập email đã đăng ký > Kiểm tra email và làm theo hướng dẫn đặt lại mật khẩu.
+
+Q: Có thể đăng nhập bằng Google không?
+A: Có, MedConnect hỗ trợ đăng nhập qua Google và Facebook để tiện lợi hơn.
+
+## Tìm kiếm Bác sĩ
+
+Q: Làm sao để tìm bác sĩ phù hợp?
+A: Vào trang "Tìm bác sĩ" > Có thể tìm theo: Tên bác sĩ, Chuyên khoa (Tim mạch, Da liễu...), Địa điểm. Hệ thống sẽ hiển thị danh sách bác sĩ với thông tin chi tiết, đánh giá và lịch trống.
+
+Q: Thông tin bác sĩ có đáng tin cậy không?
+A: Tất cả bác sĩ trên MedConnect đều đã được xác minh bằng chứng chỉ hành nghề và giấy phép của Bộ Y tế. Admin kiểm duyệt kỹ trước khi phê duyệt.
+
+Q: Tôi có thể xem đánh giá của bệnh nhân khác không?
+A: Có, mỗi bác sĩ có phần đánh giá và nhận xét từ bệnh nhân đã khám. Bạn cũng có thể để lại đánh giá sau khi hoàn thành lịch hẹn.
+
+## Đặt lịch hẹn
+
+Q: Quy trình đặt lịch khám như thế nào?
+A: Bước 1: Chọn bác sĩ > Bước 2: Chọn loại khám (Trực tiếp/Online) > Bước 3: Chọn ngày giờ trong lịch trống > Bước 4: Thanh toán phí khám > Bước 5: Nhận xác nhận qua email và thông báo.
+
+Q: Có thể đặt lịch khám online qua video không?
+A: Có, MedConnect hỗ trợ 2 hình thức: Khám trực tiếp tại phòng khám và Khám online qua video call với công nghệ Agora bảo mật cao.
+
+Q: Đặt lịch có cần thanh toán trước không?
+A: Có, bạn cần thanh toán toàn bộ phí khám trước để xác nhận lịch hẹn. Hệ thống hỗ trợ thanh toán qua VietQR, VNPAY hoặc MoMo.
+
+Q: Tôi có thể đặt lịch cho người thân không?
+A: Có, khi đặt lịch bạn có thể điền thông tin người khám là người thân. Tuy nhiên tài khoản thanh toán vẫn là của bạn.
+
+## Thanh toán
+
+Q: Có những hình thức thanh toán nào?
+A: MedConnect chấp nhận: VietQR (quét mã QR), VNPAY, MoMo. Tất cả đều bảo mật và xử lý nhanh chóng.
+
+Q: Thanh toán có an toàn không?
+A: Hoàn toàn an toàn. Chúng tôi sử dụng cổng thanh toán được cấp phép với mã hóa SSL. Thông tin thẻ không được lưu trữ trên hệ thống.
+
+Q: Phí khám được tính như thế nào?
+A: Mỗi bác sĩ có mức phí khác nhau tùy chuyên môn và kinh nghiệm. Phí được hiển thị rõ ràng trước khi thanh toán. Không có phí ẩn.
+
+Q: Có hóa đơn VAT không?
+A: Có, sau khi thanh toán thành công, hóa đơn điện tử sẽ được gửi qua email. Bạn có thể tải xuống từ trang "Lịch hẹn" của mình.
+
+## Hủy và Hoàn tiền
+
+Q: Tôi có thể hủy lịch hẹn không?
+A: Có, vào "Lịch hẹn của tôi" > Chọn lịch cần hủy > "Hủy lịch hẹn". Chính sách hoàn tiền áp dụng tùy thời điểm hủy.
+
+Q: Chính sách hoàn tiền như thế nào?
+A: - Hủy trước 24 giờ: Hoàn 100% phí khám
+- Hủy trong vòng 24 giờ: Hoàn 50%
+- Hủy trong vòng 2 giờ hoặc không đến: Không hoàn tiền
+- Nếu bác sĩ hủy: Hoàn 100% + bồi thường
+
+Q: Bao lâu thì nhận được tiền hoàn?
+A: Tiền hoàn sẽ được xử lý trong vòng 3-5 ngày làm việc và chuyển về tài khoản/ví điện tử bạn đã dùng để thanh toán.
+
+Q: Nếu bác sĩ hủy lịch thì sao?
+A: Bạn sẽ được hoàn 100% phí khám và có thể nhận thêm voucher ưu đãi. Hệ thống sẽ tự động thông báo và hỗ trợ đặt lịch khác.
+
+## Khám bệnh Online
+
+Q: Khám online qua video call hoạt động như thế nào?
+A: Đúng giờ hẹn, vào "Lịch hẹn của tôi" > Chọn "Tham gia cuộc gọi". Hệ thống sẽ kết nối video call trực tiếp với bác sĩ qua Agora.
+
+Q: Cần chuẩn bị gì cho buổi khám online?
+A: - Kết nối internet ổn định (tối thiểu 2Mbps)
+- Camera và microphone hoạt động
+- Môi trường yên tĩnh, riêng tư
+- Hồ sơ bệnh án/xét nghiệm (nếu có) để chia sẻ
+
+Q: Video call có bảo mật không?
+A: Hoàn toàn bảo mật với mã hóa end-to-end từ Agora. Không có bên thứ ba nào có thể truy cập. Cuộc gọi không được ghi lại.
+
+Q: Nếu gặp lỗi kỹ thuật trong lúc gọi thì sao?
+A: Hãy thử làm mới trang hoặc thoát ra vào lại. Nếu vẫn lỗi, liên hệ hotline 1900xxxx. Chúng tôi sẽ hỗ trợ ngay và sắp xếp lại lịch khám miễn phí.
+
+## Hồ sơ bệnh án
+
+Q: Hồ sơ bệnh án được lưu ở đâu?
+A: Tất cả hồ sơ bệnh án điện tử được lưu trữ bảo mật trên hệ thống, chỉ bạn và bác sĩ được chỉ định mới có quyền truy cập.
+
+Q: Tôi có thể xem lại toa thuốc cũ không?
+A: Có, vào "Hồ sơ bệnh án" > Chọn lần khám > Xem chi tiết toa thuốc và đơn thuốc điện tử. Có thể tải xuống PDF.
+
+Q: Bác sĩ khác có xem được hồ sơ của tôi không?
+A: Không, trừ khi bạn chủ động chia sẻ. Mỗi lần khám, bạn có thể chọn chia sẻ hồ sơ cũ với bác sĩ mới để họ tham khảo.
+
+Q: Dữ liệu y tế của tôi có được bảo mật không?
+A: Tuyệt đối. MedConnect tuân thủ nghiêm ngặt Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân. Dữ liệu được mã hóa và không bao giờ chia sẻ với bên thứ ba.
+
+## Đánh giá và Phản hồi
+
+Q: Làm sao để đánh giá bác sĩ?
+A: Sau khi hoàn thành lịch khám, hệ thống sẽ gửi thông báo mời đánh giá. Bạn có thể chấm sao (1-5 sao) và viết nhận xét.
+
+Q: Đánh giá có ẩn danh không?
+A: Tên bạn sẽ hiển thị một phần (VD: Nguyen V***) để đảm bảo tính xác thực nhưng vẫn bảo vệ danh tính.
+
+Q: Nếu tôi không hài lòng với bác sĩ thì làm sao?
+A: Bạn có thể để lại đánh giá thành thật và liên hệ bộ phận chăm sóc khách hàng qua email support@medconnect.vn hoặc hotline. Chúng tôi sẽ xem xét và xử lý.
+
+## Bảo mật và Quyền riêng tư
+
+Q: Thông tin cá nhân của tôi có được bảo mật không?
+A: Có, MedConnect cam kết bảo mật tuyệt đối thông tin cá nhân theo Luật An toàn thông tin mạng và Nghị định 13/2023/NĐ-CP.
+
+Q: Ai có thể xem thông tin y tế của tôi?
+A: Chỉ bạn, bác sĩ điều trị của bạn (khi được ủy quyền) và admin hệ thống (chỉ trong trường hợp cần thiết để hỗ trợ kỹ thuật).
+
+Q: Tôi có thể xóa tài khoản và dữ liệu không?
+A: Có, liên hệ support@medconnect.vn để yêu cầu xóa tài khoản. Chúng tôi sẽ xóa toàn bộ dữ liệu cá nhân trong vòng 30 ngày.
+
+## Hỗ trợ
+
+Q: Tôi gặp vấn đề kỹ thuật, liên hệ ai?
+A: - Email: support@medconnect.vn
+- Hotline: 1900 xxxx (8:00 - 22:00 hàng ngày)
+- Live chat: Góc dưới bên phải màn hình
+
+Q: Thời gian phản hồi là bao lâu?
+A: - Hotline: Ngay lập tức
+- Email: Trong vòng 24 giờ
+- Live chat: Trong vòng 5 phút (giờ hành chính)
+
+Q: MedConnect có app mobile không?
+A: Hiện tại MedConnect là web app, tối ưu cho cả mobile browser. App di động sẽ ra mắt trong tương lai.
+

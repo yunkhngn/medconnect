@@ -1,0 +1,79 @@
+package se1961.g1.medconnect.controller;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.ResponseEntity;
+import se1961.g1.medconnect.pojo.Doctor;
+import se1961.g1.medconnect.pojo.Speciality;
+import se1961.g1.medconnect.service.DoctorService;
+
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
+
+public class DoctorDashBoardTest {
+    @Mock
+    private DoctorService doctorService;
+
+    @InjectMocks
+    private DoctorController doctorDashboard;
+
+    @BeforeEach
+    public void setup() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    public void testGetProfileDoctorFound() throws Exception {
+        String uid = "doctor123";
+
+        // Create mock speciality
+        Speciality speciality = new Speciality();
+        speciality.setSpecialityId(1);
+        speciality.setName("Tim mạch");
+        speciality.setDescription("Chuyên khoa tim mạch");
+        
+        Doctor doctor = new Doctor();
+        doctor.setFirebaseUid(uid);
+        doctor.setName("Stephen Strange");
+        doctor.setEmail("dr.strange@example.com");
+        doctor.setPhone("123456789");
+        doctor.setSpeciality(speciality);
+        // Note: licenseId is now managed through License entity
+
+        // Mock the service to return the doctor
+        when(doctorService.getDoctor(uid)).thenReturn(Optional.of(doctor));
+
+        // Mock Authentication object
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(uid, null);
+
+        ResponseEntity<Map<String, Object>> response = doctorDashboard.getProfile(authentication);
+
+        assertEquals(200, response.getStatusCodeValue());
+        Map<String, Object> profile = response.getBody();
+        assertNotNull(profile);
+        assertEquals("Stephen Strange", profile.get("name"));
+        assertEquals("dr.strange@example.com", profile.get("email"));
+        assertEquals("123456789", profile.get("phone"));
+        assertEquals("Tim mạch", profile.get("specialization"));
+        // Note: license info is now in "active_license" object (can be null if no license)
+        // assertEquals("LIC12345", profile.get("license_id")); // Old field removed
+    }
+
+    @Test
+    public void testGetProfileDoctorNotFound() throws Exception {
+        String uid = "doctor123";
+
+        when(doctorService.getDoctor(uid)).thenReturn(Optional.empty());
+
+        var authentication = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(uid, null);
+
+        Exception exception = assertThrows(Exception.class, () -> doctorDashboard.getProfile(authentication));
+        assertEquals("Doctor not found", exception.getMessage());
+    }
+}

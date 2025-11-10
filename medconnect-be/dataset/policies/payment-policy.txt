@@ -1,0 +1,210 @@
+# Chính sách Thanh toán - MedConnect
+
+## 1. Nguyên tắc chung
+
+MedConnect cam kết cung cấp dịch vụ thanh toán an toàn, minh bạch và thuận tiện, tuân thủ đầy đủ quy định của Ngân hàng Nhà nước Việt Nam về thanh toán điện tử.
+
+## 2. Phương thức Thanh toán
+
+### 2.1. Đối với Bệnh nhân
+
+#### VietQR
+- **Mô tả:** Quét mã QR để chuyển khoản ngân hàng
+- **Ưu điểm:** Nhanh chóng, không phí, hỗ trợ tất cả ngân hàng Việt Nam
+- **Cách dùng:** Quét mã QR bằng app ngân hàng > Xác nhận > Hoàn tất
+- **Thời gian xác nhận:** 1-3 phút
+
+#### VNPAY
+- **Mô tả:** Cổng thanh toán điện tử
+- **Hỗ trợ:** Thẻ ATM nội địa, Visa, Mastercard, JCB, VNPAY-QR
+- **Phí:** 0% cho thẻ ATM nội địa, 1.5% cho thẻ quốc tế (do VNPAY thu)
+- **Thời gian xác nhận:** Ngay lập tức
+
+#### MoMo
+- **Mô tả:** Ví điện tử MoMo
+- **Ưu điểm:** Thanh toán 1 chạm, tích điểm, ưu đãi
+- **Phí:** 0%
+- **Thời gian xác nhận:** Ngay lập tức
+
+### 2.2. Đối với Bác sĩ (Nhận tiền)
+
+#### Chuyển khoản ngân hàng
+- **Chu kỳ:** 2 lần/tháng (ngày 15 và cuối tháng)
+- **Điều kiện:** Có ít nhất 500,000 VNĐ trong tài khoản
+- **Phí:** Miễn phí
+- **Thông tin cần cung cấp:** Số tài khoản, Tên ngân hàng, Chủ tài khoản (khớp với CMND/CCCD)
+
+## 3. Cơ chế Thanh toán
+
+### 3.1. Thanh toán Trước (Prepayment)
+- **Quy định:** Bệnh nhân PHẢI thanh toán 100% phí khám trước để xác nhận lịch hẹn
+- **Lý do:** Đảm bảo cam kết của bệnh nhân, bảo vệ thời gian bác sĩ
+- **Giữ tiền:** Tiền được MedConnect giữ (escrow) cho đến khi hoàn thành lịch khám
+
+### 3.2. Giải ngân cho Bác sĩ
+- **Thời điểm:** Sau khi lịch khám hoàn thành và bệnh nhân không khiếu nại trong 24h
+- **Tỷ lệ:** Bác sĩ nhận 85%, MedConnect giữ 15% phí nền tảng
+- **Ví dụ:** Phí khám 500,000 VNĐ → Bác sĩ nhận 425,000 VNĐ
+
+### 3.3. Phí nền tảng (Platform Fee)
+
+#### Đối với Bác sĩ: 15%
+**Bao gồm:**
+- Vận hành và bảo trì hệ thống
+- Chi phí server, database
+- Video call infrastructure (Agora)
+- Bảo mật và mã hóa dữ liệu
+- Hỗ trợ khách hàng 24/7
+- Marketing và quảng bá
+
+#### Đối với Bệnh nhân: 0%
+- Hoàn toàn miễn phí sử dụng nền tảng
+- Chỉ trả phí khám cho bác sĩ
+- Không có phí ẩn
+
+## 4. An toàn và Bảo mật
+
+### 4.1. Mã hóa
+- **SSL/TLS:** Tất cả giao dịch được mã hóa 256-bit
+- **Tokenization:** Thông tin thẻ không được lưu trên server MedConnect
+- **PCI DSS:** Tuân thủ chuẩn bảo mật thanh toán quốc tế
+
+### 4.2. Xác thực
+- **3D Secure:** Bắt buộc cho thẻ quốc tế (OTP từ ngân hàng)
+- **Biometric:** Hỗ trợ FaceID, TouchID, vân tay trên mobile
+- **2FA:** Xác thực 2 lớp cho giao dịch lớn (>2,000,000 VNĐ)
+
+### 4.3. Chống gian lận
+- **AI Detection:** Phát hiện giao dịch bất thường
+- **Velocity Check:** Giới hạn số giao dịch trong thời gian ngắn
+- **IP Monitoring:** Theo dõi địa chỉ IP đáng ngờ
+
+## 5. Hóa đơn và Chứng từ
+
+### 5.1. Hóa đơn cho Bệnh nhân
+- **Loại:** Hóa đơn điện tử VAT (nếu yêu cầu)
+- **Thời gian:** Gửi qua email sau khi thanh toán 1-3 ngày
+- **Nội dung:** Phí khám, Thông tin bác sĩ, Ngày giờ, Mã giao dịch
+- **Tải xuống:** Có thể tải PDF từ "Lịch hẹn" > "Hóa đơn"
+
+### 5.2. Hóa đơn cho Bác sĩ
+- **Loại:** Biên lai thu nhập
+- **Chu kỳ:** Mỗi kỳ thanh toán (15 và cuối tháng)
+- **Nội dung:** Tổng thu nhập, Số lịch khám, Phí nền tảng, Thu nhập ròng
+- **Trách nhiệm:** Bác sĩ tự khai báo thuế thu nhập cá nhân
+
+## 6. Hoàn tiền (Refund)
+
+### 6.1. Thời gian xử lý
+- **Duyệt đơn:** 1-2 ngày làm việc
+- **Chuyển tiền:** 3-5 ngày làm việc (tùy ngân hàng/ví)
+- **Tổng cộng:** Tối đa 7 ngày làm việc
+
+### 6.2. Phương thức hoàn
+- **Hoàn về nguồn:** Tiền trả về tài khoản/ví đã thanh toán
+- **Voucher:** (Trong trường hợp bồi thường) Ngay lập tức
+
+### 6.3. Lưu ý
+- Phí giao dịch (nếu có) KHÔNG được hoàn
+- Hoàn tiền tuân theo "Chính sách Hủy lịch"
+
+## 7. Thanh toán Quốc tế
+
+### 7.1. Hỗ trợ hiện tại
+- Chỉ chấp nhận VNĐ
+- Thẻ quốc tế (Visa, Mastercard) được chấp nhận nhưng quy đổi sang VNĐ
+
+### 7.2. Tương lai
+- Sẽ hỗ trợ USD, EUR, THB cho bệnh nhân quốc tế
+- Tích hợp PayPal, Stripe (đang phát triển)
+
+## 8. Khuyến mãi và Voucher
+
+### 8.1. Voucher giảm giá
+- **Áp dụng:** Nhập mã voucher trước khi thanh toán
+- **Giới hạn:** 1 voucher/1 lịch hẹn
+- **Không kết hợp:** Không dùng chung nhiều voucher
+- **Thời hạn:** Mỗi voucher có ngày hết hạn riêng
+
+### 8.2. Chương trình Loyalty
+- **Tích điểm:** Mỗi 100,000 VNĐ = 1 điểm
+- **Đổi thưởng:** 10 điểm = Voucher 50,000 VNĐ
+- **VIP:** Sau 10 lịch khám, được giảm 10% mọi lịch tiếp theo
+
+## 9. Tranh chấp và Giải quyết
+
+### 9.1. Thanh toán thất bại
+- **Kiểm tra:** Tài khoản đủ tiền, Hạn mức thẻ, Kết nối internet
+- **Liên hệ:** support@medconnect.vn hoặc hotline 1900 xxxx
+- **Thử lại:** Có thể thử lại sau 5 phút
+
+### 9.2. Thanh toán bị trừ tiền nhưng không đặt được lịch
+- **Xử lý:** Hệ thống tự động hoàn tiền trong 24h
+- **Nếu không:** Liên hệ support với mã giao dịch (từ ngân hàng/ví)
+
+### 9.3. Khiếu nại thanh toán
+- **Email:** payment-dispute@medconnect.vn
+- **Cần cung cấp:** Mã giao dịch, Screenshot, Mô tả vấn đề
+- **Thời gian xử lý:** 3-5 ngày làm việc
+
+## 10. Quy định về Thuế
+
+### 10.1. Đối với Bệnh nhân
+- Phí khám đã bao gồm VAT (nếu bác sĩ đăng ký thuế)
+- Có thể yêu cầu hóa đơn đỏ để sử dụng bảo hiểm y tế (tùy bảo hiểm)
+
+### 10.2. Đối với Bác sĩ
+- **Thu nhập từ MedConnect:** Phải khai báo thuế TNCN
+- **Trách nhiệm:** Bác sĩ tự khai báo, MedConnect cung cấp biên lai hỗ trợ
+- **Thuế suất:** Theo biểu thuế lũy tiến (5%-35%)
+
+### 10.3. MedConnect
+- Kê khai và nộp thuế GTGT, TNDN đầy đủ
+- Cung cấp hóa đơn VAT cho tất cả giao dịch (khi yêu cầu)
+
+## 11. Quy định Đặc biệt
+
+### 11.1. Giao dịch lớn (>10,000,000 VNĐ)
+- Cần xác thực bổ sung (2FA)
+- Admin có thể review trước khi duyệt
+- Thời gian xác nhận có thể lâu hơn (5-10 phút)
+
+### 11.2. Giao dịch đáng ngờ
+- Hệ thống có quyền tạm giữ để điều tra
+- Yêu cầu xác minh danh tính
+- Liên hệ qua email và hotline để hỗ trợ
+
+### 11.3. Tài khoản bị khóa thanh toán
+- **Lý do:** Vi phạm chính sách, gian lận, lạm dụng hoàn tiền
+- **Xử lý:** Liên hệ support để làm rõ
+- **Giải quyết:** Xem xét từng trường hợp cụ thể
+
+## 12. Cam kết của MedConnect
+
+- ✅ Không lưu trữ thông tin thẻ tín dụng
+- ✅ Không chia sẻ thông tin tài chính với bên thứ ba
+- ✅ Bảo mật giao dịch tuyệt đối
+- ✅ Hỗ trợ 24/7 cho vấn đề thanh toán
+- ✅ Hoàn tiền đúng cam kết
+- ✅ Minh bạch mọi khoản phí
+
+## 13. Thay đổi Chính sách
+
+- MedConnect có quyền thay đổi chính sách thanh toán
+- Thông báo trước 30 ngày qua email và thông báo trên web
+- Người dùng có quyền ngừng sử dụng nếu không đồng ý
+
+## 14. Liên hệ
+
+Mọi thắc mắc về thanh toán:
+- **Email:** payment@medconnect.vn
+- **Hotline:** 1900 xxxx (24/7 cho vấn đề khẩn cấp)
+- **Live Chat:** 8:00 - 22:00
+- **Địa chỉ:** FPT University, Hòa Lạc, Hà Nội
+
+---
+
+*Cập nhật lần cuối: Tháng 10, 2025*
+*Phiên bản: 1.0*
+*Tuân thủ: Nghị định 52/2013/NĐ-CP, Thông tư 39/2014/TT-NHNN*
+

@@ -1,0 +1,168 @@
+# Chính sách Hủy lịch và Hoàn tiền - MedConnect
+
+## 1. Quy định chung
+
+MedConnect cam kết cung cấp chính sách hủy lịch linh hoạt, công bằng cho cả bệnh nhân và bác sĩ, tuân thủ theo Luật Bảo vệ quyền lợi người tiêu dùng.
+
+## 2. Hủy lịch bởi Bệnh nhân
+
+### 2.1. Hủy trước 24 giờ
+- **Hoàn tiền:** 100% phí khám
+- **Thời gian xử lý:** 3-5 ngày làm việc
+- **Phương thức:** Tiền được hoàn về tài khoản/ví điện tử đã thanh toán
+- **Điều kiện:** Không giới hạn số lần hủy
+
+### 2.2. Hủy trong vòng 24 giờ (nhưng trước 2 giờ)
+- **Hoàn tiền:** 50% phí khám
+- **Lý do:** Bác sĩ đã sắp xếp thời gian, ảnh hưởng đến lịch làm việc
+- **Thời gian xử lý:** 3-5 ngày làm việc
+- **Lưu ý:** Nếu hủy nhiều lần trong khoảng này, tài khoản có thể bị hạn chế
+
+### 2.3. Hủy trong vòng 2 giờ trước giờ hẹn
+- **Hoàn tiền:** 0% (không hoàn tiền)
+- **Lý do:** Quá muộn để bác sĩ sắp xếp lại lịch
+- **Ngoại lệ:** Trường hợp bất khả kháng (nhập viện, tai nạn) có thể liên hệ support để xem xét đặc biệt
+
+### 2.4. Không xuất hiện (No-show)
+- **Hoàn tiền:** 0%
+- **Hậu quả:** Bác sĩ vẫn nhận 100% phí khám
+- **Ảnh hưởng:** Sau 3 lần no-show, tài khoản có thể bị đánh dấu hoặc tạm khóa chức năng đặt lịch
+
+## 3. Hủy lịch bởi Bác sĩ
+
+### 3.1. Hủy trước 24 giờ
+- **Hoàn tiền cho bệnh nhân:** 100%
+- **Bồi thường:** Voucher giảm giá 20% cho lần khám tiếp theo
+- **Ảnh hưởng đến bác sĩ:** Cảnh báo, ảnh hưởng đến xếp hạng
+
+### 3.2. Hủy trong vòng 24 giờ
+- **Hoàn tiền cho bệnh nhân:** 100%
+- **Bồi thường:** Voucher giảm giá 50% cho lần khám tiếp theo
+- **Ảnh hưởng đến bác sĩ:** Cảnh báo nghiêm trọng, giảm điểm uy tín, có thể bị phạt
+
+### 3.3. Không xuất hiện (No-show từ bác sĩ)
+- **Hoàn tiền cho bệnh nhân:** 100%
+- **Bồi thường:** Voucher miễn phí 1 lần khám (trị giá bằng phí đã mất)
+- **Ảnh hưởng đến bác sĩ:** Vi phạm nghiêm trọng, có thể bị đình chỉ tài khoản tạm thời hoặc vĩnh viễn
+
+### 3.4. Trường hợp đặc biệt
+- **Bác sĩ gặp cấp cứu y khoa:** Bệnh nhân được hoàn 100% + voucher 20%, bác sĩ không bị phạt
+- **Sự cố kỹ thuật từ MedConnect:** Hoàn 100% + voucher 30%, cả 2 bên không bị ảnh hưởng
+
+## 4. Quy trình Hủy lịch
+
+### 4.1. Đối với Bệnh nhân
+1. Đăng nhập vào tài khoản MedConnect
+2. Vào "Lịch hẹn của tôi"
+3. Chọn lịch hẹn cần hủy
+4. Click "Hủy lịch hẹn"
+5. Chọn lý do hủy (không bắt buộc nhưng khuyến khích)
+6. Xác nhận hủy
+7. Nhận email xác nhận hủy và thông tin hoàn tiền
+
+### 4.2. Đối với Bác sĩ
+1. Đăng nhập vào dashboard bác sĩ
+2. Vào "Lịch hẹn"
+3. Chọn lịch hẹn cần hủy
+4. Click "Hủy lịch hẹn"
+5. **BẮT BUỘC:** Nhập lý do hủy chi tiết
+6. Xác nhận hủy
+7. Hệ thống tự động thông báo cho bệnh nhân và xử lý hoàn tiền
+
+## 5. Hoàn tiền
+
+### 5.1. Phương thức hoàn tiền
+- **VietQR/VNPAY/MoMo:** Tiền hoàn về tài khoản/ví đã thanh toán
+- **Voucher bồi thường:** Tự động thêm vào tài khoản, có thể dùng ngay
+
+### 5.2. Thời gian hoàn tiền
+- **Xử lý:** 1-2 ngày làm việc
+- **Về tài khoản:** 3-5 ngày làm việc (tùy ngân hàng/ví)
+- **Voucher:** Ngay lập tức
+
+### 5.3. Theo dõi hoàn tiền
+- Vào "Lịch hẹn" > "Lịch sử thanh toán"
+- Trạng thái: Đang xử lý > Đã hoàn tiền > Hoàn thành
+- Email thông báo mỗi bước
+
+## 6. Thay đổi Lịch hẹn (Reschedule)
+
+### 6.1. Quy định
+- **Thay đổi trước 24h:** MIỄN PHÍ, không bị trừ tiền
+- **Thay đổi trong 24h:** Áp dụng chính sách hủy (50% hoặc 0%)
+- **Số lần:** Mỗi lịch hẹn chỉ được đổi 1 lần
+
+### 6.2. Quy trình
+1. Hủy lịch cũ (theo quy định trên)
+2. Đặt lịch mới
+3. Nếu hủy trước 24h: Dùng số tiền hoàn để đặt lịch mới (không mất thêm phí)
+
+## 7. Trường hợp Đặc biệt
+
+### 7.1. Bất khả kháng
+- Nhập viện cấp cứu
+- Tai nạn, thiên tai
+- Dịch bệnh, phong tỏa
+
+**Xử lý:** Liên hệ support@medconnect.vn với bằng chứng (giấy nhập viện, báo cáo...). MedConnect xem xét hoàn 100% dù trong thời hạn nào.
+
+### 7.2. Lỗi kỹ thuật
+- Video call không kết nối được
+- Hệ thống bị lỗi
+- Thanh toán thất bại nhưng vẫn trừ tiền
+
+**Xử lý:** Hoàn 100% + voucher bồi thường. Liên hệ support ngay.
+
+### 7.3. Bác sĩ không đáp ứng kỳ vọng
+- Nếu bệnh nhân không hài lòng với chất lượng khám (VD: bác sĩ tư vấn qua loa, thái độ không tốt)
+- **Không áp dụng hoàn tiền** nhưng có thể khiếu nại
+- Admin sẽ xem xét, nếu vi phạm nghiêm trọng: Bác sĩ bị xử lý, bệnh nhân được bồi thường
+
+## 8. Khiếu nại và Giải quyết
+
+### 8.1. Quyền khiếu nại
+- Mọi người dùng có quyền khiếu nại về quyết định hoàn tiền
+- Thời hạn: Trong vòng 7 ngày kể từ ngày hủy lịch
+
+### 8.2. Quy trình
+1. Email khiếu nại đến: dispute@medconnect.vn
+2. Cung cấp: Mã lịch hẹn, Lý do khiếu nại, Bằng chứng (nếu có)
+3. Admin xem xét trong 3-5 ngày làm việc
+4. Quyết định cuối cùng qua email
+
+### 8.3. Trung tâm hỗ trợ
+- Hotline: 1900 xxxx
+- Email: support@medconnect.vn
+- Chat trực tuyến: 8:00 - 22:00
+
+## 9. Chính sách cho Lịch khám Online vs Offline
+
+### 9.1. Khám Online (Video call)
+- Áp dụng đầy đủ chính sách trên
+- Nếu lỗi kỹ thuật không phải lỗi người dùng: Hoàn 100%
+- Nếu bệnh nhân có vấn đề internet cá nhân: Không hoàn tiền
+
+### 9.2. Khám Offline (Trực tiếp)
+- Áp dụng đầy đủ chính sách trên
+- Nếu bệnh nhân đến muộn < 15 phút: Bác sĩ quyết định có nhận khám không
+- Nếu bệnh nhân đến muộn > 15 phút: Bác sĩ có quyền từ chối, không hoàn tiền
+
+## 10. Lưu ý quan trọng
+
+- Chính sách này có thể thay đổi, người dùng sẽ được thông báo trước 30 ngày
+- Mọi tranh chấp sẽ được giải quyết theo pháp luật Việt Nam
+- MedConnect giữ quyền quyết định cuối cùng trong các trường hợp đặc biệt
+- Việc sử dụng MedConnect đồng nghĩa với việc chấp nhận chính sách này
+
+## 11. Liên hệ
+
+Mọi thắc mắc về chính sách hủy lịch và hoàn tiền:
+- Email: policy@medconnect.vn
+- Hotline: 1900 xxxx
+- Website: www.medconnect.vn/policies
+
+---
+
+*Cập nhật lần cuối: Tháng 10, 2025*
+*Phiên bản: 1.0*
+

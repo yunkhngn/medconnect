@@ -1,3 +1,46 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Node modules
+node_modules/
+
+tmp
+
+# Next.js build output
+.next/
+out/
+
+# Maven build output
+target/
+*.class
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
 .DS_Store
-.idea
-.vscode
+Thumbs.db
+
+# Docker volumes
+**/data/
+**/logs/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Sensitive files
+*.pem
+*.key
+!*.example
+
+# Database files
+*.mdf
+*.ldf
+

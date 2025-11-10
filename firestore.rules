@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cho phép user đã đăng nhập đọc/ghi messages trong vc_rooms
+    match /vc_rooms/{roomId}/messages/{messageId} {
+      allow read, write: if request.auth != null;
+    }
+    // Cho phép user đã đăng nhập đọc/ghi presence trong vc_rooms
+    match /vc_rooms/{roomId}/presence/{docId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+

@@ -1,0 +1,391 @@
+{
+  "specializations": [
+    {
+      "id": "cardiology",
+      "name_en": "Cardiology",
+      "name_vi": "Tim mạch",
+      "description": "Chuyên khoa chẩn đoán và điều trị các bệnh lý về tim, mạch máu và hệ thống tuần hoàn. Bao gồm: Bệnh mạch vành (Coronary Artery Disease), Suy tim (Heart Failure), Rối loạn nhịp tim (Arrhythmia), Tăng huyết áp (Hypertension), Bệnh van tim (Valvular Heart Disease).",
+      "common_conditions": [
+        "Bệnh mạch vành (Coronary Artery Disease - CAD)",
+        "Nhồi máu cơ tim (Myocardial Infarction - MI)",
+        "Suy tim (Heart Failure - HF)",
+        "Rối loạn nhịp tim (Arrhythmia)",
+        "Tăng huyết áp (Hypertension - HTN)",
+        "Bệnh van tim (Valvular Heart Disease)",
+        "Viêm cơ tim (Myocarditis)",
+        "Viêm màng ngoài tim (Pericarditis)"
+      ],
+      "common_symptoms": [
+        "Đau thắt ngực (Angina Pectoris)",
+        "Khó thở, thở gấp (Dyspnea)",
+        "Hồi hộp, đánh trống ngực (Palpitations)",
+        "Phù nề chi dưới (Lower Extremity Edema)",
+        "Mệt mỏi, choáng váng (Fatigue, Dizziness)",
+        "Tím tái (Cyanosis)"
+      ],
+      "diagnostic_tests": [
+        "Điện tâm đồ (Electrocardiogram - ECG/EKG)",
+        "Siêu âm tim (Echocardiography)",
+        "Holter 24h (24-hour Holter Monitoring)",
+        "Chụp mạch vành (Coronary Angiography)",
+        "Test gắng sức (Exercise Stress Test)",
+        "CT/MRI tim mạch"
+      ]
+    },
+    {
+      "id": "dermatology",
+      "name_en": "Dermatology",
+      "name_vi": "Da liễu",
+      "description": "Chuyên khoa chẩn đoán và điều trị các bệnh về da, tóc, móng và niêm mạc. Bao gồm cả da liễu thẩm mỹ (Cosmetic Dermatology).",
+      "common_conditions": [
+        "Mụn trứng cá (Acne Vulgaris)",
+        "Viêm da cơ địa (Atopic Dermatitis/Eczema)",
+        "Vẩy nến (Psoriasis)",
+        "Nấm da (Dermatophytosis/Tinea)",
+        "Zona (Herpes Zoster/Shingles)",
+        "Bệnh Lupus ban đỏ (Lupus Erythematosus)",
+        "Melanoma (Ung thư da hắc tố)",
+        "Viêm da tiếp xúc (Contact Dermatitis)",
+        "Rụng tóc (Alopecia)"
+      ],
+      "common_symptoms": [
+        "Phát ban (Rash)",
+        "Ngứa (Pruritus)",
+        "Mẩn đỏ (Erythema)",
+        "Mụn nước (Vesicles)",
+        "Tróc vảy (Scaling)",
+        "Sẩn (Papules)",
+        "Mụn mủ (Pustules)",
+        "Thay đổi màu da (Pigmentation Changes)"
+      ],
+      "diagnostic_tests": [
+        "Sinh thiết da (Skin Biopsy)",
+        "Xét nghiệm nấm (Fungal Culture)",
+        "Xét nghiệm dị ứng (Patch Test)",
+        "Soi da (Dermatoscopy)",
+        "Test KOH"
+      ]
+    },
+    {
+      "id": "neurology",
+      "name_en": "Neurology",
+      "name_vi": "Thần kinh",
+      "description": "Chuyên khoa chẩn đoán và điều trị các rối loạn về hệ thần kinh trung ương và ngoại biên, bao gồm não, tủy sống, dây thần kinh.",
+      "common_conditions": [
+        "Đột quỵ (Stroke/Cerebrovascular Accident - CVA)",
+        "Bệnh Parkinson (Parkinson's Disease)",
+        "Động kinh (Epilepsy)",
+        "Đau nửa đầu (Migraine)",
+        "Bệnh Alzheimer (Alzheimer's Disease)",
+        "Đa xơ cứng (Multiple Sclerosis - MS)",
+        "Thoái hóa thần kinh (Neuropathy)",
+        "Viêm màng não (Meningitis)"
+      ],
+      "common_symptoms": [
+        "Đau đầu (Headache)",
+        "Chóng mặt (Vertigo)",
+        "Tê liệt (Paralysis)",
+        "Co giật (Seizures)",
+        "Tê bì (Numbness/Paresthesia)",
+        "Rối loạn giấc ngủ (Sleep Disorders)",
+        "Mất trí nhớ (Memory Loss)"
+      ],
+      "diagnostic_tests": [
+        "MRI não (Brain MRI)",
+        "CT scan não (Brain CT)",
+        "Điện não đồ (Electroencephalogram - EEG)",
+        "Điện cơ đồ (Electromyography - EMG)",
+        "Chọc dò tủy sống (Lumbar Puncture)"
+      ]
+    },
+    {
+      "id": "orthopedics",
+      "name_en": "Orthopedics",
+      "name_vi": "Chấn thương chỉnh hình",
+      "description": "Chuyên khoa điều trị các bệnh lý về xương, khớp, cơ, gân, dây chằng và hệ cơ xương khớp.",
+      "common_conditions": [
+        "Gãy xương (Fracture)",
+        "Thoát vị đĩa đệm (Herniated Disc)",
+        "Viêm khớp (Arthritis)",
+        "Thoái hóa khớp (Osteoarthritis)",
+        "Loãng xương (Osteoporosis)",
+        "Rách dây chằng (Ligament Tear)",
+        "Viêm gân (Tendinitis)",
+        "Hội chứng ống cổ tay (Carpal Tunnel Syndrome)"
+      ],
+      "common_symptoms": [
+        "Đau xương, khớp (Bone/Joint Pain)",
+        "Sưng (Swelling)",
+        "Hạn chế vận động (Limited Range of Motion)",
+        "Biến dạng (Deformity)",
+        "Cứng khớp (Joint Stiffness)",
+        "Yếu cơ (Muscle Weakness)"
+      ],
+      "diagnostic_tests": [
+        "X-quang (X-ray/Radiography)",
+        "MRI cơ xương khớp (Musculoskeletal MRI)",
+        "CT scan xương (Bone CT)",
+        "Đo mật độ xương (Bone Density Scan/DEXA)",
+        "Siêu âm cơ xương khớp"
+      ]
+    },
+    {
+      "id": "gastroenterology",
+      "name_en": "Gastroenterology",
+      "name_vi": "Tiêu hóa",
+      "description": "Chuyên khoa chẩn đoán và điều trị các bệnh lý về hệ tiêu hóa: thực quản, dạ dày, ruột, gan, mật, tụy.",
+      "common_conditions": [
+        "Viêm loét dạ dày (Gastritis/Peptic Ulcer)",
+        "Trào ngược dạ dày thực quản (GERD)",
+        "Viêm gan (Hepatitis)",
+        "Xơ gan (Cirrhosis)",
+        "Hội chứng ruột kích thích (Irritable Bowel Syndrome - IBS)",
+        "Viêm đại tràng (Colitis)",
+        "Bệnh Crohn (Crohn's Disease)",
+        "Ung thư đại trực tràng (Colorectal Cancer)"
+      ],
+      "common_symptoms": [
+        "Đau bụng (Abdominal Pain)",
+        "Buồn nôn, nôn (Nausea, Vomiting)",
+        "Ợ hơi, ợ chua (Heartburn, Acid Reflux)",
+        "Tiêu chảy (Diarrhea)",
+        "Táo bón (Constipation)",
+        "Phân có máu (Bloody Stool)",
+        "Vàng da, vàng mắt (Jaundice)",
+        "Chướng bụng (Bloating)"
+      ],
+      "diagnostic_tests": [
+        "Nội soi dạ dày (Gastroscopy)",
+        "Nội soi đại tràng (Colonoscopy)",
+        "Siêu âm bụng (Abdominal Ultrasound)",
+        "CT bụng (Abdominal CT)",
+        "Xét nghiệm chức năng gan (Liver Function Test)",
+        "Test Helicobacter pylori"
+      ]
+    },
+    {
+      "id": "pulmonology",
+      "name_en": "Pulmonology",
+      "name_vi": "Hô hấp",
+      "description": "Chuyên khoa chẩn đoán và điều trị các bệnh lý về đường hô hấp và phổi.",
+      "common_conditions": [
+        "Hen phế quản (Asthma)",
+        "Bệnh phổi tắc nghẽn mạn tính (COPD)",
+        "Viêm phổi (Pneumonia)",
+        "Lao phổi (Tuberculosis - TB)",
+        "Ung thư phổi (Lung Cancer)",
+        "Xơ phổi (Pulmonary Fibrosis)",
+        "Thuyên tắc phổi (Pulmonary Embolism)",
+        "Viêm phế quản (Bronchitis)"
+      ],
+      "common_symptoms": [
+        "Khó thở (Dyspnea)",
+        "Ho (Cough)",
+        "Khò khè (Wheezing)",
+        "Ho ra máu (Hemoptysis)",
+        "Đau ngực (Chest Pain)",
+        "Tím tái (Cyanosis)",
+        "Thở nhanh (Tachypnea)"
+      ],
+      "diagnostic_tests": [
+        "X-quang phổi (Chest X-ray)",
+        "CT phổi (Chest CT)",
+        "Đo chức năng phổi (Pulmonary Function Test - PFT)",
+        "Nội soi phế quản (Bronchoscopy)",
+        "Khí máu động mạch (Arterial Blood Gas - ABG)",
+        "Test Mantoux (cho lao)"
+      ]
+    },
+    {
+      "id": "endocrinology",
+      "name_en": "Endocrinology",
+      "name_vi": "Nội tiết",
+      "description": "Chuyên khoa chẩn đoán và điều trị các rối loạn về hệ thống nội tiết, hormone.",
+      "common_conditions": [
+        "Đái tháo đường (Diabetes Mellitus - Type 1 & 2)",
+        "Cường giáp (Hyperthyroidism)",
+        "Suy giáp (Hypothyroidism)",
+        "Hội chứng chuyển hóa (Metabolic Syndrome)",
+        "Bệnh Cushing (Cushing's Syndrome)",
+        "Bệnh Addison (Addison's Disease)",
+        "Bướu cổ (Goiter)",
+        "Rối loạn tuyến yên (Pituitary Disorders)"
+      ],
+      "common_symptoms": [
+        "Tăng/giảm cân bất thường (Abnormal Weight Changes)",
+        "Mệt mỏi (Fatigue)",
+        "Đái nhiều (Polyuria)",
+        "Khát nước (Polydipsia)",
+        "Run tay (Tremor)",
+        "Vô kinh (Amenorrhea)",
+        "Chậm phát triển (Growth Delay)"
+      ],
+      "diagnostic_tests": [
+        "Đường huyết (Blood Glucose)",
+        "HbA1c",
+        "TSH, T3, T4 (Thyroid Function)",
+        "Cortisol",
+        "Insulin",
+        "Siêu âm tuyến giáp (Thyroid Ultrasound)"
+      ]
+    },
+    {
+      "id": "pediatrics",
+      "name_en": "Pediatrics",
+      "name_vi": "Nhi khoa",
+      "description": "Chuyên khoa chăm sóc sức khỏe trẻ em từ sơ sinh đến 18 tuổi.",
+      "common_conditions": [
+        "Sốt cao (Fever)",
+        "Tiêu chảy cấp (Acute Diarrhea)",
+        "Viêm phổi (Pneumonia)",
+        "Hen phế quản (Pediatric Asthma)",
+        "Tay chân miệng (Hand-Foot-Mouth Disease)",
+        "Sởi (Measles)",
+        "Thủy đậu (Chickenpox/Varicella)",
+        "Chậm phát triển (Developmental Delay)"
+      ],
+      "common_symptoms": [
+        "Sốt (Fever)",
+        "Ho, sổ mũi (Cough, Runny Nose)",
+        "Tiêu chảy, nôn (Diarrhea, Vomiting)",
+        "Phát ban (Rash)",
+        "Quấy khóc (Irritability)",
+        "Kém ăn (Poor Appetite)",
+        "Khó thở (Respiratory Distress)"
+      ],
+      "diagnostic_tests": [
+        "Khám lâm sàng (Physical Examination)",
+        "Biểu đồ tăng trưởng (Growth Chart)",
+        "Xét nghiệm máu (CBC)",
+        "X-quang phổi (Chest X-ray)",
+        "Test phát triển (Developmental Screening)"
+      ]
+    },
+    {
+      "id": "obstetrics_gynecology",
+      "name_en": "Obstetrics & Gynecology",
+      "name_vi": "Sản phụ khoa",
+      "description": "Chuyên khoa chăm sóc sức khỏe sinh sản phụ nữ, mang thai, sinh nở.",
+      "common_conditions": [
+        "Thai nghén (Pregnancy)",
+        "Rối loạn kinh nguyệt (Menstrual Disorders)",
+        "U xơ tử cung (Uterine Fibroids)",
+        "Buồng trứng đa nang (PCOS)",
+        "Viêm âm đạo (Vaginitis)",
+        "Lạc nội mạc tử cung (Endometriosis)",
+        "Tiền sản giật (Preeclampsia)",
+        "Mãn kinh (Menopause)"
+      ],
+      "common_symptoms": [
+        "Đau bụng dưới (Lower Abdominal Pain)",
+        "Rong kinh (Abnormal Menstrual Bleeding)",
+        "Khí hư bất thường (Abnormal Discharge)",
+        "Đau khi quan hệ (Dyspareunia)",
+        "Vô sinh (Infertility)"
+      ],
+      "diagnostic_tests": [
+        "Siêu âm phụ khoa (Pelvic Ultrasound)",
+        "Siêu âm thai (Obstetric Ultrasound)",
+        "Xét nghiệm Pap smear",
+        "Xét nghiệm hormone (Hormonal Profile)",
+        "Soi cổ tử cung (Colposcopy)"
+      ]
+    },
+    {
+      "id": "psychiatry",
+      "name_en": "Psychiatry",
+      "name_vi": "Tâm thần",
+      "description": "Chuyên khoa chẩn đoán và điều trị các rối loạn tâm thần, sức khỏe tâm lý.",
+      "common_conditions": [
+        "Trầm cảm (Depression/Major Depressive Disorder)",
+        "Rối loạn lo âu (Anxiety Disorders)",
+        "Rối loạn lưỡng cực (Bipolar Disorder)",
+        "Tâm thần phân liệt (Schizophrenia)",
+        "Rối loạn stress sau chấn thương (PTSD)",
+        "Rối loạn ăn uống (Eating Disorders)",
+        "ADHD (Attention Deficit Hyperactivity Disorder)",
+        "Rối loạn nhân cách (Personality Disorders)"
+      ],
+      "common_symptoms": [
+        "Buồn chán (Sadness)",
+        "Lo lắng, căng thẳng (Anxiety)",
+        "Mất ngủ (Insomnia)",
+        "Ảo giác, hoang tưởng (Hallucinations, Delusions)",
+        "Thay đổi tâm trạng (Mood Swings)",
+        "Suy nghĩ tiêu cực (Negative Thoughts)",
+        "Ý định tự sát (Suicidal Ideation)"
+      ],
+      "diagnostic_tests": [
+        "Đánh giá tâm lý (Psychological Assessment)",
+        "Phỏng vấn lâm sàng (Clinical Interview)",
+        "Thang đo PHQ-9, GAD-7",
+        "Test nhận thức (Cognitive Testing)"
+      ]
+    },
+    {
+      "id": "ophthalmology",
+      "name_en": "Ophthalmology",
+      "name_vi": "Nhãn khoa",
+      "description": "Chuyên khoa chẩn đoán và điều trị các bệnh về mắt và thị giác.",
+      "common_conditions": [
+        "Cận thị (Myopia)",
+        "Viễn thị (Hyperopia)",
+        "Loạn thị (Astigmatism)",
+        "Đục thủy tinh thể (Cataract)",
+        "Glaucoma (Tăng nhãn áp)",
+        "Viêm kết mạc (Conjunctivitis)",
+        "Thoái hóa điểm vàng (Macular Degeneration)",
+        "Bệnh võng mạc do đái tháo đường (Diabetic Retinopathy)"
+      ],
+      "common_symptoms": [
+        "Mờ mắt (Blurred Vision)",
+        "Đỏ mắt (Red Eye)",
+        "Đau mắt (Eye Pain)",
+        "Chảy nước mắt (Epiphora)",
+        "Nhìn đôi (Diplopia)",
+        "Quầng sáng (Halos)",
+        "Giảm thị lực (Vision Loss)"
+      ],
+      "diagnostic_tests": [
+        "Đo thị lực (Visual Acuity Test)",
+        "Đo nhãn áp (Tonometry)",
+        "Soi đáy mắt (Fundoscopy)",
+        "OCT (Optical Coherence Tomography)",
+        "Test màu sắc (Color Vision Test)"
+      ]
+    },
+    {
+      "id": "ent",
+      "name_en": "Otolaryngology (ENT)",
+      "name_vi": "Tai Mũi Họng",
+      "description": "Chuyên khoa chẩn đoán và điều trị các bệnh về tai, mũi, họng và đầu cổ.",
+      "common_conditions": [
+        "Viêm tai giữa (Otitis Media)",
+        "Viêm xoang (Sinusitis)",
+        "Viêm amidan (Tonsillitis)",
+        "Viêm후두 (Laryngitis)",
+        "Nghẹt mũi mạn tính (Chronic Nasal Obstruction)",
+        "Ngủ ngáy, ngưng thở khi ngủ (Sleep Apnea)",
+        "Ù tai (Tinnitus)",
+        "Chóng mặt (Vertigo/Meniere's Disease)"
+      ],
+      "common_symptoms": [
+        "Đau tai (Otalgia)",
+        "Ngạt mũi (Nasal Congestion)",
+        "Đau họng (Sore Throat)",
+        "Khàn giọng (Hoarseness)",
+        "Chảy máu mũi (Epistaxis)",
+        "Giảm thính lực (Hearing Loss)",
+        "Chóng mặt (Dizziness)"
+      ],
+      "diagnostic_tests": [
+        "Soi tai mũi họng (ENT Endoscopy)",
+        "Đo thính lực (Audiometry)",
+        "CT xoang (Sinus CT)",
+        "Soi thanh quản (Laryngoscopy)",
+        "Test tiền đình (Vestibular Testing)"
+      ]
+    }
+  ]
+}
+
