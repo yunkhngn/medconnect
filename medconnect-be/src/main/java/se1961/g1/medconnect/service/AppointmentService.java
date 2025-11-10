@@ -341,4 +341,8 @@ public class AppointmentService {
         }
         appointmentRepository.deleteById(id);
     }
+
+    public Appointment saveAppointment(Appointment appointment) {
+        return appointmentRepository.save(appointment);
+    }
 }

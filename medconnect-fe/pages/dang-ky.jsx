@@ -36,125 +36,135 @@ export default function MedConnectRegister() {
   };
 
   const sendFirebaseTokenToBackend = async (user, extra = {}) => {
-  try {
-    setIsLoading(true);
-
-    await user.reload();
-    const idToken = await user.getIdToken(true);
-
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
-    const body = {
-      name: extra.name || user.displayName || "",
-      email: extra.email || user.email || "",
-    };
-
-    const response = await fetch(`${apiUrl}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    let responseBody = null;
     try {
-      responseBody = await response.json();
-    } catch (e) {
-      responseBody = null;
-    }
+      setIsLoading(true);
 
-    if (!response.ok) {
-      let errorText = "Đăng ký thất bại từ backend.";
-      if (responseBody && responseBody.message) errorText = responseBody.message;
-      console.error("Backend register failed:", response.status, errorText);
-      showMessage(errorText, "error");
-      setIsLoading(false);
-      return false;
-    }
+      await user.reload();
+      const idToken = await user.getIdToken(true);
 
-    showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
-    setTimeout(() => {
-      router.push("/dang-nhap");
-    }, 1500);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const body = {
+        name: extra.name || user.displayName || "",
+        email: extra.email || user.email || "",
+      };
 
-    return true;
-  } catch (error) {
-    console.error("Backend error:", error);
-    showMessage("Lỗi kết nối với máy chủ. Vui lòng thử lại.", "error");
-    setIsLoading(false);
-    return false;
-  }
-};
+      const response = await fetch(`${apiUrl}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(body),
+      });
 
+      let responseBody = null;
+      try {
+        responseBody = await response.json();
+      } catch (e) {
+        responseBody = null;
+      }
 
-  const handleEmailRegister = async (e) => {
-  e.preventDefault();
+      if (!response.ok) {
+        let errorText = "Đăng ký thất bại từ backend.";
+        if (responseBody && responseBody.message) errorText = responseBody.message;
+        console.error("Backend register failed:", response.status, errorText);
+        showMessage(errorText, "error");
+        setIsLoading(false);
+        return false;
+      }
 
-  if (!termsAccepted || !privacyAccepted) {
-    showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
-    return;
-  }
-
-  if (formData.password !== formData.confirmPassword) {
-    showMessage("Mật khẩu xác nhận không khớp.", "error");
-    return;
-  }
-
-  if (formData.password.length < 6) {
-    showMessage("Mật khẩu phải có ít nhất 6 ký tự.", "error");
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      formData.email,
-      formData.password
-    );
-
-    try {
-      await updateProfile(userCredential.user, { displayName: formData.fullName });
-    } catch (updErr) {
-      console.warn("Không thể update profile:", updErr);
-    }
-
-    const ok = await sendFirebaseTokenToBackend(userCredential.user, {
-      name: formData.fullName,
-      email: formData.email,
-    });
-
-    try {
-      await auth.signOut();
-    } catch (err) {
-      console.warn("Không thể signOut:", err);
-    }
-
-    if (ok) {
       showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
       setTimeout(() => {
         router.push("/dang-nhap");
-      }, 1);
-    } else {
+      }, 1500);
+
+      return true;
+    } catch (error) {
+      console.error("Backend error:", error);
+      showMessage("Lỗi kết nối với máy chủ. Vui lòng thử lại.", "error");
       setIsLoading(false);
+      return false;
+    }
+  };
+
+
+  const handleEmailRegister = async (e) => {
+    e.preventDefault();
+
+    if (!termsAccepted || !privacyAccepted) {
+      showMessage("Vui lòng đồng ý với điều khoản và chính sách bảo mật.", "error");
+      return;
     }
 
-  } catch (error) {
-    let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+    if (formData.password !== formData.confirmPassword) {
+      showMessage("Mật khẩu xác nhận không khớp.", "error");
+      return;
+    }
 
-    if (error.code === "auth/email-already-in-use")
-      errorMessage = "Email đã được sử dụng.";
-    else if (error.code === "auth/invalid-email")
-      errorMessage = "Email không hợp lệ.";
-    else if (error.code === "auth/weak-password")
-      errorMessage = "Mật khẩu quá yếu.";
+    if (formData.password.length < 12) {
+      showMessage("Mật khẩu phải có ít nhất 12 ký tự.", "error");
+      return;
+    }
 
-    showMessage(errorMessage, "error");
-    setIsLoading(false);
-  }
-};
+    if (!/[a-z]/.test(formData.password) || !/[A-Z]/.test(formData.password)) {
+      showMessage("Mật khẩu phải bao gồm cả chữ hoa và chữ thường.", "error");
+      return;
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      showMessage("Mật khẩu phải bao gồm ít nhất một ký tự đặc biệt.", "error");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      try {
+        await updateProfile(userCredential.user, { displayName: formData.fullName });
+      } catch (updErr) {
+        console.warn("Không thể update profile:", updErr);
+      }
+
+      const ok = await sendFirebaseTokenToBackend(userCredential.user, {
+        name: formData.fullName,
+        email: formData.email,
+      });
+
+      try {
+        await auth.signOut();
+      } catch (err) {
+        console.warn("Không thể signOut:", err);
+      }
+
+      if (ok) {
+        showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");
+        setTimeout(() => {
+          router.push("/dang-nhap");
+        }, 1);
+      } else {
+        setIsLoading(false);
+      }
+
+    } catch (error) {
+      let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+
+      if (error.code === "auth/email-already-in-use")
+        errorMessage = "Email đã được sử dụng.";
+      else if (error.code === "auth/invalid-email")
+        errorMessage = "Email không hợp lệ.";
+      else if (error.code === "auth/weak-password")
+        errorMessage = "Mật khẩu quá yếu.";
+
+      showMessage(errorMessage, "error");
+      setIsLoading(false);
+    }
+  };
 
 
   const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
@@ -164,19 +174,19 @@ export default function MedConnectRegister() {
     <Default title="Đăng ký - MedConnect">
       <div className="min-h-[calc(100vh-4em)] flex items-center justify-center p-10 relative overflow-hidden">
         {/* Background with blur */}
-                <div className="absolute inset-0">
-                  <Image
-                    src="/assets/homepage/cover.jpg"
-                    alt="Background"
-                    fill
-                    className="object-cover"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-blue-500/10"></div>
-                  <div className="absolute top-20 left-20 w-72 h-72 bg-green-200/20 rounded-full blur-3xl"></div>
-                  <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>
-                </div>
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/cover.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-blue-500/10"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-green-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-200/20 rounded-full blur-3xl"></div>
+        </div>
 
         {/* Content */}
         <div className="w-full min-h-[60vh] grid place-items-center p-4 sm:p-6 relative z-10">
@@ -194,8 +204,8 @@ export default function MedConnectRegister() {
                   {message.text && (
                     <div
                       className={`p-3 rounded-lg mb-4 text-sm ${message.type === "error"
-                          ? "bg-red-50 text-red-600 border border-red-200"
-                          : "bg-green-50 text-green-600 border border-green-200"
+                        ? "bg-red-50 text-red-600 border border-red-200"
+                        : "bg-green-50 text-green-600 border border-green-200"
                         }`}
                     >
                       {message.text}

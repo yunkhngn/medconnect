@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminFrame } from '@/components/layouts/';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Card,
   CardBody,
@@ -14,17 +15,10 @@ import {
   TableCell,
 } from '@heroui/react';
 
-// API Configuration
-const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
-  ENDPOINTS: {
-    GET_STATS: '/dashboard/stats',
-    GET_RECENT_APPOINTMENTS: '/dashboard/appointments/recent',
-    GET_REVENUE: '/dashboard/revenue',
-  },
-};
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalDoctors: 0,
     totalPatients: 0,
@@ -33,67 +27,90 @@ const AdminDashboard = () => {
     pendingAppointments: 0,
     completedAppointments: 0,
   });
-
   const [recentAppointments, setRecentAppointments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data
   useEffect(() => {
-    // TODO: Replace with actual API calls
-    setStats({
-      totalDoctors: 25,
-      totalPatients: 1250,
-      totalAppointments: 3420,
-      totalRevenue: 85000000,
-      pendingAppointments: 42,
-      completedAppointments: 3200,
-    });
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
-    setRecentAppointments([
-      {
-        id: 1,
-        patientName: 'Nguyễn Thị Mai',
-        doctorName: 'BS. Trần Văn A',
-        date: '2024-01-20 10:00',
-        status: 'confirmed',
-      },
-      {
-        id: 2,
-        patientName: 'Lê Văn B',
-        doctorName: 'BS. Phạm Thị C',
-        date: '2024-01-20 14:00',
-        status: 'pending',
-      },
-      {
-        id: 3,
-        patientName: 'Trần Thị D',
-        doctorName: 'BS. Lê Văn E',
-        date: '2024-01-21 09:00',
-        status: 'completed',
-      },
-    ]);
-  }, []);
+  const fetchDashboardData = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const token = await user.getIdToken();
+      
+      // Fetch stats
+      const statsResponse = await fetch(`${API_BASE_URL}/admin/dashboard/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success && statsData.data) {
+          setStats(statsData.data);
+        }
+      }
+      
+      // Fetch recent appointments
+      const appointmentsResponse = await fetch(`${API_BASE_URL}/admin/dashboard/recent-appointments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (appointmentsResponse.ok) {
+        const appointmentsData = await appointmentsResponse.json();
+        if (appointmentsData.success && appointmentsData.data) {
+          setRecentAppointments(appointmentsData.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending':
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case 'PENDING':
         return 'warning';
-      case 'confirmed':
+      case 'CONFIRMED':
         return 'primary';
-      case 'completed':
+      case 'FINISHED':
         return 'success';
+      case 'ONGOING':
+        return 'secondary';
+      case 'CANCELLED':
+      case 'DENIED':
+        return 'danger';
       default:
         return 'default';
     }
   };
 
   const getStatusLabel = (status) => {
-    switch (status) {
-      case 'pending':
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case 'PENDING':
         return 'Chờ xác nhận';
-      case 'confirmed':
+      case 'CONFIRMED':
         return 'Đã xác nhận';
-      case 'completed':
+      case 'FINISHED':
         return 'Hoàn thành';
+      case 'ONGOING':
+        return 'Đang khám';
+      case 'CANCELLED':
+        return 'Đã hủy';
+      case 'DENIED':
+        return 'Từ chối';
       default:
         return status;
     }
@@ -208,19 +225,24 @@ const AdminDashboard = () => {
               </Button>
             </CardHeader>
             <CardBody>
-              <Table removeWrapper aria-label="Recent appointments">
+              <Table removeWrapper aria-label="Recent appointments" isLoading={isLoading}>
                 <TableHeader>
                   <TableColumn>BỆNH NHÂN</TableColumn>
                   <TableColumn>BÁC SĨ</TableColumn>
                   <TableColumn>NGÀY GIỜ</TableColumn>
                   <TableColumn>TRẠNG THÁI</TableColumn>
                 </TableHeader>
-                <TableBody>
+                <TableBody emptyContent="Không có dữ liệu">
                   {recentAppointments.map((appointment) => (
                     <TableRow key={appointment.id}>
                       <TableCell>{appointment.patientName}</TableCell>
                       <TableCell>{appointment.doctorName}</TableCell>
-                      <TableCell className="text-sm">{appointment.date}</TableCell>
+                      <TableCell className="text-sm">
+                        <div>
+                          <p>{appointment.date && new Date(appointment.date).toLocaleDateString('vi-VN')}</p>
+                          <p className="text-xs text-gray-500">{appointment.slot}</p>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Chip size="sm" color={getStatusColor(appointment.status)}>
                           {getStatusLabel(appointment.status)}

@@ -213,6 +213,14 @@ public class PaymentService {
         return paymentRepository.findByPatient(patient);
     }
 
+    public List<Payment> getAllPayments() {
+        return paymentRepository.findAll();
+    }
+
+    public Optional<Payment> getPaymentById(Long id) {
+        return paymentRepository.findById(id);
+    }
+
     /**
      * Calculate consultation fee based on appointment type and doctor's speciality
      */
