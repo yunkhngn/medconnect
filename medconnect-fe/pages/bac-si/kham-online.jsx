@@ -493,7 +493,7 @@ export default function DoctorOnlineExamList() {
           {filteredAppointments.map((appointment) => {
             const { date, time } = formatDateTime(appointment.appointmentDate);
             const isPending = appointment.status === "PENDING";
-            const payInfo = paymentByAptId[appointment.id];
+            const payInfo = paymentByAptId[appointment.id] || paymentByAptId[appointment.appointmentId];
             return (
               <Card
                 key={appointment.id}

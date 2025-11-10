@@ -37,6 +37,7 @@ export default function OfflineExamListPage() {
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
+  const [paymentByAptId, setPaymentByAptId] = useState({});
 
   const counts = {
     pending: appointments.filter(a => a.status === "PENDING").length,
@@ -92,6 +93,27 @@ export default function OfflineExamListPage() {
     };
     load();
   }, [user, selectedDate, status, q]);
+
+  // Load payment status for listed appointments
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const u = auth.currentUser; if (!u) return;
+        const token = await u.getIdToken();
+        const ids = (appointments||[]).map(a=>a.appointmentId || a.id).filter(Boolean);
+        const results = await Promise.all(ids.map(async (id)=>{
+          try {
+            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!resp.ok) return [id, { hasPaid:false }];
+            const data = await resp.json();
+            return [id, { hasPaid: !!(data.hasPaid || data.status==='PAID'), status: data.status || 'UNPAID' }];
+          } catch { return [id, { hasPaid:false }]; }
+        }));
+        setPaymentByAptId(Object.fromEntries(results));
+      } catch {}
+    };
+    if (appointments.length) loadPayments();
+  }, [appointments]);
 
   const openAppointmentModal = async (apt) => {
     setSelectedAppointment(apt);
@@ -289,6 +311,7 @@ export default function OfflineExamListPage() {
             const pr = parseReason(apt.reason);
             const slotText = SLOT_TIMES[apt.slot] || apt.slot;
             const isPending = apt.status === "PENDING";
+            const payInfo = paymentByAptId[apt.appointmentId] || paymentByAptId[apt.id];
             return (
             <Card key={apt.appointmentId} className={`hover:shadow-md transition rounded-2xl ${isPending ? 'border-4 border-yellow-400' : 'border-2 border-gray-200'}`}>
               <CardBody className="p-5">
@@ -309,6 +332,11 @@ export default function OfflineExamListPage() {
                         <Chip size="sm" variant="flat" color="success" startContent={<Video size={12}/>}>Online</Chip>
                       ) : (
                         <Chip size="sm" variant="flat" color="default" startContent={<MapPin size={12}/>}>Tại phòng khám</Chip>
+                      )}
+                      {typeof payInfo !== 'undefined' && (
+                        <Chip size="sm" variant="flat" color={payInfo?.hasPaid ? 'success' : 'warning'}>
+                          {payInfo?.hasPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                        </Chip>
                       )}
                     </div>
                   </div>
@@ -369,21 +397,35 @@ export default function OfflineExamListPage() {
                 <Divider className="my-4" />
                 <div className="flex gap-2">
                   {apt.status === "PENDING" ? (
-                    <Button 
-                      size="sm" 
-                      color="primary" 
-                      className="flex-1"
-                      startContent={<Stethoscope size={16}/>}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const appointmentId = apt.appointmentId || apt.id;
-                        if (appointmentId) {
-                          router.push(`/bac-si/kham-offline/${appointmentId}`);
-                        }
-                      }}
-                    >
-                      Xác nhận
-                    </Button>
+                    payInfo?.hasPaid ? (
+                      <Button 
+                        size="sm" 
+                        color="primary" 
+                        className="flex-1"
+                        startContent={<Stethoscope size={16}/>}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const appointmentId = apt.appointmentId || apt.id;
+                          if (appointmentId) {
+                            router.push(`/bac-si/kham-offline/${appointmentId}`);
+                          }
+                        }}
+                      >
+                        Xác nhận
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        color="default" 
+                        variant="flat"
+                        className="flex-1"
+                        startContent={<Stethoscope size={16}/>}
+                        isDisabled
+                        title="Chưa thanh toán — không thể xác nhận"
+                      >
+                        Chưa thanh toán
+                      </Button>
+                    )
                   ) : apt.status === "CONFIRMED" || apt.status === "ONGOING" ? (
                     <Button 
                       size="sm" 

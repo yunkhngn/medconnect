@@ -35,10 +35,31 @@ export default function PatientOfflineExamList() {
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
+  const [paymentByAptId, setPaymentByAptId] = useState({});
 
   useEffect(() => {
     fetchOfflineAppointments();
   }, []);
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      try {
+        const user = auth.currentUser; if (!user) return;
+        const token = await user.getIdToken();
+        const ids = (appointments||[]).map(a=>a.id || a.appointmentId).filter(Boolean);
+        const results = await Promise.all(ids.map(async (id)=>{
+          try {
+            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!resp.ok) return [id, { hasPaid:false }];
+            const data = await resp.json();
+            return [id, { hasPaid: !!(data.hasPaid || data.status==='PAID'), status: data.status || 'UNPAID' }];
+          } catch { return [id, { hasPaid:false }]; }
+        }));
+        setPaymentByAptId(Object.fromEntries(results));
+      } catch {}
+    };
+    if (appointments.length) loadPayments();
+  }, [appointments]);
 
   const openAppointmentModal = async (apt) => {
     setSelectedAppointment(apt);
@@ -214,6 +235,20 @@ export default function PatientOfflineExamList() {
     const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+  const handlePay = (appointmentId) => {
+    router.push(`/thanh-toan/${appointmentId}`);
+  };
+
+  const handleCancel = async (appointmentId) => {
+    try {
+      const user = auth.currentUser; if (!user) return;
+      const token = await user.getIdToken();
+      const resp = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/cancel`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+      if (resp.ok) {
+        setAppointments(prev => prev.map(a => ((a.id||a.appointmentId)===appointmentId ? { ...a, status: 'CANCELLED' } : a)));
+      }
+    } catch(e){ console.error('Cancel failed', e); }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -394,6 +429,7 @@ export default function PatientOfflineExamList() {
             const date = new Date(appointment.date).toLocaleDateString('vi-VN');
             const time = SLOT_TIMES[appointment.slot] || appointment.slot;
             const isPending = appointment.status === "PENDING";
+            const payInfo = paymentByAptId[appointment.id] || paymentByAptId[appointment.appointmentId];
             return (
               <Card
                 key={appointment.id || appointment.appointmentId}
@@ -420,6 +456,11 @@ export default function PatientOfflineExamList() {
                           {getStatusText(appointment.status)}
                         </Chip>
                         <Chip size="sm" variant="flat" color="default" startContent={<MapPin size={12}/>}>Tại phòng khám</Chip>
+                        {typeof payInfo !== 'undefined' && (
+                          <Chip size="sm" variant="flat" color={payInfo?.hasPaid ? 'success' : 'warning'}>
+                            {payInfo?.hasPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                          </Chip>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -476,15 +517,36 @@ export default function PatientOfflineExamList() {
                   <Divider className="my-4" />
                   <div className="flex gap-2">
                     {appointment.status === "PENDING" && (
-                      <Button
-                        color="default"
-                        size="sm"
-                        variant="flat"
-                        className="flex-1"
-                        isDisabled
-                      >
-                        Chờ xác nhận
-                      </Button>
+                      payInfo?.hasPaid ? (
+                        <Button
+                          color="default"
+                          size="sm"
+                          variant="flat"
+                          className="flex-1"
+                          isDisabled
+                        >
+                          Chờ bác sĩ xác nhận
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            color="primary"
+                            size="sm"
+                            className="flex-1"
+                            onClick={(ev)=>{ev?.stopPropagation?.(); handlePay(appointment.id || appointment.appointmentId);}}
+                          >
+                            Thanh toán
+                          </Button>
+                          <Button
+                            color="danger"
+                            size="sm"
+                            variant="flat"
+                            onClick={(ev)=>{ev?.stopPropagation?.(); handleCancel(appointment.id || appointment.appointmentId);}}
+                          >
+                            Hủy lịch
+                          </Button>
+                        </>
+                      )
                     )}
                     {appointment.status === "CONFIRMED" && (
                       <Button

@@ -678,7 +678,7 @@ export default function PatientOnlineExamList() {
                                 color="primary"
                                 size="sm"
                                 className="flex-1"
-                                onPress={(e)=>{e.stopPropagation(); handlePay(appointment.id);}}
+                                onClick={(ev)=>{ev?.stopPropagation?.(); handlePay(appointment.id);}}
                               >
                                 Thanh toán
                               </Button>
@@ -686,7 +686,7 @@ export default function PatientOnlineExamList() {
                                 color="danger"
                                 size="sm"
                                 variant="flat"
-                                onPress={(e)=>{e.stopPropagation(); handleCancel(appointment.id);}}
+                                onClick={(ev)=>{ev?.stopPropagation?.(); handleCancel(appointment.id);}}
                               >
                                 Hủy lịch
                               </Button>
