@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AdminFrame, Grid } from '@/components/layouts/';
+import { useAuth } from '@/contexts/AuthContext';
+import ToastNotification from '@/components/ui/ToastNotification';
+import { useToast } from '@/hooks/useToast';
 import {
   Table,
   TableHeader,
@@ -9,152 +12,101 @@ import {
   TableCell,
   Button,
   Input,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
   Chip,
   Select,
   SelectItem,
   Pagination,
 } from '@heroui/react';
 
-// API Configuration - Based on schema: id, appointment_id, amount, status, transaction_id, created_at
-const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
-  ENDPOINTS: {
-    GET_PAYMENTS: '/payments',
-    CREATE_PAYMENT: '/payments',
-    UPDATE_PAYMENT: (id) => `/payments/${id}`,
-    DELETE_PAYMENT: (id) => `/payments/${id}`,
-    UPDATE_STATUS: (id) => `/payments/${id}/status`,
-  },
-};
+const API_BASE_URL = 'http://localhost:8080/api';
 
 const Payment = () => {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const { user } = useAuth();
+  const { toast, showToast, hideToast, success, error } = useToast();
   const [payments, setPayments] = useState([]);
   const [filteredPayments, setFilteredPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentPayment, setCurrentPayment] = useState(null);
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
-
-  const [formData, setFormData] = useState({
-    appointmentId: '',
-    amount: '',
-    status: 'pending',
-    transactionId: '',
-  });
 
   const statusOptions = [
     { value: 'all', label: 'Tất cả trạng thái', color: 'default' },
     { value: 'pending', label: 'Chờ thanh toán', color: 'warning' },
-    { value: 'completed', label: 'Đã thanh toán', color: 'success' },
+    { value: 'paid', label: 'Đã thanh toán', color: 'success' },
     { value: 'failed', label: 'Thất bại', color: 'danger' },
     { value: 'refunded', label: 'Đã hoàn tiền', color: 'secondary' },
   ];
 
-  // Mock data
-  const mockPayments = [
-    {
-      id: 1,
-      appointmentId: 1001,
-      patientName: 'Nguyễn Thị Mai',
-      doctorName: 'BS. Trần Văn A',
-      amount: 300000,
-      status: 'completed',
-      transactionId: 'TXN-20240115-001',
-      createdAt: '2024-01-15T10:30:00',
-    },
-    {
-      id: 2,
-      appointmentId: 1002,
-      patientName: 'Lê Văn B',
-      doctorName: 'BS. Phạm Thị C',
-      amount: 250000,
-      status: 'pending',
-      transactionId: 'TXN-20240116-002',
-      createdAt: '2024-01-16T14:20:00',
-    },
-  ];
-
   useEffect(() => {
-    fetchPayments();
-  }, []);
+    if (user) {
+      fetchPayments();
+    }
+  }, [user]);
 
   useEffect(() => {
     filterPayments();
   }, [searchQuery, selectedStatus, payments]);
 
   const fetchPayments = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call
-      setTimeout(() => {
-        setPayments(mockPayments);
-        setIsLoading(false);
-      }, 500);
-    } catch (error) {
-      console.error('Error fetching payments:', error);
+      const token = await user.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/admin/payments`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setPayments(data.data);
+      } else {
+        error(data.message || 'Không thể tải danh sách thanh toán');
+        setPayments([]);
+      }
+    } catch (err) {
+      console.error('Error fetching payments:', err);
+      error('Không thể tải danh sách thanh toán');
+      setPayments([]);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const createPayment = async () => {
-    try {
-      // TODO: Replace with actual API call
-      const newPayment = {
-        ...formData,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-        patientName: 'Mock Patient',
-        doctorName: 'Mock Doctor',
-      };
-      setPayments([...payments, newPayment]);
-      resetForm();
-    } catch (error) {
-      console.error('Error creating payment:', error);
-    }
-  };
-
-  const updatePayment = async () => {
-    try {
-      // TODO: Replace with actual API call
-      setPayments(
-        payments.map((p) =>
-          p.id === currentPayment.id ? { ...p, ...formData } : p
-        )
-      );
-      resetForm();
-    } catch (error) {
-      console.error('Error updating payment:', error);
-    }
-  };
-
-  const deletePayment = async (id) => {
-    if (!confirm('Bạn có chắc muốn xóa giao dịch này?')) return;
-
-    try {
-      // TODO: Replace with actual API call
-      setPayments(payments.filter((p) => p.id !== id));
-    } catch (error) {
-      console.error('Error deleting payment:', error);
-    }
-  };
-
   const updateStatus = async (id, newStatus) => {
+    if (!user) return;
+    
     try {
-      // TODO: Replace with actual API call
-      setPayments(
-        payments.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
-      );
-    } catch (error) {
-      console.error('Error updating status:', error);
+      const token = await user.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/admin/payments/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        success('Cập nhật trạng thái thành công!');
+        fetchPayments();
+      } else {
+        error(data.message || 'Cập nhật thất bại');
+      }
+    } catch (err) {
+      console.error('Error updating status:', err);
+      error('Lỗi khi cập nhật trạng thái');
     }
   };
 
@@ -164,9 +116,9 @@ const Payment = () => {
     if (searchQuery) {
       filtered = filtered.filter(
         (p) =>
-          p.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.doctorName.toLowerCase().includes(searchQuery.toLowerCase())
+          (p.transactionId && p.transactionId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (p.patientName && p.patientName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (p.doctorName && p.doctorName.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -175,40 +127,6 @@ const Payment = () => {
     }
 
     setFilteredPayments(filtered);
-  };
-
-  const handleEdit = (payment) => {
-    setCurrentPayment(payment);
-    setFormData({
-      appointmentId: payment.appointmentId,
-      amount: payment.amount,
-      status: payment.status,
-      transactionId: payment.transactionId,
-    });
-    onOpen();
-  };
-
-  const handleAdd = () => {
-    setCurrentPayment(null);
-    resetForm();
-    onOpen();
-  };
-
-  const resetForm = () => {
-    setFormData({
-      appointmentId: '',
-      amount: '',
-      status: 'pending',
-      transactionId: '',
-    });
-  };
-
-  const handleSubmit = () => {
-    if (currentPayment) {
-      updatePayment();
-    } else {
-      createPayment();
-    }
   };
 
   const paginatedPayments = React.useMemo(() => {
@@ -244,7 +162,7 @@ const Payment = () => {
           <div className="p-4 bg-green-50 rounded-lg">
             <p className="text-sm text-gray-600">Đã thanh toán</p>
             <p className="text-2xl font-bold text-green-600">
-              {calculateTotal('completed').toLocaleString()}đ
+              {calculateTotal('paid').toLocaleString()}đ
             </p>
           </div>
           <div className="p-4 bg-yellow-50 rounded-lg">
@@ -257,6 +175,12 @@ const Payment = () => {
             <p className="text-sm text-gray-600">Thất bại</p>
             <p className="text-2xl font-bold text-red-600">
               {calculateTotal('failed').toLocaleString()}đ
+            </p>
+          </div>
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <p className="text-sm text-gray-600">Đã hoàn tiền</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {calculateTotal('refunded').toLocaleString()}đ
             </p>
           </div>
         </div>
@@ -295,9 +219,6 @@ const Payment = () => {
             </svg>
           }
         />
-        <Button color="primary" onPress={handleAdd}>
-          + Thêm Giao Dịch
-        </Button>
       </div>
 
       <Table aria-label="Payments table">
@@ -316,11 +237,17 @@ const Payment = () => {
             <TableRow key={payment.id}>
               <TableCell>
                 <Chip size="sm" variant="flat" color="primary">
-                  {payment.transactionId}
+                  {payment.transactionId || 'N/A'}
                 </Chip>
               </TableCell>
               <TableCell>
-                <p className="text-sm text-gray-600">#{payment.appointmentId}</p>
+                <div>
+                  <p className="text-sm text-gray-600">#{payment.appointmentId}</p>
+                  <p className="text-xs text-gray-500">
+                    {payment.appointmentDate && new Date(payment.appointmentDate).toLocaleDateString('vi-VN')}
+                  </p>
+                  <p className="text-xs text-gray-500">{payment.appointmentSlot}</p>
+                </div>
               </TableCell>
               <TableCell>
                 <p className="font-medium text-sm">{payment.patientName}</p>
@@ -351,27 +278,36 @@ const Payment = () => {
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="light" onPress={() => handleEdit(payment)}>
-                    Sửa
-                  </Button>
                   {payment.status === 'pending' && (
                     <Button
                       size="sm"
                       color="success"
                       variant="flat"
-                      onPress={() => updateStatus(payment.id, 'completed')}
+                      onPress={() => updateStatus(payment.id, 'paid')}
                     >
-                      Xác nhận
+                      Xác nhận thanh toán
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    color="danger"
-                    variant="light"
-                    onPress={() => deletePayment(payment.id)}
-                  >
-                    Xóa
-                  </Button>
+                  {payment.status === 'paid' && (
+                    <Button
+                      size="sm"
+                      color="warning"
+                      variant="flat"
+                      onPress={() => updateStatus(payment.id, 'refunded')}
+                    >
+                      Hoàn tiền
+                    </Button>
+                  )}
+                  {payment.status === 'pending' && (
+                    <Button
+                      size="sm"
+                      color="danger"
+                      variant="flat"
+                      onPress={() => updateStatus(payment.id, 'failed')}
+                    >
+                      Thất bại
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>
@@ -388,69 +324,12 @@ const Payment = () => {
   return (
     <AdminFrame title="Quản Lý Thanh Toán">
       <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
-
-      {/* Add/Edit Modal */}
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>
-                {currentPayment ? 'Chỉnh sửa giao dịch' : 'Thêm giao dịch mới'}
-              </ModalHeader>
-              <ModalBody>
-                <div className="space-y-4">
-                  <Input
-                    label="Appointment ID"
-                    type="number"
-                    placeholder="1001"
-                    value={formData.appointmentId}
-                    onChange={(e) => setFormData({ ...formData, appointmentId: e.target.value })}
-                  />
-                  <Input
-                    label="Số tiền"
-                    type="number"
-                    placeholder="300000"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    endContent={<span className="text-gray-400">VNĐ</span>}
-                  />
-                  <Input
-                    label="Mã giao dịch"
-                    placeholder="TXN-20240115-001"
-                    value={formData.transactionId}
-                    onChange={(e) => setFormData({ ...formData, transactionId: e.target.value })}
-                  />
-                  <Select
-                    label="Trạng thái"
-                    selectedKeys={[formData.status]}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    {statusOptions.slice(1).map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </Select>
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Hủy
-                </Button>
-                <Button
-                  color="primary"
-                  onPress={() => {
-                    handleSubmit();
-                    onClose();
-                  }}
-                >
-                  {currentPayment ? 'Cập nhật' : 'Thêm'}
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <ToastNotification
+        isVisible={toast.isVisible}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+      />
     </AdminFrame>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import SocialLoginButtons from "@/components/ui/SocialLogin";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { Default } from "@/components/layouts/";
 import { Card, CardBody, Input, Button, Divider, Checkbox } from "@heroui/react";
@@ -30,14 +30,12 @@ export default function MedConnectLogin() {
     return () => unsubscribe && unsubscribe();
   }, []);
 
-  // Remember me (email + password persisted if chosen)
+  // Prefill email from localStorage history (do not store password)
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
-    const savedPassword = localStorage.getItem("rememberedPassword");
     const wasRemembered = localStorage.getItem("rememberMe") === "true";
     if (wasRemembered && savedEmail) {
       setEmail(savedEmail);
-      setPassword(savedPassword || "");
       setRememberMe(true);
     }
   }, []);
@@ -146,18 +144,19 @@ export default function MedConnectLogin() {
   setIsLoading(true);
 
   try {
-    await signOut(auth); 
+    await signOut(auth);
+
+    // Set Firebase auth persistence based on Remember me
+    await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
 
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-    // Remember me
+    // Remember only the email locally (let browser password manager store the password securely)
     if (rememberMe) {
       localStorage.setItem("rememberedEmail", email);
-      localStorage.setItem("rememberedPassword", password);
       localStorage.setItem("rememberMe", "true");
     } else {
       localStorage.removeItem("rememberedEmail");
-      localStorage.removeItem("rememberedPassword");
       localStorage.removeItem("rememberMe");
     }
 
@@ -172,7 +171,6 @@ export default function MedConnectLogin() {
     // Clear remembered credentials on auth failure
     const clearRemembered = () => {
       localStorage.removeItem("rememberedEmail");
-      localStorage.removeItem("rememberedPassword");
       localStorage.removeItem("rememberMe");
     };
 
@@ -276,6 +274,8 @@ export default function MedConnectLogin() {
                       label="Email"
                       labelPlacement="outside"
                       placeholder="example@gmail.com"
+                      name="email"
+                      autoComplete="username email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -286,6 +286,8 @@ export default function MedConnectLogin() {
                       label="Mật khẩu"
                       labelPlacement="outside"
                       placeholder="Nhập mật khẩu của bạn"
+                      name="current-password"
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       endContent={

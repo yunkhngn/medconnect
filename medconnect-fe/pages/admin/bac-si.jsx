@@ -169,15 +169,40 @@ const Doctor = () => {
   };
 
   const deleteDoctor = async (id) => {
-    if (!confirm('Bạn có chắc muốn xóa bác sĩ này?')) return;
+    if (!confirm('Bạn có chắc muốn vô hiệu hóa bác sĩ này?')) return;
     
     try {
-      await doctorAPI.deleteDoctor(id, user);
-      toast.success('Xóa bác sĩ thành công');
+      // Chuyển status thành INACTIVE thay vì xóa
+      const doctor = doctors.find(d => d.id === id);
+      if (!doctor) {
+        toast.error('Không tìm thấy bác sĩ');
+        return;
+      }
+      
+      const updateData = {
+        ...doctor,
+        status: 'INACTIVE'
+      };
+      
+      const token = await user.getIdToken();
+      const response = await fetch(`http://localhost:8080/api/admin/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Không thể cập nhật trạng thái bác sĩ');
+      }
+      
+      toast.success('Đã vô hiệu hóa bác sĩ');
       await fetchDoctors();
     } catch (error) {
-      console.error('Error deleting doctor:', error);
-      toast.error('Không thể xóa bác sĩ');
+      console.error('Error updating doctor status:', error);
+      toast.error('Không thể vô hiệu hóa bác sĩ');
     }
   };
 
@@ -404,8 +429,13 @@ const Doctor = () => {
                     <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
                       Chỉnh sửa
                     </DropdownItem>
-                    <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deleteDoctor(doctor.id)}>
-                      Xóa
+                    <DropdownItem 
+                      key="deactivate" 
+                      className="text-danger" 
+                      color="danger" 
+                      onPress={() => deleteDoctor(doctor.id)}
+                    >
+                      Vô hiệu hóa
                     </DropdownItem>
                   </DropdownMenu>
                 </Dropdown>

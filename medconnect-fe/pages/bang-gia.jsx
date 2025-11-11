@@ -378,7 +378,7 @@ const PricingPage = () => {
                   </p>
                   <div className="flex justify-center">
                     <Button
-                      onClick={() => router.push('/lien-he')}
+                      onClick={() => router.push('/dang-nhap')}
                       color="primary"
                       size="lg"
                     >

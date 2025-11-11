@@ -23,10 +23,34 @@ export default function PatientOnlineExamList() {
   const [prescription, setPrescription] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [paymentByAptId, setPaymentByAptId] = useState({}); // { [id]: { hasPaid, status } }
 
   useEffect(() => {
     fetchOnlineAppointments();
   }, []);
+
+  useEffect(() => {
+    // After appointments loaded, fetch payment status for each
+    const loadPayments = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+        const ids = (appointments || []).map(a => a.id || a.appointmentId).filter(Boolean);
+        const results = await Promise.all(ids.map(async (id) => {
+          try {
+            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!resp.ok) return [id, { hasPaid: false }];
+            const data = await resp.json();
+            return [id, { hasPaid: !!(data.hasPaid || data.status === 'PAID'), status: data.status || (data.hasPaid ? 'PAID' : 'UNPAID') }];
+          } catch { return [id, { hasPaid: false }]; }
+        }));
+        const map = Object.fromEntries(results);
+        setPaymentByAptId(map);
+      } catch {}
+    };
+    if (appointments.length) loadPayments();
+  }, [appointments]);
 
   const openAppointmentModal = async (apt) => {
     setSelectedAppointment(apt);
@@ -334,6 +358,21 @@ export default function PatientOnlineExamList() {
     router.push(`/nguoi-dung/kham-online/${appointmentId}`);
   };
 
+  const handlePay = (appointmentId) => {
+    router.push(`/thanh-toan/${appointmentId}`);
+  };
+
+  const handleCancel = async (appointmentId) => {
+    try {
+      const user = auth.currentUser; if (!user) return;
+      const token = await user.getIdToken();
+      const resp = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/cancel`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+      if (resp.ok) {
+        setAppointments(prev => prev.map(a => ( (a.id||a.appointmentId)===appointmentId ? { ...a, status: 'CANCELLED' } : a)));
+      }
+    } catch (e) { console.error('Cancel failed', e); }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -502,6 +541,7 @@ export default function PatientOnlineExamList() {
                 const { date } = formatDateTime(appointment.appointmentDate);
                 const time = slotToRange(appointment.slot) || formatDateTime(appointment.appointmentDate).time;
                 const isPending = appointment.status === "PENDING";
+                const payInfo = paymentByAptId[appointment.id];
                 return (
                   <Card
                     key={appointment.id}
@@ -528,6 +568,11 @@ export default function PatientOnlineExamList() {
                               {getStatusText(appointment.status)}
                             </Chip>
                             <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
+                            {typeof payInfo !== 'undefined' && (
+                              <Chip size="sm" variant="flat" color={payInfo?.hasPaid ? 'success' : 'warning'}>
+                                {payInfo?.hasPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                              </Chip>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -617,15 +662,36 @@ export default function PatientOnlineExamList() {
                       <Divider className="my-4" />
                       <div className="flex gap-2">
                         {appointment.status === "PENDING" && (
-                          <Button
-                            color="default"
-                            size="sm"
-                            variant="flat"
-                            className="flex-1"
-                            isDisabled
-                          >
-                            Chờ xác nhận
-                          </Button>
+                          payInfo?.hasPaid ? (
+                            <Button
+                              color="default"
+                              size="sm"
+                              variant="flat"
+                              className="flex-1"
+                              isDisabled
+                            >
+                              Chờ bác sĩ xác nhận
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                color="primary"
+                                size="sm"
+                                className="flex-1"
+                                onClick={(ev)=>{ev?.stopPropagation?.(); handlePay(appointment.id);}}
+                              >
+                                Thanh toán
+                              </Button>
+                              <Button
+                                color="danger"
+                                size="sm"
+                                variant="flat"
+                                onClick={(ev)=>{ev?.stopPropagation?.(); handleCancel(appointment.id);}}
+                              >
+                                Hủy lịch
+                              </Button>
+                            </>
+                          )
                         )}
                         {appointment.status === "CONFIRMED" && (
                           <Button
