@@ -14,10 +14,19 @@ services:
       - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-      - ./medconnect-be/createdb.sql:/docker-entrypoint-initdb.d/createdb.sql:ro
+      # Mount createdb and mock-data scripts
+      - ./medconnect-be/createdb.sql:/scripts/createdb.sql:ro
+      - ./medconnect-be/mock-data.sql:/scripts/mock-data.sql:ro
     networks:
       - medconnect-network
+    command: >
+      /bin/bash -c "
+      /opt/mssql/bin/sqlservr &
+      sleep 30s &&
+      /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $${SA_PASSWORD} -d master -i /scripts/createdb.sql -C &&
+      echo 'Database MedConnect created successfully!' &&
+      wait
+      "
     healthcheck:
       test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD:-MedConnect@2025}" -Q "SELECT 1" -C || exit 1
       interval: 10s

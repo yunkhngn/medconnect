@@ -6,6 +6,8 @@ import { Default } from "@/components/layouts/";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import { generatePasswordResetEmail } from "@/utils/emailTemplates";
+import { sendEmailViaAPI } from "@/utils/emailHelper";
 
 const ForgotPassword = () => {
   const router = useRouter();
@@ -28,7 +30,20 @@ const ForgotPassword = () => {
 
     setIsLoading(true);
     try {
+      // Send Firebase password reset email
       await sendPasswordResetEmail(auth, email);
+      
+      // Also send custom email via our backend
+      try {
+        const resetLink = `http://localhost:3000/dang-nhap`; // Firebase will send its own link
+        const { subject, html } = generatePasswordResetEmail("Người dùng", resetLink);
+        await sendEmailViaAPI(email, subject, html);
+        console.log("✅ Custom password reset email sent");
+      } catch (emailError) {
+        console.error("⚠️ Failed to send custom email:", emailError);
+        // Don't block if custom email fails, Firebase email was sent
+      }
+      
       showMessage("Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư.", "success");
 
       setTimeout(() => {

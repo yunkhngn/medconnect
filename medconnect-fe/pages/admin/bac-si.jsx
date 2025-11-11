@@ -4,6 +4,8 @@ import { AdminFrame, Grid } from '@/components/layouts/';
 import { useToast } from '@/hooks/useToast';
 import ToastNotification from '@/components/ui/ToastNotification';
 import { doctorAPI } from '@/services/api';
+import { generateDoctorApprovalEmail } from '@/utils/emailTemplates';
+import { sendEmailViaAPI } from '@/utils/emailHelper';
 import {
   Table,
   TableHeader,
@@ -147,6 +149,8 @@ const Doctor = () => {
 
   const updateDoctor = async () => {
     try {
+      const wasApproved = currentDoctor.status === 'PENDING' && formData.status === 'ACTIVE';
+      
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -159,13 +163,43 @@ const Doctor = () => {
       };
       
       await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
-      toast.success('Cập nhật bác sĩ thành công');
+      
+      // Send approval email if doctor was just approved
+      if (wasApproved) {
+        try {
+          const tempPassword = generateTempPassword(); // Random 8-character password
+          const { subject, html } = generateDoctorApprovalEmail(
+            formData.name,
+            formData.email,
+            tempPassword
+          );
+          await sendEmailViaAPI(formData.email, subject, html);
+          console.log(`✅ Approval email sent to ${formData.email}`);
+          toast.success('Đã duyệt bác sĩ và gửi email thông báo');
+        } catch (emailError) {
+          console.error('⚠️ Failed to send approval email:', emailError);
+          toast.warning('Đã duyệt bác sĩ nhưng không thể gửi email');
+        }
+      } else {
+        toast.success('Cập nhật bác sĩ thành công');
+      }
+      
       await fetchDoctors();
       resetForm();
     } catch (error) {
       console.error('Error updating doctor:', error);
       toast.error(error.message || 'Không thể cập nhật bác sĩ');
     }
+  };
+
+  // Helper function to generate random temporary password
+  const generateTempPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   };
 
   const deleteDoctor = async (id) => {
