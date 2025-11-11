@@ -6,6 +6,7 @@ import ToastNotification from '@/components/ui/ToastNotification';
 import { doctorAPI } from '@/services/api';
 import { generateDoctorApprovalEmail } from '@/utils/emailTemplates';
 import { sendEmailViaAPI } from '@/utils/emailHelper';
+import { FileText } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -29,6 +30,8 @@ import {
   DropdownItem,
   Select,
   SelectItem,
+  Card,
+  CardBody,
   Pagination,
 } from '@heroui/react';
 
@@ -101,6 +104,7 @@ const Doctor = () => {
         email: d.email,
         phone: d.phone,
         licenseId: d.licenseId,
+        license: d.license,  // ✅ Include license object
         specializationLabel: d.specialty,
         userId: d.userId,
         avatar: d.avatar,
@@ -495,14 +499,24 @@ const Doctor = () => {
       <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
 
       {/* Add/Edit Modal */}
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
+      <Modal 
+        isOpen={isOpen} 
+        onOpenChange={onOpenChange} 
+        size="3xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "max-h-[90vh]",
+          body: "py-6",
+          backdrop: "bg-black/50 backdrop-opacity-40"
+        }}
+      >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader>
+              <ModalHeader className="flex flex-col gap-1 border-b">
                 {currentDoctor ? 'Chỉnh sửa bác sĩ' : 'Thêm bác sĩ mới'}
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="Họ và tên"
@@ -575,6 +589,172 @@ const Doctor = () => {
                       rows="4"
                     />
                   </div>
+
+                  {/* Certificate Display Section - Only in Edit Mode */}
+                  {currentDoctor && currentDoctor.license && (
+                    <div className="col-span-2 mt-4">
+                      <label className="block text-sm font-medium mb-3 text-gray-700">
+                        📋 Chứng chỉ hành nghề
+                      </label>
+                      <div className="relative bg-gradient-to-br from-white rounded-xl p-6 border-4 border-double border-teal-200 shadow-lg">
+                        {/* Status Badge - Top Left */}
+                        <div className="absolute top-4 left-4">
+                          <Chip
+                            size="md"
+                            color={currentDoctor.license.is_active && !currentDoctor.license.is_expired ? "success" : "danger"}
+                            variant="shadow"
+                            className="font-semibold"
+                          >
+                            {currentDoctor.license.is_expired ? "Đã hết hạn" : currentDoctor.license.is_active ? "Hiệu lực" : "Không hoạt động"}
+                          </Chip>
+                        </div>
+
+                        {/* View Image Button - Top Right */}
+                        {currentDoctor.license.proof_images && (
+                          <div className="absolute top-4 right-4">
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              color="primary"
+                              startContent={<FileText size={16} />}
+                              onPress={() => {
+                                try {
+                                  const images = JSON.parse(currentDoctor.license.proof_images);
+                                  window.open(images[0], '_blank');
+                                } catch (error) {
+                                  console.error('Error parsing proof images:', error);
+                                  // Fallback: try opening as single URL
+                                  window.open(currentDoctor.license.proof_images, '_blank');
+                                }
+                              }}
+                              className="text-blue-600 hover:bg-blue-100"
+                            >
+                              Xem ảnh
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Header */}
+                        <div className="text-center mb-6 mt-8">
+                          <div className="flex justify-center mb-3">
+                            <div className="bg-gradient-to-br from-teal-500 to-green-500 p-3 rounded-full">
+                              <FileText size={32} className="text-white" />
+                            </div>
+                          </div>
+                          <h4 className="text-sm uppercase tracking-wider text-gray-600 font-semibold mb-1">
+                            Giấy phép hành nghề
+                          </h4>
+                          <p className="text-2xl font-bold text-teal-700 tracking-wide">
+                            {currentDoctor.license.license_number}
+                          </p>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="flex items-center gap-2 mb-6">
+                          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-300 to-transparent"></div>
+                          <div className="w-2 h-2 bg-teal-400 rounded-full"></div>
+                          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-teal-300 to-transparent"></div>
+                        </div>
+
+                        {/* Information Grid */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Ngày cấp</p>
+                              <div className="flex items-center gap-2 text-gray-800">
+                                <span className="font-medium">{currentDoctor.license.issued_date || 'N/A'}</span>
+                              </div>
+                            </div>
+                            {currentDoctor.license.issued_by && (
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Nơi cấp</p>
+                                <div className="flex items-start gap-2 text-gray-800">
+                                  <span className="font-medium text-sm leading-tight">{currentDoctor.license.issued_by}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Hết hạn</p>
+                              <div className="flex items-center gap-2 text-gray-800">
+                                <span className="font-medium">{currentDoctor.license.expiry_date || 'Vô thời hạn'}</span>
+                              </div>
+                            </div>
+                            {currentDoctor.license.issuer_title && (
+                              <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Chức vụ</p>
+                                <div className="flex items-start gap-2 text-gray-800">
+                                  <span className="font-medium text-sm leading-tight">{currentDoctor.license.issuer_title}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Scope of Practice */}
+                        {currentDoctor.license.scope_of_practice && (
+                          <div className="mb-4">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-semibold">Phạm vi</p>
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                              <span className="font-medium text-sm text-gray-800 leading-tight">
+                                {currentDoctor.license.scope_of_practice}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {currentDoctor.license.notes && (
+                          <div className="mb-4">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-semibold">Ghi chú</p>
+                            <div className="bg-yellow-50 p-3 rounded-lg border-l-4 border-yellow-400">
+                              <span className="font-medium text-sm text-gray-800 leading-tight">
+                                {currentDoctor.license.notes}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Expiry Warning */}
+                        {currentDoctor.license.days_until_expiry !== null && 
+                         currentDoctor.license.days_until_expiry > 0 && 
+                         currentDoctor.license.days_until_expiry < 365 && (
+                          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-lg p-3 flex items-center gap-3">
+                            <div className="bg-orange-500 p-2 rounded-full">
+                              <FileText size={18} className="text-white" />
+                            </div>
+                            <div>
+                              <p className="text-orange-800 font-semibold text-sm">Sắp hết hạn</p>
+                              <p className="text-orange-600 text-xs">Còn {currentDoctor.license.days_until_expiry} ngày</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Decorative Seal/Stamp */}
+                        <div className="absolute bottom-6 right-6 opacity-10">
+                          <div className="w-20 h-20 rounded-full border-4 border-teal-500 flex items-center justify-center">
+                            <FileText size={40} className="text-teal-500" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* No License State */}
+                  {currentDoctor && !currentDoctor.license && (
+                    <div className="col-span-2 mt-4">
+                      <label className="block text-sm font-medium mb-3 text-gray-700">
+                        📋 Chứng chỉ hành nghề
+                      </label>
+                      <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                        <FileText size={64} className="mb-3 text-gray-400" />
+                        <p className="text-gray-600 font-medium">Chưa có chứng chỉ hành nghề</p>
+                        <p className="text-sm text-gray-500 mt-1">Bác sĩ chưa upload chứng chỉ</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </ModalBody>
               <ModalFooter>

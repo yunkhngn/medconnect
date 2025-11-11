@@ -44,7 +44,37 @@ public class EmailService {
     }
 
     /**
-     * Send appointment confirmation email
+     * Send appointment PENDING confirmation email (ORANGE/CAM - After Payment)
+     * Sent after payment is successful, waiting for doctor confirmation
+     */
+    public String sendAppointmentPendingConfirmation(
+            String to,
+            String patientName,
+            String doctorName,
+            String appointmentDate,
+            String appointmentTime,
+            String appointmentType
+    ) throws ResendException {
+        try {
+            Map<String, String> variables = new HashMap<>();
+            variables.put("patientName", patientName);
+            variables.put("doctorName", doctorName);
+            variables.put("appointmentDate", appointmentDate);
+            variables.put("appointmentTime", appointmentTime);
+            variables.put("appointmentType", appointmentType);
+            
+            String html = templateLoader.loadTemplate("appointment-pending", variables);
+            String subject = "Đơn đặt lịch đang chờ xác nhận - MedConnect";
+            
+            return sendEmail(to, subject, html);
+        } catch (IOException e) {
+            throw new ResendException("Failed to load email template: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Send appointment CONFIRMED email (GREEN/XANH - After Doctor Confirms)
+     * Sent when doctor confirms the appointment
      */
     public String sendAppointmentConfirmation(
             String to,

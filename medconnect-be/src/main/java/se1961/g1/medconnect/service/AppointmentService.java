@@ -42,6 +42,9 @@ public class AppointmentService {
 
     @Autowired
     private PaymentRepository paymentRepository;
+    
+    @Autowired
+    private EmailService emailService;
 
     // ============================================
     // GET APPOINTMENTS
@@ -318,7 +321,36 @@ public class AppointmentService {
         }
         
         appointment.setStatus(AppointmentStatus.CONFIRMED);
-        return appointmentRepository.save(appointment);
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        
+        // 📧 Send "CONFIRMED" email to patient (GREEN/XANH)
+        try {
+            Patient patient = appointment.getPatient();
+            Doctor doctor = appointment.getDoctor();
+            
+            String patientEmail = patient.getEmail();
+            String patientName = patient.getName();
+            String doctorName = doctor.getName();
+            String appointmentDate = appointment.getDate().toString();
+            String appointmentTime = appointment.getSlot().name();
+            String specialization = doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Tổng quát";
+            
+            emailService.sendAppointmentConfirmation(
+                patientEmail,
+                patientName,
+                doctorName,
+                appointmentDate,
+                appointmentTime,
+                specialization
+            );
+            
+            System.out.println("✅ Confirmation email sent to: " + patientEmail);
+        } catch (Exception emailError) {
+            System.err.println("⚠️ Failed to send confirmation email: " + emailError.getMessage());
+            // Don't fail the confirmation if email fails
+        }
+        
+        return savedAppointment;
     }
     
     public Appointment denyAppointment(Long id) throws Exception {

@@ -389,14 +389,46 @@ public class AdminController {
             doctorData.put("avatar", doctor.getAvatarUrl());
             doctorData.put("status", doctor.getStatus() != null ? doctor.getStatus().name() : null);
 
-            // Get license number from active license
+            // Get active license with full details
             License activeLicense = doctor.getActiveLicense();
-            doctorData.put("licenseId", activeLicense != null ? activeLicense.getLicenseNumber() : null);
+            if (activeLicense != null) {
+                doctorData.put("licenseId", activeLicense.getLicenseId());
+                doctorData.put("license", mapLicenseToResponse(activeLicense));
+            } else {
+                doctorData.put("licenseId", null);
+                doctorData.put("license", null);
+            }
 
             response.add(doctorData);
         }
 
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Helper method to map License entity to response Map
+     */
+    private Map<String, Object> mapLicenseToResponse(License license) {
+        if (license == null) {
+            return null;
+        }
+        
+        Map<String, Object> map = new HashMap<>();
+        map.put("license_id", license.getLicenseId());
+        map.put("license_number", license.getLicenseNumber());
+        map.put("issued_date", license.getIssuedDate());
+        map.put("expiry_date", license.getExpiryDate());
+        map.put("issued_by", license.getIssuedBy());
+        map.put("issuer_title", license.getIssuerTitle());
+        map.put("scope_of_practice", license.getScopeOfPractice());
+        map.put("is_active", license.getIsActive());
+        map.put("notes", license.getNotes());
+        map.put("proof_images", license.getProofImages());
+        map.put("is_expired", license.isExpired());
+        map.put("is_valid", license.isValid());
+        map.put("days_until_expiry", license.getDaysUntilExpiry());
+        
+        return map;
     }
 
     @PostMapping
@@ -456,6 +488,17 @@ public class AdminController {
         if (doctor.getSpeciality() != null) {
             response.put("specialty", doctor.getSpeciality().getName());
             response.put("specialityId", doctor.getSpeciality().getSpecialityId());
+            response.put("specializationLabel", doctor.getSpeciality().getName());
+        }
+        
+        // Include license information
+        License activeLicense = doctor.getActiveLicense();
+        if (activeLicense != null) {
+            response.put("licenseId", activeLicense.getLicenseId());
+            response.put("license", mapLicenseToResponse(activeLicense));
+        } else {
+            response.put("licenseId", null);
+            response.put("license", null);
         }
         
         return response;
