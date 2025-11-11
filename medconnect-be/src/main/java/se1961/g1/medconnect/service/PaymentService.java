@@ -172,30 +172,42 @@ public class PaymentService {
     }
 
     public Payment handleIPN(Map<String, String> vnpResponse) throws Exception {
+        System.out.println("=== VNPAY CALLBACK RECEIVED ===");
+        System.out.println("Response params: " + vnpResponse);
+        
         String txnRef = vnpResponse.get("vnp_TxnRef");
         String responseCode = vnpResponse.get("vnp_ResponseCode");
+        
+        System.out.println("TxnRef: " + txnRef);
+        System.out.println("ResponseCode: " + responseCode);
 
         if (txnRef == null) {
+            System.err.println("ERROR: Missing transaction reference");
             throw new Exception("Invalid IPN: missing transaction reference");
         }
 
         Long paymentId = Long.parseLong(txnRef.split("-")[0]);
+        System.out.println("Extracted PaymentId: " + paymentId);
+        
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new Exception("Payment not found"));
 
+        System.out.println("Current payment status: " + payment.getStatus());
+
         if ("00".equals(responseCode)) { // success
+            System.out.println("Payment SUCCESS - updating to PAID");
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaidAt(LocalDateTime.now());
             payment.setGatewayResponse(vnpResponse.toString());
 
-            Appointment appointment = payment.getAppointment();
-            if (appointment != null) {
-                appointment.setStatus(se1961.g1.medconnect.enums.AppointmentStatus.CONFIRMED);
-                appointmentRepository.save(appointment);
-            }
+            // Don't auto-confirm appointment - let doctor confirm manually after payment
+            // Appointment status remains PENDING until doctor confirms
+            System.out.println("Payment marked as PAID. Appointment remains PENDING for doctor confirmation.");
 
             paymentRepository.save(payment);
+            System.out.println("Payment saved with status: " + payment.getStatus());
         } else {
+            System.out.println("Payment FAILED with code: " + responseCode);
             payment.setStatus(PaymentStatus.FAILED);
             payment.setGatewayResponse(vnpResponse.toString());
 
