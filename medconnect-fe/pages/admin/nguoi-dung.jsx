@@ -29,7 +29,21 @@ import {
   Pagination,
 } from '@heroui/react';
 
+<<<<<<< HEAD
+// ✅ API Configuration
+const API_CONFIG = {
+  BASE_URL: 'http://localhost:8080/api',
+  ENDPOINTS: {
+    GET_PATIENTS: '/patients',
+    CREATE_PATIENT: '/patients',
+    UPDATE_PATIENT: (id) => `/patients/${id}`,
+    DELETE_PATIENT: (id) => `/patients/${id}`,
+    TOGGLE_STATUS: (id) => `/patients/${id}/status`,
+  },
+};
+=======
 const API_BASE_URL = 'http://localhost:8080/api';
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
 
 const Patient = () => {
   const { user } = useAuth();
@@ -62,8 +76,16 @@ const Patient = () => {
   const [statusOptions, setStatusOptions] = useState([
     { value: 'all', label: 'Tất cả trạng thái' },
     { value: 'active', label: 'Hoạt động' },
+<<<<<<< HEAD
+    { value: 'inactive', label: 'Tạm ngưng' },
+    { value: 'blocked', label: 'Skibidi' },
+  ];
+
+  const genderOptions = [
+=======
   ]);
   const [genderOptions, setGenderOptions] = useState([
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
     { value: 'male', label: 'Nam' },
     { value: 'female', label: 'Nữ' },
     { value: 'other', label: 'Khác' },
@@ -82,7 +104,40 @@ const Patient = () => {
     { value: 'AB-', label: 'AB-' },
     { value: 'O+', label: 'O+' },
     { value: 'O-', label: 'O-' },
+<<<<<<< HEAD
+  ];
+
+  // ✅ Fetch patients from backend
+  const fetchPatients = async () => {
+  setIsLoading(true);
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/patients/all-with-user`);
+    if (!response.ok) {
+      console.error('❌ HTTP error', response.status);
+      setPatients([]);
+      return;
+    }
+
+    const text = await response.text();
+    if (!text) {
+      console.error('❌ Response empty');
+      setPatients([]);
+      return;
+    }
+
+    const data = JSON.parse(text);
+    setPatients(data);
+  } catch (error) {
+    console.error('❌ Error fetching patients:', error);
+    setPatients([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+=======
   ]);
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
 
   // Fetch constants from backend
   useEffect(() => {
@@ -119,6 +174,21 @@ const Patient = () => {
     filterPatients();
   }, [searchQuery, selectedGender, selectedBloodType, patients]);
 
+<<<<<<< HEAD
+  const createPatient = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CREATE_PATIENT}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        await fetchPatients();
+        resetForm();
+      }
+    } catch (error) {
+      console.error('❌ Error creating patient:', error);
+=======
   const fetchPatients = async () => {
     if (!user) return;
     
@@ -204,6 +274,7 @@ const Patient = () => {
     } catch (error) {
       console.error('Error updating patient:', error);
       toast.error('Lỗi khi cập nhật bệnh nhân');
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
     }
   };
 
@@ -211,6 +282,19 @@ const Patient = () => {
     if (!user) return;
     
     try {
+<<<<<<< HEAD
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.UPDATE_PATIENT(currentPatient.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        await fetchPatients();
+        resetForm();
+      }
+    } catch (error) {
+      console.error('❌ Error updating patient:', error);
+=======
       const token = await user.getIdToken();
       const response = await fetch(`${API_BASE_URL}/admin/patients`, {
         method: 'POST',
@@ -233,14 +317,33 @@ const Patient = () => {
     } catch (error) {
       console.error('Error creating patient:', error);
       toast.error(error.message || 'Lỗi khi tạo bệnh nhân');
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
     }
   };
 
   const deletePatient = async (id) => {
     if (!user) return;
     if (!confirm('Bạn có chắc muốn xóa người dùng này?')) return;
-    
     try {
+<<<<<<< HEAD
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DELETE_PATIENT(id)}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) await fetchPatients();
+    } catch (error) {
+      console.error('❌ Error deleting patient:', error);
+    }
+  };
+
+  const toggleStatus = async (id) => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.TOGGLE_STATUS(id)}`, {
+        method: 'PUT',
+      });
+      if (response.ok) await fetchPatients();
+    } catch (error) {
+      console.error('❌ Error toggling status:', error);
+=======
       const token = await user.getIdToken();
       const response = await fetch(`${API_BASE_URL}/admin/patients/${id}`, {
         method: 'DELETE',
@@ -260,6 +363,7 @@ const Patient = () => {
     } catch (error) {
       console.error('Error deleting patient:', error);
       toast.error('Lỗi khi xóa bệnh nhân');
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
     }
   };
 
@@ -269,9 +373,9 @@ const Patient = () => {
     if (searchQuery) {
       filtered = filtered.filter(
         (p) =>
-          p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.phone.includes(searchQuery)
+          p.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.phone?.includes(searchQuery)
       );
     }
 
@@ -296,10 +400,17 @@ const Patient = () => {
     }
     
     setFormData({
+<<<<<<< HEAD
+      fullName: patient.fullName || '',
+      email: patient.email || '',
+      phone: patient.phone || '',
+      address: patient.address || '',
+=======
       fullName: patient.fullName,
       email: patient.email,
       phone: patient.phone,
       address: addressValue || '',
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
       dateOfBirth: patient.dateOfBirth || '',
       gender: patient.gender || '',
       bloodType: patient.bloodType || '',
@@ -331,12 +442,9 @@ const Patient = () => {
     });
   };
 
-  const handleSubmit = () => {
-    if (currentPatient) {
-      updatePatient();
-    } else {
-      createPatient();
-    }
+  const handleSubmit = async () => {
+    if (currentPatient) await updatePatient();
+    else await createPatient();
   };
 
   const paginatedPatients = React.useMemo(() => {
@@ -347,7 +455,7 @@ const Patient = () => {
 
   const pages = Math.ceil(filteredPatients.length / rowsPerPage);
 
-  // Left Panel - Stats & Filters
+  // ✅ Left panel - Stats & Filters
   const leftPanel = (
     <div className="space-y-6">
       <div>
@@ -413,7 +521,7 @@ const Patient = () => {
     </div>
   );
 
-  // Right Panel - Table
+  // ✅ Right panel - Table
   const rightPanel = (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -448,9 +556,19 @@ const Patient = () => {
             <TableRow key={patient.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar src={patient.avatar} size="sm" />
+                  <Avatar src={patient.avatar || '/assets/homepage/mockup-avatar.jpg'} size="sm" />
                   <div>
                     <p className="font-medium">{patient.fullName}</p>
+<<<<<<< HEAD
+                    <p className="text-xs text-gray-500">
+                      {patient.gender === 'male'
+                        ? '👨 Nam'
+                        : patient.gender === 'female'
+                        ? '👩 Nữ'
+                        : '🧑 Khác'}
+                    </p>
+=======
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
                   </div>
                 </div>
               </TableCell>
@@ -461,12 +579,16 @@ const Patient = () => {
                 </div>
               </TableCell>
               <TableCell>
+<<<<<<< HEAD
+                <p className="text-sm">{patient.address}</p>
+=======
                 <Chip size="sm" variant="flat" color={patient.gender === 'male' ? 'primary' : patient.gender === 'female' ? 'secondary' : 'default'}>
                   {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
                 </Chip>
               </TableCell>
               <TableCell>
                 <p className="text-sm">{typeof patient.address === 'object' ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', ')) : (patient.address || '')}</p>
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
               </TableCell>
               <TableCell>
                 <Chip size="sm" variant="flat" color="danger">
@@ -474,23 +596,49 @@ const Patient = () => {
                 </Chip>
               </TableCell>
               <TableCell>
-                <p className="text-sm">{new Date(patient.joinDate).toLocaleDateString('vi-VN')}</p>
+                <p className="text-sm">
+                  {patient.joinDate ? new Date(patient.joinDate).toLocaleDateString('vi-VN') : ''}
+                </p>
               </TableCell>
               <TableCell>
+<<<<<<< HEAD
+                <Chip
+                  color={
+                    patient.status === 'active'
+                      ? 'success'
+                      : patient.status === 'blocked'
+                      ? 'danger'
+                      : 'default'
+                  }
+                  size="sm"
+                >
+                  {patient.status === 'active'
+                    ? 'Hoạt động'
+                    : patient.status === 'blocked'
+                    ? 'Đã khóa'
+                    : 'Tạm ngưng'}
+                </Chip>
+              </TableCell>
+              <TableCell>
+=======
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
                 <Dropdown>
                   <DropdownTrigger>
                     <Button isIconOnly size="sm" variant="light">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
+                      ⋮
                     </Button>
                   </DropdownTrigger>
                   <DropdownMenu aria-label="Thao tác">
                     <DropdownItem key="view-emr" onPress={() => handleViewEmr(patient)}>
                       📋 Xem EMR
                     </DropdownItem>
+<<<<<<< HEAD
+                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient.id)}>
+                      {patient.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
+=======
                     <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
                       ✏️ Chỉnh sửa
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
                     </DropdownItem>
                     <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
                       🗑️ Xóa
@@ -504,12 +652,7 @@ const Patient = () => {
       </Table>
 
       <div className="flex justify-center">
-        <Pagination
-          total={pages}
-          page={page}
-          onChange={setPage}
-          showControls
-        />
+        <Pagination total={pages} page={page} onChange={setPage} showControls />
       </div>
     </div>
   );
@@ -526,7 +669,7 @@ const Patient = () => {
       <AdminFrame title="Quản Lý Người Dùng">
         <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
 
-      {/* Add/Edit Modal */}
+      {/* Modal Add/Edit */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
         <ModalContent>
           {(onClose) => (
@@ -536,6 +679,13 @@ const Patient = () => {
               </ModalHeader>
               <ModalBody>
                 <div className="grid grid-cols-2 gap-4">
+<<<<<<< HEAD
+                  <Input label="Họ và tên" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
+                  <Input label="Email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                  <Input label="Số điện thoại" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  <Input label="Ngày sinh" type="date" value={formData.dateOfBirth} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} />
+                  <Select label="Giới tính" selectedKeys={formData.gender ? [formData.gender] : []} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
+=======
                   <Input
                     label="Họ và tên"
                     placeholder="Nguyễn Văn A"
@@ -586,12 +736,16 @@ const Patient = () => {
                       setFormData({ ...formData, gender: value });
                     }}
                   >
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
                     {genderOptions.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         {item.label}
                       </SelectItem>
                     ))}
                   </Select>
+<<<<<<< HEAD
+                  <Select label="Nhóm máu" selectedKeys={formData.bloodType ? [formData.bloodType] : []} onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}>
+=======
                   <Select
                     label="Nhóm máu"
                     placeholder="Chọn nhóm máu"
@@ -601,19 +755,14 @@ const Patient = () => {
                       setFormData({ ...formData, bloodType: value !== undefined ? value : '' });
                     }}
                   >
+>>>>>>> 396a9ef6beaa324bc456e27ada4e585c32dd2d0b
                     {bloodTypeOptions.map((item) => (
                       <SelectItem key={item.value || 'empty'} value={item.value}>
                         {item.label}
                       </SelectItem>
                     ))}
                   </Select>
-                  <Input
-                    label="Địa chỉ"
-                    placeholder="Hà Nội, Việt Nam"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="col-span-2"
-                  />
+                  <Input label="Địa chỉ" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="col-span-2" />
                 </div>
               </ModalBody>
               <ModalFooter>

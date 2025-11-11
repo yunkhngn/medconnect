@@ -91,6 +91,40 @@ export const doctorAPI = {
   getAllSpecialties: (user) => apiCall('/admin/speciality/all', {}, user),
 };
 
+export const patientAPI = {
+  // Get my profile
+  getMyProfile: (user) => apiCall('/patient/profile', {}, user),
+
+  // Update my profile
+  updateMyProfile: (data, user) =>
+    apiCall('/patient/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, user),
+};
+
+// Admin APIs for managing patients
+export const adminPatientAPI = {
+  getAllPatients: (user) => apiCall('/patient/all', {}, user),
+
+  getPatientById: (id, user) => apiCall(`/patient/${id}`, {}, user),
+
+  updatePatient: (id, data, user) => apiCall(`/patient/update`, {
+    method: 'POST', // vì backend dùng POST cho update
+    body: JSON.stringify(data),
+  }, user),
+
+  createPatient: (data, user) => apiCall('/patient/update', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, user),
+
+  deletePatient: (id, user) => apiCall(`/patient/${id}`, { 
+    method: 'DELETE'
+  }, user),
+};
+
+
 // Export individual endpoints for backward compatibility
 export const API_ENDPOINTS = {
   // Admin
