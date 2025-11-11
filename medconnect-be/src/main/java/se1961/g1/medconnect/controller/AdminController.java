@@ -1049,6 +1049,16 @@ public class AdminController {
         response.put("status", appointment.getStatus().name().toLowerCase());
         response.put("createdAt", appointment.getCreatedAt() != null ? appointment.getCreatedAt().toString() : "");
         
+        // Include video call session timestamps when available
+        if (appointment.getVideoCallSession() != null) {
+            var session = appointment.getVideoCallSession();
+            response.put("videoCallStart", session.getStartTime() != null ? session.getStartTime().toString() : null);
+            response.put("videoCallEnd", session.getEndTime() != null ? session.getEndTime().toString() : null);
+        } else {
+            response.put("videoCallStart", null);
+            response.put("videoCallEnd", null);
+        }
+        
         return response;
     }
 
