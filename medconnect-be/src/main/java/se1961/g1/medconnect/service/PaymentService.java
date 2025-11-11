@@ -37,6 +37,9 @@ public class PaymentService {
 
     @Autowired
     private PatientRepository patientRepository;
+    
+    @Autowired
+    private EmailService emailService;
 
     @Value("${vnpay.tmnCode}")
     private String vnpTmnCode;
@@ -206,6 +209,34 @@ public class PaymentService {
 
             paymentRepository.save(payment);
             System.out.println("Payment saved with status: " + payment.getStatus());
+            
+            // 📧 Send "Pending Confirmation" email to patient (ORANGE/CAM)
+            try {
+                Appointment appointment = payment.getAppointment();
+                Patient patient = appointment.getPatient();
+                Doctor doctor = appointment.getDoctor();
+                
+                String patientEmail = patient.getEmail();
+                String patientName = patient.getName();
+                String doctorName = doctor.getName();
+                String appointmentDate = appointment.getDate().toString();
+                String appointmentTime = appointment.getSlot().name(); // SLOT_1, SLOT_2, etc.
+                String appointmentType = appointment.getType().name();
+                
+                emailService.sendAppointmentPendingConfirmation(
+                    patientEmail,
+                    patientName,
+                    doctorName,
+                    appointmentDate,
+                    appointmentTime,
+                    appointmentType
+                );
+                
+                System.out.println("✅ Pending confirmation email sent to: " + patientEmail);
+            } catch (Exception emailError) {
+                System.err.println("⚠️ Failed to send pending email: " + emailError.getMessage());
+                // Don't fail the payment if email fails
+            }
         } else {
             System.out.println("Payment FAILED with code: " + responseCode);
             payment.setStatus(PaymentStatus.FAILED);

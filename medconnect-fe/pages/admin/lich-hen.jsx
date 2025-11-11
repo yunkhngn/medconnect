@@ -538,6 +538,8 @@ const Appointment = () => {
           <TableColumn>BỆNH NHÂN</TableColumn>
           <TableColumn>BÁC SĨ</TableColumn>
           <TableColumn>NGÀY & GIỜ KHÁM</TableColumn>
+          <TableColumn>BẮT ĐẦU VIDEO</TableColumn>
+          <TableColumn>KẾT THÚC VIDEO</TableColumn>
           <TableColumn>TRẠNG THÁI</TableColumn>
           <TableColumn>THAO TÁC</TableColumn>
         </TableHeader>
@@ -564,6 +566,16 @@ const Appointment = () => {
                   <p className="text-xs text-blue-600">
                     {appointment.slotTime}
                   </p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-xs">
+                  {appointment.videoCallStart ? new Date(appointment.videoCallStart).toLocaleString('vi-VN') : '—'}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-xs">
+                  {appointment.videoCallEnd ? new Date(appointment.videoCallEnd).toLocaleString('vi-VN') : '—'}
                 </div>
               </TableCell>
               <TableCell>

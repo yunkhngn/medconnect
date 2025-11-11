@@ -22,6 +22,9 @@ export default function DoctorOnlineExamRoom() {
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'emr'
   const [unread, setUnread] = useState(0);
   const [seconds, setSeconds] = useState(0);
+  const [extended, setExtended] = useState(false);
+  const [showExtendPrompt, setShowExtendPrompt] = useState(false);
+  const [oneMinuteWarn, setOneMinuteWarn] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isPatientInfoOpen, onOpen: onPatientInfoOpen, onOpenChange: onPatientInfoOpenChange } = useDisclosure();
@@ -106,6 +109,26 @@ export default function DoctorOnlineExamRoom() {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Appointment time control: 30 minutes base + optional 10-minute extension (once)
+  useEffect(() => {
+    const BASE_SECONDS = 30 * 60;
+    const EXTEND_SECONDS = 10 * 60;
+    // Prompt extend exactly at 30:00 if not extended yet
+    if (seconds >= BASE_SECONDS && !extended && !showExtendPrompt) {
+      setShowExtendPrompt(true);
+    }
+    // 1-minute warning before auto-finish (only after extension accepted or if not extending, the finish happens at BASE_SECONDS)
+    const endPoint = extended ? (BASE_SECONDS + EXTEND_SECONDS) : BASE_SECONDS;
+    if (seconds >= endPoint - 60 && seconds < endPoint && !oneMinuteWarn) {
+      setOneMinuteWarn(true);
+    }
+    // Auto finish at endPoint if extended, otherwise finishing is triggered by decline
+    if (extended && seconds >= endPoint) {
+      handleEndAppointment();
+    }
+    // eslint-disable-next-line
+  }, [seconds, extended]);
 
   // Handle fullscreen
   const toggleFullscreen = () => {
@@ -387,6 +410,29 @@ export default function DoctorOnlineExamRoom() {
     return `${mm}:${ss}`;
   };
 
+  const remainingTime = () => {
+    const BASE_SECONDS = 30 * 60;
+    const EXTEND_SECONDS = 10 * 60;
+    const endPoint = extended ? (BASE_SECONDS + EXTEND_SECONDS) : BASE_SECONDS;
+    const remain = Math.max(0, endPoint - seconds);
+    const mm = String(Math.floor(remain / 60)).padStart(2, "0");
+    const ss = String(remain % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  };
+
+  const timeSeverity = () => {
+    // Visual severity for countdown chip: default, warning (orange), danger (red)
+    const BASE_SECONDS = 30 * 60;
+    const EXTEND_SECONDS = 10 * 60;
+    const endPoint = extended ? (BASE_SECONDS + EXTEND_SECONDS) : BASE_SECONDS;
+    const remain = Math.max(0, endPoint - seconds);
+    if (remain <= 60) return 'danger';
+    if (remain <= 5 * 60) return 'warning';
+    // As approaching 30-min mark pre-extend, start warning at last 2 minutes
+    if (!extended && seconds >= (BASE_SECONDS - 2 * 60)) return 'warning';
+    return 'default';
+  };
+
   const handleSendMessage = async () => {
     const text = chatMessage.trim();
     if (!text) return;
@@ -553,7 +599,10 @@ export default function DoctorOnlineExamRoom() {
           <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-3">
               <Chip color="primary" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">Phiên khám online • Bác sĩ</Chip>
-              <Chip variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">{formatTime(seconds)}</Chip>
+              <Chip variant="bordered" className={`bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold ${timeSeverity()==='danger' ? 'text-red-700' : timeSeverity()==='warning' ? 'text-orange-600' : 'text-gray-900'}`}>
+                {/* Show elapsed and remaining */}
+                {formatTime(seconds)} • Còn {remainingTime()}
+              </Chip>
               <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={onPatientInfoOpen} startContent={<User size={18} />}>Thông tin bệnh nhân</Button>
               <div className="ml-2 bg-white/50 backdrop-blur-md rounded-full p-1 border border-white/30 shadow-lg">
                 <button className={`px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${activeTab==='chat'?'bg-primary/90 text-white shadow-md':'text-gray-900 bg-white/40'}`} onClick={()=>{setActiveTab('chat'); setUnread(0);}}>Chat {unread>0 && <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold bg-red-600 text-white rounded-full">{unread}</span>}</button>
@@ -564,6 +613,12 @@ export default function DoctorOnlineExamRoom() {
               <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />} onPress={toggleFullscreen}>Toàn màn hình</Button>
             </div>
           </div>
+          {/* One-minute warning banner */}
+          {oneMinuteWarn && (
+            <div className="absolute left-0 right-0 top-16 px-4 flex justify-center z-20">
+              <div className="bg-orange-500 text-white text-sm px-3 py-2 rounded-md shadow">Còn 1 phút trước khi kết thúc phiên</div>
+            </div>
+          )}
           {tokenError && (
             <div className="absolute left-0 right-0 top-16 px-4 flex justify-center z-20">
               <div className="bg-red-600 text-white text-sm px-3 py-2 rounded-md shadow">{tokenError}</div>
@@ -900,6 +955,21 @@ export default function DoctorOnlineExamRoom() {
           </ModalBody>
           <ModalFooter>
             <Button color="default" variant="light" onPress={onPatientInfoOpenChange}>Đóng</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      {/* Extend prompt at 30 minutes */}
+      <Modal isOpen={showExtendPrompt} onOpenChange={setShowExtendPrompt}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">Gia hạn phiên khám?</h3>
+          </ModalHeader>
+          <ModalBody>
+            <p>Phiên khám đã đạt 30 phút. Bạn có muốn gia hạn thêm 10 phút không?</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => { setShowExtendPrompt(false); handleEndAppointment(); }}>Kết thúc</Button>
+            <Button color="primary" onPress={() => { setExtended(true); setShowExtendPrompt(false); setOneMinuteWarn(false); }}>Gia hạn 10 phút</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { generateAppointmentConfirmationEmail } from "@/utils/emailTemplates";
+import { sendEmailViaAPI } from "@/utils/emailHelper";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -154,6 +156,37 @@ export default function DoctorAppointmentsPage() {
 
       if (response.ok) {
         toast.success("Đã xác nhận lịch hẹn");
+        
+        // Send confirmation email to patient
+        try {
+          // Find the confirmed appointment from the list to get patient details
+          const confirmedAppointment = appointments.find(apt => 
+            (apt.appointmentId || apt.id) === appointmentId
+          );
+          
+          if (confirmedAppointment && confirmedAppointment.patient?.email) {
+            const appointmentDate = new Date(confirmedAppointment.date).toLocaleDateString('vi-VN');
+            const appointmentTime = SLOT_TIMES[confirmedAppointment.slot] || confirmedAppointment.slot;
+            
+            const emailDetails = {
+              patientName: confirmedAppointment.patient?.name || 'Bệnh nhân',
+              doctorName: `BS. ${confirmedAppointment.doctor?.name || user?.displayName || 'Bác sĩ'}`,
+              date: appointmentDate,
+              time: appointmentTime,
+              specialty: confirmedAppointment.doctor?.speciality?.name || confirmedAppointment.speciality?.name || 'Chưa xác định',
+              type: confirmedAppointment.type,
+              appointmentId: appointmentId
+            };
+            
+            const { subject, html } = generateAppointmentConfirmationEmail(emailDetails);
+            await sendEmailViaAPI(confirmedAppointment.patient.email, subject, html);
+            console.log("✅ Confirmation email sent to patient");
+          }
+        } catch (emailError) {
+          console.error("⚠️ Failed to send confirmation email:", emailError);
+          // Don't block the confirmation flow if email fails
+        }
+        
         fetchAppointments();
         onClose();
       } else {

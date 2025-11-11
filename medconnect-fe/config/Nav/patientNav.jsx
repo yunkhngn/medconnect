@@ -53,15 +53,6 @@ const menuItems = [
       ),
       href: '/nguoi-dung/kham-offline',
     },
-    {
-      label: 'Trợ lý cá nhân',
-      icon: (
-         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m0-6L3 9m9 5l9-5m-9 5v6m0 0l-9-5m9 5l9-5" />
-         </svg>
-      ),
-      href: '/nguoi-dung/tro-ly-ca-nhan',
-    }
   ];
 
 export default menuItems;

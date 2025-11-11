@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -22,20 +22,32 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('=== SENDING EMAIL ===');
+    console.log('To:', to);
+    console.log('Subject:', subject);
+    console.log('API Key:', process.env.RESEND_API_KEY ? 'Configured' : 'Missing');
+    
     const data = await resend.emails.send({
-      from: 'MedConnect <onboarding@medconnects.app>',
+      from: 'MedConnect <noreply@mail.medconnects.app>',
       to: [to],
       subject: subject,
       html: html,
     });
 
+    console.log('=== RESEND RESPONSE ===');
+    console.log('Response:', JSON.stringify(data, null, 2));
+
     return res.status(200).json({ 
       success: true, 
       id: data.id,
+      data: data,
       message: 'Email sent successfully' 
     });
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('=== EMAIL ERROR ===');
+    console.error('Error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     
     // Handle specific Resend errors
     if (error.message?.includes('API key')) {
