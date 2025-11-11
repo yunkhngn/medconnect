@@ -207,40 +207,15 @@ const Doctor = () => {
   };
 
   const deleteDoctor = async (id) => {
-    if (!confirm('Bạn có chắc muốn vô hiệu hóa bác sĩ này?')) return;
+    if (!confirm('Xóa bác sĩ này sẽ xóa cả lịch hẹn, phiên video và tài khoản liên quan. Bạn có chắc chắn?')) return;
     
     try {
-      // Chuyển status thành INACTIVE thay vì xóa
-      const doctor = doctors.find(d => d.id === id);
-      if (!doctor) {
-        toast.error('Không tìm thấy bác sĩ');
-        return;
-      }
-      
-      const updateData = {
-        ...doctor,
-        status: 'INACTIVE'
-      };
-      
-      const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/admin/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Không thể cập nhật trạng thái bác sĩ');
-      }
-      
-      toast.success('Đã vô hiệu hóa bác sĩ');
+      await doctorAPI.deleteDoctor(id, user);
+      toast.success('Đã xóa bác sĩ và dữ liệu liên quan');
       await fetchDoctors();
     } catch (error) {
-      console.error('Error updating doctor status:', error);
-      toast.error('Không thể vô hiệu hóa bác sĩ');
+      console.error('Error deleting doctor:', error);
+      toast.error(error.message || 'Không thể xóa bác sĩ');
     }
   };
 
@@ -467,13 +442,13 @@ const Doctor = () => {
                     <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
                       Chỉnh sửa
                     </DropdownItem>
-                    <DropdownItem 
-                      key="deactivate" 
-                      className="text-danger" 
-                      color="danger" 
+                    <DropdownItem
+                      key="delete"
+                      className="text-danger"
+                      color="danger"
                       onPress={() => deleteDoctor(doctor.id)}
                     >
-                      Vô hiệu hóa
+                      Xóa bác sĩ
                     </DropdownItem>
                   </DropdownMenu>
                 </Dropdown>

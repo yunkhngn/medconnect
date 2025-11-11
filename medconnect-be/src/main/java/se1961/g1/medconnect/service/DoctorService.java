@@ -2,15 +2,21 @@ package se1961.g1.medconnect.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.DoctorApplicationDTO;
 import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.enums.Role;
+import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Speciality;
+import se1961.g1.medconnect.repository.AppointmentRepository;
 import se1961.g1.medconnect.repository.DoctorRepository;
+import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.repository.ScheduleRepository;
 import se1961.g1.medconnect.repository.SpecialityRepository;
 import se1961.g1.medconnect.repository.UserRepository;
+import se1961.g1.medconnect.repository.VideoCallSessionRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +32,14 @@ public class DoctorService {
     private UserRepository userRepository;
     @Autowired
     private FirebaseService firebaseService;
+    @Autowired
+    private AppointmentRepository appointmentRepository;
+    @Autowired
+    private PaymentRepository paymentRepository;
+    @Autowired
+    private VideoCallSessionRepository videoCallSessionRepository;
+    @Autowired
+    private ScheduleRepository scheduleRepository;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
         return doctorRepository.findByFirebaseUid(uid);
@@ -97,12 +111,35 @@ public class DoctorService {
         return doctorRepository.save(existing);
     }
 
+    @Transactional
     public void deleteDoctor(Long id) throws Exception {
-        // Soft delete to avoid FK constraint violations
         Doctor existing = doctorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
-        existing.setStatus(se1961.g1.medconnect.enums.DoctorStatus.INACTIVE);
-        doctorRepository.save(existing);
+
+        // Clean up schedules
+        scheduleRepository.deleteByUser(existing);
+
+        // Clean up appointments and associated records
+        List<Appointment> appointments = appointmentRepository.findByDoctor(existing);
+        for (Appointment appointment : appointments) {
+            // delete payment if any
+            paymentRepository.deleteByAppointment(appointment);
+            // delete video call session if any
+            videoCallSessionRepository.deleteByAppointment(appointment);
+        }
+        if (!appointments.isEmpty()) {
+            appointmentRepository.deleteAll(appointments);
+        }
+
+        // Delete Firebase account
+        try {
+            firebaseService.deleteFirebaseUser(existing.getFirebaseUid());
+        } catch (Exception e) {
+            // Log and continue deletion to keep DB consistent
+            System.err.println("Failed to delete Firebase user for doctor id=" + id + ": " + e.getMessage());
+        }
+
+        doctorRepository.delete(existing);
     }
 
     /**

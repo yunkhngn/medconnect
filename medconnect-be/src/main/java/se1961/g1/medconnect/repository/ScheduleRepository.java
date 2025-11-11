@@ -16,4 +16,6 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
     Optional<Schedule> findByUserUserIdAndDateAndSlot(Long userId, LocalDate date, Slot slot);
     
     List<Schedule> findByUserAndDate(User user, LocalDate date);
+    List<Schedule> findByUser(User user);
+    void deleteByUser(User user);
 }

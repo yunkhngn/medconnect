@@ -8,5 +8,6 @@ import java.util.Optional;
 
 public interface VideoCallSessionRepository extends JpaRepository<VideoCallSession, Long> {
     Optional<VideoCallSession> findByAppointment(Appointment appointment);
+    void deleteByAppointment(Appointment appointment);
 }
 

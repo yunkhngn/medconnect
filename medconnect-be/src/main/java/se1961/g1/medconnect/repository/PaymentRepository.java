@@ -16,5 +16,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByPatient(Patient patient);
     List<Payment> findByPatientAndStatus(Patient patient, PaymentStatus status);
     List<Payment> findByStatus(PaymentStatus status);
+    void deleteByAppointment(Appointment appointment);
 }
 
