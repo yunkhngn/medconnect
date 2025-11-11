@@ -26,7 +26,7 @@ import {
   Pagination,
 } from '@heroui/react';
 
-// API Configuration
+// ✅ API Configuration
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api',
   ENDPOINTS: {
@@ -63,7 +63,7 @@ const Patient = () => {
     { value: 'all', label: 'Tất cả trạng thái' },
     { value: 'active', label: 'Hoạt động' },
     { value: 'inactive', label: 'Tạm ngưng' },
-    { value: 'blocked', label: 'Đã khóa' },
+    { value: 'blocked', label: 'Skibidi' },
   ];
 
   const genderOptions = [
@@ -88,23 +88,34 @@ const Patient = () => {
     { value: 'O-', label: 'O-' },
   ];
 
-  // Mock data
-  const mockPatients = [
-    {
-      id: 1,
-      fullName: 'Nguyễn Thị Mai',
-      email: 'mai.nguyen@email.com',
-      phone: '0912345678',
-      address: 'Hà Nội',
-      dateOfBirth: '1990-05-15',
-      gender: 'female',
-      bloodType: 'A',
-      status: 'active',
-      avatar: '/assets/homepage/mockup-avatar.jpg',
-      joinDate: '2024-01-15',
-    },
-    // Add more mock data...
-  ];
+  // ✅ Fetch patients from backend
+  const fetchPatients = async () => {
+  setIsLoading(true);
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/patients/all-with-user`);
+    if (!response.ok) {
+      console.error('❌ HTTP error', response.status);
+      setPatients([]);
+      return;
+    }
+
+    const text = await response.text();
+    if (!text) {
+      console.error('❌ Response empty');
+      setPatients([]);
+      return;
+    }
+
+    const data = JSON.parse(text);
+    setPatients(data);
+  } catch (error) {
+    console.error('❌ Error fetching patients:', error);
+    setPatients([]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchPatients();
@@ -114,65 +125,58 @@ const Patient = () => {
     filterPatients();
   }, [searchQuery, selectedStatus, patients]);
 
-  const fetchPatients = async () => {
-    setIsLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      setTimeout(() => {
-        setPatients(mockPatients);
-        setIsLoading(false);
-      }, 500);
-    } catch (error) {
-      console.error('Error fetching patients:', error);
-      setIsLoading(false);
-    }
-  };
-
   const createPatient = async () => {
     try {
-      // TODO: Replace with actual API call
-      const newPatient = {
-        ...formData,
-        id: Date.now(),
-        status: 'active',
-        avatar: '/assets/homepage/mockup-avatar.jpg',
-        joinDate: new Date().toISOString().split('T')[0],
-      };
-      setPatients([...patients, newPatient]);
-      resetForm();
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CREATE_PATIENT}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        await fetchPatients();
+        resetForm();
+      }
     } catch (error) {
-      console.error('Error creating patient:', error);
+      console.error('❌ Error creating patient:', error);
     }
   };
 
   const updatePatient = async () => {
     try {
-      // TODO: Replace with actual API call
-      setPatients(patients.map(p => p.id === currentPatient.id ? { ...p, ...formData } : p));
-      resetForm();
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.UPDATE_PATIENT(currentPatient.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        await fetchPatients();
+        resetForm();
+      }
     } catch (error) {
-      console.error('Error updating patient:', error);
+      console.error('❌ Error updating patient:', error);
     }
   };
 
   const deletePatient = async (id) => {
     if (!confirm('Bạn có chắc muốn xóa người dùng này?')) return;
-    
     try {
-      // TODO: Replace with actual API call
-      setPatients(patients.filter(p => p.id !== id));
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DELETE_PATIENT(id)}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) await fetchPatients();
     } catch (error) {
-      console.error('Error deleting patient:', error);
+      console.error('❌ Error deleting patient:', error);
     }
   };
 
-  const toggleStatus = async (id, currentStatus) => {
+  const toggleStatus = async (id) => {
     try {
-      // TODO: Replace with actual API call
-      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      setPatients(patients.map(p => p.id === id ? { ...p, status: newStatus } : p));
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.TOGGLE_STATUS(id)}`, {
+        method: 'PUT',
+      });
+      if (response.ok) await fetchPatients();
     } catch (error) {
-      console.error('Error toggling status:', error);
+      console.error('❌ Error toggling status:', error);
     }
   };
 
@@ -182,9 +186,9 @@ const Patient = () => {
     if (searchQuery) {
       filtered = filtered.filter(
         (p) =>
-          p.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.phone.includes(searchQuery)
+          p.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.phone?.includes(searchQuery)
       );
     }
 
@@ -198,13 +202,13 @@ const Patient = () => {
   const handleEdit = (patient) => {
     setCurrentPatient(patient);
     setFormData({
-      fullName: patient.fullName,
-      email: patient.email,
-      phone: patient.phone,
-      address: patient.address,
-      dateOfBirth: patient.dateOfBirth,
-      gender: patient.gender,
-      bloodType: patient.bloodType,
+      fullName: patient.fullName || '',
+      email: patient.email || '',
+      phone: patient.phone || '',
+      address: patient.address || '',
+      dateOfBirth: patient.dateOfBirth || '',
+      gender: patient.gender || '',
+      bloodType: patient.bloodType || '',
     });
     onOpen();
   };
@@ -227,12 +231,9 @@ const Patient = () => {
     });
   };
 
-  const handleSubmit = () => {
-    if (currentPatient) {
-      updatePatient();
-    } else {
-      createPatient();
-    }
+  const handleSubmit = async () => {
+    if (currentPatient) await updatePatient();
+    else await createPatient();
   };
 
   const paginatedPatients = React.useMemo(() => {
@@ -243,7 +244,7 @@ const Patient = () => {
 
   const pages = Math.ceil(filteredPatients.length / rowsPerPage);
 
-  // Left Panel - Stats & Filters
+  // ✅ Left panel - Stats & Filters
   const leftPanel = (
     <div className="space-y-6">
       <div>
@@ -286,7 +287,7 @@ const Patient = () => {
     </div>
   );
 
-  // Right Panel - Table
+  // ✅ Right panel - Table
   const rightPanel = (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -321,11 +322,15 @@ const Patient = () => {
             <TableRow key={patient.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar src={patient.avatar} size="sm" />
+                  <Avatar src={patient.avatar || '/assets/homepage/mockup-avatar.jpg'} size="sm" />
                   <div>
                     <p className="font-medium">{patient.fullName}</p>
                     <p className="text-xs text-gray-500">
-                      {patient.gender === 'male' ? '👨 Nam' : patient.gender === 'female' ? '👩 Nữ' : '🧑 Khác'}
+                      {patient.gender === 'male'
+                        ? '👨 Nam'
+                        : patient.gender === 'female'
+                        ? '👩 Nữ'
+                        : '🧑 Khác'}
                     </p>
                   </div>
                 </div>
@@ -337,7 +342,7 @@ const Patient = () => {
                 </div>
               </TableCell>
               <TableCell>
-                <p className="text-sm">{typeof patient.address === 'object' ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', ')) : (patient.address || '')}</p>
+                <p className="text-sm">{patient.address}</p>
               </TableCell>
               <TableCell>
                 <Chip size="sm" variant="flat" color="danger">
@@ -345,34 +350,40 @@ const Patient = () => {
                 </Chip>
               </TableCell>
               <TableCell>
-                <p className="text-sm">{new Date(patient.joinDate).toLocaleDateString('vi-VN')}</p>
+                <p className="text-sm">
+                  {patient.joinDate ? new Date(patient.joinDate).toLocaleDateString('vi-VN') : ''}
+                </p>
               </TableCell>
               <TableCell>
-                <Chip 
+                <Chip
                   color={
-                    patient.status === 'active' ? 'success' : 
-                    patient.status === 'blocked' ? 'danger' : 'default'
-                  } 
+                    patient.status === 'active'
+                      ? 'success'
+                      : patient.status === 'blocked'
+                      ? 'danger'
+                      : 'default'
+                  }
                   size="sm"
                 >
-                  {patient.status === 'active' ? 'Hoạt động' : 
-                   patient.status === 'blocked' ? 'Đã khóa' : 'Tạm ngưng'}
+                  {patient.status === 'active'
+                    ? 'Hoạt động'
+                    : patient.status === 'blocked'
+                    ? 'Đã khóa'
+                    : 'Tạm ngưng'}
                 </Chip>
               </TableCell>
               <TableCell>
                 <Dropdown>
                   <DropdownTrigger>
                     <Button isIconOnly size="sm" variant="light">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
+                      ⋮
                     </Button>
                   </DropdownTrigger>
                   <DropdownMenu aria-label="Actions">
                     <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
                       Chỉnh sửa
                     </DropdownItem>
-                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient.id, patient.status)}>
+                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient.id)}>
                       {patient.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
                     </DropdownItem>
                     <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
@@ -387,12 +398,7 @@ const Patient = () => {
       </Table>
 
       <div className="flex justify-center">
-        <Pagination
-          total={pages}
-          page={page}
-          onChange={setPage}
-          showControls
-        />
+        <Pagination total={pages} page={page} onChange={setPage} showControls />
       </div>
     </div>
   );
@@ -401,7 +407,7 @@ const Patient = () => {
     <AdminFrame title="Quản Lý Người Dùng">
       <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
 
-      {/* Add/Edit Modal */}
+      {/* Modal Add/Edit */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
         <ModalContent>
           {(onClose) => (
@@ -411,62 +417,25 @@ const Patient = () => {
               </ModalHeader>
               <ModalBody>
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    label="Họ và tên"
-                    placeholder="Nguyễn Văn A"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  />
-                  <Input
-                    label="Email"
-                    type="email"
-                    placeholder="user@email.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                  <Input
-                    label="Số điện thoại"
-                    placeholder="0901234567"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                  <Input
-                    label="Ngày sinh"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                  />
-                  <Select
-                    label="Giới tính"
-                    placeholder="Chọn giới tính"
-                    selectedKeys={formData.gender ? [formData.gender] : []}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  >
+                  <Input label="Họ và tên" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
+                  <Input label="Email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                  <Input label="Số điện thoại" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                  <Input label="Ngày sinh" type="date" value={formData.dateOfBirth} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} />
+                  <Select label="Giới tính" selectedKeys={formData.gender ? [formData.gender] : []} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
                     {genderOptions.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         {item.label}
                       </SelectItem>
                     ))}
                   </Select>
-                  <Select
-                    label="Nhóm máu"
-                    placeholder="Chọn nhóm máu"
-                    selectedKeys={formData.bloodType ? [formData.bloodType] : []}
-                    onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
-                  >
+                  <Select label="Nhóm máu" selectedKeys={formData.bloodType ? [formData.bloodType] : []} onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}>
                     {bloodTypeOptions.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
                         {item.label}
                       </SelectItem>
                     ))}
                   </Select>
-                  <Input
-                    label="Địa chỉ"
-                    placeholder="Hà Nội, Việt Nam"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="col-span-2"
-                  />
+                  <Input label="Địa chỉ" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="col-span-2" />
                 </div>
               </ModalBody>
               <ModalFooter>
