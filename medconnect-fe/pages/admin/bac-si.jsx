@@ -37,6 +37,7 @@ import {
 
 const Doctor = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const { isOpen: isImageModalOpen, onOpen: onImageModalOpen, onOpenChange: onImageModalOpenChange } = useDisclosure();
   const { user } = useAuth();
   const toast = useToast();
   const [doctors, setDoctors] = useState([]);
@@ -46,6 +47,8 @@ const Doctor = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');  // New filter for status
   const [isLoading, setIsLoading] = useState(false);
   const [currentDoctor, setCurrentDoctor] = useState(null);
+  const [licenseImages, setLicenseImages] = useState([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
   const [specialties, setSpecialties] = useState([
@@ -106,13 +109,14 @@ const Doctor = () => {
         licenseId: d.licenseId,
         license: d.license,  // ✅ Include license object
         specializationLabel: d.specialty,
+        specialityId: d.specialityId,  // ✅ Include specialityId for form mapping
         userId: d.userId,
         avatar: d.avatar,
         status: (d.status || 'ACTIVE'),  // Keep original case for proper filtering
-        experienceYears: d.experienceYears,
-        educationLevel: d.educationLevel,
-        bio: d.bio,
-        clinicAddress: d.clinicAddress,
+        experienceYears: d.experienceYears || 0,
+        educationLevel: d.educationLevel || '',
+        bio: d.bio || '',
+        clinicAddress: d.clinicAddress || '',
         provinceCode: d.provinceCode,
         districtCode: d.districtCode,
         wardCode: d.wardCode,
@@ -250,20 +254,26 @@ const Doctor = () => {
   const handleEdit = (doctor) => {
     setCurrentDoctor(doctor);
     
-    // Find specialty ID from specialty name
-    const specialty = specialties.find(s => 
-      s.label.toLowerCase() === (doctor.specializationLabel || '').toLowerCase()
-    );
+    // Use specialityId directly if available, otherwise try to find by name
+    let specialityIdValue = '';
+    if (doctor.specialityId) {
+      specialityIdValue = String(doctor.specialityId);
+    } else {
+      const specialty = specialties.find(s => 
+        s.label.toLowerCase() === (doctor.specializationLabel || '').toLowerCase()
+      );
+      specialityIdValue = specialty?.value || '';
+    }
     
     setFormData({
       name: doctor.name || '',
       email: doctor.email || '',
       phone: doctor.phone || '',
-      specialityId: specialty?.value || '',
-      experienceYears: doctor.experienceYears || 0,
+      specialityId: specialityIdValue,
+      experienceYears: doctor.experienceYears !== undefined && doctor.experienceYears !== null ? doctor.experienceYears : 0,
       educationLevel: doctor.educationLevel || '',
       bio: doctor.bio || '',
-      status: doctor.status || 'ACTIVE',  // Add status
+      status: doctor.status || 'ACTIVE',
     });
     onOpen();
   };
@@ -399,9 +409,13 @@ const Doctor = () => {
                 </div>
               </TableCell>
               <TableCell>
-                <Chip size="sm" variant="flat" color="primary">
-                  {doctor.licenseId}
-                </Chip>
+                {doctor.license?.license_number ? (
+                  <Chip size="sm" variant="flat" color="primary">
+                    {doctor.license.license_number}
+                  </Chip>
+                ) : (
+                  <span className="text-sm text-gray-400">Chưa có</span>
+                )}
               </TableCell>
               <TableCell>
                 <Chip size="sm" variant="flat">
@@ -499,6 +513,10 @@ const Doctor = () => {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="col-span-2"
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "border-default-200 bg-gray-50"
+                    }}
                     isRequired
                   />
                   <Input
@@ -507,6 +525,10 @@ const Doctor = () => {
                     placeholder="doctor@medconnect.vn"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "border-default-200 bg-gray-50"
+                    }}
                     isRequired
                     isDisabled={currentDoctor !== null}
                     description={currentDoctor ? "Email không thể thay đổi" : ""}
@@ -516,20 +538,32 @@ const Doctor = () => {
                     placeholder="0901234567"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "border-default-200 bg-gray-50"
+                    }}
                     isRequired
                   />
                   <Input
                     label="Số năm kinh nghiệm"
                     type="number"
                     placeholder="5"
-                    value={formData.experienceYears}
+                    value={formData.experienceYears !== undefined && formData.experienceYears !== null ? String(formData.experienceYears) : ''}
                     onChange={(e) => setFormData({ ...formData, experienceYears: parseInt(e.target.value) || 0 })}
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "border-default-200 bg-gray-50"
+                    }}
                   />
                   <Select
                     label="Chuyên khoa"
                     placeholder="Chọn chuyên khoa"
                     selectedKeys={formData.specialityId ? [formData.specialityId] : []}
                     onChange={(e) => setFormData({ ...formData, specialityId: e.target.value })}
+                    variant="bordered"
+                    classNames={{
+                      trigger: "border-default-200 bg-gray-50"
+                    }}
                     isRequired
                   >
                     {specialties.slice(1).map((item) => (
@@ -541,14 +575,22 @@ const Doctor = () => {
                   <Input
                     label="Trình độ học vấn"
                     placeholder="Tiến sĩ Y khoa, Thạc sĩ..."
-                    value={formData.educationLevel}
+                    value={formData.educationLevel || ''}
                     onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value })}
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "border-default-200 bg-gray-50"
+                    }}
                   />
                   <Select
                     label="Trạng thái tài khoản"
                     placeholder="Chọn trạng thái"
                     selectedKeys={formData.status ? [formData.status] : []}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    variant="bordered"
+                    classNames={{
+                      trigger: "border-default-200 bg-gray-50"
+                    }}
                   >
                     <SelectItem key="ACTIVE" value="ACTIVE">Hoạt động</SelectItem>
                     <SelectItem key="PENDING" value="PENDING">Chờ duyệt</SelectItem>
@@ -560,7 +602,7 @@ const Doctor = () => {
                       placeholder="Tôi là bác sĩ tim mạch..."
                       value={formData.bio}
                       onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      className="w-full min-h-[100px] p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full min-h-[100px] p-3 rounded-lg bg-gray-50 border border-default-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows="4"
                     />
                   </div>
@@ -571,7 +613,7 @@ const Doctor = () => {
                       <label className="block text-sm font-medium mb-3 text-gray-700">
                         📋 Chứng chỉ hành nghề
                       </label>
-                      <div className="relative bg-gradient-to-br from-white rounded-xl p-6 border-4 border-double border-teal-200 shadow-lg">
+                      <div className="relative bg-gradient-to-br from-white rounded-xl p-6 shadow-lg">
                         {/* Status Badge - Top Left */}
                         <div className="absolute top-4 left-4">
                           <Chip
@@ -594,12 +636,23 @@ const Doctor = () => {
                               startContent={<FileText size={16} />}
                               onPress={() => {
                                 try {
+                                  // Try to parse as JSON array
                                   const images = JSON.parse(currentDoctor.license.proof_images);
-                                  window.open(images[0], '_blank');
+                                  if (Array.isArray(images) && images.length > 0) {
+                                    setLicenseImages(images);
+                                    setSelectedImageIndex(0);
+                                    onImageModalOpen();
+                                  } else {
+                                    // If it's a single string URL
+                                    setLicenseImages([currentDoctor.license.proof_images]);
+                                    setSelectedImageIndex(0);
+                                    onImageModalOpen();
+                                  }
                                 } catch (error) {
-                                  console.error('Error parsing proof images:', error);
-                                  // Fallback: try opening as single URL
-                                  window.open(currentDoctor.license.proof_images, '_blank');
+                                  // Fallback: treat as single URL string
+                                  setLicenseImages([currentDoctor.license.proof_images]);
+                                  setSelectedImageIndex(0);
+                                  onImageModalOpen();
                                 }
                               }}
                               className="text-blue-600 hover:bg-blue-100"
@@ -745,6 +798,127 @@ const Doctor = () => {
                 >
                   {currentDoctor ? 'Cập nhật' : 'Thêm'}
                 </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* License Images Modal */}
+      <Modal 
+        isOpen={isImageModalOpen} 
+        onOpenChange={onImageModalOpenChange}
+        size="5xl"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <FileText className="text-teal-600" size={24} />
+                  <span>Ảnh chứng chỉ hành nghề</span>
+                </div>
+                {licenseImages.length > 1 && (
+                  <p className="text-sm text-gray-500 font-normal mt-1">
+                    {selectedImageIndex + 1} / {licenseImages.length}
+                  </p>
+                )}
+              </ModalHeader>
+              <ModalBody className="py-6">
+                {licenseImages.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Main Image Display */}
+                    <div className="w-full flex justify-center items-center bg-gray-100 rounded-lg p-4 min-h-[400px]">
+                      <img
+                        src={licenseImages[selectedImageIndex]}
+                        alt={`Chứng chỉ ${selectedImageIndex + 1}`}
+                        className="max-w-full max-h-[600px] object-contain rounded-lg shadow-lg"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/600x400?text=Không+thể+tải+ảnh';
+                        }}
+                      />
+                    </div>
+
+                    {/* Thumbnail Gallery */}
+                    {licenseImages.length > 1 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Chọn ảnh khác:</p>
+                        <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                          {licenseImages.map((image, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedImageIndex(index)}
+                              className={`relative overflow-hidden rounded-lg border-2 transition-all duration-200 ${
+                                selectedImageIndex === index
+                                  ? 'border-teal-500 ring-2 ring-teal-200 shadow-md'
+                                  : 'border-gray-200 hover:border-teal-300'
+                              }`}
+                            >
+                              <img
+                                src={image}
+                                alt={`Thumbnail ${index + 1}`}
+                                className="w-full h-20 object-cover"
+                                onError={(e) => {
+                                  e.target.src = 'https://via.placeholder.com/100x80?text=Error';
+                                }}
+                              />
+                              {selectedImageIndex === index && (
+                                <div className="absolute inset-0 bg-teal-500 bg-opacity-20 flex items-center justify-center">
+                                  <div className="w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">✓</span>
+                                  </div>
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Navigation Buttons for Multiple Images */}
+                    {licenseImages.length > 1 && (
+                      <div className="flex justify-center gap-4 pt-2">
+                        <Button
+                          variant="flat"
+                          color="primary"
+                          isDisabled={selectedImageIndex === 0}
+                          onPress={() => setSelectedImageIndex(prev => Math.max(0, prev - 1))}
+                        >
+                          ← Ảnh trước
+                        </Button>
+                        <Button
+                          variant="flat"
+                          color="primary"
+                          isDisabled={selectedImageIndex === licenseImages.length - 1}
+                          onPress={() => setSelectedImageIndex(prev => Math.min(licenseImages.length - 1, prev + 1))}
+                        >
+                          Ảnh sau →
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <FileText size={64} className="mb-3 text-gray-400" />
+                    <p className="text-gray-600 font-medium">Không có ảnh để hiển thị</p>
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Đóng
+                </Button>
+                {licenseImages.length > 0 && (
+                  <Button
+                    color="primary"
+                    onPress={() => {
+                      window.open(licenseImages[selectedImageIndex], '_blank');
+                    }}
+                  >
+                    Mở ảnh trong tab mới
+                  </Button>
+                )}
               </ModalFooter>
             </>
           )}

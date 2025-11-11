@@ -50,6 +50,10 @@ const Patient = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPatient, setCurrentPatient] = useState(null);
   const [selectedPatientForEmr, setSelectedPatientForEmr] = useState(null);
+  const [emrEntries, setEmrEntries] = useState([]);
+  const [emrLoading, setEmrLoading] = useState(false);
+  const [emrError, setEmrError] = useState('');
+  const [appointmentsMap, setAppointmentsMap] = useState({});
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
 
@@ -349,9 +353,69 @@ const Patient = () => {
     onOpen();
   };
 
-  const handleViewEmr = (patient) => {
+  const handleViewEmr = async (patient) => {
     setSelectedPatientForEmr(patient);
+    setEmrEntries([]);
+    setEmrError('');
     onEmrOpen();
+    
+    // Fetch EMR data
+    if (user && patient?.id) {
+      setEmrLoading(true);
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(`${API_BASE_URL}/medical-records/patient/${patient.id}/entries`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const entries = Array.isArray(data) ? data : [];
+          setEmrEntries(entries);
+          
+          // Fetch doctor names from appointments if available
+          const appointmentIds = entries
+            .map(e => e.appointment_id)
+            .filter(id => id != null);
+          
+          if (appointmentIds.length > 0 && user) {
+            const appointmentsData = {};
+            await Promise.all(
+              appointmentIds.map(async (apptId) => {
+                try {
+                  const apptResponse = await fetch(`${API_BASE_URL}/appointments/${apptId}`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  if (apptResponse.ok) {
+                    const apptData = await apptResponse.json();
+                    appointmentsData[apptId] = apptData;
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch appointment ${apptId}:`, err);
+                }
+              })
+            );
+            setAppointmentsMap(appointmentsData);
+          }
+        } else if (response.status === 404) {
+          setEmrEntries([]);
+          setEmrError('');
+        } else {
+          setEmrError('Không thể tải hồ sơ bệnh án');
+        }
+      } catch (error) {
+        console.error('Error fetching EMR:', error);
+        setEmrError('Lỗi khi tải hồ sơ bệnh án');
+      } finally {
+        setEmrLoading(false);
+      }
+    }
   };
 
   const resetForm = () => {
@@ -688,7 +752,7 @@ const Patient = () => {
                   {selectedPatientForEmr && (
                     <div className="space-y-6">
                       {/* Basic info */}
-                      <div className="border rounded-lg p-4 bg-gray-50">
+                      <div className="rounded-lg p-4 bg-gray-50">
                         <h3 className="font-semibold mb-3 text-lg">📋 Thông Tin Bệnh Nhân</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -720,65 +784,105 @@ const Patient = () => {
                         </div>
                       </div>
 
-                      {/* Mockup history, prescriptions, tests */}
-                      <div className="border rounded-lg p-4">
+                      {/* Lịch Sử Khám Bệnh */}
+                      <div className="rounded-lg p-4">
                         <h3 className="font-semibold mb-3 text-lg">🏥 Lịch Sử Khám Bệnh</h3>
-                        <div className="space-y-3">
-                          <div className="p-3 bg-blue-50 rounded-lg">
-                            <div className="flex justify-between items-start mb-2">
-                              <p className="font-medium">Khám tổng quát</p>
-                              <span className="text-xs text-gray-500">15/10/2025</span>
-                            </div>
-                            <p className="text-sm text-gray-600">Bác sĩ: Dr. Nguyễn Văn A</p>
-                            <p className="text-sm text-gray-600">Chẩn đoán: Sức khỏe tốt, theo dõi định kỳ</p>
+                        {emrLoading && (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                            <p className="text-sm text-gray-500">Đang tải...</p>
                           </div>
-                          <div className="p-3 bg-blue-50 rounded-lg">
-                            <div className="flex justify-between items-start mb-2">
-                              <p className="font-medium">Khám nội khoa</p>
-                              <span className="text-xs text-gray-500">01/09/2025</span>
-                            </div>
-                            <p className="text-sm text-gray-600">Bác sĩ: Dr. Trần Thị B</p>
-                            <p className="text-sm text-gray-600">Chẩn đoán: Viêm họng nhẹ</p>
+                        )}
+                        {!emrLoading && emrError && (
+                          <div className="text-center py-4 text-red-600 text-sm">{emrError}</div>
+                        )}
+                        {!emrLoading && !emrError && emrEntries.length === 0 && (
+                          <div className="text-center py-4 text-gray-500 text-sm">Chưa có lịch sử khám bệnh</div>
+                        )}
+                        {!emrLoading && !emrError && emrEntries.length > 0 && (
+                          <div className="space-y-3">
+                            {emrEntries.map((entry, idx) => {
+                              // Parse diagnosis
+                              const diagnosis = entry?.diagnosis || entry?.assessment_plan?.final_diagnosis || [];
+                              const primaryDiag = Array.isArray(diagnosis) && diagnosis.length > 0 
+                                ? (diagnosis[0]?.text || diagnosis[0]?.primary || diagnosis[0]) 
+                                : (typeof diagnosis === 'string' ? diagnosis : null);
+                              const diagText = primaryDiag || entry?.chief_complaint || entry?.reason_for_visit || 'Chưa có chẩn đoán';
+                              
+                              // Get date
+                              const date = entry?.visit_date || entry?.encounter?.started_at || entry?.date || entry?.visit_id?.replace('V', '');
+                              const dateStr = date ? (isNaN(Date.parse(date)) ? date : new Date(date).toLocaleDateString('vi-VN')) : 'Chưa có ngày';
+                              
+                              // Get doctor name - check multiple possible fields and appointment
+                              const appointment = entry?.appointment_id ? appointmentsMap[entry.appointment_id] : null;
+                              const doctorName = entry?.doctor_name 
+                                || entry?.doctor?.name 
+                                || entry?.doctorName
+                                || entry?.encounter?.doctor?.name
+                                || entry?.encounter?.doctor_name
+                                || appointment?.doctor?.name
+                                || appointment?.doctorName
+                                || (entry?.doctor_id ? 'Bác sĩ (ID: ' + entry.doctor_id + ')' : null)
+                                || 'Chưa có thông tin';
+                              
+                              // Get visit type
+                              const visitType = entry?.visit_type || entry?.type || 'Khám';
+                              
+                              return (
+                                <div key={idx} className="p-3 bg-blue-50 rounded-lg">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <p className="font-medium">{visitType === 'online' ? 'Khám online' : visitType === 'offline' ? 'Khám offline' : visitType}</p>
+                                    <span className="text-xs text-gray-500">{dateStr}</span>
+                                  </div>
+                                  <p className="text-sm text-gray-600">Bác sĩ: {doctorName}</p>
+                                  <p className="text-sm text-gray-600">Chẩn đoán: {diagText}</p>
+                                  {entry?.notes && (
+                                    <p className="text-sm text-gray-500 mt-1 italic">Ghi chú: {entry.notes}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
+                        )}
                       </div>
 
-                      <div className="border rounded-lg p-4">
+                      {/* Đơn Thuốc */}
+                      <div className="rounded-lg p-4">
                         <h3 className="font-semibold mb-3 text-lg">💊 Đơn Thuốc</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center p-2 bg-green-50 rounded">
-                            <div>
-                              <p className="font-medium text-sm">Paracetamol 500mg</p>
-                              <p className="text-xs text-gray-600">2 viên x 3 lần/ngày sau ăn</p>
-                            </div>
-                            <span className="text-xs text-gray-500">15/10/2025</span>
+                        {emrLoading && (
+                          <div className="text-center py-4 text-sm text-gray-500">Đang tải...</div>
+                        )}
+                        {!emrLoading && !emrError && emrEntries.length === 0 && (
+                          <div className="text-center py-4 text-gray-500 text-sm">Chưa có đơn thuốc</div>
+                        )}
+                        {!emrLoading && !emrError && emrEntries.length > 0 && (
+                          <div className="space-y-2">
+                            {emrEntries.map((entry, entryIdx) => {
+                              const prescriptions = entry?.prescriptions || entry?.medications || [];
+                              const date = entry?.visit_date || entry?.encounter?.started_at || entry?.date || entry?.visit_id?.replace('V', '');
+                              const dateStr = date ? (isNaN(Date.parse(date)) ? date : new Date(date).toLocaleDateString('vi-VN')) : '';
+                              
+                              if (prescriptions.length === 0) return null;
+                              
+                              return prescriptions.map((med, medIdx) => (
+                                <div key={`${entryIdx}-${medIdx}`} className="flex justify-between items-center p-2 bg-green-50 rounded">
+                                  <div>
+                                    <p className="font-medium text-sm">{med.name || med.medication_name || 'Chưa có tên thuốc'}</p>
+                                    <p className="text-xs text-gray-600">
+                                      {med.dosage && `Liều: ${med.dosage}`}
+                                      {med.frequency && ` • ${med.frequency}`}
+                                      {med.duration && ` • ${med.duration}`}
+                                    </p>
+                                  </div>
+                                  {dateStr && <span className="text-xs text-gray-500">{dateStr}</span>}
+                                </div>
+                              ));
+                            }).flat().filter(Boolean)}
+                            {emrEntries.every(e => (!e.prescriptions || e.prescriptions.length === 0) && (!e.medications || e.medications.length === 0)) && (
+                              <div className="text-center py-4 text-gray-500 text-sm">Chưa có đơn thuốc</div>
+                            )}
                           </div>
-                          <div className="flex justify-between items-center p-2 bg-green-50 rounded">
-                            <div>
-                              <p className="font-medium text-sm">Vitamin C 1000mg</p>
-                              <p className="text-xs text-gray-600">1 viên x 1 lần/ngày</p>
-                            </div>
-                            <span className="text-xs text-gray-500">01/09/2025</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border rounded-lg p-4">
-                        <h3 className="font-semibold mb-3 text-lg">🔬 Kết Quả Xét Nghiệm</h3>
-                        <div className="space-y-2">
-                          <div className="p-2 bg-purple-50 rounded">
-                            <p className="font-medium text-sm">Xét nghiệm máu tổng quát</p>
-                            <p className="text-xs text-gray-600">Ngày: 15/10/2025 • Kết quả: Bình thường</p>
-                          </div>
-                          <div className="p-2 bg-purple-50 rounded">
-                            <p className="font-medium text-sm">Xét nghiệm đường huyết</p>
-                            <p className="text-xs text-gray-600">Ngày: 15/10/2025 • Kết quả: 95 mg/dL (Bình thường)</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-center text-sm text-gray-500 italic">
-                        * Đây là dữ liệu mockup để demo giao diện
+                        )}
                       </div>
                     </div>
                   )}

@@ -14,6 +14,7 @@ import se1961.g1.medconnect.enums.Slot;
 import se1961.g1.medconnect.pojo.*;
 import se1961.g1.medconnect.repository.DoctorRepository;
 import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.repository.VideoCallSessionRepository;
 import se1961.g1.medconnect.service.AdminService;
 import se1961.g1.medconnect.service.AppointmentService;
 import se1961.g1.medconnect.service.DoctorService;
@@ -59,6 +60,9 @@ public class AdminController {
 
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Autowired
+    private VideoCallSessionRepository videoCallSessionRepository;
 
     // ============= DASHBOARD STATS =============
     
@@ -382,12 +386,21 @@ public class AdminController {
         for (Doctor doctor : doctors) {
             Map<String, Object> doctorData = new HashMap<>();
             doctorData.put("id", doctor.getUserId());
+            doctorData.put("userId", doctor.getUserId());
             doctorData.put("name", doctor.getName());
             doctorData.put("email", doctor.getEmail());
             doctorData.put("phone", doctor.getPhone());
             doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
+            doctorData.put("specialityId", doctor.getSpeciality() != null ? doctor.getSpeciality().getSpecialityId() : null);
             doctorData.put("avatar", doctor.getAvatarUrl());
             doctorData.put("status", doctor.getStatus() != null ? doctor.getStatus().name() : null);
+            doctorData.put("experienceYears", doctor.getExperienceYears());
+            doctorData.put("educationLevel", doctor.getEducationLevel());
+            doctorData.put("bio", doctor.getBio());
+            doctorData.put("clinicAddress", doctor.getClinicAddress());
+            doctorData.put("provinceCode", doctor.getProvinceCode());
+            doctorData.put("districtCode", doctor.getDistrictCode());
+            doctorData.put("wardCode", doctor.getWardCode());
 
             // Get active license with full details
             License activeLicense = doctor.getActiveLicense();
@@ -1050,11 +1063,18 @@ public class AdminController {
         response.put("createdAt", appointment.getCreatedAt() != null ? appointment.getCreatedAt().toString() : "");
         
         // Include video call session timestamps when available
-        if (appointment.getVideoCallSession() != null) {
-            var session = appointment.getVideoCallSession();
-            response.put("videoCallStart", session.getStartTime() != null ? session.getStartTime().toString() : null);
-            response.put("videoCallEnd", session.getEndTime() != null ? session.getEndTime().toString() : null);
-        } else {
+        // Fetch VideoCallSession explicitly from repository to avoid lazy loading issues
+        try {
+            var session = videoCallSessionRepository.findById(appointment.getAppointmentId()).orElse(null);
+            if (session != null) {
+                response.put("videoCallStart", session.getStartTime() != null ? session.getStartTime().toString() : null);
+                response.put("videoCallEnd", session.getEndTime() != null ? session.getEndTime().toString() : null);
+            } else {
+                response.put("videoCallStart", null);
+                response.put("videoCallEnd", null);
+            }
+        } catch (Exception e) {
+            // If there's any error fetching the session, just set to null
             response.put("videoCallStart", null);
             response.put("videoCallEnd", null);
         }

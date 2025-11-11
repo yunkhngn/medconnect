@@ -159,14 +159,30 @@ export default function DoctorProfile() {
 
         setDoctor(prev => ({
           ...prev,
-          ...data,
-          // Ensure speciality_id is properly set
-          speciality_id: data.speciality_id || data.specialityId || prev.speciality_id,
-          // Map snake_case from backend to camelCase for state
-          experienceYears: data.experience_years !== undefined ? String(data.experience_years) : prev.experienceYears || "",
-          experience_years: data.experience_years !== undefined ? data.experience_years : prev.experience_years,
-          educationLevel: data.education_level !== undefined ? data.education_level : prev.educationLevel || "",
-          education_level: data.education_level !== undefined ? data.education_level : prev.education_level
+          name: data.name || prev.name || "",
+          email: data.email || prev.email || "",
+          phone: data.phone || prev.phone || "",
+          specialization: data.specialization || prev.specialization || "",
+          speciality_id: data.speciality_id || data.specialityId || prev.speciality_id || null,
+          // Map experience_years - keep as number for calculations, but also store as string for input
+          experienceYears: data.experience_years !== undefined && data.experience_years !== null ? String(data.experience_years) : (prev.experienceYears || ""),
+          experience_years: data.experience_years !== undefined && data.experience_years !== null ? data.experience_years : (prev.experience_years || 0),
+          // Map education_level
+          educationLevel: data.education_level !== undefined && data.education_level !== null ? data.education_level : (prev.educationLevel || ""),
+          education_level: data.education_level !== undefined && data.education_level !== null ? data.education_level : (prev.education_level || ""),
+          // Map bio
+          bio: data.bio !== undefined && data.bio !== null ? data.bio : (prev.bio || ""),
+          // Map clinic address
+          clinic_address: data.clinic_address !== undefined && data.clinic_address !== null ? data.clinic_address : (prev.clinic_address || ""),
+          // Map address fields
+          province_code: data.province_code !== undefined && data.province_code !== null ? data.province_code : (prev.province_code || null),
+          province_name: data.province_name || prev.province_name || "",
+          district_code: data.district_code !== undefined && data.district_code !== null ? data.district_code : (prev.district_code || null),
+          district_name: data.district_name || prev.district_name || "",
+          ward_code: data.ward_code !== undefined && data.ward_code !== null ? data.ward_code : (prev.ward_code || null),
+          ward_name: data.ward_name || prev.ward_name || "",
+          // Map active license
+          active_license: data.active_license || prev.active_license || null
         }));
 
         // Fetch avatar from backend API
