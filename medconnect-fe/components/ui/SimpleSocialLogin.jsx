@@ -4,6 +4,8 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/router";
 import { getRoleRedirectPath } from "@/utils/roleRedirect";
+import { generateWelcomeEmail } from "@/utils/emailTemplates";
+import { sendEmailViaAPI } from "@/utils/emailHelper";
 
 export default function SimpleSocialLogin({ buttonText = "Đăng nhập với Google", showMessage }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +62,17 @@ export default function SimpleSocialLogin({ buttonText = "Đăng nhập với Go
 
         if (registerResponse.ok) {
           if (showMessage) showMessage("Tài khoản mới đã được tạo thành công!", "success");
+          
+          // Send welcome email to new user
+          try {
+            const userName = user.displayName || user.email?.split('@')[0] || 'Bạn';
+            const { subject, html } = generateWelcomeEmail(userName, user.email);
+            await sendEmailViaAPI(user.email, subject, html);
+            console.log("✅ Welcome email sent to new Google user");
+          } catch (emailError) {
+            console.error("⚠️ Failed to send welcome email:", emailError);
+            // Don't block registration flow if email fails
+          }
           
           setTimeout(() => {
             router.push('/nguoi-dung/trang-chu'); // New users go to patient dashboard

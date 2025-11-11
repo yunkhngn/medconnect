@@ -4,6 +4,8 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/router";
 import { getRoleRedirectPath } from "@/utils/roleRedirect";
+import { generateWelcomeEmail } from "@/utils/emailTemplates";
+import { sendEmailViaAPI } from "@/utils/emailHelper";
 
 export default function SocialLoginButtons({ onSuccess, onError, autoRedirect = false }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +107,17 @@ export default function SocialLoginButtons({ onSuccess, onError, autoRedirect = 
         if (registerResponse.ok) {
           // Registration successful
           const registerData = await registerResponse.json();
+          
+          // Send welcome email to new user
+          try {
+            const userName = user.displayName || user.email?.split('@')[0] || 'Bạn';
+            const { subject, html } = generateWelcomeEmail(userName, user.email);
+            await sendEmailViaAPI(user.email, subject, html);
+            console.log("✅ Welcome email sent to new Google user");
+          } catch (emailError) {
+            console.error("⚠️ Failed to send welcome email:", emailError);
+            // Don't block registration flow if email fails
+          }
           
           if (autoRedirect) {
             // Auto redirect to patient dashboard for new users
