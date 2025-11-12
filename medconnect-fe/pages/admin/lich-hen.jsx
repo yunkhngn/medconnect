@@ -273,7 +273,7 @@ const Appointment = () => {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          status: formData.status,
+          status: formData.status.toUpperCase(),
         }),
       });
       
@@ -283,6 +283,7 @@ const Appointment = () => {
         toast.success(data.message || 'Cập nhật lịch hẹn thành công!');
         fetchAppointments();
         resetForm();
+        setCurrentAppointment(null);
         return true;
       } else {
         toast.error(data.message || 'Cập nhật thất bại');
@@ -619,8 +620,8 @@ const Appointment = () => {
                 </div>
               </TableCell>
               <TableCell>
-                <Chip color={getStatusColor(appointment.status)} size="sm">
-                  {statusOptions.find((s) => s.value === appointment.status)?.label}
+                <Chip color={getStatusColor(appointment.status?.toLowerCase())} size="sm" variant="flat">
+                  {statusOptions.find((s) => s.value === appointment.status?.toLowerCase())?.label || appointment.status || 'N/A'}
                 </Chip>
               </TableCell>
               <TableCell>
@@ -681,121 +682,185 @@ const Appointment = () => {
               </ModalHeader>
               <ModalBody>
                 <div className="space-y-4">
-                  <Select
-                    label="Bệnh nhân"
-                    placeholder="Chọn bệnh nhân"
-                    isDisabled={!!currentAppointment}
-                    selectedKeys={formData.patientId ? new Set([formData.patientId.toString()]) : new Set()}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || '';
-                      setFormData({ ...formData, patientId: value });
-                    }}
-                  >
-                    {patients.length === 0 ? (
-                      <SelectItem key="loading" value="loading" isDisabled>
-                        Đang tải...
-                      </SelectItem>
-                    ) : (
-                      patients.map((patient) => (
-                        <SelectItem key={patient.id.toString()} value={patient.id.toString()}>
-                          {patient.fullName || patient.name || `Bệnh nhân #${patient.id}`} (ID: {patient.id})
-                        </SelectItem>
-                      ))
-                    )}
-                  </Select>
-
-                  <Select
-                    label="Bác sĩ"
-                    placeholder="Chọn bác sĩ"
-                    isDisabled={!!currentAppointment}
-                    selectedKeys={formData.doctorId ? new Set([formData.doctorId.toString()]) : new Set()}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || '';
-                      setFormData({ ...formData, doctorId: value, slot: '' }); // Reset slot when doctor changes
-                      setAvailableSlots([]); // Clear slots when doctor changes
-                      // Fetch available slots if date is also selected
-                      if (formData.appointmentDate) {
-                        fetchAvailableSlots(parseInt(value), formData.appointmentDate);
-                      }
-                    }}
-                  >
-                    {doctors.length === 0 ? (
-                      <SelectItem key="loading" value="loading" isDisabled>
-                        Đang tải...
-                      </SelectItem>
-                    ) : (
-                      doctors.map((doctor) => (
-                        <SelectItem key={doctor.id.toString()} value={doctor.id.toString()}>
-                          {doctor.name || `Bác sĩ #${doctor.id}`}{doctor.speciality ? ` - ${doctor.speciality}` : ''}
-                        </SelectItem>
-                      ))
-                    )}
-                  </Select>
-
-                  <Input
-                    label="Ngày khám"
-                    type="date"
-                    isDisabled={!!currentAppointment}
-                    value={formData.appointmentDate}
-                    onChange={(e) => {
-                      const dateValue = e.target.value;
-                      setFormData({ ...formData, appointmentDate: dateValue, slot: '' }); // Reset slot when date changes
-                      setAvailableSlots([]); // Clear slots when date changes
-                      // Fetch available slots if doctor is also selected
-                      if (formData.doctorId) {
-                        fetchAvailableSlots(parseInt(formData.doctorId), dateValue);
-                      }
-                    }}
-                    variant="bordered"
-                    classNames={{
-                      inputWrapper: "focus-within:border-primary focus-within:ring-0"
-                    }}
-                  />
-
-                  <Select
-                    label="Giờ khám (Slot)"
-                    placeholder={isLoadingSlots ? "Đang tải..." : (formData.doctorId && formData.appointmentDate ? "Chọn giờ khám" : "Chọn bác sĩ và ngày trước")}
-                    isDisabled={!!currentAppointment || isLoadingSlots || !formData.doctorId || !formData.appointmentDate}
-                    selectedKeys={formData.slot ? new Set([formData.slot]) : new Set()}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || '';
-                      setFormData({ ...formData, slot: value });
-                    }}
-                  >
-                    {isLoadingSlots ? (
-                      <SelectItem key="loading" value="loading" isDisabled>
-                        Đang tải slot...
-                      </SelectItem>
-                    ) : availableSlots.length === 0 && formData.doctorId && formData.appointmentDate ? (
-                      <SelectItem key="no-slots" value="no-slots" isDisabled>
-                        Không có slot trống
-                      </SelectItem>
-                    ) : (
-                      availableSlots.map((slotValue) => {
-                        const slotOption = slotOptions.find(s => s.value === slotValue);
-                        return (
-                          <SelectItem key={slotValue} value={slotValue}>
-                            {slotOption ? slotOption.label : slotValue}
+                  {currentAppointment ? (
+                    // Edit mode: Only show status
+                    <>
+                      <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                        <p className="text-sm text-gray-600">Bệnh nhân: <span className="font-medium text-gray-800">{currentAppointment.patientName}</span></p>
+                        <p className="text-sm text-gray-600">Bác sĩ: <span className="font-medium text-gray-800">{currentAppointment.doctorName}</span></p>
+                        <p className="text-sm text-gray-600">Ngày khám: <span className="font-medium text-gray-800">{new Date(currentAppointment.appointmentDate).toLocaleDateString('vi-VN')}</span></p>
+                        <p className="text-sm text-gray-600">Giờ khám: <span className="font-medium text-gray-800">{currentAppointment.slotTime || currentAppointment.slot}</span></p>
+                      </div>
+                      <Select
+                        label="Trạng thái"
+                        selectedKeys={new Set([formData.status.toUpperCase()])}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, status: (selectedValue || 'PENDING').toLowerCase() });
+                        }}
+                      >
+                        {statusOptions.slice(1).map((item) => (
+                          <SelectItem 
+                            key={item.value.toUpperCase()} 
+                            value={item.value.toUpperCase()}
+                            textValue={item.label}
+                          >
+                            {item.label}
                           </SelectItem>
-                        );
-                      })
-                    )}
-                  </Select>
+                        ))}
+                      </Select>
+                    </>
+                  ) : (
+                    // Add mode: Show all fields
+                    <>
+                      <Select
+                        label="Bệnh nhân"
+                        placeholder="Chọn bệnh nhân"
+                        selectedKeys={formData.patientId ? new Set([formData.patientId.toString()]) : new Set()}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, patientId: selectedValue || '' });
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {patients.length === 0 ? (
+                          <SelectItem key="loading" value="loading" isDisabled>
+                            Đang tải...
+                          </SelectItem>
+                        ) : (
+                          patients.map((patient) => {
+                            const displayName = `${patient.fullName || patient.name || `Bệnh nhân #${patient.id}`} (ID: ${patient.id})`;
+                            return (
+                              <SelectItem 
+                                key={patient.id.toString()} 
+                                value={patient.id.toString()}
+                                textValue={displayName}
+                              >
+                                {displayName}
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </Select>
 
-                  <Select
-                    label="Trạng thái"
-                    selectedKeys={new Set([formData.status.toUpperCase()])}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || 'PENDING';
-                      setFormData({ ...formData, status: value.toLowerCase() });
-                    }}
-                  >
-                    {statusOptions.slice(1).filter(item => item.value !== 'completed' && item.value !== 'cancelled').map((item) => (
-                      <SelectItem key={item.value.toUpperCase()} value={item.value.toUpperCase()}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </Select>
+                      <Select
+                        label="Bác sĩ"
+                        placeholder="Chọn bác sĩ"
+                        selectedKeys={formData.doctorId ? new Set([formData.doctorId.toString()]) : new Set()}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, doctorId: selectedValue || '', slot: '' }); // Reset slot when doctor changes
+                          setAvailableSlots([]); // Clear slots when doctor changes
+                          // Fetch available slots if date is also selected
+                          if (formData.appointmentDate && selectedValue) {
+                            fetchAvailableSlots(parseInt(selectedValue), formData.appointmentDate);
+                          }
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {doctors.length === 0 ? (
+                          <SelectItem key="loading" value="loading" isDisabled>
+                            Đang tải...
+                          </SelectItem>
+                        ) : (
+                          doctors.map((doctor) => {
+                            const displayName = `${doctor.name || `Bác sĩ #${doctor.id}`}${doctor.speciality ? ` - ${doctor.speciality}` : ''}`;
+                            return (
+                              <SelectItem 
+                                key={doctor.id.toString()} 
+                                value={doctor.id.toString()}
+                                textValue={displayName}
+                              >
+                                {displayName}
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </Select>
+
+                      <Input
+                        label="Ngày khám"
+                        type="date"
+                        value={formData.appointmentDate}
+                        onChange={(e) => {
+                          const dateValue = e.target.value;
+                          setFormData({ ...formData, appointmentDate: dateValue, slot: '' }); // Reset slot when date changes
+                          setAvailableSlots([]); // Clear slots when date changes
+                          // Fetch available slots if doctor is also selected
+                          if (formData.doctorId) {
+                            fetchAvailableSlots(parseInt(formData.doctorId), dateValue);
+                          }
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          inputWrapper: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      />
+
+                      <Select
+                        label="Giờ khám (Slot)"
+                        placeholder={isLoadingSlots ? "Đang tải..." : (formData.doctorId && formData.appointmentDate ? "Chọn giờ khám" : "Chọn bác sĩ và ngày trước")}
+                        isDisabled={isLoadingSlots || !formData.doctorId || !formData.appointmentDate}
+                        selectedKeys={formData.slot ? new Set([formData.slot]) : new Set()}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, slot: selectedValue || '' });
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {isLoadingSlots ? (
+                          <SelectItem key="loading" value="loading" isDisabled>
+                            Đang tải slot...
+                          </SelectItem>
+                        ) : availableSlots.length === 0 && formData.doctorId && formData.appointmentDate ? (
+                          <SelectItem key="no-slots" value="no-slots" isDisabled>
+                            Không có slot trống
+                          </SelectItem>
+                        ) : (
+                          availableSlots.map((slotValue) => {
+                            const slotOption = slotOptions.find(s => s.value === slotValue);
+                            return (
+                              <SelectItem key={slotValue} value={slotValue}>
+                                {slotOption ? slotOption.label : slotValue}
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </Select>
+
+                      <Select
+                        label="Trạng thái"
+                        selectedKeys={new Set([formData.status.toUpperCase()])}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, status: (selectedValue || 'PENDING').toLowerCase() });
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {statusOptions.slice(1).filter(item => item.value !== 'completed' && item.value !== 'cancelled').map((item) => (
+                          <SelectItem 
+                            key={item.value.toUpperCase()} 
+                            value={item.value.toUpperCase()}
+                            textValue={item.label}
+                          >
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </Select>
+                    </>
+                  )}
                 </div>
               </ModalBody>
               <ModalFooter>
