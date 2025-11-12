@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/specialties/**").permitAll()
                 .requestMatchers("/api/specialities/**").permitAll() // backward compatibility
                 .requestMatchers("/api/doctors").permitAll() // public doctor list for dropdowns
+                .requestMatchers("/api/doctor-applications").permitAll() // public doctor application form
                 .requestMatchers("/api/payment/ipn").permitAll() // VNPay webhook
                 .requestMatchers("/api/payment/confirm").permitAll() // VNPay callback  
                 .requestMatchers("/doctor/dashboard/all").permitAll() // public list of doctors for booking

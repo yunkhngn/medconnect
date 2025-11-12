@@ -12,13 +12,21 @@ import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Speciality;
 import se1961.g1.medconnect.repository.AppointmentRepository;
 import se1961.g1.medconnect.repository.DoctorRepository;
+import se1961.g1.medconnect.repository.LicenseRepository;
 import se1961.g1.medconnect.repository.PaymentRepository;
 import se1961.g1.medconnect.repository.ScheduleRepository;
 import se1961.g1.medconnect.repository.SpecialityRepository;
 import se1961.g1.medconnect.repository.UserRepository;
 import se1961.g1.medconnect.repository.VideoCallSessionRepository;
+import se1961.g1.medconnect.pojo.License;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -40,6 +48,10 @@ public class DoctorService {
     private VideoCallSessionRepository videoCallSessionRepository;
     @Autowired
     private ScheduleRepository scheduleRepository;
+    @Autowired
+    private LicenseRepository licenseRepository;
+    @Autowired
+    private EmailService emailService;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
         return doctorRepository.findByFirebaseUid(uid);
@@ -98,6 +110,29 @@ public class DoctorService {
         Doctor existing = doctorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
         
+        // Store original status before update
+        se1961.g1.medconnect.enums.DoctorStatus originalStatus = existing.getStatus();
+        
+        System.out.println("=== Doctor Update Request ===");
+        System.out.println("Doctor ID: " + id);
+        System.out.println("Original status: " + originalStatus);
+        System.out.println("Requested status: " + dto.getStatus());
+        
+        // Validate status transition rules
+        if (dto.getStatus() != null && originalStatus != null) {
+            // Rule 1: Cannot change from ACTIVE to PENDING
+            if (originalStatus == se1961.g1.medconnect.enums.DoctorStatus.ACTIVE 
+                    && dto.getStatus() == se1961.g1.medconnect.enums.DoctorStatus.PENDING) {
+                throw new RuntimeException("Không thể chuyển bác sĩ từ trạng thái ACTIVE về PENDING");
+            }
+            
+            // Rule 2: From PENDING, only allow transition to ACTIVE
+            if (originalStatus == se1961.g1.medconnect.enums.DoctorStatus.PENDING 
+                    && dto.getStatus() != se1961.g1.medconnect.enums.DoctorStatus.ACTIVE) {
+                throw new RuntimeException("Bác sĩ đang ở trạng thái PENDING chỉ có thể được chuyển sang ACTIVE");
+            }
+        }
+        
         // Update User info if provided
         if (dto.getName() != null) {
             existing.setName(dto.getName());
@@ -107,8 +142,81 @@ public class DoctorService {
         }
         // Email không được thay đổi
         
+        // Map DTO to Doctor (this will set the new status)
         mapDtoToDoctor(dto, existing);
+        
+        // Check if doctor is being approved (PENDING -> ACTIVE) AFTER mapping
+        boolean isBeingApproved = originalStatus == se1961.g1.medconnect.enums.DoctorStatus.PENDING 
+                && existing.getStatus() == se1961.g1.medconnect.enums.DoctorStatus.ACTIVE;
+        
+        System.out.println("Status after mapping: " + existing.getStatus());
+        System.out.println("Is being approved: " + isBeingApproved);
+        
+        // If being approved, create Firebase account and send email
+        if (isBeingApproved) {
+            System.out.println("=== Starting Doctor Approval Process ===");
+            System.out.println("Doctor email: " + existing.getEmail());
+            System.out.println("Doctor name: " + existing.getName());
+            
+            try {
+                // Generate random password
+                String tempPassword = generateRandomPassword();
+                System.out.println("Generated password: " + tempPassword);
+                
+                // Check if Firebase account already exists (if firebaseUid is not a placeholder)
+                if (existing.getFirebaseUid() != null && !existing.getFirebaseUid().startsWith("pending-")) {
+                    System.out.println("Firebase account already exists: " + existing.getFirebaseUid());
+                    // Update password instead of creating new account
+                    try {
+                        firebaseService.updateFirebaseUserPassword(existing.getFirebaseUid(), tempPassword);
+                        System.out.println("Updated Firebase password successfully");
+                    } catch (Exception e) {
+                        System.err.println("Failed to update Firebase password: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    // Create Firebase account
+                    System.out.println("Creating new Firebase account...");
+                    String firebaseUid = firebaseService.createFirebaseUser(
+                        existing.getEmail(),
+                        tempPassword,
+                        existing.getName()
+                    );
+                    existing.setFirebaseUid(firebaseUid);
+                    System.out.println("Firebase account created: " + firebaseUid);
+                }
+                
+                // Send approval email with password
+                System.out.println("Sending approval email to: " + existing.getEmail());
+                emailService.sendDoctorApprovalEmail(
+                    existing.getEmail(),
+                    existing.getName(),
+                    tempPassword
+                );
+                System.out.println("✅ Approval email sent successfully!");
+                
+            } catch (Exception e) {
+                System.err.println("❌ ERROR: Failed to create Firebase account or send email");
+                System.err.println("Error message: " + e.getMessage());
+                e.printStackTrace();
+                // Continue with approval even if Firebase/email fails
+                // But log the error clearly
+            }
+        }
+        
         return doctorRepository.save(existing);
+    }
+    
+    /**
+     * Generate random password for doctor approval
+     */
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
+        StringBuilder password = new StringBuilder();
+        for (int i = 0; i < 12; i++) {
+            password.append(chars.charAt((int) (Math.random() * chars.length())));
+        }
+        return password.toString();
     }
 
     @Transactional
@@ -223,6 +331,56 @@ public class DoctorService {
             doctor.setSpeciality(speciality);
         }
         
-        return doctorRepository.save(doctor);
+        // Save doctor first to get ID
+        doctor = doctorRepository.save(doctor);
+        
+        // Parse and save certifications as License records
+        if (dto.getCertifications() != null && !dto.getCertifications().trim().isEmpty()) {
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                List<Map<String, Object>> certifications = objectMapper.readValue(
+                    dto.getCertifications(), 
+                    new TypeReference<List<Map<String, Object>>>() {}
+                );
+                
+                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                
+                for (Map<String, Object> cert : certifications) {
+                    License license = new License();
+                    license.setDoctor(doctor);
+                    license.setLicenseNumber((String) cert.get("certificateNumber"));
+                    
+                    // Parse issue date
+                    if (cert.get("issueDate") != null) {
+                        license.setIssuedDate(LocalDate.parse((String) cert.get("issueDate"), dateFormatter));
+                    }
+                    
+                    // Parse expiry date (optional)
+                    if (cert.get("expiryDate") != null && !((String) cert.get("expiryDate")).isEmpty()) {
+                        license.setExpiryDate(LocalDate.parse((String) cert.get("expiryDate"), dateFormatter));
+                    }
+                    
+                    license.setIssuedBy((String) cert.get("issuingAuthority"));
+                    license.setIssuerTitle((String) cert.get("issuerPosition"));
+                    license.setScopeOfPractice((String) cert.get("scope"));
+                    license.setNotes((String) cert.get("notes"));
+                    license.setIsActive(true);
+                    
+                    // Handle base64 image - store as JSON array string
+                    if (cert.get("base64Image") != null) {
+                        // Store base64 image as JSON array
+                        String base64Image = (String) cert.get("base64Image");
+                        license.setProofImages("[\"" + base64Image + "\"]");
+                    }
+                    
+                    licenseRepository.save(license);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse certifications: " + e.getMessage());
+                // Continue even if license parsing fails
+            }
+        }
+        
+        return doctor;
     }
 }

@@ -464,8 +464,56 @@ public class AdminController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody DoctorDTO dto) {
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
+            System.out.println("=== AdminController.updateDoctor ===");
+            System.out.println("Doctor ID: " + id);
+            System.out.println("Raw request: " + request);
+            
+            // Convert Map to DoctorDTO manually to handle status conversion
+            DoctorDTO dto = new DoctorDTO();
+            if (request.containsKey("name")) dto.setName((String) request.get("name"));
+            if (request.containsKey("email")) dto.setEmail((String) request.get("email"));
+            if (request.containsKey("phone")) dto.setPhone((String) request.get("phone"));
+            if (request.containsKey("specialityId")) {
+                Object specId = request.get("specialityId");
+                if (specId instanceof Integer) {
+                    dto.setSpecialityId((Integer) specId);
+                } else if (specId instanceof String) {
+                    dto.setSpecialityId(Integer.parseInt((String) specId));
+                }
+            }
+            if (request.containsKey("experienceYears")) {
+                Object exp = request.get("experienceYears");
+                if (exp instanceof Integer) {
+                    dto.setExperienceYears((Integer) exp);
+                } else if (exp instanceof String) {
+                    dto.setExperienceYears(Integer.parseInt((String) exp));
+                }
+            }
+            if (request.containsKey("educationLevel")) dto.setEducationLevel((String) request.get("educationLevel"));
+            if (request.containsKey("bio")) dto.setBio((String) request.get("bio"));
+            
+            // Handle status conversion from string to enum
+            if (request.containsKey("status")) {
+                Object statusObj = request.get("status");
+                if (statusObj instanceof String) {
+                    String statusStr = ((String) statusObj).toUpperCase();
+                    try {
+                        dto.setStatus(se1961.g1.medconnect.enums.DoctorStatus.valueOf(statusStr));
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Invalid status: " + statusStr);
+                        dto.setStatus(null);
+                    }
+                } else if (statusObj instanceof se1961.g1.medconnect.enums.DoctorStatus) {
+                    dto.setStatus((se1961.g1.medconnect.enums.DoctorStatus) statusObj);
+                }
+            }
+            
+            System.out.println("DTO Status: " + dto.getStatus());
+            System.out.println("DTO Name: " + dto.getName());
+            System.out.println("DTO Email: " + dto.getEmail());
+            
             Doctor updated = doctorService.updateDoctor(id, dto);
             
             Map<String, Object> response = new HashMap<>();
@@ -473,8 +521,11 @@ public class AdminController {
             response.put("message", "Cập nhật bác sĩ thành công");
             response.put("data", mapDoctorToResponse(updated));
             
+            System.out.println("✅ Doctor updated successfully");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            System.err.println("❌ Error updating doctor: " + e.getMessage());
+            e.printStackTrace();
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", e.getMessage());

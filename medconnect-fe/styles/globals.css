@@ -47,3 +47,17 @@
 .animate-slide-in {
   animation: slide-in 0.3s ease-out forwards;
 }
+
+/* Remove black outline/ring on focus for all interactive elements */
+*:focus,
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* HeroUI specific overrides */
+[data-focus="true"],
+[data-focus-visible="true"] {
+  outline: none !important;
+  box-shadow: none !important;
+}

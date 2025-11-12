@@ -20,6 +20,20 @@ export default function MedConnectLogin() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [redirect, setRedirect] = useState(false);
 
+  const showMessage = (text, type = "info") => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: "", type: "" }), 5000);
+  };
+
+  // Check for error query parameter
+  useEffect(() => {
+    if (router.query.error === 'inactive') {
+      showMessage("Tài khoản của bạn đang ở trạng thái không hoạt động. Vui lòng liên hệ admin để được kích hoạt.", "error");
+      // Clear the query parameter
+      router.replace('/dang-nhap', undefined, { shallow: true });
+    }
+  }, [router.query]);
+
   useEffect(() => {
     // keep auth state listener if you need it elsewhere, but do NOT auto-redirect here
     // (we let finalizeLogin control redirect after successful backend handshake)
@@ -39,11 +53,6 @@ export default function MedConnectLogin() {
       setRememberMe(true);
     }
   }, []);
-
-  const showMessage = (text, type = "info") => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 5000);
-  };
 
   // Notify backend with Firebase ID token so server can set httpOnly session/cookie.
   // Returns an object: { ok: boolean, body: parsedJson|null }
@@ -106,9 +115,30 @@ export default function MedConnectLogin() {
       return;
     }
 
-    // If backend returned role in the login response, use it directly.
+    // Check user status if available in response
+    const userStatus = notifyRes.body?.status;
     const backendRole = notifyRes.body && (notifyRes.body.role || notifyRes.body.data?.role);
+    
+    // If backend returned role, check status for doctors
     if (backendRole) {
+      // Check if doctor account is PENDING or INACTIVE
+      if (backendRole.toLowerCase() === 'doctor' && userStatus) {
+        if (userStatus === 'PENDING' || userStatus === 'INACTIVE') {
+          // Sign out immediately
+          try {
+            await signOut(auth);
+          } catch (signOutErr) {
+            console.error("Failed to sign out:", signOutErr);
+          }
+          setIsLoading(false);
+          showMessage(
+            `Tài khoản của bạn đang ở trạng thái ${userStatus === 'PENDING' ? 'chờ duyệt' : 'không hoạt động'}. Vui lòng liên hệ admin để được kích hoạt.`,
+            "error"
+          );
+          return;
+        }
+      }
+      
       showMessage("Đăng nhập thành công!", "success");
       setTimeout(() => setRedirect(true), 200);
       return;
@@ -123,8 +153,44 @@ export default function MedConnectLogin() {
 
     // Try to get role via getUserRole (custom claim or backend /user/role)
     const role = await getUserRole(firebaseUser, { fallbackToBackend: true });
-
+    
+    // Also check status from backend
     if (role) {
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+        const statusResponse = await fetch(`${apiUrl}/user/role`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          const userStatus = statusData.status;
+          
+          // Check if doctor account is PENDING or INACTIVE
+          if (role.toLowerCase() === 'doctor' && userStatus) {
+            if (userStatus === 'PENDING' || userStatus === 'INACTIVE') {
+              // Sign out immediately
+              try {
+                await signOut(auth);
+              } catch (signOutErr) {
+                console.error("Failed to sign out:", signOutErr);
+              }
+              setIsLoading(false);
+              showMessage(
+                `Tài khoản của bạn đang ở trạng thái ${userStatus === 'PENDING' ? 'chờ duyệt' : 'không hoạt động'}. Vui lòng liên hệ admin để được kích hoạt.`,
+                "error"
+              );
+              return;
+            }
+          }
+        }
+      } catch (statusErr) {
+        console.warn("Failed to check user status:", statusErr);
+      }
+      
       showMessage("Đăng nhập thành công!", "success");
       setTimeout(() => setRedirect(true), 200);
     } else {
