@@ -251,11 +251,18 @@ public class DoctorService {
         }
 
         // Delete Firebase account
-        try {
-            firebaseService.deleteFirebaseUser(existing.getFirebaseUid());
-        } catch (Exception e) {
-            // Log and continue deletion to keep DB consistent
-            System.err.println("Failed to delete Firebase user for doctor id=" + id + ": " + e.getMessage());
+        if (existing.getFirebaseUid() != null && !existing.getFirebaseUid().isEmpty() && !existing.getFirebaseUid().startsWith("pending-")) {
+            try {
+                System.out.println("Deleting Firebase account for doctor: " + existing.getFirebaseUid());
+                firebaseService.deleteFirebaseUser(existing.getFirebaseUid());
+                System.out.println("✅ Firebase account deleted successfully");
+            } catch (Exception e) {
+                // Log and continue deletion to keep DB consistent
+                System.err.println("❌ Failed to delete Firebase user for doctor id=" + id + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("⚠️ Doctor has no valid Firebase UID (or is pending), skipping Firebase deletion");
         }
 
         doctorRepository.delete(existing);

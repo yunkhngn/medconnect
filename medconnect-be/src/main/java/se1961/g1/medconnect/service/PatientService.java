@@ -97,11 +97,16 @@ public class PatientService {
         // 7. Delete Firebase user
         if (patient.getFirebaseUid() != null && !patient.getFirebaseUid().isEmpty()) {
             try {
+                System.out.println("Deleting Firebase account for patient: " + patient.getFirebaseUid());
                 firebaseService.deleteFirebaseUser(patient.getFirebaseUid());
+                System.out.println("✅ Firebase account deleted successfully");
             } catch (Exception e) {
-                System.err.println("Failed to delete Firebase user: " + e.getMessage());
+                System.err.println("❌ Failed to delete Firebase user for patient id=" + userId + ": " + e.getMessage());
+                e.printStackTrace();
                 // Continue with database deletion even if Firebase deletion fails
             }
+        } else {
+            System.out.println("⚠️ Patient has no Firebase UID, skipping Firebase deletion");
         }
 
         // 8. Delete patient (this will cascade delete MR due to @OneToOne cascade = CascadeType.ALL)

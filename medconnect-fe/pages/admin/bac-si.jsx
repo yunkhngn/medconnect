@@ -867,7 +867,7 @@ const Doctor = () => {
                       }}
                       className="flex-1"
                     >
-                      ✅ Phê duyệt
+                      Phê duyệt
                     </Button>
                   )}
                 </div>

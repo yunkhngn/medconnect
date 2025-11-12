@@ -127,10 +127,18 @@ public class AdminService {
         User user = userOpt.get();
 
         // Xóa user trên Firebase
-        try {
-            firebaseAuth.deleteUser(user.getFirebaseUid());
-        } catch (Exception e) {
-            System.err.println("Lỗi xóa user Firebase: " + e.getMessage());
+        if (user.getFirebaseUid() != null && !user.getFirebaseUid().isEmpty()) {
+            try {
+                System.out.println("Deleting Firebase account for admin: " + user.getFirebaseUid());
+                firebaseAuth.deleteUser(user.getFirebaseUid());
+                System.out.println("✅ Firebase account deleted successfully");
+            } catch (Exception e) {
+                System.err.println("❌ Failed to delete Firebase user for admin id=" + userId + ": " + e.getMessage());
+                e.printStackTrace();
+                // Continue with database deletion even if Firebase deletion fails
+            }
+        } else {
+            System.out.println("⚠️ Admin has no Firebase UID, skipping Firebase deletion");
         }
 
         // Xóa trong database
