@@ -495,6 +495,11 @@ export default function DatLichKham() {
       return;
     }
 
+    if (!reason || reason.trim() === "") {
+      toast.error("Vui lòng nhập lý do khám");
+      return;
+    }
+
     setLoading(true);
     try {
       const token = await user.getIdToken();
@@ -1219,11 +1224,12 @@ export default function DatLichKham() {
               </div>
             )}
 
-            {/* Reason (Optional) */}
+            {/* Reason (Required) */}
             {selectedSlot && (
               <div>
-                <label className="block text-sm font-medium mb-2">Lý do khám <span className="text-gray-500">(tùy chọn)</span></label>
+                <label className="block text-sm font-medium mb-2">Lý do khám <span className="text-red-500">*</span></label>
                 <Textarea
+                  isRequired
                   variant="flat"
                   placeholder="Mô tả triệu chứng hoặc lý do bạn muốn khám..."
                   value={reason}

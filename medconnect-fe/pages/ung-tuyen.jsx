@@ -468,7 +468,7 @@ export default function DoctorApplication() {
                           label="Chuyên khoa"
                           name="specialty"
                           placeholder={isLoadingSpecialties ? "Đang tải..." : "Chọn chuyên khoa"}
-                          selectedKeys={formData.specialty ? new Set([formData.specialty]) : new Set([])}
+                          selectedKeys={formData.specialty ? [String(formData.specialty)] : []}
                           onSelectionChange={(keys) => {
                             const selectedValue = Array.from(keys)[0];
                             setFormData(prev => ({ ...prev, specialty: selectedValue || "" }));

@@ -550,8 +550,11 @@ const Doctor = () => {
                   <Select
                     label="Chuyên khoa"
                     placeholder="Chọn chuyên khoa"
-                    selectedKeys={formData.specialityId ? [formData.specialityId] : []}
-                    onChange={(e) => setFormData({ ...formData, specialityId: e.target.value })}
+                    selectedKeys={formData.specialityId ? [String(formData.specialityId)] : []}
+                    onSelectionChange={(keys) => {
+                      const selectedValue = Array.from(keys)[0];
+                      setFormData({ ...formData, specialityId: selectedValue || "" });
+                    }}
                     variant="bordered"
                     classNames={{
                       trigger: "border-default-200 bg-gray-50"
