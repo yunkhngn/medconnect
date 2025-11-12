@@ -10,6 +10,7 @@ import se1961.g1.medconnect.dto.CreateAdminRequest;
 import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.dto.UpdateAdminRequest;
 import se1961.g1.medconnect.enums.AppointmentStatus;
+import se1961.g1.medconnect.enums.PatientStatus;
 import se1961.g1.medconnect.enums.Slot;
 import se1961.g1.medconnect.pojo.*;
 import se1961.g1.medconnect.repository.DoctorRepository;
@@ -831,6 +832,23 @@ public class AdminController {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 patient.setDateOfBirth(sdf.parse((String) request.get("dateOfBirth")));
             }
+            // Update status if provided (for toggle active/inactive)
+            if (request.containsKey("status")) {
+                String statusStr = (String) request.get("status");
+                try {
+                    // Convert string to enum
+                    PatientStatus status = PatientStatus.valueOf(statusStr.toUpperCase());
+                    patient.setStatus(status);
+                } catch (IllegalArgumentException e) {
+                    // If enum value doesn't match, try to find by value
+                    for (PatientStatus ps : PatientStatus.values()) {
+                        if (ps.getValue().equalsIgnoreCase(statusStr)) {
+                            patient.setStatus(ps);
+                            break;
+                        }
+                    }
+                }
+            }
 
             Patient updatedPatient = patientService.savePatient(patient);
             
@@ -898,7 +916,7 @@ public class AdminController {
         response.put("phone", patient.getPhone());
         response.put("gender", patient.getGender());
         response.put("bloodType", patient.getBloodType());
-        response.put("status", "active");
+        response.put("status", patient.getStatus() != null ? patient.getStatus().getValue() : "active");
         response.put("avatar", patient.getAvatarUrl());
         
         // Address

@@ -828,8 +828,8 @@ const Doctor = () => {
               <ModalFooter className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1 flex gap-2">
                   <Button variant="light" onPress={onClose} className="flex-1">
-                    Hủy
-                  </Button>
+                  Hủy
+                </Button>
                   {currentDoctor?.status === 'PENDING' && (
                     <Button
                       color="success"

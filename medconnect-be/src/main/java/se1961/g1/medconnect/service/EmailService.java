@@ -39,15 +39,15 @@ public class EmailService {
         System.out.println("HTML Content Length: " + (htmlContent != null ? htmlContent.length() : 0));
         
         try {
-            CreateEmailOptions params = CreateEmailOptions.builder()
-                    .from(fromEmail)
-                    .to(to)
-                    .subject(subject)
-                    .html(htmlContent)
-                    .build();
+        CreateEmailOptions params = CreateEmailOptions.builder()
+                .from(fromEmail)
+                .to(to)
+                .subject(subject)
+                .html(htmlContent)
+                .build();
 
             System.out.println("Sending email via Resend...");
-            CreateEmailResponse response = resend.emails().send(params);
+        CreateEmailResponse response = resend.emails().send(params);
             String emailId = response.getId();
             System.out.println("✅ Email sent successfully! Email ID: " + emailId);
             return emailId;
