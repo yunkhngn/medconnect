@@ -4,8 +4,6 @@ import { AdminFrame, Grid } from '@/components/layouts/';
 import { useToast } from '@/hooks/useToast';
 import ToastNotification from '@/components/ui/ToastNotification';
 import { doctorAPI } from '@/services/api';
-import { generateDoctorApprovalEmail } from '@/utils/emailTemplates';
-import { sendEmailViaAPI } from '@/utils/emailHelper';
 import { FileText } from 'lucide-react';
 import {
   Table,
@@ -157,7 +155,13 @@ const Doctor = () => {
 
   const updateDoctor = async () => {
     try {
-      const wasApproved = currentDoctor.status === 'PENDING' && formData.status === 'ACTIVE';
+      console.log('=== Frontend: updateDoctor ===');
+      console.log('Current doctor:', currentDoctor);
+      console.log('Current doctor status:', currentDoctor?.status);
+      console.log('Form data status:', formData.status);
+      
+      const wasApproved = currentDoctor?.status === 'PENDING' && formData.status === 'ACTIVE';
+      console.log('Was approved:', wasApproved);
       
       const payload = {
         name: formData.name,
@@ -170,24 +174,22 @@ const Doctor = () => {
         status: formData.status,  // Add status
       };
       
-      await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
+      console.log('Payload being sent:', payload);
       
-      // Send approval email if doctor was just approved
+      const response = await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
+      console.log('Backend response:', response);
+      
+      // Check if response indicates success or error
+      if (response.success === false) {
+        // Backend returned an error
+        toast.error(response.message || 'Không thể cập nhật bác sĩ');
+        console.error('Backend error:', response);
+        return;
+      }
+      
+      // Backend will handle Firebase account creation and email sending when approving
       if (wasApproved) {
-        try {
-          const tempPassword = generateTempPassword(); // Random 8-character password
-          const { subject, html } = generateDoctorApprovalEmail(
-            formData.name,
-            formData.email,
-            tempPassword
-          );
-          await sendEmailViaAPI(formData.email, subject, html);
-          console.log(`✅ Approval email sent to ${formData.email}`);
-          toast.success('Đã duyệt bác sĩ và gửi email thông báo');
-        } catch (emailError) {
-          console.error('⚠️ Failed to send approval email:', emailError);
-          toast.warning('Đã duyệt bác sĩ nhưng không thể gửi email');
-        }
+        toast.success('Đã duyệt bác sĩ. Email với thông tin đăng nhập đã được gửi tự động.');
       } else {
         toast.success('Cập nhật bác sĩ thành công');
       }
@@ -198,16 +200,6 @@ const Doctor = () => {
       console.error('Error updating doctor:', error);
       toast.error(error.message || 'Không thể cập nhật bác sĩ');
     }
-  };
-
-  // Helper function to generate random temporary password
-  const generateTempPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
   };
 
   const deleteDoctor = async (id) => {
@@ -558,8 +550,11 @@ const Doctor = () => {
                   <Select
                     label="Chuyên khoa"
                     placeholder="Chọn chuyên khoa"
-                    selectedKeys={formData.specialityId ? [formData.specialityId] : []}
-                    onChange={(e) => setFormData({ ...formData, specialityId: e.target.value })}
+                    selectedKeys={formData.specialityId ? [String(formData.specialityId)] : []}
+                    onSelectionChange={(keys) => {
+                      const selectedValue = Array.from(keys)[0];
+                      setFormData({ ...formData, specialityId: selectedValue || "" });
+                    }}
                     variant="bordered"
                     classNames={{
                       trigger: "border-default-200 bg-gray-50"
@@ -586,16 +581,61 @@ const Doctor = () => {
                     label="Trạng thái tài khoản"
                     placeholder="Chọn trạng thái"
                     selectedKeys={formData.status ? [formData.status] : []}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    onSelectionChange={(keys) => {
+                      const selectedStatus = Array.from(keys)[0] || formData.status;
+                      setFormData({ ...formData, status: selectedStatus });
+                    }}
                     variant="bordered"
                     classNames={{
                       trigger: "border-default-200 bg-gray-50"
                     }}
+                    isDisabled={!currentDoctor} // Disable when creating new doctor
                   >
-                    <SelectItem key="ACTIVE" value="ACTIVE">Hoạt động</SelectItem>
-                    <SelectItem key="PENDING" value="PENDING">Chờ duyệt</SelectItem>
-                    <SelectItem key="INACTIVE" value="INACTIVE">Không hoạt động</SelectItem>
+                    <SelectItem 
+                      key="ACTIVE" 
+                      value="ACTIVE"
+                      isDisabled={
+                        currentDoctor?.status === 'ACTIVE' ? false :
+                        currentDoctor?.status === 'PENDING' ? false :
+                        currentDoctor?.status === 'INACTIVE' ? false :
+                        false
+                      }
+                    >
+                      Hoạt động
+                    </SelectItem>
+                    <SelectItem 
+                      key="PENDING" 
+                      value="PENDING"
+                      isDisabled={
+                        currentDoctor?.status === 'ACTIVE' ? true : // Cannot change from ACTIVE to PENDING
+                        currentDoctor?.status === 'PENDING' ? false :
+                        currentDoctor?.status === 'INACTIVE' ? true : // Cannot change from INACTIVE to PENDING
+                        false
+                      }
+                    >
+                      Chờ duyệt
+                    </SelectItem>
+                    <SelectItem 
+                      key="INACTIVE" 
+                      value="INACTIVE"
+                      isDisabled={
+                        currentDoctor?.status === 'PENDING' ? true : // From PENDING, only allow ACTIVE
+                        false
+                      }
+                    >
+                      Không hoạt động
+                    </SelectItem>
                   </Select>
+                  {currentDoctor && (
+                    <div className="col-span-2 text-xs text-gray-500 mt-1">
+                      {currentDoctor.status === 'PENDING' && (
+                        <span className="text-orange-600">⚠️ Bác sĩ đang chờ duyệt, chỉ có thể chuyển sang "Hoạt động"</span>
+                      )}
+                      {currentDoctor.status === 'ACTIVE' && (
+                        <span className="text-blue-600">ℹ️ Bác sĩ đang hoạt động, không thể chuyển về "Chờ duyệt"</span>
+                      )}
+                    </div>
+                  )}
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Giới thiệu bản thân</label>
                     <textarea
@@ -785,16 +825,62 @@ const Doctor = () => {
                   )}
                 </div>
               </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
+              <ModalFooter className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1 flex gap-2">
+                  <Button variant="light" onPress={onClose} className="flex-1">
                   Hủy
                 </Button>
+                  {currentDoctor?.status === 'PENDING' && (
+                    <Button
+                      color="success"
+                      onPress={async () => {
+                        try {
+                          // Set status to ACTIVE and submit directly
+                          const approvePayload = {
+                            name: formData.name,
+                            email: formData.email,
+                            phone: formData.phone,
+                            specialityId: parseInt(formData.specialityId),
+                            experienceYears: formData.experienceYears,
+                            educationLevel: formData.educationLevel,
+                            bio: formData.bio,
+                            status: 'ACTIVE',  // Force ACTIVE for approval
+                          };
+                          
+                          console.log('=== Approving Doctor ===');
+                          console.log('Payload:', approvePayload);
+                          
+                          const response = await doctorAPI.updateDoctor(currentDoctor.id, approvePayload, user);
+                          console.log('Backend response:', response);
+                          
+                          if (response.success === false) {
+                            toast.error(response.message || 'Không thể phê duyệt bác sĩ');
+                            console.error('Backend error:', response);
+                            return;
+                          }
+                          
+                          toast.success('Đã phê duyệt bác sĩ. Email với thông tin đăng nhập đã được gửi tự động.');
+                          await fetchDoctors();
+                          resetForm();
+                          onClose();
+                        } catch (error) {
+                          console.error('Error approving doctor:', error);
+                          toast.error(error.message || 'Không thể phê duyệt bác sĩ');
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      Phê duyệt
+                    </Button>
+                  )}
+                </div>
                 <Button
                   color="primary"
                   onPress={() => {
                     handleSubmit();
                     onClose();
                   }}
+                  className={currentDoctor?.status === 'PENDING' ? 'w-full sm:w-auto' : ''}
                 >
                   {currentDoctor ? 'Cập nhật' : 'Thêm'}
                 </Button>

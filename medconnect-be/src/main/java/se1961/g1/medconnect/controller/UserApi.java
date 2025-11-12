@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.User;
 import se1961.g1.medconnect.service.UserService;
 
@@ -21,7 +22,7 @@ public class UserApi {
     private UserService userService;
 
     @GetMapping("/role")
-    public ResponseEntity<Map<String, String>> getUserRole(Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> getUserRole(Authentication authentication) {
         String uid = (String) authentication.getPrincipal();
         Optional<User> userOpt = userService.getUser(uid);
 
@@ -30,9 +31,16 @@ public class UserApi {
         }
 
         User user = userOpt.get();
-        Map<String, String> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
         response.put("role", String.valueOf(user.getRole()));
         response.put("email", user.getEmail());
+        
+        // If user is a doctor, include status
+        if (user instanceof Doctor) {
+            Doctor doctor = (Doctor) user;
+            response.put("status", doctor.getStatus() != null ? doctor.getStatus().name() : null);
+        }
+        
         return ResponseEntity.ok(response);
     }
 }

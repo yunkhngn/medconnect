@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardHeader, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea } from "@heroui/react";
-import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Activity, CheckCircle, Globe } from "lucide-react";
+import { Button, Card, CardHeader, CardBody, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea, Tabs, Tab } from "@heroui/react";
+import { Video, Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Activity, CheckCircle, Globe, Star } from "lucide-react";
 import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
@@ -22,6 +22,8 @@ export default function DoctorOnlineExamList() {
   const [prescription, setPrescription] = useState(null); // {medications:[{name,dose,frequency,duration,note}], note}
   const [medicalRecord, setMedicalRecord] = useState(null); // Full medical record entry
   const [paymentByAptId, setPaymentByAptId] = useState({});
+  const [appointmentFeedback, setAppointmentFeedback] = useState(null);
+  const [activeTab, setActiveTab] = useState("details");
 
   useEffect(() => {
     fetchOnlineAppointments();
@@ -51,6 +53,8 @@ export default function DoctorOnlineExamList() {
     setSelectedAppointment(apt);
     setPrescription(null);
     setMedicalRecord(null);
+    setAppointmentFeedback(null);
+    setActiveTab("details");
     onOpen();
     try {
       setRxLoading(true);
@@ -217,7 +221,72 @@ export default function DoctorOnlineExamList() {
     } finally {
       setRxLoading(false);
     }
+    
+    // Fetch feedback
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const aptId = apt.id || apt.appointmentId;
+      if (aptId) {
+        const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (feedbackResp.ok) {
+          const feedbackData = await feedbackResp.json();
+          console.log('[Doctor Modal] Feedback response:', feedbackData);
+          if (feedbackData.success && feedbackData.data) {
+            console.log('[Doctor Modal] Setting feedback:', feedbackData.data);
+            setAppointmentFeedback(feedbackData.data);
+          } else {
+            console.log('[Doctor Modal] No feedback data found');
+            setAppointmentFeedback(null);
+          }
+        } else {
+          console.log('[Doctor Modal] Feedback response not ok:', feedbackResp.status);
+          setAppointmentFeedback(null);
+        }
+      }
+    } catch (e) {
+      console.error('[Doctor Modal] Error fetching feedback:', e);
+      setAppointmentFeedback(null);
+    }
   };
+
+  // Fetch feedback when modal opens and appointment is selected
+  useEffect(() => {
+    if (isOpen && selectedAppointment) {
+      const fetchFeedback = async () => {
+        try {
+          const user = auth.currentUser;
+          if (!user) return;
+          const token = await user.getIdToken();
+          const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
+          if (aptId) {
+            const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (feedbackResp.ok) {
+              const feedbackData = await feedbackResp.json();
+              console.log('[Doctor Modal] Feedback response (useEffect):', feedbackData);
+              if (feedbackData.success && feedbackData.data) {
+                console.log('[Doctor Modal] Setting feedback (useEffect):', feedbackData.data);
+                setAppointmentFeedback(feedbackData.data);
+              } else {
+                setAppointmentFeedback(null);
+              }
+            } else {
+              setAppointmentFeedback(null);
+            }
+          }
+        } catch (e) {
+          console.error('[Doctor Modal] Error fetching feedback (useEffect):', e);
+          setAppointmentFeedback(null);
+        }
+      };
+      fetchFeedback();
+    }
+  }, [isOpen, selectedAppointment]);
 
   const fetchOnlineAppointments = async () => {
     try {
@@ -673,7 +742,9 @@ export default function DoctorOnlineExamList() {
                 <p>Đang tải thông tin...</p>
               </div>
             ) : selectedAppointment ? (
-              <div className="space-y-4">
+              <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key)}>
+                <Tab key="details" title="Chi tiết">
+              <div className="space-y-4 pt-4">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <User className="w-4 h-4" />
                   <span>Bệnh nhân: {selectedAppointment.patientName}</span>
@@ -788,6 +859,46 @@ export default function DoctorOnlineExamList() {
                   {medicalRecord?.notes || prescription?.note || "Không có ghi chú"}
                 </p>
               </div>
+                </Tab>
+                <Tab key="feedback" title="Đánh giá">
+                  <div className="space-y-6 pt-4">
+                    {appointmentFeedback && appointmentFeedback.rating ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-gray-50 rounded-lg border border-yellow-200">
+                          <h4 className="text-sm font-semibold mb-3">Đánh giá từ bệnh nhân</h4>
+                          <div className="flex justify-center gap-1 mb-3">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-6 h-6 ${
+                                  star <= (appointmentFeedback.rating || 0)
+                                    ? 'text-yellow-400 fill-current'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-center text-sm text-gray-600 mb-2">
+                            ({appointmentFeedback.rating}/5)
+                          </p>
+                          {appointmentFeedback.comment && (
+                            <p className="text-sm text-gray-700 italic text-center">"{appointmentFeedback.comment}"</p>
+                          )}
+                          {appointmentFeedback.createdAt && (
+                            <p className="text-xs text-gray-500 text-center mt-2">
+                              Đánh giá vào: {new Date(appointmentFeedback.createdAt).toLocaleDateString('vi-VN')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">Chưa có đánh giá từ bệnh nhân</p>
+                      </div>
+                    )}
+                  </div>
+                </Tab>
+              </Tabs>
             ) : (
               <div className="text-center py-8">
                 <p>Chọn một cuộc hẹn để xem chi tiết.</p>

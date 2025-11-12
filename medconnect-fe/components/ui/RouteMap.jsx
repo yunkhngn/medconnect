@@ -178,7 +178,7 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
             onClick={requestCurrentLocation}
             className="px-3 py-1.5 rounded-lg bg-white/90 border text-sm hover:bg-white"
             disabled={isGettingLocation}
-            title="Sử dụng vị trí hiện tại"
+            title="Sử dụng vị trí hiện tại để tính đường đi"
           >
             {isGettingLocation ? 'Đang lấy vị trí...' : 'Dùng vị trí hiện tại'}
           </button>

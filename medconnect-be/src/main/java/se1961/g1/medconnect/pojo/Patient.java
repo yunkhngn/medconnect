@@ -3,6 +3,7 @@ package se1961.g1.medconnect.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import se1961.g1.medconnect.enums.PatientStatus;
 import java.util.Date;
 import java.util.List;
 
@@ -50,6 +51,10 @@ public class Patient extends User {
     private String emergencyContactRelationship;
     private String bloodType;
     private String allergies;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private PatientStatus status = PatientStatus.ACTIVE; // Default to ACTIVE
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL)
     @com.fasterxml.jackson.annotation.JsonIgnore

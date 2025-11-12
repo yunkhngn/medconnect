@@ -20,7 +20,7 @@ import navigate from "@/config/Nav/guestNav";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
-import { Home, FileText, Calendar } from "lucide-react";
+import { Home, FileText, Calendar, User } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import getUserRole from "../../config/Auth/GetUserRole";
@@ -286,8 +286,12 @@ const Nav = () => {
                   <div className="space-y-4">
                     <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <Avatar
-                        src={userPhoto || "/assets/homepage/mockup-avatar.jpg"}
+                        src={userPhoto || null}
                         size="md"
+                        showFallback
+                        fallback={
+                          <User className="text-default-400" size={24} />
+                        }
                       />
                       <div>
                         <p className="font-medium text-gray-900">{userEmail}</p>

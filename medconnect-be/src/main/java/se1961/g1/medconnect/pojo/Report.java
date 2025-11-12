@@ -9,21 +9,24 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Feedback")
+@Table(name = "Report")
 @Getter
 @Setter
-public class Feedback {
+public class Report {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long feedbackId;
+    private Long reportId;
 
-    private String comment;
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String reason; // Lý do báo xấu
 
-    @Column(nullable = false)
-    private int rating;
+    @Enumerated(EnumType.STRING)
+    private ReportStatus status = ReportStatus.PENDING; // PENDING, REVIEWED, RESOLVED, DISMISSED
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    private LocalDateTime reviewedAt;
 
     @ManyToOne
     @JoinColumn(name = "patient")
@@ -39,5 +42,17 @@ public class Feedback {
     @JoinColumn(name = "appointment")
     @JsonIgnore
     private Appointment appointment;
+
+    @ManyToOne
+    @JoinColumn(name = "reviewed_by")
+    @JsonIgnore
+    private Admin reviewedBy;
+
+    public enum ReportStatus {
+        PENDING,
+        REVIEWED,
+        RESOLVED,
+        DISMISSED
+    }
 }
 

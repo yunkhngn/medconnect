@@ -366,8 +366,9 @@ export default function PatientDashboard() {
                     <div className="flex items-start justify-between">
                       <div className="flex gap-3">
                         <Avatar
-                          src="/assets/homepage/mockup-avatar.jpg"
+                          src={apt.doctor?.avatar || null}
                           size="lg"
+                          showFallback
                         />
                         <div>
                           <p className="font-semibold">{apt.doctor?.name}</p>

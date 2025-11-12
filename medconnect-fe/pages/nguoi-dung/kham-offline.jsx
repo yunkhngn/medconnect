@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, CardBody, CardHeader, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Plus } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Avatar, Chip, Input, Select, SelectItem, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea, Tabs, Tab } from "@heroui/react";
+import { Calendar, Clock, User, Phone, Mail, MapPin, Search, Filter, Plus, Star, Flag } from "lucide-react";
 import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import PatientFrame from "@/components/layouts/Patient/Frame";
@@ -36,10 +36,53 @@ export default function PatientOfflineExamList() {
   const [prescription, setPrescription] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
   const [paymentByAptId, setPaymentByAptId] = useState({});
+  const [feedback, setFeedback] = useState(null);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
     fetchOfflineAppointments();
   }, []);
+
+  // Fetch feedback when modal opens and appointment is selected
+  useEffect(() => {
+    if (isOpen && selectedAppointment) {
+      const fetchFeedback = async () => {
+        try {
+          const user = auth.currentUser;
+          if (!user) return;
+          const token = await user.getIdToken();
+          const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
+          if (aptId) {
+            const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (feedbackResp.ok) {
+              const feedbackData = await feedbackResp.json();
+              console.log('[Patient Modal] Feedback response (useEffect):', feedbackData);
+              if (feedbackData.success && feedbackData.data) {
+                console.log('[Patient Modal] Setting feedback (useEffect):', feedbackData.data);
+                setFeedback(feedbackData.data);
+              } else {
+                setFeedback(null);
+              }
+            } else {
+              setFeedback(null);
+            }
+          }
+        } catch (e) {
+          console.error('[Patient Modal] Error fetching feedback (useEffect):', e);
+          setFeedback(null);
+        }
+      };
+      fetchFeedback();
+    }
+  }, [isOpen, selectedAppointment]);
 
   useEffect(() => {
     const loadPayments = async () => {
@@ -65,6 +108,10 @@ export default function PatientOfflineExamList() {
     setSelectedAppointment(apt);
     setPrescription(null);
     setMedicalRecord(null);
+    setFeedback(null);
+    setFeedbackRating(5);
+    setFeedbackComment("");
+    setActiveTab("details");
     onOpen();
     try {
       setRxLoading(true);
@@ -189,6 +236,93 @@ export default function PatientOfflineExamList() {
       setPrescription(null);
     } finally {
       setRxLoading(false);
+    }
+    
+    // Fetch feedback
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const aptId = apt.id || apt.appointmentId;
+      if (aptId) {
+        const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (feedbackResp.ok) {
+          const feedbackData = await feedbackResp.json();
+          console.log('[Patient Modal] Feedback response:', feedbackData);
+          if (feedbackData.success && feedbackData.data) {
+            console.log('[Patient Modal] Setting feedback:', feedbackData.data);
+            setFeedback(feedbackData.data);
+          } else {
+            console.log('[Patient Modal] No feedback data found');
+            setFeedback(null);
+          }
+        } else {
+          console.log('[Patient Modal] Feedback response not ok:', feedbackResp.status);
+          setFeedback(null);
+        }
+      }
+    } catch (e) {
+      console.error('[Patient Modal] Error fetching feedback:', e);
+      setFeedback(null);
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!selectedAppointment) return;
+    setSubmittingFeedback(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
+      const response = await fetch('http://localhost:8080/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          appointmentId: aptId,
+          rating: feedbackRating,
+          comment: feedbackComment || ''
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Fetch feedback from server to get complete data
+        try {
+          const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (feedbackResp.ok) {
+            const feedbackData = await feedbackResp.json();
+            if (feedbackData.success && feedbackData.data) {
+              setFeedback(feedbackData.data);
+            }
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch feedback after submit:', fetchError);
+          // Fallback to local data
+          setFeedback({
+            rating: feedbackRating,
+            comment: feedbackComment,
+            createdAt: new Date().toISOString()
+          });
+        }
+        // Reset form
+        setFeedbackRating(5);
+        setFeedbackComment("");
+        alert('Đánh giá đã được gửi thành công!');
+      } else {
+        alert(data.message || 'Không thể gửi đánh giá');
+      }
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      alert('Lỗi khi gửi đánh giá');
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -345,6 +479,10 @@ export default function PatientOfflineExamList() {
               placeholder="Tên bác sĩ, chuyên khoa..."
               value={searchQuery}
               onValueChange={setSearchQuery}
+              variant="bordered"
+              classNames={{
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
               startContent={<Search className="w-4 h-4 text-gray-400" />}
             />
           </div>
@@ -559,15 +697,29 @@ export default function PatientOfflineExamList() {
                       </Button>
                     )}
                     {appointment.status === "FINISHED" && (
-                      <Button
-                        color="default"
-                        size="sm"
-                        variant="flat"
-                        className="flex-1"
-                        onPress={() => openAppointmentModal(appointment)}
-                      >
-                        Xem lại
-                      </Button>
+                      <>
+                        <Button
+                          color="default"
+                          size="sm"
+                          variant="flat"
+                          className="flex-1"
+                          onPress={() => openAppointmentModal(appointment)}
+                        >
+                          Xem lại
+                        </Button>
+                        <Button
+                          color="warning"
+                          size="sm"
+                          variant="flat"
+                          startContent={<Star className="w-4 h-4" />}
+                          onPress={() => {
+                            openAppointmentModal(appointment);
+                            setActiveTab("feedback");
+                          }}
+                        >
+                          Đánh giá
+                        </Button>
+                      </>
                     )}
                     {appointment.status === "CANCELLED" && (
                       <Button
@@ -606,7 +758,9 @@ export default function PatientOfflineExamList() {
                 <p>Đang tải thông tin...</p>
               </div>
             ) : selectedAppointment ? (
-              <div className="space-y-4">
+              <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key)}>
+                <Tab key="details" title="Chi tiết">
+                  <div className="space-y-4 pt-4">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <User className="w-4 h-4" />
                   <span>Bệnh nhân: {selectedAppointment.patientName || selectedAppointment.patient?.name || "Chưa có"}</span>
@@ -748,7 +902,108 @@ export default function PatientOfflineExamList() {
                 ) : (
                   <p className="text-sm text-gray-400 pl-4 italic">Không có ghi chú</p>
                 )}
-              </div>
+                  </div>
+                </Tab>
+                <Tab key="feedback" title="Đánh giá">
+                  <div className="space-y-6 pt-4">
+                    {(() => {
+                      console.log('[Feedback Tab] Current feedback state:', feedback);
+                      return null;
+                    })()}
+                    {feedback && feedback.rating ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <h4 className="text-sm font-semibold mb-3">Đánh giá của bạn</h4>
+                          <div className="flex justify-center gap-1 mb-3">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-6 h-6 ${
+                                  star <= (feedback.rating || 0)
+                                    ? 'text-yellow-400 fill-current'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          {feedback.comment && (
+                            <p className="text-sm text-gray-700 italic text-center">"{feedback.comment}"</p>
+                          )}
+                          {feedback.createdAt && (
+                            <p className="text-xs text-gray-500 text-center mt-2">
+                              Đánh giá vào: {new Date(feedback.createdAt).toLocaleDateString('vi-VN')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-3 block">Đánh giá của bạn</label>
+                          <div className="flex justify-center gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setFeedbackRating(star)}
+                                className={`p-2 transition-all ${
+                                  star <= feedbackRating
+                                    ? 'text-yellow-400 scale-110'
+                                    : 'text-gray-300 hover:text-yellow-300'
+                                }`}
+                              >
+                                <Star className="w-8 h-8 fill-current" />
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-center text-sm text-gray-600 mt-2">
+                            {feedbackRating === 5 && 'Rất hài lòng'}
+                            {feedbackRating === 4 && 'Hài lòng'}
+                            {feedbackRating === 3 && 'Bình thường'}
+                            {feedbackRating === 2 && 'Không hài lòng'}
+                            {feedbackRating === 1 && 'Rất không hài lòng'}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Textarea
+                            label="Nhận xét (tùy chọn)"
+                            placeholder="Chia sẻ thêm về trải nghiệm của bạn..."
+                            value={feedbackComment}
+                            onValueChange={setFeedbackComment}
+                            minRows={4}
+                            variant="bordered"
+                            classNames={{
+                              inputWrapper: "focus-within:border-primary focus-within:ring-0"
+                            }}
+                          />
+                        </div>
+                        
+                        <Button
+                          color="primary"
+                          className="w-full"
+                          onPress={submitFeedback}
+                          isLoading={submittingFeedback}
+                        >
+                          Gửi đánh giá
+                        </Button>
+                        
+                        <Divider />
+                        
+                        <Button
+                          color="danger"
+                          variant="flat"
+                          startContent={<Flag className="w-4 h-4" />}
+                          onPress={() => setShowReportModal(true)}
+                          isDisabled={submittingFeedback}
+                        >
+                          Báo xấu bác sĩ
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Tab>
+              </Tabs>
             ) : (
               <div className="text-center py-8">Chọn một cuộc hẹn để xem chi tiết.</div>
             )}
@@ -756,6 +1011,82 @@ export default function PatientOfflineExamList() {
           <ModalFooter>
             <Button color="danger" variant="flat" onPress={onClose}>
               Đóng
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Report Modal */}
+      <Modal isOpen={showReportModal} onOpenChange={setShowReportModal}>
+        <ModalContent>
+          <ModalHeader>Báo xấu bác sĩ</ModalHeader>
+          <ModalBody>
+            <Textarea
+              label="Lý do báo xấu"
+              placeholder="Vui lòng mô tả chi tiết lý do bạn báo xấu bác sĩ này..."
+              value={reportReason}
+              onValueChange={setReportReason}
+              minRows={4}
+              variant="bordered"
+              isRequired
+              classNames={{
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Báo xấu sẽ được gửi đến admin để xem xét. Vui lòng cung cấp thông tin chính xác và chi tiết.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setShowReportModal(false)}>
+              Hủy
+            </Button>
+            <Button
+              color="danger"
+              onPress={async () => {
+                if (!reportReason.trim()) {
+                  alert('Vui lòng điền lý do báo xấu');
+                  return;
+                }
+                if (!selectedAppointment) {
+                  alert('Không tìm thấy thông tin cuộc hẹn');
+                  return;
+                }
+                setSubmittingReport(true);
+                try {
+                  const user = auth.currentUser;
+                  if (!user) return;
+                  const token = await user.getIdToken();
+                  const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
+                  const response = await fetch('http://localhost:8080/api/reports', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      appointmentId: aptId,
+                      reason: reportReason
+                    })
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    alert('Báo xấu đã được gửi thành công. Admin sẽ xem xét.');
+                    setShowReportModal(false);
+                    setReportReason("");
+                  } else {
+                    alert(data.message || 'Không thể gửi báo xấu');
+                  }
+                } catch (error) {
+                  console.error('Failed to submit report:', error);
+                  alert('Lỗi khi gửi báo xấu');
+                } finally {
+                  setSubmittingReport(false);
+                }
+              }}
+              isLoading={submittingReport}
+            >
+              Gửi báo xấu
             </Button>
           </ModalFooter>
         </ModalContent>

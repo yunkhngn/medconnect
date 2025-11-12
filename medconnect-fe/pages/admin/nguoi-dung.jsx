@@ -157,10 +157,21 @@ const Patient = () => {
         if (gender === 'Nữ') gender = 'female';
         if (!gender) gender = p.gender || '';
 
+        // Normalize status - handle both enum values and string values
+        let status = p.status;
+        if (status) {
+          // Convert to lowercase if it's uppercase enum value
+          status = status.toLowerCase();
+        } else {
+          // Default to active if no status
+          status = 'active';
+        }
+
         return {
           ...p,
           gender,
           bloodType: p.bloodType || '',
+          status: status,
         };
       });
 
@@ -280,26 +291,111 @@ const Patient = () => {
     }
   };
 
-  // Optional: toggle status (active/block)
-  const toggleStatus = async (id) => {
+  // Optional: toggle status (active/inactive)
+  const toggleStatus = async (patient) => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`${API_BASE_URL}/admin/patients/${id}/status`, {
+      // Normalize status for comparison
+      const currentStatus = patient.status ? patient.status.toLowerCase() : 'active';
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      // Use the update patient endpoint instead of status endpoint
+      const response = await fetch(`${API_BASE_URL}/admin/patients/${patient.id}`, {
         method: 'PUT',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ status: newStatus }),
       });
-      const data = await response.json();
-      if (data.success) {
+      
+      // Check if response has content
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        const text = await response.text();
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            console.error('Error parsing JSON:', parseError, 'Response text:', text);
+            if (response.ok) {
+              // If response is OK but not JSON, assume success
+              toast.success(newStatus === 'active' ? 'Đã kích hoạt bệnh nhân' : 'Đã tạm ngưng bệnh nhân');
+              // Update local state immediately
+              setPatients(prevPatients => 
+                prevPatients.map(p => 
+                  p.id === patient.id 
+                    ? { ...p, status: newStatus }
+                    : p
+                )
+              );
+        fetchPatients();
+              return;
+      } else {
+              toast.error('Lỗi khi thay đổi trạng thái');
+              return;
+            }
+          }
+        } else {
+          // Empty response but status is OK
+          if (response.ok) {
+            toast.success(newStatus === 'active' ? 'Đã kích hoạt bệnh nhân' : 'Đã tạm ngưng bệnh nhân');
+            // Update local state immediately
+            setPatients(prevPatients => 
+              prevPatients.map(p => 
+                p.id === patient.id 
+                  ? { ...p, status: newStatus }
+                  : p
+              )
+            );
+            fetchPatients();
+            return;
+          } else {
+            toast.error(`Lỗi ${response.status}: ${response.statusText}`);
+            return;
+          }
+        }
+      } else {
+        // Response is not JSON
+        if (response.ok) {
+          toast.success(newStatus === 'active' ? 'Đã kích hoạt bệnh nhân' : 'Đã tạm ngưng bệnh nhân');
+          // Update local state immediately
+          setPatients(prevPatients => 
+            prevPatients.map(p => 
+              p.id === patient.id 
+                ? { ...p, status: newStatus }
+                : p
+            )
+          );
+          fetchPatients();
+          return;
+        } else {
+          const text = await response.text().catch(() => '');
+          toast.error(`Lỗi ${response.status}: ${text || response.statusText}`);
+          return;
+        }
+      }
+      
+      if (data && data.success) {
+        toast.success(newStatus === 'active' ? 'Đã kích hoạt bệnh nhân' : 'Đã tạm ngưng bệnh nhân');
+        // Update local state immediately for better UX
+        setPatients(prevPatients => 
+          prevPatients.map(p => 
+            p.id === patient.id 
+              ? { ...p, status: newStatus }
+              : p
+          )
+        );
+        // Also fetch from server to ensure consistency
         fetchPatients();
       } else {
-        toast.error(data.message || 'Thao tác thất bại');
+        toast.error(data?.message || 'Thao tác thất bại');
       }
     } catch (error) {
       console.error('Error toggling status:', error);
-      toast.error('Lỗi khi thay đổi trạng thái');
+      toast.error('Lỗi khi thay đổi trạng thái: ' + error.message);
     }
   };
 
@@ -545,7 +641,11 @@ const Patient = () => {
             <TableRow key={patient.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar src={patient.avatar || '/assets/homepage/mockup-avatar.jpg'} size="sm" />
+                  <Avatar 
+                    src={patient.avatar || null} 
+                    size="sm"
+                    showFallback
+                  />
                   <div>
                     <p className="font-medium">{patient.fullName}</p>
                     <p className="text-xs text-gray-500">{patient.email}</p>
@@ -595,16 +695,16 @@ const Patient = () => {
                   </DropdownTrigger>
                   <DropdownMenu aria-label="Thao tác">
                     <DropdownItem key="view-emr" onPress={() => handleViewEmr(patient)}>
-                      📋 Xem EMR
+                      Xem EMR
                     </DropdownItem>
                     <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
-                      ✏️ Chỉnh sửa
+                      Chỉnh sửa
                     </DropdownItem>
-                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient.id)}>
-                      {patient.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
+                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient)}>
+                      {(patient.status && patient.status.toLowerCase() === 'active') ? 'Tạm ngưng' : 'Kích hoạt'}
                     </DropdownItem>
                     <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
-                      🗑️ Xóa
+                      Xóa
                     </DropdownItem>
                   </DropdownMenu>
                 </Dropdown>
@@ -753,7 +853,7 @@ const Patient = () => {
                     <div className="space-y-6">
                       {/* Basic info */}
                       <div className="rounded-lg p-4 bg-gray-50">
-                        <h3 className="font-semibold mb-3 text-lg">📋 Thông Tin Bệnh Nhân</h3>
+                        <h3 className="font-semibold mb-3 text-lg">Thông Tin Bệnh Nhân</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-gray-600">Họ tên</p>
@@ -786,7 +886,7 @@ const Patient = () => {
 
                       {/* Lịch Sử Khám Bệnh */}
                       <div className="rounded-lg p-4">
-                        <h3 className="font-semibold mb-3 text-lg">🏥 Lịch Sử Khám Bệnh</h3>
+                        <h3 className="font-semibold mb-3 text-lg">Lịch Sử Khám Bệnh</h3>
                         {emrLoading && (
                           <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
@@ -848,7 +948,7 @@ const Patient = () => {
 
                       {/* Đơn Thuốc */}
                       <div className="rounded-lg p-4">
-                        <h3 className="font-semibold mb-3 text-lg">💊 Đơn Thuốc</h3>
+                        <h3 className="font-semibold mb-3 text-lg">Đơn Thuốc</h3>
                         {emrLoading && (
                           <div className="text-center py-4 text-sm text-gray-500">Đang tải...</div>
                         )}

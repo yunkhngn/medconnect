@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
-  Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
+  Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter
 } from "@heroui/react";
-import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone } from "lucide-react";
+import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone, MessageSquare, Shield, Info } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import RouteMap from "@/components/ui/RouteMap";
 import Grid from "@/components/layouts/Grid";
@@ -59,6 +59,10 @@ export default function DatLichKham() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
 
+  // Privacy Policy Modal
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+
   // Booking flow steps
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -68,11 +72,10 @@ export default function DatLichKham() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [appointmentType, setAppointmentType] = useState("ONLINE");
   const [reason, setReason] = useState("");
-  const [symptomImages, setSymptomImages] = useState([]); // [{name, url, file}]
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [doctorFeedbackSummary, setDoctorFeedbackSummary] = useState(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   // Filter doctors
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,9 +94,9 @@ export default function DatLichKham() {
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
     const day = d.getDay(); // 0..6 (Sun..Sat)
-    const diff = (day === 0 ? -6 : 1) - day; // start Monday
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday start
     const monday = new Date(d);
-    monday.setDate(d.getDate() + diff);
+    monday.setDate(diff);
     monday.setHours(0,0,0,0);
     return monday;
   });
@@ -275,7 +278,11 @@ export default function DatLichKham() {
       const dates = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(weekStart);
         d.setDate(weekStart.getDate() + i);
-        return d.toISOString().split('T')[0];
+        // Use local date format to avoid timezone issues
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       });
       const results = {};
       try {
@@ -289,6 +296,7 @@ export default function DatLichKham() {
           }
         });
         await Promise.all(promises);
+        console.log('Weekly available slots:', results);
         setWeeklyAvailable(results);
       } catch (e) {
         setWeeklyAvailable({});
@@ -320,8 +328,30 @@ export default function DatLichKham() {
     }
   };
 
-  const handlePreviewDoctor = (doctor) => {
+  const handlePreviewDoctor = async (doctor) => {
     setPreviewDoctor(doctor);
+    // Fetch feedback summary for this doctor
+    if (doctor && doctor.id) {
+      setLoadingFeedback(true);
+      try {
+        const response = await fetch(`http://localhost:8080/api/feedback/doctor/${doctor.id}/summary`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setDoctorFeedbackSummary(data.data);
+          } else {
+            setDoctorFeedbackSummary(null);
+          }
+        } else {
+          setDoctorFeedbackSummary(null);
+        }
+      } catch (error) {
+        console.error('Error fetching feedback summary:', error);
+        setDoctorFeedbackSummary(null);
+      } finally {
+        setLoadingFeedback(false);
+      }
+    }
   };
 
   const handleSelectDoctor = (doctor) => {
@@ -464,34 +494,26 @@ export default function DatLichKham() {
   };
 
   const handleConfirmBooking = async () => {
+    // Kiểm tra đồng ý chính sách bảo vệ dữ liệu cá nhân
+    if (!acceptedPrivacy) {
+      setShowPrivacyModal(true);
+      toast.error("Vui lòng đọc và đồng ý với chính sách bảo vệ dữ liệu cá nhân");
+      return;
+    }
+
     if (!selectedSlot) {
       toast.error("Vui lòng chọn khung giờ");
+      return;
+    }
+
+    if (!reason || reason.trim() === "") {
+      toast.error("Vui lòng nhập lý do khám");
       return;
     }
 
     setLoading(true);
     try {
       const token = await user.getIdToken();
-
-      // Upload symptom images to backend (Cloudinary) first, get URLs
-      let uploadedUrls = [];
-      if (symptomImages.length > 0) {
-        const uploadOne = async (file) => {
-          const form = new FormData();
-          form.append("file", file);
-          const resp = await fetch("http://localhost:8080/api/medical-photo/upload", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: form
-          });
-          if (!resp.ok) throw new Error(await resp.text());
-          const j = await resp.json();
-          return j.photoUrl;
-        };
-        uploadedUrls = await Promise.all(
-          symptomImages.map((i) => uploadOne(i.file))
-        );
-      }
 
       const response = await fetch("http://localhost:8080/api/appointments", {
         method: "POST",
@@ -504,16 +526,8 @@ export default function DatLichKham() {
           date: selectedDate,
           slot: selectedSlot,
           type: appointmentType,
-          // Store JSON in reason field as requested
-          reason: JSON.stringify({
-            reason: reason || null,
-            attachments: uploadedUrls
-          }),
-          // Keep detail optional for backward compatibility
-          detail: JSON.stringify({
-            reason: reason || null,
-            attachments: uploadedUrls
-          })
+          // Store reason as plain text
+          reason: reason || null
         })
       });
 
@@ -669,142 +683,19 @@ export default function DatLichKham() {
                 Lọc và xem hồ sơ bác sĩ, sau đó chọn lịch trống trong tuần. Chúng tôi gợi ý các bác sĩ nổi bật theo chuyên khoa và khu vực của bạn.
               </p>
             </div>
-            {previewDoctor && (
-              <Card shadow="lg" className="rounded-2xl overflow-hidden">
-                <div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 text-white">
-                  <div className="flex items-center gap-5">
-                    <Avatar
-                      src={previewDoctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(previewDoctor.name)}&background=0D9488&color=fff`}
-                      className="w-24 h-24 ring-4 ring-white/30"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-3xl font-extrabold leading-tight truncate">{previewDoctor.name}</h3>
-                        <Chip variant="flat" color="primary" size="sm" className="bg-white/20 text-white">{SPECIALTY_MAP[previewDoctor.specialty] || previewDoctor.specialty}</Chip>
-                      </div>
-                      <p className="text-white/90 mt-2 text-sm">
-                        {previewDoctor.bio || "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
-                      </p>
-                    </div>
-                    <div className="hidden md:flex items-center gap-2">
-                      <Button size="sm" variant="bordered" className="border-white/50 text-white" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
-                      <Button size="sm" color="primary" className="bg-white text-teal-700" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
-                    </div>
-                  </div>
-                </div>
-                <CardBody className="p-6 space-y-6">
-                  {/* Stats (minimal) */}
-                  <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
-                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
-                      <div className="flex items-center gap-2 text-gray-700"><Star size={18} className="text-yellow-500" /><span className="text-sm">Đánh giá</span></div>
-                      <p className="text-2xl font-bold">{previewDoctor.rating || "4.8"}</p>
-                    </div>
-                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
-                      <div className="flex items-center gap-2 text-gray-700"><Award size={18} className="text-teal-600" /><span className="text-sm">Năm KN</span></div>
-                      <p className="text-2xl font-bold">{previewDoctor.experience_years || previewDoctor.experienceYears || "—"}</p>
-                    </div>
-                  </div>
-
-                  {/* Contacts */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Điện thoại</p>
-                      <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Email</p>
-                      <p className="font-medium truncate">{previewDoctor.email || "doctor@medconnect.vn"}</p>
-                    </div>
-                  </div>
-
-                  {/* Education & License */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Trình độ</p>
-                      <p className="font-medium">{previewDoctor.education_level || "—"}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Chứng chỉ hành nghề</p>
-                      <p className="font-medium">{previewDoctor.licenseId ? `#${previewDoctor.licenseId}` : "—"}</p>
-                    </div>
-                  </div>
-
-                  {/* Address + Map (moved below, bigger) */}
-                  <div className="space-y-2">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Địa chỉ phòng khám</p>
-                      <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
-                    </div>
-                    <div className="rounded-xl overflow-hidden bg-gray-100">
-                      {originAddr && destAddr && process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ? (
-                        <RouteMap
-                          originAddress={originAddr}
-                          destinationAddress={destAddr}
-                          apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}
-                        />
-                      ) : (
-                        <>
-                          {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
-                          {!loadingMap && embedUrl && (
-                            <iframe
-                              src={embedUrl}
-                              className="w-full h-96 border-0"
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
-                              allowFullScreen
-                            />
-                          )}
-                          {!loadingMap && !embedUrl && mapUrl && (
-                            <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
-                          )}
-                          {!loadingMap && !embedUrl && !mapUrl && mapError && (
-                            <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
-                          )}
-                        </>
-                      )}
-                      {routeUrl && (
-                        <div className="p-3 bg-white/70 border-t flex justify-end">
-                          <Button as={"a"} href={routeUrl} target="_blank" rel="noopener" color="primary" size="sm">
-                            Mở trên Google Maps
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Mock reviews */}
-                  <div className="mt-2">
-                    <p className="font-semibold mb-2">Đánh giá nổi bật</p>
-                    <div className="space-y-2 text-sm">
-                      {[
-                        { name: "Nguyễn T.", content: "Bác sĩ tư vấn kỹ, điều trị hiệu quả." },
-                        { name: "Lê Q.", content: "Phòng khám sạch sẽ, đặt lịch nhanh chóng." }
-                      ].map((rv, idx) => (
-                        <div key={idx} className="p-3 rounded-lg bg-gray-50">
-                          <div className="flex items-center gap-2 text-yellow-500"><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} /></div>
-                          <p className="mt-1 text-gray-700"><span className="font-medium">{rv.name}</span>: {rv.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex md:hidden gap-3 mt-5">
-                    <Button variant="light" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
-                    <Button color="primary" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
-                  </div>
-                </CardBody>
-              </Card>
-            )}
+            
             {/* Filters */}
             <div className="space-y-4 bg-white/70 p-4 rounded-2xl shadow-sm">
               <div className="grid grid-cols-12 gap-3 items-stretch">
                 {/* Row 1: Search full width */}
                 <div className="col-span-12">
             <Input
+                    variant="flat"
                     size="lg"
                     classNames={{
-                      inputWrapper: "min-h-[64px] h-[64px]",
+                      inputWrapper: "min-h-[64px] h-[64px] bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100 border-0 shadow-none",
                       input: "text-base",
+                      base: "border-0",
                     }}
               placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
               value={searchQuery}
@@ -815,6 +706,7 @@ export default function DatLichKham() {
                 {/* Row 2: Specialty + Province */}
                 <div className="col-span-12 md:col-span-6">
                   <Select
+                    variant="flat"
                     size="lg"
                     label="Chuyên khoa"
                     placeholder="Tất cả"
@@ -822,6 +714,10 @@ export default function DatLichKham() {
                     onSelectionChange={(keys) => {
                       const k = Array.from(keys)[0];
                       setSpecialityFilter(k || "");
+                    }}
+                    classNames={{
+                      trigger: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100 border-0 shadow-none",
+                      base: "border-0",
                     }}
                   >
                     {Object.entries(SPECIALTY_MAP).map(([key, label]) => (
@@ -831,6 +727,7 @@ export default function DatLichKham() {
                 </div>
                 <div className="col-span-12 md:col-span-6">
                   <Select
+                    variant="flat"
                     size="lg"
                     label="Tỉnh/Thành phố"
                     placeholder="Chọn tỉnh/thành"
@@ -841,6 +738,10 @@ export default function DatLichKham() {
                       setProvinceCode(code);
                       setDistrictCode(null);
                       setWardCode(null);
+                    }}
+                    classNames={{
+                      trigger: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100 border-0 shadow-none",
+                      base: "border-0",
                     }}
                   >
                     {provinces.map((p) => (
@@ -935,6 +836,192 @@ export default function DatLichKham() {
               ))}
             </div>
             )}
+            
+            {/* Preview Doctor Card - Moved Below List */}
+            {previewDoctor && (
+              <Card shadow="lg" className="rounded-2xl overflow-hidden mt-6">
+                <div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 text-white">
+                  <div className="flex items-center gap-5">
+                    <Avatar
+                      src={previewDoctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(previewDoctor.name)}&background=0D9488&color=fff`}
+                      className="w-24 h-24 ring-4 ring-white/30"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-3xl font-extrabold leading-tight truncate">{previewDoctor.name}</h3>
+                        <Chip variant="flat" color="primary" size="sm" className="bg-white/20 text-white">{SPECIALTY_MAP[previewDoctor.specialty] || previewDoctor.specialty}</Chip>
+                      </div>
+                      <p className="text-white/90 mt-2 text-sm">
+                        {previewDoctor.bio || "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
+                      </p>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2">
+                      <Button size="sm" variant="bordered" className="border-white/50 text-white" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
+                    </div>
+                  </div>
+                </div>
+                <CardBody className="p-6 space-y-6">
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2 text-gray-700"><Star size={18} className="text-yellow-500" /><span className="text-sm">Đánh giá</span></div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">
+                          {loadingFeedback ? "..." : (doctorFeedbackSummary?.averageRating?.toFixed(1) || previewDoctor.rating || "—")}
+                        </p>
+                        {doctorFeedbackSummary?.totalFeedbacks > 0 && (
+                          <p className="text-xs text-gray-500">({doctorFeedbackSummary.totalFeedbacks} đánh giá)</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2 text-gray-700"><Award size={18} className="text-teal-600" /><span className="text-sm">Năm KN</span></div>
+                      <p className="text-2xl font-bold">{previewDoctor.experience_years || previewDoctor.experienceYears || "—"}</p>
+                    </div>
+                    {doctorFeedbackSummary?.totalFeedbacks > 0 && (
+                      <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-700"><MessageSquare size={18} className="text-blue-500" /><span className="text-sm">Feedback</span></div>
+                        <p className="text-2xl font-bold">{doctorFeedbackSummary.totalFeedbacks}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contacts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Điện thoại</p>
+                      <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Email</p>
+                      <p className="font-medium truncate">{previewDoctor.email || "doctor@medconnect.vn"}</p>
+                    </div>
+                  </div>
+
+                  {/* Education & License */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Trình độ</p>
+                      <p className="font-medium">{previewDoctor.education_level || "—"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Chứng chỉ hành nghề</p>
+                      <p className="font-medium">{previewDoctor.licenseId ? `#${previewDoctor.licenseId}` : "—"}</p>
+                    </div>
+                  </div>
+
+                  {/* Address + Map */}
+                  <div className="space-y-2">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Địa chỉ phòng khám</p>
+                      <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
+                    </div>
+                    <div className="rounded-xl overflow-hidden bg-gray-100">
+                      {originAddr && destAddr && process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ? (
+                        <RouteMap
+                          originAddress={originAddr}
+                          destinationAddress={destAddr}
+                          apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}
+                        />
+                      ) : (
+                        <>
+                          {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
+                          {!loadingMap && embedUrl && (
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-96 border-0"
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              allowFullScreen
+                            />
+                          )}
+                          {!loadingMap && !embedUrl && mapUrl && (
+                            <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                          )}
+                          {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                            <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                          )}
+                        </>
+                      )}
+                      {routeUrl && (
+                        <div className="p-3 bg-white/70 border-t flex justify-end">
+                          <Button as={"a"} href={routeUrl} target="_blank" rel="noopener" color="primary" size="sm">
+                            Mở trên Google Maps
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Feedback Reviews */}
+                  <div className="mt-2">
+                    <p className="font-semibold mb-2 flex items-center gap-2">
+                      <MessageSquare size={18} />
+                      {loadingFeedback ? "Đang tải đánh giá..." : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? "3 đánh giá gần nhất" : "Chưa có đánh giá"}
+                    </p>
+                    {loadingFeedback ? (
+                      <div className="text-center py-4 text-gray-500">Đang tải...</div>
+                    ) : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? (
+                      <div className="space-y-2 text-sm">
+                        {doctorFeedbackSummary.recentFeedbacks.map((fb, idx) => (
+                          <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-gray-900">{fb.patientName || 'Bệnh nhân'}</span>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    size={14}
+                                    className={`${
+                                      star <= fb.rating
+                                        ? 'text-yellow-400 fill-current'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {fb.comment && (
+                              <p className="mt-1 text-gray-700">"{fb.comment}"</p>
+                            )}
+                            {fb.createdAt && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-lg bg-gray-50 text-center text-gray-500 text-sm">
+                        Chưa có đánh giá nào cho bác sĩ này
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons - Bigger at bottom */}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-200">
+                    <Button 
+                      variant="flat" 
+                      size="lg"
+                      className="flex-1"
+                      onPress={() => setPreviewDoctor(null)}
+                    >
+                      Đóng
+                    </Button>
+                    <Button 
+                      color="primary" 
+                      size="lg"
+                      className="flex-1 font-semibold text-lg"
+                      onPress={() => handleSelectDoctor(previewDoctor)}
+                      endContent={<ChevronRight size={20} />}
+                    >
+                      Xem lịch & đặt
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
           </CardBody>
         </Card>
       )}
@@ -953,97 +1040,171 @@ export default function DatLichKham() {
             {/* Weekly Calendar */}
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-sm">
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
-                    const prev = new Date(weekStart);
-                    prev.setDate(prev.getDate() - 7);
-                    setWeekStart(prev);
-                  }}>
-                    Tuần trước
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-xl shadow-sm">
+                  <Button 
+                    size="sm" 
+                    variant="light" 
+                    className="data-[hover=true]:bg-white rounded-lg transition-colors" 
+                    onPress={() => {
+                      const prev = new Date(weekStart);
+                      prev.setDate(prev.getDate() - 7);
+                      setWeekStart(prev);
+                    }}
+                  >
+                    ← Tuần trước
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
-                    const now = new Date();
-                    const day = now.getDay();
-                    const diff = (day === 0 ? -6 : 1) - day;
-                    const monday = new Date(now);
-                    monday.setDate(now.getDate() + diff);
-                    monday.setHours(0,0,0,0);
-                    setWeekStart(monday);
-                  }}>
+                  <Button 
+                    size="sm" 
+                    variant="flat"
+                    color="primary"
+                    className="rounded-lg font-semibold" 
+                    onPress={() => {
+                      const now = new Date();
+                      const day = now.getDay();
+                      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                      const monday = new Date(now);
+                      monday.setDate(diff);
+                      monday.setHours(0,0,0,0);
+                      setWeekStart(monday);
+                    }}
+                  >
                     Tuần hiện tại
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
-                    const next = new Date(weekStart);
-                    next.setDate(next.getDate() + 7);
-                    setWeekStart(next);
-                  }}>
-                    Tuần sau
+                  <Button 
+                    size="sm" 
+                    variant="light" 
+                    className="data-[hover=true]:bg-white rounded-lg transition-colors" 
+                    onPress={() => {
+                      const next = new Date(weekStart);
+                      next.setDate(next.getDate() + 7);
+                      setWeekStart(next);
+                    }}
+                  >
+                    Tuần sau →
                   </Button>
                 </div>
-            </div>
+              </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="grid grid-cols-8 min-w-[920px]">
-                  {/* Header */}
-                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50/80 border-r sticky left-0 z-10">Khung giờ</div>
-                  {Array.from({ length: 7 }).map((_, i) => {
-                    const d = new Date(weekStart);
-                    d.setDate(weekStart.getDate() + i);
-                    const dayLabel = d.toLocaleDateString("vi-VN", { weekday: 'short' });
-                    const dateLabel = d.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit' });
-                    const key = d.toISOString().split('T')[0];
-                    return (
-                      <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
-                        <div className="text-xs text-gray-500">{dayLabel}</div>
-                        <div className="text-sm">{dateLabel}</div>
-                  </div>
-                    );
-                  })}
-
-                  {/* Body */}
-                  {Object.keys(SLOT_TIMES).map((slotKey) => (
-                    <div key={slotKey} className="contents">
-                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center sticky left-0 bg-white/90 z-10">{SLOT_TIMES[slotKey]}</div>
-                      {Array.from({ length: 7 }, (_, i) => {
+              {/* Table Schedule */}
+              <div className="overflow-x-auto rounded-lg border-2 border-gray-300 bg-white shadow-md">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="sticky top-0 bg-gradient-to-r from-gray-50 to-gray-100 z-10 shadow-sm">
+                    <tr>
+                      <th className="border-2 border-gray-300 p-4 text-left font-bold text-gray-800 min-w-[140px] bg-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Clock size={18} className="text-teal-600" />
+                          Khung giờ
+                        </div>
+                      </th>
+                      {Array.from({ length: 7 }).map((_, i) => {
                         const d = new Date(weekStart);
                         d.setDate(weekStart.getDate() + i);
-                        const dateStr = d.toISOString().split('T')[0];
-                        const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
-                        const today = new Date();
-                        today.setHours(0,0,0,0);
-                        const isPast = d < today;
-                        const selectable = available && !isPast;
-                        const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                        const isToday = d.toDateString() === new Date().toDateString();
+                        const dayName = ["CN", "Th 2", "Th 3", "Th 4", "Th 5", "Th 6", "Th 7"][d.getDay()];
+                        
                         return (
-                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center bg-white">
-                            <button
-                              onClick={() => {
-                                if (!selectable) return;
-                                handleDateChange(dateStr);
-                                setSelectedSlot(slotKey);
-                              }}
-                              className={`w-full h-10 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none
-                                ${isSelected ? 'bg-teal-600 text-white shadow-md ring-2 ring-teal-300' : ''}
-                                ${!isSelected && selectable ? 'bg-teal-50/40 border border-teal-300 hover:bg-teal-100 text-teal-700' : ''}
-                                ${!selectable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
-                              `}
-                              disabled={!selectable}
-                            >
-                              {isSelected ? 'Đã chọn' : (selectable ? 'Chọn' : '—')}
-                            </button>
-                  </div>
+                          <th 
+                            key={i} 
+                            className={`border-2 border-gray-300 p-3 text-center font-bold min-w-[120px] ${
+                              isToday ? "bg-teal-100 border-teal-400" : "bg-gray-50"
+                            }`}
+                          >
+                            <div className={`text-xs uppercase tracking-wide ${isToday ? "text-teal-700" : "text-gray-600"}`}>
+                              {dayName}
+                            </div>
+                            <div className={`text-lg font-bold mt-1 ${isToday ? "text-teal-700" : "text-gray-800"}`}>
+                              {d.getDate()}-{d.getMonth() + 1}
+                            </div>
+                            {isToday && (
+                              <div className="text-xs text-teal-600 font-semibold mt-1">Hôm nay</div>
+                            )}
+                          </th>
                         );
                       })}
-                  </div>
+                    </tr>
+                  </thead>
+                  
+                  <tbody>
+                    {Object.entries(SLOT_TIMES).map(([slotKey, slotTime], slotIdx) => (
+                      <tr key={slotKey} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="border-2 border-gray-300 p-4 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-500">Ca {slotIdx + 1}</span>
+                            <span className="text-sm">{slotTime}</span>
+                          </div>
+                        </td>
+                        {Array.from({ length: 7 }, (_, i) => {
+                          const d = new Date(weekStart);
+                          d.setDate(weekStart.getDate() + i);
+                          // Use local date format to avoid timezone issues
+                          const year = d.getFullYear();
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const dateStr = `${year}-${month}-${day}`;
+                          
+                          const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const isPast = d < today;
+                          const selectable = available && !isPast;
+                          const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                          const isToday = d.toDateString() === new Date().toDateString();
+                          
+                          return (
+                            <td
+                              key={dateStr + slotKey}
+                              className={`border-2 border-gray-300 p-2 text-center transition-all duration-200 ${
+                                isPast ? "bg-gray-100 opacity-60" : ""
+                              } ${
+                                !isPast && selectable ? "hover:bg-teal-50 hover:border-teal-300" : ""
+                              } ${
+                                isToday ? "bg-teal-50/30" : isPast ? "bg-gray-100" : "bg-white"
+                              }`}
+                            >
+                              {isSelected ? (
+                                <div className="flex items-center justify-center gap-1 text-teal-700 font-semibold py-2">
+                                  <Check size={16} />
+                                  Đã chọn
+                                </div>
+                              ) : selectable ? (
+                                <Button
+                                  size="sm"
+                                  color="primary"
+                                  variant="flat"
+                                  className="w-full"
+                                  onPress={() => {
+                                    handleDateChange(dateStr);
+                                    setSelectedSlot(slotKey);
+                                  }}
+                                >
+                                  Chọn
+                                </Button>
+                              ) : (
+                                <span className="text-gray-400 py-2 block">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     ))}
-                  </div>
+                  </tbody>
+                </table>
               </div>
 
               {/* Legend */}
               <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-3">
-                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-600"></span>Đã chọn</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-100 border border-teal-300"></span>Có thể đặt</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-gray-100"></span>Không khả dụng</div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded bg-white border-2 border-teal-600"></span>
+                  Đã chọn
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded bg-white border-2 border-gray-300"></span>
+                  Có thể đặt
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded bg-gray-100 border-2 border-gray-300"></span>
+                  Không khả dụng
+                </div>
               </div>
             </div>
 
@@ -1074,80 +1235,39 @@ export default function DatLichKham() {
               </div>
             )}
 
-            {/* Reason (Optional) */}
+            {/* Reason (Required) */}
             {selectedSlot && (
               <div>
-                <label className="block text-sm font-medium mb-2">Lý do khám <span className="text-gray-500">(tùy chọn)</span></label>
+                <label className="block text-sm font-medium mb-2">Lý do khám <span className="text-red-500">*</span></label>
                 <Textarea
+                  isRequired
+                  variant="flat"
                   placeholder="Mô tả triệu chứng hoặc lý do bạn muốn khám..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   minRows={3}
+                  classNames={{
+                    inputWrapper: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100",
+                  }}
                 />
 
-                {/* Symptom images */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium mb-2">Đính kèm ảnh triệu chứng <span className="text-gray-500">(tùy chọn)</span></label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                      e.target.value = '';
-                    }}
-                    className="hidden"
-                  />
-
-                  {/* Dropzone */}
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      const files = Array.from(e.dataTransfer.files || []);
-                      files.forEach((file) => {
-                        if (!file.type.startsWith('image/')) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                    }}
-                    className={`rounded-xl w-full p-6 text-center cursor-pointer transition border-2 border-dashed ${isDragging ? 'bg-teal-50 border-teal-400' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
-                  >
-                    <p className="text-sm text-gray-700">Kéo & thả ảnh vào đây hoặc <span className="text-teal-600 font-medium">bấm để chọn</span></p>
-                    <p className="text-xs text-gray-500 mt-1">Hỗ trợ nhiều ảnh, định dạng JPEG/PNG</p>
-                  </div>
-
-                  {symptomImages.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      {symptomImages.map((img, idx) => (
-                        <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden relative group border">
-                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setSymptomImages((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 bg-white/80 text-red-600 text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      ))}
+                {/* Privacy Notice */}
+                <div className="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+                  <div className="flex items-start gap-2">
+                    <Shield size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-blue-900">
+                      <p className="font-semibold mb-1">Bảo vệ dữ liệu cá nhân</p>
+                      <p>
+                        Thông tin sức khỏe của bạn là dữ liệu nhạy cảm và sẽ được bảo vệ theo Nghị định 13/2023/NĐ-CP. 
+                        <button 
+                          onClick={() => setShowPrivacyModal(true)}
+                          className="text-blue-700 underline ml-1 font-medium hover:text-blue-800"
+                        >
+                          Xem chi tiết
+                        </button>
+                      </p>
                     </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">Ảnh chỉ lưu kèm nội dung ghi chú của bạn khi tạo lịch. Nếu cần gửi ảnh chất lượng cao, vui lòng mang theo hoặc gửi qua kênh chat sau khi đặt lịch.</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1155,7 +1275,7 @@ export default function DatLichKham() {
             {/* Action Buttons */}
             <div className="flex gap-4 pt-6 border-t">
               <Button
-                variant="bordered"
+                variant="flat"
                 onClick={() => setCurrentStep(1)}
                 fullWidth
                 size="lg"
@@ -1232,7 +1352,7 @@ export default function DatLichKham() {
 
             <div className="flex gap-3">
               <Button
-                variant="bordered"
+                variant="flat"
                 onClick={() => setCurrentStep(2)}
                 fullWidth
               >
@@ -1266,6 +1386,174 @@ export default function DatLichKham() {
   return (
     <PatientFrame>
       <ToastNotification toast={toast} />
+      
+      {/* Privacy Policy Modal - Nghị định 13/2023/NĐ-CP */}
+      <Modal 
+        isOpen={showPrivacyModal} 
+        onClose={() => setShowPrivacyModal(false)}
+        size="3xl"
+        scrollBehavior="inside"
+        backdrop="blur"
+      >
+        <ModalContent>
+          <ModalHeader className="flex gap-2 items-center border-b">
+            <Shield className="text-teal-600" size={24} />
+            <div>
+              <h3 className="text-xl font-bold">Thông báo về Bảo vệ Dữ liệu Cá nhân</h3>
+              <p className="text-sm text-gray-600 font-normal">Theo Nghị định 13/2023/NĐ-CP</p>
+            </div>
+          </ModalHeader>
+          <ModalBody className="py-6">
+            <div className="space-y-4 text-sm">
+              {/* Thông báo chính */}
+              <div className="bg-teal-50 border-l-4 border-teal-500 p-4 rounded">
+                <h4 className="font-semibold text-teal-900 mb-2 flex items-center gap-2">
+                  <Info size={18} />
+                  Thông báo về việc xử lý dữ liệu cá nhân nhạy cảm
+                </h4>
+                <p className="text-gray-700">
+                  MedConnect cam kết bảo vệ dữ liệu cá nhân của bạn theo đúng quy định của pháp luật Việt Nam, 
+                  đặc biệt là Nghị định 13/2023/NĐ-CP về Bảo vệ dữ liệu cá nhân.
+                </p>
+              </div>
+
+              {/* Dữ liệu được thu thập */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">1. Dữ liệu cá nhân nhạy cảm được xử lý</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
+                  <li>Thông tin sức khỏe: Lý do khám, triệu chứng, hình ảnh triệu chứng, lịch sử bệnh</li>
+                  <li>Dữ liệu sinh trắc học: Ảnh khuôn mặt (nếu có)</li>
+                  <li>Thông tin cá nhân: Họ tên, số điện thoại, email, địa chỉ</li>
+                  <li>Thông tin bảo hiểm y tế (nếu có)</li>
+                </ul>
+              </div>
+
+              {/* Mục đích xử lý */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">2. Mục đích xử lý dữ liệu</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
+                  <li>Đặt lịch và quản lý cuộc hẹn khám bệnh</li>
+                  <li>Hỗ trợ bác sĩ trong việc chẩn đoán và điều trị</li>
+                  <li>Lưu trữ hồ sơ bệnh án điện tử</li>
+                  <li>Cải thiện chất lượng dịch vụ y tế</li>
+                  <li>Thực hiện các nghĩa vụ pháp lý</li>
+                </ul>
+              </div>
+
+              {/* Quyền của chủ thể dữ liệu */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">3. Quyền của bạn (Điều 9 Nghị định 13)</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
+                  <li>Quyền được biết về việc xử lý dữ liệu cá nhân của mình</li>
+                  <li>Quyền đồng ý hoặc không đồng ý cho xử lý dữ liệu</li>
+                  <li>Quyền truy cập, chỉnh sửa, bổ sung dữ liệu cá nhân</li>
+                  <li>Quyền rút lại sự đồng ý</li>
+                  <li>Quyền xóa dữ liệu cá nhân</li>
+                  <li>Quyền hạn chế xử lý dữ liệu</li>
+                  <li>Quyền yêu cầu cung cấp bản sao dữ liệu</li>
+                  <li>Quyền phản đối xử lý dữ liệu</li>
+                  <li>Quyền khiếu nại, tố cáo, khởi kiện</li>
+                  <li>Quyền yêu cầu bồi thường thiệt hại</li>
+                  <li>Quyền tự bảo vệ theo quy định của pháp luật</li>
+                </ul>
+              </div>
+
+              {/* Thời gian lưu trữ */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">4. Thời gian lưu trữ dữ liệu</h4>
+                <p className="text-gray-700">
+                  Dữ liệu của bạn sẽ được lưu trữ theo quy định của pháp luật về hồ sơ bệnh án và chỉ trong thời gian cần thiết 
+                  để thực hiện mục đích đã nêu. Bạn có quyền yêu cầu xóa dữ liệu bất cứ lúc nào.
+                </p>
+              </div>
+
+              {/* Biện pháp bảo mật */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">5. Biện pháp bảo mật (Điều 20 Nghị định 13)</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
+                  <li>Mã hóa dữ liệu nhạy cảm khi truyền và lưu trữ</li>
+                  <li>Kiểm soát truy cập nghiêm ngặt - chỉ bác sĩ và nhân viên được ủy quyền</li>
+                  <li>Ghi log và giám sát các hoạt động xử lý dữ liệu</li>
+                  <li>Sao lưu và khôi phục dữ liệu định kỳ</li>
+                  <li>Đào tạo nhân viên về bảo vệ dữ liệu cá nhân</li>
+                </ul>
+              </div>
+
+              {/* Chia sẻ dữ liệu */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">6. Chia sẻ dữ liệu với bên thứ ba</h4>
+                <p className="text-gray-700">
+                  Dữ liệu của bạn chỉ được chia sẻ với bác sĩ phụ trách và các nhân viên y tế liên quan trực tiếp đến việc chăm sóc sức khỏe của bạn. 
+                  Chúng tôi không bán hoặc chia sẻ dữ liệu của bạn cho bên thứ ba vì mục đích thương mại.
+                </p>
+              </div>
+
+              {/* Thông báo vi phạm */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">7. Thông báo vi phạm (Điều 23 Nghị định 13)</h4>
+                <p className="text-gray-700">
+                  Nếu phát hiện có vi phạm an toàn dữ liệu, chúng tôi sẽ thông báo cho bạn trong vòng 72 giờ và thực hiện các biện pháp 
+                  khắc phục theo quy định tại Điều 23 Nghị định 13/2023/NĐ-CP.
+                </p>
+              </div>
+
+              {/* Cơ quan chuyên trách */}
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">8. Cơ quan chuyên trách bảo vệ dữ liệu cá nhân</h4>
+                <p className="text-gray-700">
+                  <strong>Cục An ninh mạng và phòng, chống tội phạm sử dụng công nghệ cao - Bộ Công an</strong>
+                </p>
+                <p className="text-gray-600 text-xs mt-1">
+                  Cổng thông tin quốc gia về bảo vệ dữ liệu cá nhân: Bạn có thể khiếu nại vi phạm về bảo vệ dữ liệu cá nhân tại đây.
+                </p>
+              </div>
+
+              {/* Liên hệ */}
+              <div className="bg-gray-50 p-4 rounded border">
+                <h4 className="font-semibold text-gray-900 mb-2">9. Liên hệ với chúng tôi</h4>
+                <p className="text-gray-700">
+                  Nếu bạn có câu hỏi hoặc muốn thực hiện quyền của mình, vui lòng liên hệ:
+                </p>
+                <ul className="mt-2 space-y-1 text-gray-700">
+                  <li><strong>Email:</strong> privacy@medconnect.vn</li>
+                  <li><strong>Hotline:</strong> 1900-xxxx</li>
+                  <li><strong>Địa chỉ:</strong> [Địa chỉ công ty]</li>
+                </ul>
+              </div>
+
+              {/* Đồng ý */}
+              <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                <p className="text-gray-700">
+                  <strong>Lưu ý quan trọng:</strong> Bằng việc tiếp tục sử dụng dịch vụ đặt lịch khám, bạn xác nhận đã đọc, 
+                  hiểu và đồng ý với việc MedConnect xử lý dữ liệu cá nhân nhạy cảm của bạn theo các điều khoản đã nêu trên.
+                </p>
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter className="border-t">
+            <Button 
+              variant="flat" 
+              onPress={() => {
+                setShowPrivacyModal(false);
+                setAcceptedPrivacy(false);
+              }}
+            >
+              Từ chối
+            </Button>
+            <Button 
+              color="primary" 
+              onPress={() => {
+                setShowPrivacyModal(false);
+                setAcceptedPrivacy(true);
+              }}
+              className="font-semibold"
+            >
+              Tôi đã đọc và đồng ý
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
     </PatientFrame>
   );

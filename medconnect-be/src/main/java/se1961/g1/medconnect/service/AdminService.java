@@ -81,6 +81,8 @@ public class AdminService {
         admin.setEmail(request.getEmail());
         admin.setFirebaseUid(userRecord.getUid());
         admin.setRole(Role.ADMIN);
+        // Set default avatar for admin
+        admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
 
         Admin savedAdmin = adminRepository.save(admin);
         
@@ -127,10 +129,18 @@ public class AdminService {
         User user = userOpt.get();
 
         // Xóa user trên Firebase
-        try {
-            firebaseAuth.deleteUser(user.getFirebaseUid());
-        } catch (Exception e) {
-            System.err.println("Lỗi xóa user Firebase: " + e.getMessage());
+        if (user.getFirebaseUid() != null && !user.getFirebaseUid().isEmpty()) {
+            try {
+                System.out.println("Deleting Firebase account for admin: " + user.getFirebaseUid());
+                firebaseAuth.deleteUser(user.getFirebaseUid());
+                System.out.println("✅ Firebase account deleted successfully");
+            } catch (Exception e) {
+                System.err.println("❌ Failed to delete Firebase user for admin id=" + userId + ": " + e.getMessage());
+                e.printStackTrace();
+                // Continue with database deletion even if Firebase deletion fails
+            }
+        } else {
+            System.out.println("⚠️ Admin has no Firebase UID, skipping Firebase deletion");
         }
 
         // Xóa trong database

@@ -4,6 +4,8 @@ import { Default } from "@/components/layouts/";
 import { useRouter } from "next/router";
 import Float from "@/components/ui/Float";
 import SimpleCaptcha from "@/components/ui/SimpleCaptcha";
+import AddressSelector from "@/components/ui/AddressSelector";
+import { useAddressData } from "@/hooks/useAddressData";
 import Image from "next/image";
 import { DollarSign, Clock, Building, TrendingUp, Users, BookOpen, Plus, X, Upload, FileText } from "lucide-react";
 
@@ -29,8 +31,17 @@ export default function DoctorApplication() {
     education: "",
     certifications: [],
     bio: "",
-    clinicAddress: "",
-    workingHours: ""
+    provinceCode: "",
+    districtCode: "",
+    wardCode: "",
+    street: ""
+  });
+
+  // Store address names for display
+  const [addressNames, setAddressNames] = useState({
+    province: "",
+    district: "",
+    ward: ""
   });
   
   const [currentCertificate, setCurrentCertificate] = useState({
@@ -50,6 +61,9 @@ export default function DoctorApplication() {
   const [specialties, setSpecialties] = useState([]);
   const [isLoadingSpecialties, setIsLoadingSpecialties] = useState(true);
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+
+  // Use address data hook to get names
+  const { provinces, districts, wards } = useAddressData();
 
   // Fetch specialties from backend
   useEffect(() => {
@@ -74,39 +88,10 @@ export default function DoctorApplication() {
           setSpecialties(transformedData);
         } else {
           console.error("Failed to fetch specialties, status:", response.status);
-          // Use fallback data if API fails
-          const fallbackSpecialties = [
-            { value: "1", label: "Nội khoa" },
-            { value: "2", label: "Ngoại khoa" },
-            { value: "3", label: "Sản phụ khoa" },
-            { value: "4", label: "Nhi khoa" },
-            { value: "5", label: "Tim mạch" },
-            { value: "6", label: "Thần kinh" },
-            { value: "7", label: "Da liễu" },
-            { value: "8", label: "Tai mũi họng" },
-            { value: "9", label: "Mắt" },
-            { value: "10", label: "Răng hàm mặt" },
-          ];
-          setSpecialties(fallbackSpecialties);
           showMessage("Đang sử dụng danh sách chuyên khoa mặc định", "warning");
         }
       } catch (error) {
         console.error("Error fetching specialties:", error);
-        // Use fallback data if network error
-        const fallbackSpecialties = [
-          { value: "1", label: "Nội khoa" },
-          { value: "2", label: "Ngoại khoa" },
-          { value: "3", label: "Sản phụ khoa" },
-          { value: "4", label: "Nhi khoa" },
-          { value: "5", label: "Tim mạch" },
-          { value: "6", label: "Thần kinh" },
-          { value: "7", label: "Da liễu" },
-          { value: "8", label: "Tai mũi họng" },
-          { value: "9", label: "Mắt" },
-          { value: "10", label: "Răng hàm mặt" },
-        ];
-        setSpecialties(fallbackSpecialties);
-        showMessage("Đang sử dụng danh sách chuyên khoa mặc định", "warning");
       } finally {
         setIsLoadingSpecialties(false);
       }
@@ -120,12 +105,56 @@ export default function DoctorApplication() {
     setTimeout(() => setMessage({ text: "", type: "" }), 5000);
   };
 
+  // Helper function to convert File to base64
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleProvinceChange = (code) => {
+    setFormData(prev => ({ ...prev, provinceCode: code, districtCode: null, wardCode: null }));
+    if (code) {
+      const provinceName = provinces.find(p => String(p.code) === String(code))?.name || "";
+      setAddressNames(prev => ({ ...prev, province: provinceName, district: "", ward: "" }));
+    } else {
+      setAddressNames(prev => ({ ...prev, province: "", district: "", ward: "" }));
+    }
+  };
+
+  const handleDistrictChange = (code) => {
+    setFormData(prev => ({ ...prev, districtCode: code, wardCode: null }));
+    if (code) {
+      const districtName = districts.find(d => String(d.code) === String(code))?.name || "";
+      setAddressNames(prev => ({ ...prev, district: districtName, ward: "" }));
+    } else {
+      setAddressNames(prev => ({ ...prev, district: "", ward: "" }));
+    }
+  };
+
+  const handleWardChange = (code) => {
+    setFormData(prev => ({ ...prev, wardCode: code }));
+    if (code) {
+      const wardName = wards.find(w => String(w.code) === String(code))?.name || "";
+      setAddressNames(prev => ({ ...prev, ward: wardName }));
+    } else {
+      setAddressNames(prev => ({ ...prev, ward: "" }));
+    }
+  };
+
+  const handleStreetChange = (e) => {
+    setFormData(prev => ({ ...prev, street: e.target.value }));
   };
 
   const handleCertificateInputChange = (e) => {
@@ -220,6 +249,28 @@ export default function DoctorApplication() {
     setIsLoading(true);
 
     try {
+      // Convert image files to base64 for certifications
+      const certificationsWithBase64 = await Promise.all(
+        formData.certifications.map(async (cert) => {
+          const certData = { ...cert };
+          // Remove imageFile and imagePreview, add base64Image if available
+          delete certData.imageFile;
+          delete certData.imagePreview;
+          
+          // Convert imageFile to base64 if exists
+          if (cert.imageFile) {
+            try {
+              const base64 = await fileToBase64(cert.imageFile);
+              certData.base64Image = base64;
+            } catch (error) {
+              console.error("Failed to convert image to base64:", error);
+            }
+          }
+          
+          return certData;
+        })
+      );
+
       // Prepare JSON data for API (match backend DTO)
       const applicationData = {
         fullName: formData.fullName,
@@ -228,10 +279,12 @@ export default function DoctorApplication() {
         specialtyId: parseInt(formData.specialty),  // Send as specialtyId (number)
         experience: parseInt(formData.experience) || 0,
         education: formData.education,
-        certifications: JSON.stringify(formData.certifications), // Convert to JSON string for backend
+        certifications: JSON.stringify(certificationsWithBase64), // Convert to JSON string for backend
         bio: formData.bio,
-        clinicAddress: formData.clinicAddress,
-        workingHours: formData.workingHours
+        clinicAddress: [formData.street, addressNames.ward, addressNames.district, addressNames.province]
+          .filter(Boolean)
+          .join(", "),
+        workingHours: "" // Remove this field from form
       };
 
       console.log("Submitting application data:", applicationData);
@@ -244,7 +297,31 @@ export default function DoctorApplication() {
         body: JSON.stringify(applicationData),
       });
 
-      const result = await response.json();
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type");
+      let result;
+      
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+        console.log("JSON response:", result);
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response (status " + response.status + "):", text);
+        
+        // Show more specific error messages
+        if (response.status === 404) {
+          throw new Error("API endpoint không tồn tại. Vui lòng kiểm tra backend đang chạy.");
+        } else if (response.status === 500) {
+          throw new Error("Lỗi server: " + (text.substring(0, 100) || "Internal Server Error"));
+        } else if (!response.ok) {
+          throw new Error("Lỗi HTTP " + response.status + ": " + (text.substring(0, 100) || "Unknown error"));
+        } else {
+          throw new Error("Server trả về dữ liệu không hợp lệ (không phải JSON)");
+        }
+      }
 
       if (response.ok && result.success) {
         showMessage(
@@ -391,7 +468,7 @@ export default function DoctorApplication() {
                           label="Chuyên khoa"
                           name="specialty"
                           placeholder={isLoadingSpecialties ? "Đang tải..." : "Chọn chuyên khoa"}
-                          selectedKeys={formData.specialty ? new Set([formData.specialty]) : new Set([])}
+                          selectedKeys={formData.specialty ? [String(formData.specialty)] : []}
                           onSelectionChange={(keys) => {
                             const selectedValue = Array.from(keys)[0];
                             setFormData(prev => ({ ...prev, specialty: selectedValue || "" }));
@@ -523,26 +600,44 @@ export default function DoctorApplication() {
                     {/* Work Info */}
                     <div className="space-y-3 sm:space-y-4">
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900">Thông tin công việc</h3>
-                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                        <Textarea
-                          label="Địa chỉ phòng khám/Bệnh viện"
-                          name="clinicAddress"
-                          placeholder="Nhập địa chỉ nơi làm việc hiện tại (nếu có)"
-                          value={formData.clinicAddress}
-                          onChange={handleInputChange}
-                          labelPlacement="outside"
-                          minRows={2}
-                          size="sm"
-                        />
-                        <Input
-                          label="Thời gian làm việc mong muốn"
-                          name="workingHours"
-                          placeholder="VD: Thứ 2-6, 8h-17h"
-                          value={formData.workingHours}
-                          onChange={handleInputChange}
-                          labelPlacement="outside"
-                          size="sm"
-                        />
+                      <div className="space-y-4">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Địa chỉ phòng khám/Bệnh viện
+                            </label>
+                            <div className="space-y-3">
+                              <AddressSelector
+                                provinceCode={formData.provinceCode}
+                                districtCode={formData.districtCode}
+                                wardCode={formData.wardCode}
+                                onProvinceChange={handleProvinceChange}
+                                onDistrictChange={handleDistrictChange}
+                                onWardChange={handleWardChange}
+                                size="sm"
+                                variant="flat"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Input
+                              label="Số nhà, đường"
+                              name="street"
+                              placeholder="Nhập số nhà, tên đường"
+                              value={formData.street}
+                              onChange={handleStreetChange}
+                              labelPlacement="outside"
+                              size="sm"
+                              variant="flat"
+                              classNames={{
+                                input: 'text-gray-900',
+                                inputWrapper: 'bg-gray-100 hover:bg-gray-200',
+                                base: 'gap-1',
+                                label: 'text-sm font-medium text-gray-700 pb-1',
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 

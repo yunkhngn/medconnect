@@ -9,6 +9,7 @@ import Grid from "@/components/layouts/Grid";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useToast } from "@/hooks/useToast";
 import { auth } from "@/lib/firebase";
+import { parseReason } from "@/utils/appointmentUtils";
 
 export default function OfflineExamDetailPage() {
   const router = useRouter();
@@ -57,12 +58,28 @@ export default function OfflineExamDetailPage() {
         }
         return v;
       };
+      // Parse reason properly - handle both object and string formats
+      let chiefComplaint = src.chief_complaint || src.complaint || "";
+      if (!chiefComplaint && src.reason) {
+        // If reason is an object, parse it to get reasonText
+        if (typeof src.reason === 'object' && src.reason !== null) {
+          const parsed = parseReason(src.reason);
+          chiefComplaint = parsed.reasonText || "";
+        } else if (typeof src.reason === 'string') {
+          // If reason is a string, try to parse it
+          const parsed = parseReason(src.reason);
+          chiefComplaint = parsed.reasonText || src.reason;
+        } else {
+          chiefComplaint = String(src.reason || "");
+        }
+      }
+      
       return {
         visit_id: src.visit_id || n.visit_id,
         visit_date: src.visit_date,
         visit_time: src.visit_time,
         visit_type: src.visit_type,
-        chief_complaint: src.chief_complaint || src.reason || src.complaint,
+        chief_complaint: chiefComplaint,
         vital_signs: parseMaybe(src.vital_signs),
         physical_exam: parseMaybe(src.physical_exam),
         diagnosis: parseMaybe(src.diagnosis),

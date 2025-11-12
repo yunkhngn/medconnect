@@ -119,18 +119,31 @@ export default function DoctorProfile() {
 
   const fetchSpecialities = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/specialities");
+      const response = await fetch("http://localhost:8080/api/specialties");
       if (response.ok) {
         const data = await response.json();
         console.log("[Specialities] Fetched data:", data);
-        if (data.length > 0) {
+        if (data && data.length > 0) {
           console.log("[Specialities] First item keys:", Object.keys(data[0]));
           console.log("[Specialities] First item:", data[0]);
+          // Ensure data is properly formatted with id and name
+          const formattedData = data.map(item => ({
+            id: item.id || item.specialityId || item.speciality_id,
+            name: item.name || item.specialityName || item.speciality_name
+          })).filter(item => item.id && item.name); // Filter out invalid items
+          console.log("[Specialities] Formatted data:", formattedData);
+          setSpecialities(formattedData);
+        } else {
+          console.warn("[Specialities] No data received from API");
+          setSpecialities([]);
         }
-        setSpecialities(data);
+      } else {
+        console.error("[Specialities] API response not OK:", response.status, response.statusText);
+        setSpecialities([]);
       }
     } catch (error) {
       console.error("Error fetching specialities:", error);
+      setSpecialities([]);
     } finally {
       setLoadingSpecialities(false);
     }

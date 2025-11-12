@@ -143,11 +143,6 @@ export function formatReasonForDisplay(reason, includeLabel = false) {
     }
   }
   
-  // Add attachment info if present
-  if (attachments && attachments.length > 0) {
-    displayText += ' (có đính kèm ảnh)';
-  }
-  
   // Add label if requested
   if (includeLabel) {
     return `Lý do khám:\n\n${displayText}`;
