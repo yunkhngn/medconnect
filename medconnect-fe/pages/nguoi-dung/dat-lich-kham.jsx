@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
 } from "@heroui/react";
-import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone } from "lucide-react";
+import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone, MessageSquare } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import RouteMap from "@/components/ui/RouteMap";
 import Grid from "@/components/layouts/Grid";
@@ -73,6 +73,8 @@ export default function DatLichKham() {
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [doctorFeedbackSummary, setDoctorFeedbackSummary] = useState(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   // Filter doctors
   const [searchQuery, setSearchQuery] = useState("");
@@ -320,8 +322,30 @@ export default function DatLichKham() {
     }
   };
 
-  const handlePreviewDoctor = (doctor) => {
+  const handlePreviewDoctor = async (doctor) => {
     setPreviewDoctor(doctor);
+    // Fetch feedback summary for this doctor
+    if (doctor && doctor.id) {
+      setLoadingFeedback(true);
+      try {
+        const response = await fetch(`http://localhost:8080/api/feedback/doctor/${doctor.id}/summary`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setDoctorFeedbackSummary(data.data);
+          } else {
+            setDoctorFeedbackSummary(null);
+          }
+        } else {
+          setDoctorFeedbackSummary(null);
+        }
+      } catch (error) {
+        console.error('Error fetching feedback summary:', error);
+        setDoctorFeedbackSummary(null);
+      } finally {
+        setLoadingFeedback(false);
+      }
+    }
   };
 
   const handleSelectDoctor = (doctor) => {
@@ -694,15 +718,28 @@ export default function DatLichKham() {
                 </div>
                 <CardBody className="p-6 space-y-6">
                   {/* Stats (minimal) */}
-                  <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-2 text-gray-700"><Star size={18} className="text-yellow-500" /><span className="text-sm">Đánh giá</span></div>
-                      <p className="text-2xl font-bold">{previewDoctor.rating || "4.8"}</p>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">
+                          {loadingFeedback ? "..." : (doctorFeedbackSummary?.averageRating?.toFixed(1) || previewDoctor.rating || "—")}
+                        </p>
+                        {doctorFeedbackSummary?.totalFeedbacks > 0 && (
+                          <p className="text-xs text-gray-500">({doctorFeedbackSummary.totalFeedbacks} đánh giá)</p>
+                        )}
+                      </div>
                     </div>
                     <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-2 text-gray-700"><Award size={18} className="text-teal-600" /><span className="text-sm">Năm KN</span></div>
                       <p className="text-2xl font-bold">{previewDoctor.experience_years || previewDoctor.experienceYears || "—"}</p>
                     </div>
+                    {doctorFeedbackSummary?.totalFeedbacks > 0 && (
+                      <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-700"><MessageSquare size={18} className="text-blue-500" /><span className="text-sm">Feedback</span></div>
+                        <p className="text-2xl font-bold">{doctorFeedbackSummary.totalFeedbacks}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Contacts */}
@@ -772,20 +809,50 @@ export default function DatLichKham() {
                     </div>
                   </div>
 
-                  {/* Mock reviews */}
+                  {/* Real Feedback Reviews */}
                   <div className="mt-2">
-                    <p className="font-semibold mb-2">Đánh giá nổi bật</p>
-                    <div className="space-y-2 text-sm">
-                      {[
-                        { name: "Nguyễn T.", content: "Bác sĩ tư vấn kỹ, điều trị hiệu quả." },
-                        { name: "Lê Q.", content: "Phòng khám sạch sẽ, đặt lịch nhanh chóng." }
-                      ].map((rv, idx) => (
-                        <div key={idx} className="p-3 rounded-lg bg-gray-50">
-                          <div className="flex items-center gap-2 text-yellow-500"><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} fill="currentColor" /><Star size={16} /></div>
-                          <p className="mt-1 text-gray-700"><span className="font-medium">{rv.name}</span>: {rv.content}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <p className="font-semibold mb-2 flex items-center gap-2">
+                      <MessageSquare size={18} />
+                      {loadingFeedback ? "Đang tải đánh giá..." : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? "3 đánh giá gần nhất" : "Chưa có đánh giá"}
+                    </p>
+                    {loadingFeedback ? (
+                      <div className="text-center py-4 text-gray-500">Đang tải...</div>
+                    ) : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? (
+                      <div className="space-y-2 text-sm">
+                        {doctorFeedbackSummary.recentFeedbacks.map((fb, idx) => (
+                          <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-gray-900">{fb.patientName || 'Bệnh nhân'}</span>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    size={14}
+                                    className={`${
+                                      star <= fb.rating
+                                        ? 'text-yellow-400 fill-current'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {fb.comment && (
+                              <p className="mt-1 text-gray-700">"{fb.comment}"</p>
+                            )}
+                            {fb.createdAt && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-lg bg-gray-50 text-center text-gray-500 text-sm">
+                        Chưa có đánh giá nào cho bác sĩ này
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex md:hidden gap-3 mt-5">

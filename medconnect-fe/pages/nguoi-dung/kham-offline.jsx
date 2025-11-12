@@ -415,6 +415,10 @@ export default function PatientOfflineExamList() {
               placeholder="Tên bác sĩ, chuyên khoa..."
               value={searchQuery}
               onValueChange={setSearchQuery}
+              variant="bordered"
+              classNames={{
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
               startContent={<Search className="w-4 h-4 text-gray-400" />}
             />
           </div>
@@ -899,6 +903,9 @@ export default function PatientOfflineExamList() {
                             onValueChange={setFeedbackComment}
                             minRows={4}
                             variant="bordered"
+                            classNames={{
+                              inputWrapper: "focus-within:border-primary focus-within:ring-0"
+                            }}
                           />
                         </div>
                         
@@ -927,79 +934,6 @@ export default function PatientOfflineExamList() {
                   </div>
                 </Tab>
               </Tabs>
-              
-              {/* Report Modal */}
-              <Modal isOpen={showReportModal} onOpenChange={setShowReportModal}>
-                <ModalContent>
-                  <ModalHeader>Báo xấu bác sĩ</ModalHeader>
-                  <ModalBody>
-                    <Textarea
-                      label="Lý do báo xấu"
-                      placeholder="Vui lòng mô tả chi tiết lý do bạn báo xấu bác sĩ này..."
-                      value={reportReason}
-                      onValueChange={setReportReason}
-                      minRows={4}
-                      variant="bordered"
-                      isRequired
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                      Báo xấu sẽ được gửi đến admin để xem xét. Vui lòng cung cấp thông tin chính xác và chi tiết.
-                    </p>
-                  </ModalBody>
-                  <ModalFooter>
-                    <Button variant="light" onPress={() => setShowReportModal(false)}>
-                      Hủy
-                    </Button>
-                    <Button
-                      color="danger"
-                      onPress={async () => {
-                        if (!reportReason.trim()) {
-                          alert('Vui lòng điền lý do báo xấu');
-                          return;
-                        }
-                        if (!selectedAppointment) {
-                          alert('Không tìm thấy thông tin cuộc hẹn');
-                          return;
-                        }
-                        setSubmittingReport(true);
-                        try {
-                          const user = auth.currentUser;
-                          if (!user) return;
-                          const token = await user.getIdToken();
-                          const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
-                          const response = await fetch('http://localhost:8080/api/reports', {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${token}`,
-                              'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                              appointmentId: aptId,
-                              reason: reportReason
-                            })
-                          });
-                          const data = await response.json();
-                          if (data.success) {
-                            alert('Báo xấu đã được gửi thành công. Admin sẽ xem xét.');
-                            setShowReportModal(false);
-                            setReportReason("");
-                          } else {
-                            alert(data.message || 'Không thể gửi báo xấu');
-                          }
-                        } catch (error) {
-                          console.error('Failed to submit report:', error);
-                          alert('Lỗi khi gửi báo xấu');
-                        } finally {
-                          setSubmittingReport(false);
-                        }
-                      }}
-                      isLoading={submittingReport}
-                    >
-                      Gửi báo xấu
-                    </Button>
-                  </ModalFooter>
-                </ModalContent>
-              </Modal>
             ) : (
               <div className="text-center py-8">Chọn một cuộc hẹn để xem chi tiết.</div>
             )}
@@ -1007,6 +941,82 @@ export default function PatientOfflineExamList() {
           <ModalFooter>
             <Button color="danger" variant="flat" onPress={onClose}>
               Đóng
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Report Modal */}
+      <Modal isOpen={showReportModal} onOpenChange={setShowReportModal}>
+        <ModalContent>
+          <ModalHeader>Báo xấu bác sĩ</ModalHeader>
+          <ModalBody>
+            <Textarea
+              label="Lý do báo xấu"
+              placeholder="Vui lòng mô tả chi tiết lý do bạn báo xấu bác sĩ này..."
+              value={reportReason}
+              onValueChange={setReportReason}
+              minRows={4}
+              variant="bordered"
+              isRequired
+              classNames={{
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Báo xấu sẽ được gửi đến admin để xem xét. Vui lòng cung cấp thông tin chính xác và chi tiết.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => setShowReportModal(false)}>
+              Hủy
+            </Button>
+            <Button
+              color="danger"
+              onPress={async () => {
+                if (!reportReason.trim()) {
+                  alert('Vui lòng điền lý do báo xấu');
+                  return;
+                }
+                if (!selectedAppointment) {
+                  alert('Không tìm thấy thông tin cuộc hẹn');
+                  return;
+                }
+                setSubmittingReport(true);
+                try {
+                  const user = auth.currentUser;
+                  if (!user) return;
+                  const token = await user.getIdToken();
+                  const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
+                  const response = await fetch('http://localhost:8080/api/reports', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      appointmentId: aptId,
+                      reason: reportReason
+                    })
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    alert('Báo xấu đã được gửi thành công. Admin sẽ xem xét.');
+                    setShowReportModal(false);
+                    setReportReason("");
+                  } else {
+                    alert(data.message || 'Không thể gửi báo xấu');
+                  }
+                } catch (error) {
+                  console.error('Failed to submit report:', error);
+                  alert('Lỗi khi gửi báo xấu');
+                } finally {
+                  setSubmittingReport(false);
+                }
+              }}
+              isLoading={submittingReport}
+            >
+              Gửi báo xấu
             </Button>
           </ModalFooter>
         </ModalContent>

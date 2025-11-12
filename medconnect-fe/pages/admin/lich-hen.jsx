@@ -533,6 +533,10 @@ const Appointment = () => {
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
             placeholder="Chọn ngày"
+            variant="bordered"
+            classNames={{
+              inputWrapper: "focus-within:border-primary focus-within:ring-0"
+            }}
           />
 
           {(selectedPatient !== 'all' || selectedDoctor !== 'all' || selectedDate) && (
@@ -564,6 +568,10 @@ const Appointment = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-xs"
+          variant="bordered"
+          classNames={{
+            inputWrapper: "focus-within:border-primary focus-within:ring-0"
+          }}
           startContent={
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -747,6 +755,10 @@ const Appointment = () => {
                       if (formData.doctorId) {
                         fetchAvailableSlots(parseInt(formData.doctorId), dateValue);
                       }
+                    }}
+                    variant="bordered"
+                    classNames={{
+                      inputWrapper: "focus-within:border-primary focus-within:ring-0"
                     }}
                   />
 

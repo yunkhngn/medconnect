@@ -436,6 +436,9 @@ export default function PatientOnlineExamRoom() {
                   onValueChange={setFeedbackComment}
                   minRows={4}
                   variant="bordered"
+                  classNames={{
+                    inputWrapper: "focus-within:border-primary focus-within:ring-0"
+                  }}
                 />
               </div>
               
@@ -488,6 +491,9 @@ export default function PatientOnlineExamRoom() {
                   minRows={4}
                   variant="bordered"
                   isRequired
+                  classNames={{
+                    inputWrapper: "focus-within:border-primary focus-within:ring-0"
+                  }}
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Báo xấu sẽ được gửi đến admin để xem xét. Vui lòng cung cấp thông tin chính xác và chi tiết.
@@ -688,7 +694,17 @@ export default function PatientOnlineExamRoom() {
               ))}
             </div>
             <div className="p-4 flex gap-2 items-center bg-gray-50/50">
-              <Input placeholder="Nhập tin nhắn…" className="flex-1" variant="flat" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
+              <Input 
+                placeholder="Nhập tin nhắn…" 
+                className="flex-1" 
+                variant="flat" 
+                value={chatMessage} 
+                onChange={(e) => setChatMessage(e.target.value)} 
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                classNames={{
+                  inputWrapper: "focus-within:ring-0"
+                }}
+              />
               <Button color="success" onPress={handleSendMessage}><Send size={16} /></Button>
             </div>
           </div>

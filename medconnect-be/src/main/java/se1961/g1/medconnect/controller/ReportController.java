@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.pojo.Report;
 import se1961.g1.medconnect.pojo.User;
+import se1961.g1.medconnect.pojo.Admin;
 import se1961.g1.medconnect.repository.UserRepository;
 import se1961.g1.medconnect.service.ReportService;
 
@@ -58,6 +59,18 @@ public class ReportController {
     @GetMapping
     public ResponseEntity<?> getAllReports(Authentication authentication) {
         try {
+            // Check if user is admin
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            if (!(user instanceof Admin)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "Chỉ admin mới có thể xem danh sách báo xấu");
+                return ResponseEntity.status(403).body(error);
+            }
+            
             var reports = reportService.getAllReports();
             
             Map<String, Object> response = new HashMap<>();
@@ -74,8 +87,20 @@ public class ReportController {
     }
     
     @GetMapping("/status/{status}")
-    public ResponseEntity<?> getReportsByStatus(@PathVariable String status) {
+    public ResponseEntity<?> getReportsByStatus(@PathVariable String status, Authentication authentication) {
         try {
+            // Check if user is admin
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            if (!(user instanceof Admin)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "Chỉ admin mới có thể xem danh sách báo xấu");
+                return ResponseEntity.status(403).body(error);
+            }
+            
             Report.ReportStatus reportStatus = Report.ReportStatus.valueOf(status.toUpperCase());
             var reports = reportService.getReportsByStatus(reportStatus);
             
@@ -102,6 +127,14 @@ public class ReportController {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
+            // Check if user is admin
+            if (!(user instanceof Admin)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "Chỉ admin mới có thể cập nhật trạng thái báo xấu");
+                return ResponseEntity.status(403).body(error);
+            }
+            
             String statusStr = request.get("status").toString().toUpperCase();
             Report.ReportStatus status = Report.ReportStatus.valueOf(statusStr);
             
@@ -122,8 +155,20 @@ public class ReportController {
     }
     
     @DeleteMapping("/{reportId}")
-    public ResponseEntity<?> deleteReport(@PathVariable Long reportId) {
+    public ResponseEntity<?> deleteReport(@PathVariable Long reportId, Authentication authentication) {
         try {
+            // Check if user is admin
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            if (!(user instanceof Admin)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "Chỉ admin mới có thể xóa báo xấu");
+                return ResponseEntity.status(403).body(error);
+            }
+            
             reportService.deleteReport(reportId);
             
             Map<String, Object> response = new HashMap<>();

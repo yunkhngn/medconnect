@@ -169,6 +169,10 @@ export default function TestFeedback() {
               value={appointmentId}
               onValueChange={setAppointmentId}
               variant="bordered"
+              classNames={{
+                input: "remove-arrow",
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
             />
             
             <div>
@@ -243,6 +247,10 @@ export default function TestFeedback() {
               value={fetchAppointmentId}
               onValueChange={setFetchAppointmentId}
               variant="bordered"
+              classNames={{
+                input: "remove-arrow",
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
             />
             
             <Button
@@ -320,6 +328,10 @@ export default function TestFeedback() {
               value={doctorId}
               onValueChange={setDoctorId}
               variant="bordered"
+              classNames={{
+                input: "remove-arrow",
+                inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              }}
             />
             
             <Button

@@ -344,6 +344,11 @@ export default function MedConnectLogin() {
                       autoComplete="username email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      variant="bordered"
+                      classNames={{
+                        inputWrapper: "focus-within:border-primary focus-within:ring-0 focus-within:shadow-none focus-within:ring-offset-0 focus-within:ring-offset-transparent",
+                        input: "focus:outline-none focus:ring-0"
+                      }}
                     />
 
                     <Input
@@ -356,6 +361,11 @@ export default function MedConnectLogin() {
                       autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      variant="bordered"
+                      classNames={{
+                        inputWrapper: "focus-within:border-primary focus-within:ring-0 focus-within:shadow-none focus-within:ring-offset-0 focus-within:ring-offset-transparent",
+                        input: "focus:outline-none focus:ring-0"
+                      }}
                       endContent={
                         <button
                           className="focus:outline-none"
