@@ -49,6 +49,41 @@ export default function PatientOfflineExamList() {
     fetchOfflineAppointments();
   }, []);
 
+  // Fetch feedback when modal opens and appointment is selected
+  useEffect(() => {
+    if (isOpen && selectedAppointment) {
+      const fetchFeedback = async () => {
+        try {
+          const user = auth.currentUser;
+          if (!user) return;
+          const token = await user.getIdToken();
+          const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
+          if (aptId) {
+            const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (feedbackResp.ok) {
+              const feedbackData = await feedbackResp.json();
+              console.log('[Patient Modal] Feedback response (useEffect):', feedbackData);
+              if (feedbackData.success && feedbackData.data) {
+                console.log('[Patient Modal] Setting feedback (useEffect):', feedbackData.data);
+                setFeedback(feedbackData.data);
+              } else {
+                setFeedback(null);
+              }
+            } else {
+              setFeedback(null);
+            }
+          }
+        } catch (e) {
+          console.error('[Patient Modal] Error fetching feedback (useEffect):', e);
+          setFeedback(null);
+        }
+      };
+      fetchFeedback();
+    }
+  }, [isOpen, selectedAppointment]);
+
   useEffect(() => {
     const loadPayments = async () => {
       try {
@@ -74,6 +109,8 @@ export default function PatientOfflineExamList() {
     setPrescription(null);
     setMedicalRecord(null);
     setFeedback(null);
+    setFeedbackRating(5);
+    setFeedbackComment("");
     setActiveTab("details");
     onOpen();
     try {
@@ -213,13 +250,22 @@ export default function PatientOfflineExamList() {
         });
         if (feedbackResp.ok) {
           const feedbackData = await feedbackResp.json();
+          console.log('[Patient Modal] Feedback response:', feedbackData);
           if (feedbackData.success && feedbackData.data) {
+            console.log('[Patient Modal] Setting feedback:', feedbackData.data);
             setFeedback(feedbackData.data);
+          } else {
+            console.log('[Patient Modal] No feedback data found');
+            setFeedback(null);
           }
+        } else {
+          console.log('[Patient Modal] Feedback response not ok:', feedbackResp.status);
+          setFeedback(null);
         }
       }
     } catch (e) {
       console.error('[Patient Modal] Error fetching feedback:', e);
+      setFeedback(null);
     }
   };
 
@@ -245,11 +291,29 @@ export default function PatientOfflineExamList() {
       });
       const data = await response.json();
       if (data.success) {
-        setFeedback({
-          rating: feedbackRating,
-          comment: feedbackComment,
-          createdAt: new Date().toISOString()
-        });
+        // Fetch feedback from server to get complete data
+        try {
+          const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (feedbackResp.ok) {
+            const feedbackData = await feedbackResp.json();
+            if (feedbackData.success && feedbackData.data) {
+              setFeedback(feedbackData.data);
+            }
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch feedback after submit:', fetchError);
+          // Fallback to local data
+          setFeedback({
+            rating: feedbackRating,
+            comment: feedbackComment,
+            createdAt: new Date().toISOString()
+          });
+        }
+        // Reset form
+        setFeedbackRating(5);
+        setFeedbackComment("");
         alert('Đánh giá đã được gửi thành công!');
       } else {
         alert(data.message || 'Không thể gửi đánh giá');
@@ -842,7 +906,11 @@ export default function PatientOfflineExamList() {
                 </Tab>
                 <Tab key="feedback" title="Đánh giá">
                   <div className="space-y-6 pt-4">
-                    {feedback ? (
+                    {(() => {
+                      console.log('[Feedback Tab] Current feedback state:', feedback);
+                      return null;
+                    })()}
+                    {feedback && feedback.rating ? (
                       <div className="space-y-4">
                         <div className="p-4 bg-gray-50 rounded-lg">
                           <h4 className="text-sm font-semibold mb-3">Đánh giá của bạn</h4>
@@ -851,7 +919,7 @@ export default function PatientOfflineExamList() {
                               <Star
                                 key={star}
                                 className={`w-6 h-6 ${
-                                  star <= feedback.rating
+                                  star <= (feedback.rating || 0)
                                     ? 'text-yellow-400 fill-current'
                                     : 'text-gray-300'
                                 }`}
@@ -861,9 +929,11 @@ export default function PatientOfflineExamList() {
                           {feedback.comment && (
                             <p className="text-sm text-gray-700 italic text-center">"{feedback.comment}"</p>
                           )}
-                          <p className="text-xs text-gray-500 text-center mt-2">
-                            Đánh giá vào: {new Date(feedback.createdAt).toLocaleDateString('vi-VN')}
-                          </p>
+                          {feedback.createdAt && (
+                            <p className="text-xs text-gray-500 text-center mt-2">
+                              Đánh giá vào: {new Date(feedback.createdAt).toLocaleDateString('vi-VN')}
+                            </p>
+                          )}
                         </div>
                       </div>
                     ) : (

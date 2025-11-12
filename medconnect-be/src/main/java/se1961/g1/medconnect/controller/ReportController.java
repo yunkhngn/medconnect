@@ -28,7 +28,11 @@ public class ReportController {
             @RequestBody Map<String, Object> request,
             Authentication authentication) {
         try {
-            String email = authentication.getName();
+            // Get email from authentication details (set by FirebaseFilter)
+            String email = (String) authentication.getDetails();
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email not found in authentication");
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
@@ -60,7 +64,11 @@ public class ReportController {
     public ResponseEntity<?> getAllReports(Authentication authentication) {
         try {
             // Check if user is admin
-            String email = authentication.getName();
+            // Get email from authentication details (set by FirebaseFilter)
+            String email = (String) authentication.getDetails();
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email not found in authentication");
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
@@ -90,7 +98,11 @@ public class ReportController {
     public ResponseEntity<?> getReportsByStatus(@PathVariable String status, Authentication authentication) {
         try {
             // Check if user is admin
-            String email = authentication.getName();
+            // Get email from authentication details (set by FirebaseFilter)
+            String email = (String) authentication.getDetails();
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email not found in authentication");
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
@@ -123,7 +135,11 @@ public class ReportController {
             @RequestBody Map<String, Object> request,
             Authentication authentication) {
         try {
-            String email = authentication.getName();
+            // Get email from authentication details (set by FirebaseFilter)
+            String email = (String) authentication.getDetails();
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email not found in authentication");
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
@@ -158,7 +174,11 @@ public class ReportController {
     public ResponseEntity<?> deleteReport(@PathVariable Long reportId, Authentication authentication) {
         try {
             // Check if user is admin
-            String email = authentication.getName();
+            // Get email from authentication details (set by FirebaseFilter)
+            String email = (String) authentication.getDetails();
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email not found in authentication");
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             

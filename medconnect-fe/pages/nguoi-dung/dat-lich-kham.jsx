@@ -705,10 +705,12 @@ export default function DatLichKham() {
                 {/* Row 1: Search full width */}
                 <div className="col-span-12">
             <Input
+                    variant="flat"
                     size="lg"
                     classNames={{
-                      inputWrapper: "min-h-[64px] h-[64px]",
+                      inputWrapper: "min-h-[64px] h-[64px] bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100 border-0 shadow-none",
                       input: "text-base",
+                      base: "border-0",
                     }}
               placeholder="Tìm bác sĩ theo tên hoặc chuyên khoa..."
               value={searchQuery}
@@ -719,6 +721,7 @@ export default function DatLichKham() {
                 {/* Row 2: Specialty + Province */}
                 <div className="col-span-12 md:col-span-6">
                   <Select
+                    variant="flat"
                     size="lg"
                     label="Chuyên khoa"
                     placeholder="Tất cả"
@@ -726,6 +729,10 @@ export default function DatLichKham() {
                     onSelectionChange={(keys) => {
                       const k = Array.from(keys)[0];
                       setSpecialityFilter(k || "");
+                    }}
+                    classNames={{
+                      trigger: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100 border-0 shadow-none",
+                      base: "border-0",
                     }}
                   >
                     {Object.entries(SPECIALTY_MAP).map(([key, label]) => (
@@ -735,6 +742,7 @@ export default function DatLichKham() {
                 </div>
                 <div className="col-span-12 md:col-span-6">
                   <Select
+                    variant="flat"
                     size="lg"
                     label="Tỉnh/Thành phố"
                     placeholder="Chọn tỉnh/thành"
@@ -745,6 +753,10 @@ export default function DatLichKham() {
                       setProvinceCode(code);
                       setDistrictCode(null);
                       setWardCode(null);
+                    }}
+                    classNames={{
+                      trigger: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100 border-0 shadow-none",
+                      base: "border-0",
                     }}
                   >
                     {provinces.map((p) => (
@@ -1005,7 +1017,7 @@ export default function DatLichKham() {
                   {/* Action Buttons - Bigger at bottom */}
                   <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-200">
                     <Button 
-                      variant="bordered" 
+                      variant="flat" 
                       size="lg"
                       className="flex-1"
                       onPress={() => setPreviewDoctor(null)}
@@ -1243,10 +1255,14 @@ export default function DatLichKham() {
               <div>
                 <label className="block text-sm font-medium mb-2">Lý do khám <span className="text-gray-500">(tùy chọn)</span></label>
                 <Textarea
+                  variant="flat"
                   placeholder="Mô tả triệu chứng hoặc lý do bạn muốn khám..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   minRows={3}
+                  classNames={{
+                    inputWrapper: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100",
+                  }}
                 />
 
                 {/* Symptom images */}
@@ -1319,7 +1335,7 @@ export default function DatLichKham() {
             {/* Action Buttons */}
             <div className="flex gap-4 pt-6 border-t">
               <Button
-                variant="bordered"
+                variant="flat"
                 onClick={() => setCurrentStep(1)}
                 fullWidth
                 size="lg"
@@ -1396,7 +1412,7 @@ export default function DatLichKham() {
 
             <div className="flex gap-3">
               <Button
-                variant="bordered"
+                variant="flat"
                 onClick={() => setCurrentStep(2)}
                 fullWidth
               >

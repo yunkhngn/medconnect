@@ -244,13 +244,38 @@ export default function PatientOnlineExamRoom() {
       
       const data = await response.json();
       if (data.success) {
+        // Fetch feedback from server to get complete data
+        try {
+          const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (feedbackResp.ok) {
+            const feedbackData = await feedbackResp.json();
+            if (feedbackData.success && feedbackData.data) {
+              setExistingFeedback(feedbackData.data);
+            } else {
+              // Fallback to local data
+              setExistingFeedback({
+                rating: feedbackRating,
+                comment: feedbackComment,
+                createdAt: new Date().toISOString()
+              });
+            }
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch feedback after submit:', fetchError);
+          // Fallback to local data
+          setExistingFeedback({
+            rating: feedbackRating,
+            comment: feedbackComment,
+            createdAt: new Date().toISOString()
+          });
+        }
         setFeedbackSubmitted(true);
         setShowFeedbackForm(false);
-        setExistingFeedback({
-          rating: feedbackRating,
-          comment: feedbackComment,
-          createdAt: new Date().toISOString()
-        });
+        // Reset form
+        setFeedbackRating(5);
+        setFeedbackComment("");
         // Reset countdown after feedback submitted
         setCountdown(10);
         const timer = setInterval(() => {

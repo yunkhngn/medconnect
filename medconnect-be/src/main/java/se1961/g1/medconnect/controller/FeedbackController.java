@@ -27,7 +27,11 @@ public class FeedbackController {
             @RequestBody Map<String, Object> request,
             Authentication authentication) {
         try {
-            String email = authentication.getName();
+            // Get email from authentication details (set by FirebaseFilter)
+            String email = (String) authentication.getDetails();
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email not found in authentication");
+            }
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
