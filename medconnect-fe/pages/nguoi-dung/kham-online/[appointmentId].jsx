@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Button, Card, CardHeader, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star, CheckCircle, AlertCircle } from "lucide-react";
+import { Button, Card, CardHeader, CardBody, Avatar, Input, Divider, Chip, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Textarea, RadioGroup, Radio } from "@heroui/react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, Camera, Send, Star, CheckCircle, AlertCircle, Flag } from "lucide-react";
 import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
@@ -43,6 +43,15 @@ export default function PatientOnlineExamRoom() {
   const [remoteConnected, setRemoteConnected] = useState(false);
   const [countdown, setCountdown] = useState(10);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [existingFeedback, setExistingFeedback] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   // Video refs cho injection của Agora
   const localVideoRef = useRef(null);
@@ -174,10 +183,100 @@ export default function PatientOnlineExamRoom() {
     fetchToken();
   }, [appointmentId, agoraUid]);
 
-  // Handle completed appointment countdown
+  // Fetch existing feedback when appointment is finished
   useEffect(() => {
-    if (appointment?.status === 'FINISHED' || appointment?.status === 'COMPLETED') {
-      setCountdown(10); // Reset countdown when status changes to FINISHED
+    if ((appointment?.status === 'FINISHED' || appointment?.status === 'COMPLETED') && appointmentId) {
+      fetchExistingFeedback();
+    }
+  }, [appointment?.status, appointmentId]);
+
+  const fetchExistingFeedback = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const response = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setExistingFeedback(data.data);
+          setFeedbackSubmitted(true);
+        } else {
+          setShowFeedbackForm(true);
+        }
+      } else {
+        setShowFeedbackForm(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch feedback:", error);
+      setShowFeedbackForm(true);
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackRating || feedbackRating < 1 || feedbackRating > 5) {
+      alert('Vui lòng chọn đánh giá từ 1 đến 5 sao');
+      return;
+    }
+    
+    setSubmittingFeedback(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const response = await fetch('http://localhost:8080/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          appointmentId: appointmentId,
+          rating: feedbackRating,
+          comment: feedbackComment || ''
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setFeedbackSubmitted(true);
+        setShowFeedbackForm(false);
+        setExistingFeedback({
+          rating: feedbackRating,
+          comment: feedbackComment,
+          createdAt: new Date().toISOString()
+        });
+        // Reset countdown after feedback submitted
+        setCountdown(10);
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              router.push('/nguoi-dung/kham-online');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        alert(data.message || 'Không thể gửi đánh giá');
+      }
+    } catch (error) {
+      console.error("Failed to submit feedback:", error);
+      alert('Lỗi khi gửi đánh giá');
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
+  // Handle completed appointment countdown (only if feedback submitted)
+  useEffect(() => {
+    if ((appointment?.status === 'FINISHED' || appointment?.status === 'COMPLETED') && feedbackSubmitted && !showFeedbackForm) {
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -190,7 +289,7 @@ export default function PatientOnlineExamRoom() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [appointment?.status, router]);
+  }, [appointment?.status, feedbackSubmitted, showFeedbackForm, router]);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -290,6 +389,163 @@ export default function PatientOnlineExamRoom() {
   const apptTimeStr = apptDateObj && !isNaN(apptDateObj.getTime()) ? apptDateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—';
 
   if (appointment.status === 'FINISHED' || appointment.status === 'COMPLETED') {
+    if (showFeedbackForm && !feedbackSubmitted) {
+      return (
+        <div className="w-screen h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+          <Card className="max-w-2xl w-full">
+            <CardHeader className="flex flex-col gap-2 pb-4">
+              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Star className="w-8 h-8 text-white fill-current" />
+              </div>
+              <h2 className="text-2xl font-bold text-center">Đánh giá phiên khám</h2>
+              <p className="text-gray-600 text-center">Chúng tôi rất mong nhận được phản hồi từ bạn</p>
+            </CardHeader>
+            <CardBody className="space-y-6">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-3 block">Đánh giá của bạn</label>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFeedbackRating(star)}
+                      className={`p-2 transition-all ${
+                        star <= feedbackRating
+                          ? 'text-yellow-400 scale-110'
+                          : 'text-gray-300 hover:text-yellow-300'
+                      }`}
+                    >
+                      <Star className="w-8 h-8 fill-current" />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-center text-sm text-gray-600 mt-2">
+                  {feedbackRating === 5 && 'Rất hài lòng'}
+                  {feedbackRating === 4 && 'Hài lòng'}
+                  {feedbackRating === 3 && 'Bình thường'}
+                  {feedbackRating === 2 && 'Không hài lòng'}
+                  {feedbackRating === 1 && 'Rất không hài lòng'}
+                </p>
+              </div>
+              
+              <div>
+                <Textarea
+                  label="Nhận xét (tùy chọn)"
+                  placeholder="Chia sẻ thêm về trải nghiệm của bạn..."
+                  value={feedbackComment}
+                  onValueChange={setFeedbackComment}
+                  minRows={4}
+                  variant="bordered"
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="bordered"
+                  className="flex-1"
+                  onPress={() => {
+                    setShowFeedbackForm(false);
+                    setCountdown(10);
+                  }}
+                  isDisabled={submittingFeedback}
+                >
+                  Bỏ qua
+                </Button>
+                <Button
+                  color="primary"
+                  className="flex-1"
+                  onPress={submitFeedback}
+                  isLoading={submittingFeedback}
+                >
+                  Gửi đánh giá
+                </Button>
+              </div>
+              
+              <Divider />
+              
+              <Button
+                color="danger"
+                variant="flat"
+                startContent={<Flag className="w-4 h-4" />}
+                onPress={() => setShowReportModal(true)}
+                isDisabled={submittingFeedback}
+              >
+                Báo xấu bác sĩ
+              </Button>
+            </CardBody>
+          </Card>
+          
+          {/* Report Modal */}
+          <Modal isOpen={showReportModal} onOpenChange={setShowReportModal}>
+            <ModalContent>
+              <ModalHeader>Báo xấu bác sĩ</ModalHeader>
+              <ModalBody>
+                <Textarea
+                  label="Lý do báo xấu"
+                  placeholder="Vui lòng mô tả chi tiết lý do bạn báo xấu bác sĩ này..."
+                  value={reportReason}
+                  onValueChange={setReportReason}
+                  minRows={4}
+                  variant="bordered"
+                  isRequired
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Báo xấu sẽ được gửi đến admin để xem xét. Vui lòng cung cấp thông tin chính xác và chi tiết.
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={() => setShowReportModal(false)}>
+                  Hủy
+                </Button>
+                <Button
+                  color="danger"
+                  onPress={async () => {
+                    if (!reportReason.trim()) {
+                      alert('Vui lòng điền lý do báo xấu');
+                      return;
+                    }
+                    setSubmittingReport(true);
+                    try {
+                      const user = auth.currentUser;
+                      if (!user) return;
+                      const token = await user.getIdToken();
+                      const response = await fetch('http://localhost:8080/api/reports', {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${token}`,
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          appointmentId: appointmentId,
+                          reason: reportReason
+                        })
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        alert('Báo xấu đã được gửi thành công. Admin sẽ xem xét.');
+                        setShowReportModal(false);
+                        setReportReason("");
+                      } else {
+                        alert(data.message || 'Không thể gửi báo xấu');
+                      }
+                    } catch (error) {
+                      console.error('Failed to submit report:', error);
+                      alert('Lỗi khi gửi báo xấu');
+                    } finally {
+                      setSubmittingReport(false);
+                    }
+                  }}
+                  isLoading={submittingReport}
+                >
+                  Gửi báo xấu
+                </Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
+        </div>
+      );
+    }
+    
     return (
       <div className="w-screen h-screen bg-gradient-to-br from-green-50 to-teal-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
@@ -299,6 +555,25 @@ export default function PatientOnlineExamRoom() {
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Phiên khám đã hoàn thành</h2>
             <p className="text-gray-600">Cảm ơn bạn đã sử dụng dịch vụ khám online của chúng tôi</p>
+            {existingFeedback && (
+              <div className="mt-4 p-4 bg-white rounded-lg">
+                <div className="flex justify-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-5 h-5 ${
+                        star <= existingFeedback.rating
+                          ? 'text-yellow-400 fill-current'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                {existingFeedback.comment && (
+                  <p className="text-sm text-gray-600 italic">"{existingFeedback.comment}"</p>
+                )}
+              </div>
+            )}
           </div>
           <div className="space-y-4">
             <Button 

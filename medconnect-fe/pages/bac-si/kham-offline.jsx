@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import Grid from "@/components/layouts/Grid";
-import { Calendar, Stethoscope, Search, Clock, Phone, Mail, Video, MapPin, User } from "lucide-react";
+import { Calendar, Stethoscope, Search, Clock, Phone, Mail, Video, MapPin, User, Star } from "lucide-react";
 import { Button, Card, CardBody, CardHeader, Divider, Input, Chip, Select, SelectItem, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { auth } from "@/lib/firebase";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
@@ -38,6 +38,7 @@ export default function OfflineExamListPage() {
   const [prescription, setPrescription] = useState(null);
   const [medicalRecord, setMedicalRecord] = useState(null);
   const [paymentByAptId, setPaymentByAptId] = useState({});
+  const [appointmentFeedback, setAppointmentFeedback] = useState(null);
 
   const counts = {
     pending: appointments.filter(a => a.status === "PENDING").length,
@@ -217,6 +218,30 @@ export default function OfflineExamListPage() {
       setPrescription(null);
     } finally {
       setRxLoading(false);
+    }
+    
+    // Fetch feedback
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const aptId = apt.appointmentId || apt.id;
+      if (aptId) {
+        const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (feedbackResp.ok) {
+          const feedbackData = await feedbackResp.json();
+          if (feedbackData.success && feedbackData.data) {
+            setAppointmentFeedback(feedbackData.data);
+          } else {
+            setAppointmentFeedback(null);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[Modal] Error fetching feedback:', e);
+      setAppointmentFeedback(null);
     }
   };
 
@@ -532,6 +557,38 @@ export default function OfflineExamListPage() {
                   <Mail className="w-4 h-4" />
                   <span>Email: {selectedAppointment.patient?.email || "Chưa có"}</span>
                 </div>
+                {appointmentFeedback && (
+                  <>
+                    <Divider className="my-4" />
+                    <h4 className="text-sm font-medium text-gray-700">Đánh giá từ bệnh nhân</h4>
+                    <div className="pl-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium">Rating:</span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-4 h-4 ${
+                                star <= appointmentFeedback.rating
+                                  ? 'text-yellow-400 fill-current'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">({appointmentFeedback.rating}/5)</span>
+                      </div>
+                      {appointmentFeedback.comment && (
+                        <p className="text-sm text-gray-700 italic">"{appointmentFeedback.comment}"</p>
+                      )}
+                      {appointmentFeedback.createdAt && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(appointmentFeedback.createdAt).toLocaleDateString('vi-VN')}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
                 <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">

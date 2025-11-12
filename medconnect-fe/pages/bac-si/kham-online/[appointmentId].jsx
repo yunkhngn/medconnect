@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Button, Card, CardHeader, CardBody, Avatar, Input, Divider, Chip, Textarea, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send, Search, Activity, CheckCircle, AlertCircle } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send, Search, Activity, CheckCircle, AlertCircle, Star } from "lucide-react";
 import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
@@ -65,6 +65,7 @@ export default function DoctorOnlineExamRoom() {
   const [emrEntries, setEmrEntries] = useState([]);
   const [emrLoading, setEmrLoading] = useState(false);
   const [emrError, setEmrError] = useState("");
+  const [appointmentFeedback, setAppointmentFeedback] = useState(null);
 
   // refs video call
   const localVideoRef = useRef(null);
@@ -274,6 +275,33 @@ export default function DoctorOnlineExamRoom() {
     }, 300);
     return () => clearTimeout(t);
   }, [icdQuery]);
+
+  // Fetch feedback when patient info modal opens
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      if (!isPatientInfoOpen || !appointment || !appointmentId) return;
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+        const response = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setAppointmentFeedback(data.data);
+          } else {
+            setAppointmentFeedback(null);
+          }
+        }
+      } catch (e) {
+        console.error('[Feedback] Error:', e);
+        setAppointmentFeedback(null);
+      }
+    };
+    fetchFeedback();
+  }, [isPatientInfoOpen, appointment, appointmentId]);
 
   // EMR fetch effect (must be before any early returns)
   useEffect(() => {
@@ -934,6 +962,40 @@ export default function DoctorOnlineExamRoom() {
                 )}
               </div>
               <Divider />
+              {appointmentFeedback && (
+                <>
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">Đánh giá từ bệnh nhân</h4>
+                    <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium">Rating:</span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-4 h-4 ${
+                                star <= appointmentFeedback.rating
+                                  ? 'text-yellow-400 fill-current'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">({appointmentFeedback.rating}/5)</span>
+                      </div>
+                      {appointmentFeedback.comment && (
+                        <p className="text-sm text-gray-700 italic">"{appointmentFeedback.comment}"</p>
+                      )}
+                      {appointmentFeedback.createdAt && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(appointmentFeedback.createdAt).toLocaleDateString('vi-VN')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Divider />
+                </>
+              )}
               <div className="space-y-3">
                 <h4 className="font-semibold">Lý do khám</h4>
                 <p className="text-sm text-gray-700 whitespace-pre-line">{formatReasonForDisplay(appointment.reason)}</p>
