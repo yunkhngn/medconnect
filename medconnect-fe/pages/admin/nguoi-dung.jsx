@@ -545,7 +545,11 @@ const Patient = () => {
             <TableRow key={patient.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <Avatar src={patient.avatar || '/assets/homepage/mockup-avatar.jpg'} size="sm" />
+                  <Avatar 
+                    src={patient.avatar || null} 
+                    size="sm"
+                    showFallback
+                  />
                   <div>
                     <p className="font-medium">{patient.fullName}</p>
                     <p className="text-xs text-gray-500">{patient.email}</p>

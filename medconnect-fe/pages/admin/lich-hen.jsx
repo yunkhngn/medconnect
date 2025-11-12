@@ -387,24 +387,14 @@ const Appointment = () => {
 
   const handleEdit = (appointment) => {
     setCurrentAppointment(appointment);
-    // Convert appointmentDate to yyyy-MM-dd format if needed
-    let dateValue = appointment.appointmentDate;
-    if (dateValue && dateValue.includes('/')) {
-      // Convert dd/MM/yyyy to yyyy-MM-dd
-      const parts = dateValue.split('/');
-      dateValue = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
+    // When editing, only allow status change
     setFormData({
       patientId: appointment.patientId.toString(),
       doctorId: appointment.doctorId.toString(),
-      appointmentDate: dateValue,
-      slot: appointment.slot,
-      status: appointment.status.toUpperCase(),
+      appointmentDate: '',
+      slot: '',
+      status: appointment.status.toLowerCase(),
     });
-    // Fetch available slots for editing (though slots might be limited)
-    if (appointment.doctorId && dateValue) {
-      fetchAvailableSlots(appointment.doctorId, dateValue);
-    }
     onOpen();
   };
 
@@ -794,13 +784,13 @@ const Appointment = () => {
 
                   <Select
                     label="Trạng thái"
-                    selectedKeys={new Set([formData.status])}
+                    selectedKeys={new Set([formData.status.toUpperCase()])}
                     onSelectionChange={(keys) => {
                       const value = Array.from(keys)[0] || 'PENDING';
-                      setFormData({ ...formData, status: value });
+                      setFormData({ ...formData, status: value.toLowerCase() });
                     }}
                   >
-                    {statusOptions.slice(1).filter(item => item.value !== 'completed').map((item) => (
+                    {statusOptions.slice(1).filter(item => item.value !== 'completed' && item.value !== 'cancelled').map((item) => (
                       <SelectItem key={item.value.toUpperCase()} value={item.value.toUpperCase()}>
                         {item.label}
                       </SelectItem>

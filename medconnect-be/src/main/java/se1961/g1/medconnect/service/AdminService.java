@@ -81,6 +81,8 @@ public class AdminService {
         admin.setEmail(request.getEmail());
         admin.setFirebaseUid(userRecord.getUid());
         admin.setRole(Role.ADMIN);
+        // Set default avatar for admin
+        admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
 
         Admin savedAdmin = adminRepository.save(admin);
         

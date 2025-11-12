@@ -101,6 +101,8 @@ public class DoctorService {
         doctor.setPhone(dto.getPhone());
         doctor.setRole(Role.DOCTOR);
         doctor.setFirebaseUid(firebaseUid); // Use real Firebase UID
+        // Set default avatar for doctor
+        doctor.setAvatarUrl("https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg");
         
         mapDtoToDoctor(dto, doctor);
         return doctorRepository.save(doctor);
@@ -325,6 +327,8 @@ public class DoctorService {
         doctor.setEmail(dto.getEmail());
         doctor.setPhone(dto.getPhone());
         doctor.setRole(Role.DOCTOR);
+        // Set default avatar for doctor
+        doctor.setAvatarUrl("https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg");
         
         // Generate temporary firebase_uid placeholder
         // Admin will update this with real Firebase UID when approving

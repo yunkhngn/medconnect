@@ -68,8 +68,8 @@ const UserAvatar = forwardRef(({
     };
   }, [getAvatarUrl]);
 
-  // Use mockup avatar as fallback (no generated avatar)
-  const finalAvatarUrl = avatarUrl || '/assets/homepage/mockup-avatar.jpg';
+  // Use null as fallback - Avatar component will show fallback icon
+  const finalAvatarUrl = avatarUrl || null;
   
   const baseClasses = `relative rounded-full overflow-hidden ${showBorder ? 'ring-2 ring-cyan-100' : ''} ${className}`;
   const buttonClasses = asButton ? 'cursor-pointer transition-transform hover:scale-105' : '';
@@ -80,6 +80,21 @@ const UserAvatar = forwardRef(({
       <Tag
         ref={ref}
         className={`${baseClasses} bg-gray-200 animate-pulse`}
+        style={{ width: size, height: size }}
+        {...props}
+      >
+        <div className="w-full h-full flex items-center justify-center">
+          <User className="text-gray-400" size={size * 0.5} />
+        </div>
+      </Tag>
+    );
+  }
+
+  if (!finalAvatarUrl) {
+    return (
+      <Tag
+        ref={ref}
+        className={`${baseClasses} ${buttonClasses} bg-gray-100`}
         style={{ width: size, height: size }}
         {...props}
       >
@@ -106,7 +121,8 @@ const UserAvatar = forwardRef(({
         priority={false}
         quality={60}
         onError={(e) => {
-          e.currentTarget.src = '/assets/homepage/mockup-avatar.jpg';
+          // Hide image on error, let fallback icon show
+          e.currentTarget.style.display = 'none';
         }}
       />
     </Tag>

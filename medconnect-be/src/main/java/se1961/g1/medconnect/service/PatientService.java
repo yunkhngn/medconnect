@@ -133,6 +133,8 @@ public class PatientService {
             patient.setEmail(email);
             patient.setName(fullName);
             patient.setPhone(phone);
+            // Set default avatar for patient
+            patient.setAvatarUrl("https://img.freepik.com/free-psd/3d-rendering-avatar_23-2150833572.jpg?semt=ais_hybrid&w=740&q=80");
             
             return patientRepository.save(patient);
             
