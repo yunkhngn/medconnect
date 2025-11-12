@@ -176,7 +176,16 @@ const Doctor = () => {
       
       console.log('Payload being sent:', payload);
       
-      await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
+      const response = await doctorAPI.updateDoctor(currentDoctor.id, payload, user);
+      console.log('Backend response:', response);
+      
+      // Check if response indicates success or error
+      if (response.success === false) {
+        // Backend returned an error
+        toast.error(response.message || 'Không thể cập nhật bác sĩ');
+        console.error('Backend error:', response);
+        return;
+      }
       
       // Backend will handle Firebase account creation and email sending when approving
       if (wasApproved) {
@@ -813,16 +822,62 @@ const Doctor = () => {
                   )}
                 </div>
               </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  Hủy
-                </Button>
+              <ModalFooter className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1 flex gap-2">
+                  <Button variant="light" onPress={onClose} className="flex-1">
+                    Hủy
+                  </Button>
+                  {currentDoctor?.status === 'PENDING' && (
+                    <Button
+                      color="success"
+                      onPress={async () => {
+                        try {
+                          // Set status to ACTIVE and submit directly
+                          const approvePayload = {
+                            name: formData.name,
+                            email: formData.email,
+                            phone: formData.phone,
+                            specialityId: parseInt(formData.specialityId),
+                            experienceYears: formData.experienceYears,
+                            educationLevel: formData.educationLevel,
+                            bio: formData.bio,
+                            status: 'ACTIVE',  // Force ACTIVE for approval
+                          };
+                          
+                          console.log('=== Approving Doctor ===');
+                          console.log('Payload:', approvePayload);
+                          
+                          const response = await doctorAPI.updateDoctor(currentDoctor.id, approvePayload, user);
+                          console.log('Backend response:', response);
+                          
+                          if (response.success === false) {
+                            toast.error(response.message || 'Không thể phê duyệt bác sĩ');
+                            console.error('Backend error:', response);
+                            return;
+                          }
+                          
+                          toast.success('Đã phê duyệt bác sĩ. Email với thông tin đăng nhập đã được gửi tự động.');
+                          await fetchDoctors();
+                          resetForm();
+                          onClose();
+                        } catch (error) {
+                          console.error('Error approving doctor:', error);
+                          toast.error(error.message || 'Không thể phê duyệt bác sĩ');
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      ✅ Phê duyệt
+                    </Button>
+                  )}
+                </div>
                 <Button
                   color="primary"
                   onPress={() => {
                     handleSubmit();
                     onClose();
                   }}
+                  className={currentDoctor?.status === 'PENDING' ? 'w-full sm:w-auto' : ''}
                 >
                   {currentDoctor ? 'Cập nhật' : 'Thêm'}
                 </Button>

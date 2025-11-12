@@ -523,13 +523,21 @@ public class AdminController {
             
             System.out.println("✅ Doctor updated successfully");
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             System.err.println("❌ Error updating doctor: " + e.getMessage());
             e.printStackTrace();
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            // Return 200 with error message so frontend can show it
+            return ResponseEntity.ok(error);
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error updating doctor: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi không xác định: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
     

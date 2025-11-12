@@ -32,15 +32,35 @@ public class EmailService {
      * Send a simple text email
      */
     public String sendEmail(String to, String subject, String htmlContent) throws ResendException {
-        CreateEmailOptions params = CreateEmailOptions.builder()
-                .from(fromEmail)
-                .to(to)
-                .subject(subject)
-                .html(htmlContent)
-                .build();
+        System.out.println("=== EmailService.sendEmail ===");
+        System.out.println("From: " + fromEmail);
+        System.out.println("To: " + to);
+        System.out.println("Subject: " + subject);
+        System.out.println("HTML Content Length: " + (htmlContent != null ? htmlContent.length() : 0));
+        
+        try {
+            CreateEmailOptions params = CreateEmailOptions.builder()
+                    .from(fromEmail)
+                    .to(to)
+                    .subject(subject)
+                    .html(htmlContent)
+                    .build();
 
-        CreateEmailResponse response = resend.emails().send(params);
-        return response.getId();
+            System.out.println("Sending email via Resend...");
+            CreateEmailResponse response = resend.emails().send(params);
+            String emailId = response.getId();
+            System.out.println("✅ Email sent successfully! Email ID: " + emailId);
+            return emailId;
+        } catch (ResendException e) {
+            System.err.println("❌ ResendException: " + e.getMessage());
+            System.err.println("Error details: " + e.toString());
+            e.printStackTrace();
+            throw e;
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error in sendEmail: " + e.getMessage());
+            e.printStackTrace();
+            throw new ResendException("Unexpected error: " + e.getMessage());
+        }
     }
 
     /**
@@ -293,7 +313,25 @@ public class EmailService {
     }
 
     private String buildDoctorApprovalEmailHtml(String doctorName, String email, String password) {
-        return """
+        // Escape special characters in password to prevent HTML injection
+        String escapedPassword = password
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
+        
+        String escapedEmail = email
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;");
+        
+        String escapedName = doctorName
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;");
+        
+        return String.format("""
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -303,7 +341,7 @@ public class EmailService {
                         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.7; color: #1f2937; margin: 0; padding: 0; background: #f3f4f6; }
                         .wrapper { background: #f3f4f6; padding: 40px 20px; }
                         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-                        .header { background: linear-gradient(135deg, #10b981 0%, #059669 50%, #14b8a6 100%); color: white; padding: 50px 30px; text-align: center; position: relative; }
+                        .header { background: linear-gradient(135deg, #10b981 0%%, #059669 50%%, #14b8a6 100%%); color: white; padding: 50px 30px; text-align: center; position: relative; }
                         .header h1 { margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
                         .content { padding: 45px 35px; }
                         .greeting { font-size: 18px; color: #111827; margin-bottom: 20px; }
@@ -380,6 +418,6 @@ public class EmailService {
                     </div>
                 </body>
                 </html>
-                """.formatted(doctorName, email, password);
+                """, escapedName, escapedEmail, escapedPassword);
     }
 }

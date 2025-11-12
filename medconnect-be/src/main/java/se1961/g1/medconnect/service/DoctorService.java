@@ -188,19 +188,30 @@ public class DoctorService {
                 
                 // Send approval email with password
                 System.out.println("Sending approval email to: " + existing.getEmail());
-                emailService.sendDoctorApprovalEmail(
-                    existing.getEmail(),
-                    existing.getName(),
-                    tempPassword
-                );
-                System.out.println("✅ Approval email sent successfully!");
+                try {
+                    emailService.sendDoctorApprovalEmail(
+                        existing.getEmail(),
+                        existing.getName(),
+                        tempPassword
+                    );
+                    System.out.println("✅ Approval email sent successfully!");
+                } catch (Exception emailException) {
+                    System.err.println("❌ ERROR: Failed to send approval email");
+                    System.err.println("Email error: " + emailException.getMessage());
+                    emailException.printStackTrace();
+                    // Re-throw to let controller handle it
+                    throw new RuntimeException("Đã phê duyệt bác sĩ nhưng không thể gửi email: " + emailException.getMessage(), emailException);
+                }
                 
+            } catch (RuntimeException e) {
+                // Re-throw RuntimeException (including our custom exceptions)
+                throw e;
             } catch (Exception e) {
-                System.err.println("❌ ERROR: Failed to create Firebase account or send email");
+                System.err.println("❌ ERROR: Failed to create Firebase account");
                 System.err.println("Error message: " + e.getMessage());
                 e.printStackTrace();
-                // Continue with approval even if Firebase/email fails
-                // But log the error clearly
+                // Continue with approval even if Firebase fails, but throw if email fails
+                throw new RuntimeException("Không thể tạo tài khoản Firebase: " + e.getMessage(), e);
             }
         }
         
