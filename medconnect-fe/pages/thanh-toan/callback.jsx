@@ -45,18 +45,8 @@ export default function PaymentCallback() {
       }
 
       if (vnp_ResponseCode === "00" && vnp_TransactionStatus === "00") {
-        // Payment successful
-        const successUrl = `/thanh-toan/thanh-cong?${new URLSearchParams({
-          vnp_TxnRef: vnp_TxnRef || '',
-          vnp_Amount: vnp_Amount || '',
-          vnp_OrderInfo: vnp_OrderInfo || '',
-          vnp_PayDate: vnp_PayDate || '',
-          vnp_BankCode: vnp_BankCode || '',
-          vnp_TransactionNo: vnp_TransactionNo || '',
-          vnp_ResponseCode: vnp_ResponseCode || '',
-          appointmentId: appointmentId || '',
-          status: 'PAID'
-        }).toString()}`;
+        // Payment successful - pass all VNPay params to success page
+        const successUrl = `/thanh-toan/thanh-cong?${new URLSearchParams(queryParams).toString()}`;
         
         console.log("Redirecting to success page:", successUrl);
         router.replace(successUrl);

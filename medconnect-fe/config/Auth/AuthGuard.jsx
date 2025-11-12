@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { routeConfig } from "./routeConfig";
 import { useAuth } from "@/contexts/AuthContext";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const AuthGuard = ({ children }) => {
   const router = useRouter();
@@ -56,6 +58,7 @@ const AuthGuard = ({ children }) => {
 
             const data = await response.json();
             const userRole = data.role?.toLowerCase();
+            const userStatus = data.status; // Get doctor status if available
             
             // If no role yet (just signed up), allow access to sign up/login page
             if (!userRole && (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap")) {
@@ -63,6 +66,31 @@ const AuthGuard = ({ children }) => {
               setAuthorized(true);
               setChecking(false);
               return;
+            }
+            
+            // Check if doctor account is PENDING or INACTIVE - block login
+            if (userRole === 'doctor' && userStatus) {
+              if (userStatus === 'PENDING' || userStatus === 'INACTIVE') {
+                console.log('[AuthGuard] Doctor account is', userStatus, '- blocking redirect and signing out');
+                // Sign out the user immediately
+                signOut(auth)
+                  .then(() => {
+                    console.log('[AuthGuard] User signed out successfully');
+                    // Clear any cached data
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('rememberedEmail');
+                      localStorage.removeItem('rememberMe');
+                    }
+                  })
+                  .catch((err) => {
+                    console.error('[AuthGuard] Failed to sign out:', err);
+                  });
+                // Don't redirect, stay on login page
+                setAuthorized(false);
+                setChecking(false);
+                setError(`Tài khoản của bạn đang ở trạng thái ${userStatus === 'PENDING' ? 'chờ duyệt' : 'không hoạt động'}. Vui lòng liên hệ admin để được kích hoạt.`);
+                return;
+              }
             }
             
             const dashboardPath = getRoleDashboard(userRole);
@@ -133,6 +161,7 @@ const AuthGuard = ({ children }) => {
 
         const data = await response.json();
         const userRole = data.role?.toLowerCase();
+        const userStatus = data.status; // Get doctor status if available
 
         // If no role yet (just signed up), allow access to sign up/login pages
         if (!userRole && (router.pathname === "/dang-ky" || router.pathname === "/dang-nhap")) {
@@ -142,7 +171,39 @@ const AuthGuard = ({ children }) => {
           return;
         }
 
-        console.log('[AuthGuard] User role:', userRole, 'Required:', rule.roles);
+        // Check if doctor account is PENDING or INACTIVE - block login
+        if (userRole === 'doctor' && userStatus) {
+          if (userStatus === 'PENDING' || userStatus === 'INACTIVE') {
+            console.log('[AuthGuard] Doctor account is', userStatus, '- blocking access and signing out');
+            setAuthorized(false);
+            setChecking(false);
+            
+            // Sign out the user immediately and wait for it to complete
+            if (user) {
+              signOut(auth)
+                .then(() => {
+                  console.log('[AuthGuard] User signed out successfully');
+                  // Clear any cached data
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('rememberedEmail');
+                    localStorage.removeItem('rememberMe');
+                  }
+                  // Redirect to login page
+                  router.replace("/dang-nhap?error=inactive");
+                })
+                .catch((err) => {
+                  console.error('[AuthGuard] Failed to sign out:', err);
+                  // Still redirect even if sign out fails
+                  router.replace("/dang-nhap?error=inactive");
+                });
+            } else {
+              router.replace("/dang-nhap?error=inactive");
+            }
+            return;
+          }
+        }
+
+        console.log('[AuthGuard] User role:', userRole, 'Status:', userStatus, 'Required:', rule.roles);
 
         // Check if user has required role
         if (rule.roles && !rule.roles.includes(userRole)) {

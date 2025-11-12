@@ -22,7 +22,7 @@ export const useEmailService = () => {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          from: 'MedConnect <onboarding@resend.dev>', // Replace with verified domain
+          from: 'MedConnect <noreply@mail.medconnects.app>',
           to: Array.isArray(to) ? to : [to],
           subject,
           html,
@@ -30,8 +30,22 @@ export const useEmailService = () => {
         }),
       });
 
+      const contentType = response.headers.get('content-type');
+      
       if (!response.ok) {
-        const errorData = await response.json();
+        // Try to parse error as JSON
+        let errorData;
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            errorData = await response.json();
+          } else {
+            const textError = await response.text();
+            console.error('Non-JSON error response:', textError);
+            errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+          }
+        } catch (parseError) {
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+        }
         throw new Error(errorData.message || 'Failed to send email');
       }
 

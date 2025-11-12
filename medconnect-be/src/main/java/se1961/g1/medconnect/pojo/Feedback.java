@@ -34,5 +34,10 @@ public class Feedback {
     @JoinColumn(name = "doctor")
     @JsonIgnore
     private Doctor doctor;
+
+    @ManyToOne
+    @JoinColumn(name = "appointment")
+    @JsonIgnore
+    private Appointment appointment;
 }
 

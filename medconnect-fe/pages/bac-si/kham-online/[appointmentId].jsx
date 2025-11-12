@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Button, Card, CardHeader, CardBody, Avatar, Input, Divider, Chip, Textarea, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send, Search, Activity, CheckCircle, AlertCircle } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send, Search, Activity, CheckCircle, AlertCircle, Star } from "lucide-react";
 import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
@@ -22,6 +22,9 @@ export default function DoctorOnlineExamRoom() {
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'emr'
   const [unread, setUnread] = useState(0);
   const [seconds, setSeconds] = useState(0);
+  const [extended, setExtended] = useState(false);
+  const [showExtendPrompt, setShowExtendPrompt] = useState(false);
+  const [oneMinuteWarn, setOneMinuteWarn] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const { isOpen: isPatientInfoOpen, onOpen: onPatientInfoOpen, onOpenChange: onPatientInfoOpenChange } = useDisclosure();
@@ -62,6 +65,7 @@ export default function DoctorOnlineExamRoom() {
   const [emrEntries, setEmrEntries] = useState([]);
   const [emrLoading, setEmrLoading] = useState(false);
   const [emrError, setEmrError] = useState("");
+  const [appointmentFeedback, setAppointmentFeedback] = useState(null);
 
   // refs video call
   const localVideoRef = useRef(null);
@@ -106,6 +110,26 @@ export default function DoctorOnlineExamRoom() {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Appointment time control: 30 minutes base + optional 10-minute extension (once)
+  useEffect(() => {
+    const BASE_SECONDS = 30 * 60;
+    const EXTEND_SECONDS = 10 * 60;
+    // Prompt extend exactly at 30:00 if not extended yet
+    if (seconds >= BASE_SECONDS && !extended && !showExtendPrompt) {
+      setShowExtendPrompt(true);
+    }
+    // 1-minute warning before auto-finish (only after extension accepted or if not extending, the finish happens at BASE_SECONDS)
+    const endPoint = extended ? (BASE_SECONDS + EXTEND_SECONDS) : BASE_SECONDS;
+    if (seconds >= endPoint - 60 && seconds < endPoint && !oneMinuteWarn) {
+      setOneMinuteWarn(true);
+    }
+    // Auto finish at endPoint if extended, otherwise finishing is triggered by decline
+    if (extended && seconds >= endPoint) {
+      handleEndAppointment();
+    }
+    // eslint-disable-next-line
+  }, [seconds, extended]);
 
   // Handle fullscreen
   const toggleFullscreen = () => {
@@ -252,6 +276,33 @@ export default function DoctorOnlineExamRoom() {
     return () => clearTimeout(t);
   }, [icdQuery]);
 
+  // Fetch feedback when patient info modal opens
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      if (!isPatientInfoOpen || !appointment || !appointmentId) return;
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+        const response = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setAppointmentFeedback(data.data);
+          } else {
+            setAppointmentFeedback(null);
+          }
+        }
+      } catch (e) {
+        console.error('[Feedback] Error:', e);
+        setAppointmentFeedback(null);
+      }
+    };
+    fetchFeedback();
+  }, [isPatientInfoOpen, appointment, appointmentId]);
+
   // EMR fetch effect (must be before any early returns)
   useEffect(() => {
     const fetchEmr = async () => {
@@ -387,6 +438,29 @@ export default function DoctorOnlineExamRoom() {
     return `${mm}:${ss}`;
   };
 
+  const remainingTime = () => {
+    const BASE_SECONDS = 30 * 60;
+    const EXTEND_SECONDS = 10 * 60;
+    const endPoint = extended ? (BASE_SECONDS + EXTEND_SECONDS) : BASE_SECONDS;
+    const remain = Math.max(0, endPoint - seconds);
+    const mm = String(Math.floor(remain / 60)).padStart(2, "0");
+    const ss = String(remain % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  };
+
+  const timeSeverity = () => {
+    // Visual severity for countdown chip: default, warning (orange), danger (red)
+    const BASE_SECONDS = 30 * 60;
+    const EXTEND_SECONDS = 10 * 60;
+    const endPoint = extended ? (BASE_SECONDS + EXTEND_SECONDS) : BASE_SECONDS;
+    const remain = Math.max(0, endPoint - seconds);
+    if (remain <= 60) return 'danger';
+    if (remain <= 5 * 60) return 'warning';
+    // As approaching 30-min mark pre-extend, start warning at last 2 minutes
+    if (!extended && seconds >= (BASE_SECONDS - 2 * 60)) return 'warning';
+    return 'default';
+  };
+
   const handleSendMessage = async () => {
     const text = chatMessage.trim();
     if (!text) return;
@@ -505,8 +579,7 @@ export default function DoctorOnlineExamRoom() {
   // Parse reason safely - handle both object and string formats
   const reasonData = parseReason(appointment.reason);
   const reasonText = reasonData?.reasonText ? String(reasonData.reasonText) : '';
-  const attachments = Array.isArray(reasonData?.attachments) ? reasonData.attachments : [];
-  console.log('[Appointment] reason:', appointment.reason, 'parsed:', { reasonText, attachments });
+  console.log('[Appointment] reason:', appointment.reason, 'parsed:', { reasonText });
   
   // Derive names/avatars for header (doctor view)
   const selfName = auth.currentUser?.displayName || appointment?.doctorName || 'Bác sĩ';
@@ -553,7 +626,10 @@ export default function DoctorOnlineExamRoom() {
           <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-3">
               <Chip color="primary" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">Phiên khám online • Bác sĩ</Chip>
-              <Chip variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">{formatTime(seconds)}</Chip>
+              <Chip variant="bordered" className={`bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold ${timeSeverity()==='danger' ? 'text-red-700' : timeSeverity()==='warning' ? 'text-orange-600' : 'text-gray-900'}`}>
+                {/* Show elapsed and remaining */}
+                {formatTime(seconds)} • Còn {remainingTime()}
+              </Chip>
               <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={onPatientInfoOpen} startContent={<User size={18} />}>Thông tin bệnh nhân</Button>
               <div className="ml-2 bg-white/50 backdrop-blur-md rounded-full p-1 border border-white/30 shadow-lg">
                 <button className={`px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${activeTab==='chat'?'bg-primary/90 text-white shadow-md':'text-gray-900 bg-white/40'}`} onClick={()=>{setActiveTab('chat'); setUnread(0);}}>Chat {unread>0 && <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold bg-red-600 text-white rounded-full">{unread}</span>}</button>
@@ -564,6 +640,12 @@ export default function DoctorOnlineExamRoom() {
               <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />} onPress={toggleFullscreen}>Toàn màn hình</Button>
             </div>
           </div>
+          {/* One-minute warning banner */}
+          {oneMinuteWarn && (
+            <div className="absolute left-0 right-0 top-16 px-4 flex justify-center z-20">
+              <div className="bg-orange-500 text-white text-sm px-3 py-2 rounded-md shadow">Còn 1 phút trước khi kết thúc phiên</div>
+            </div>
+          )}
           {tokenError && (
             <div className="absolute left-0 right-0 top-16 px-4 flex justify-center z-20">
               <div className="bg-red-600 text-white text-sm px-3 py-2 rounded-md shadow">{tokenError}</div>
@@ -879,27 +961,63 @@ export default function DoctorOnlineExamRoom() {
                 )}
               </div>
               <Divider />
+              {appointmentFeedback && (
+                <>
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">Đánh giá từ bệnh nhân</h4>
+                    <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium">Rating:</span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-4 h-4 ${
+                                star <= appointmentFeedback.rating
+                                  ? 'text-yellow-400 fill-current'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">({appointmentFeedback.rating}/5)</span>
+                      </div>
+                      {appointmentFeedback.comment && (
+                        <p className="text-sm text-gray-700 italic">"{appointmentFeedback.comment}"</p>
+                      )}
+                      {appointmentFeedback.createdAt && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(appointmentFeedback.createdAt).toLocaleDateString('vi-VN')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Divider />
+                </>
+              )}
               <div className="space-y-3">
                 <h4 className="font-semibold">Lý do khám</h4>
                 <p className="text-sm text-gray-700 whitespace-pre-line">{formatReasonForDisplay(appointment.reason)}</p>
-                {attachments && attachments.length > 0 && (
-                  <div className="space-y-2">
-                    <h5 className="font-medium text-sm">Hình ảnh đính kèm</h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      {attachments.map((attachment, index) => (
-                        <div key={index} className="relative group">
-                          <img src={attachment} alt={`Attachment ${index + 1}`} className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(attachment, '_blank')} />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg flex items-center justify-center transition-all"><Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100" /></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </ModalBody>
           <ModalFooter>
             <Button color="default" variant="light" onPress={onPatientInfoOpenChange}>Đóng</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      {/* Extend prompt at 30 minutes */}
+      <Modal isOpen={showExtendPrompt} onOpenChange={setShowExtendPrompt}>
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-lg font-semibold">Gia hạn phiên khám?</h3>
+          </ModalHeader>
+          <ModalBody>
+            <p>Phiên khám đã đạt 30 phút. Bạn có muốn gia hạn thêm 10 phút không?</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={() => { setShowExtendPrompt(false); handleEndAppointment(); }}>Kết thúc</Button>
+            <Button color="primary" onPress={() => { setExtended(true); setShowExtendPrompt(false); setOneMinuteWarn(false); }}>Gia hạn 10 phút</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

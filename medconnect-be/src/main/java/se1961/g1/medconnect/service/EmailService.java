@@ -32,6 +32,13 @@ public class EmailService {
      * Send a simple text email
      */
     public String sendEmail(String to, String subject, String htmlContent) throws ResendException {
+        System.out.println("=== EmailService.sendEmail ===");
+        System.out.println("From: " + fromEmail);
+        System.out.println("To: " + to);
+        System.out.println("Subject: " + subject);
+        System.out.println("HTML Content Length: " + (htmlContent != null ? htmlContent.length() : 0));
+        
+        try {
         CreateEmailOptions params = CreateEmailOptions.builder()
                 .from(fromEmail)
                 .to(to)
@@ -39,12 +46,55 @@ public class EmailService {
                 .html(htmlContent)
                 .build();
 
+            System.out.println("Sending email via Resend...");
         CreateEmailResponse response = resend.emails().send(params);
-        return response.getId();
+            String emailId = response.getId();
+            System.out.println("✅ Email sent successfully! Email ID: " + emailId);
+            return emailId;
+        } catch (ResendException e) {
+            System.err.println("❌ ResendException: " + e.getMessage());
+            System.err.println("Error details: " + e.toString());
+            e.printStackTrace();
+            throw e;
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error in sendEmail: " + e.getMessage());
+            e.printStackTrace();
+            throw new ResendException("Unexpected error: " + e.getMessage());
+        }
     }
 
     /**
-     * Send appointment confirmation email
+     * Send appointment PENDING confirmation email (ORANGE/CAM - After Payment)
+     * Sent after payment is successful, waiting for doctor confirmation
+     */
+    public String sendAppointmentPendingConfirmation(
+            String to,
+            String patientName,
+            String doctorName,
+            String appointmentDate,
+            String appointmentTime,
+            String appointmentType
+    ) throws ResendException {
+        try {
+            Map<String, String> variables = new HashMap<>();
+            variables.put("patientName", patientName);
+            variables.put("doctorName", doctorName);
+            variables.put("appointmentDate", appointmentDate);
+            variables.put("appointmentTime", appointmentTime);
+            variables.put("appointmentType", appointmentType);
+            
+            String html = templateLoader.loadTemplate("appointment-pending", variables);
+            String subject = "Đơn đặt lịch đang chờ xác nhận - MedConnect";
+            
+            return sendEmail(to, subject, html);
+        } catch (IOException e) {
+            throw new ResendException("Failed to load email template: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Send appointment CONFIRMED email (GREEN/XANH - After Doctor Confirms)
+     * Sent when doctor confirms the appointment
      */
     public String sendAppointmentConfirmation(
             String to,
@@ -152,6 +202,55 @@ public class EmailService {
         }
     }
 
+    /**
+     * Send doctor approval email with login credentials
+     */
+    public void sendDoctorApprovalEmail(String toEmail, String doctorName, String password) {
+        try {
+            System.out.println("=== Sending Doctor Approval Email ===");
+            System.out.println("To: " + toEmail);
+            System.out.println("Doctor Name: " + doctorName);
+            System.out.println("Password: " + password);
+            
+            // Load template from resources
+            Map<String, String> variables = new HashMap<>();
+            variables.put("doctorName", doctorName != null ? escapeHtml(doctorName) : "");
+            variables.put("email", toEmail != null ? escapeHtml(toEmail) : "");
+            variables.put("password", password != null ? escapeHtml(password) : "");
+            
+            String htmlContent = templateLoader.loadTemplate("doctor-approval", variables);
+            System.out.println("Email HTML content loaded from template, length: " + htmlContent.length());
+            
+            String emailId = sendEmail(toEmail, "Chúc mừng! Hồ sơ bác sĩ đã được phê duyệt - MedConnect", htmlContent);
+            System.out.println("✅ Email sent successfully! Email ID: " + emailId);
+        } catch (IOException e) {
+            System.err.println("❌ Failed to load doctor approval email template: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Không thể tải template email phê duyệt: " + e.getMessage());
+        } catch (ResendException e) {
+            System.err.println("❌ Failed to send doctor approval email: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Không thể gửi email phê duyệt: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error sending doctor approval email: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Không thể gửi email phê duyệt: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Escape HTML special characters to prevent injection
+     */
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
+    }
+
     private String buildDoctorWelcomeEmailHtml(String doctorName, String email, String phone) {
         return """
                 <!DOCTYPE html>
@@ -235,4 +334,5 @@ public class EmailService {
                 </html>
                 """.formatted(doctorName, email, phone);
     }
+
 }

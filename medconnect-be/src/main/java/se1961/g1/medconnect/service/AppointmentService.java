@@ -12,14 +12,17 @@ import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Patient;
 import se1961.g1.medconnect.pojo.Schedule;
 import se1961.g1.medconnect.pojo.Payment;
+import se1961.g1.medconnect.pojo.VideoCallSession;
 import se1961.g1.medconnect.repository.AppointmentRepository;
 import se1961.g1.medconnect.repository.DoctorRepository;
 import se1961.g1.medconnect.repository.PatientRepository;
 import se1961.g1.medconnect.repository.ScheduleRepository;
 import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.repository.VideoCallSessionRepository;
 import se1961.g1.medconnect.enums.PaymentStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +45,12 @@ public class AppointmentService {
 
     @Autowired
     private PaymentRepository paymentRepository;
+    
+    @Autowired
+    private EmailService emailService;
+    
+    @Autowired
+    private VideoCallSessionRepository videoCallSessionRepository;
 
     // ============================================
     // GET APPOINTMENTS
@@ -318,7 +327,36 @@ public class AppointmentService {
         }
         
         appointment.setStatus(AppointmentStatus.CONFIRMED);
-        return appointmentRepository.save(appointment);
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        
+        // 📧 Send "CONFIRMED" email to patient (GREEN/XANH)
+        try {
+            Patient patient = appointment.getPatient();
+            Doctor doctor = appointment.getDoctor();
+            
+            String patientEmail = patient.getEmail();
+            String patientName = patient.getName();
+            String doctorName = doctor.getName();
+            String appointmentDate = appointment.getDate().toString();
+            String appointmentTime = appointment.getSlot().name();
+            String specialization = doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Tổng quát";
+            
+            emailService.sendAppointmentConfirmation(
+                patientEmail,
+                patientName,
+                doctorName,
+                appointmentDate,
+                appointmentTime,
+                specialization
+            );
+            
+            System.out.println("✅ Confirmation email sent to: " + patientEmail);
+        } catch (Exception emailError) {
+            System.err.println("⚠️ Failed to send confirmation email: " + emailError.getMessage());
+            // Don't fail the confirmation if email fails
+        }
+        
+        return savedAppointment;
     }
     
     public Appointment denyAppointment(Long id) throws Exception {
@@ -342,7 +380,20 @@ public class AppointmentService {
         }
         
         appointment.setStatus(AppointmentStatus.ONGOING);
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        // Create session if not exists and mark start time
+        VideoCallSession session = videoCallSessionRepository.findById(saved.getAppointmentId()).orElse(null);
+        if (session == null) {
+            session = new VideoCallSession();
+            session.setAppointment(saved);
+            // startTime will be set by @CreationTimestamp if null on insert, but set explicitly for clarity
+            session.setStartTime(LocalDateTime.now());
+        } else if (session.getStartTime() == null) {
+            session.setStartTime(LocalDateTime.now());
+        }
+        videoCallSessionRepository.save(session);
+        return saved;
     }
     
     public Appointment finishAppointment(Long id) throws Exception {
@@ -354,7 +405,18 @@ public class AppointmentService {
         }
         
         appointment.setStatus(AppointmentStatus.FINISHED);
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        // Set end time for session
+        VideoCallSession session = videoCallSessionRepository.findById(saved.getAppointmentId()).orElse(null);
+        if (session == null) {
+            session = new VideoCallSession();
+            session.setAppointment(saved);
+            session.setStartTime(LocalDateTime.now());
+        }
+        session.setEndTime(LocalDateTime.now());
+        videoCallSessionRepository.save(session);
+        return saved;
     }
     
     public void deleteAppointment(Long id) throws Exception {

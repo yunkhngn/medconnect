@@ -10,10 +10,12 @@ import se1961.g1.medconnect.dto.CreateAdminRequest;
 import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.dto.UpdateAdminRequest;
 import se1961.g1.medconnect.enums.AppointmentStatus;
+import se1961.g1.medconnect.enums.PatientStatus;
 import se1961.g1.medconnect.enums.Slot;
 import se1961.g1.medconnect.pojo.*;
 import se1961.g1.medconnect.repository.DoctorRepository;
 import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.repository.VideoCallSessionRepository;
 import se1961.g1.medconnect.service.AdminService;
 import se1961.g1.medconnect.service.AppointmentService;
 import se1961.g1.medconnect.service.DoctorService;
@@ -59,6 +61,9 @@ public class AdminController {
 
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Autowired
+    private VideoCallSessionRepository videoCallSessionRepository;
 
     // ============= DASHBOARD STATS =============
     
@@ -382,21 +387,62 @@ public class AdminController {
         for (Doctor doctor : doctors) {
             Map<String, Object> doctorData = new HashMap<>();
             doctorData.put("id", doctor.getUserId());
+            doctorData.put("userId", doctor.getUserId());
             doctorData.put("name", doctor.getName());
             doctorData.put("email", doctor.getEmail());
             doctorData.put("phone", doctor.getPhone());
             doctorData.put("specialty", doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Chưa có");
+            doctorData.put("specialityId", doctor.getSpeciality() != null ? doctor.getSpeciality().getSpecialityId() : null);
             doctorData.put("avatar", doctor.getAvatarUrl());
             doctorData.put("status", doctor.getStatus() != null ? doctor.getStatus().name() : null);
+            doctorData.put("experienceYears", doctor.getExperienceYears());
+            doctorData.put("educationLevel", doctor.getEducationLevel());
+            doctorData.put("bio", doctor.getBio());
+            doctorData.put("clinicAddress", doctor.getClinicAddress());
+            doctorData.put("provinceCode", doctor.getProvinceCode());
+            doctorData.put("districtCode", doctor.getDistrictCode());
+            doctorData.put("wardCode", doctor.getWardCode());
 
-            // Get license number from active license
+            // Get active license with full details
             License activeLicense = doctor.getActiveLicense();
-            doctorData.put("licenseId", activeLicense != null ? activeLicense.getLicenseNumber() : null);
+            if (activeLicense != null) {
+                doctorData.put("licenseId", activeLicense.getLicenseId());
+                doctorData.put("license", mapLicenseToResponse(activeLicense));
+            } else {
+                doctorData.put("licenseId", null);
+                doctorData.put("license", null);
+            }
 
             response.add(doctorData);
         }
 
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Helper method to map License entity to response Map
+     */
+    private Map<String, Object> mapLicenseToResponse(License license) {
+        if (license == null) {
+            return null;
+        }
+        
+        Map<String, Object> map = new HashMap<>();
+        map.put("license_id", license.getLicenseId());
+        map.put("license_number", license.getLicenseNumber());
+        map.put("issued_date", license.getIssuedDate());
+        map.put("expiry_date", license.getExpiryDate());
+        map.put("issued_by", license.getIssuedBy());
+        map.put("issuer_title", license.getIssuerTitle());
+        map.put("scope_of_practice", license.getScopeOfPractice());
+        map.put("is_active", license.getIsActive());
+        map.put("notes", license.getNotes());
+        map.put("proof_images", license.getProofImages());
+        map.put("is_expired", license.isExpired());
+        map.put("is_valid", license.isValid());
+        map.put("days_until_expiry", license.getDaysUntilExpiry());
+        
+        return map;
     }
 
     @PostMapping
@@ -419,8 +465,56 @@ public class AdminController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody DoctorDTO dto) {
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
+            System.out.println("=== AdminController.updateDoctor ===");
+            System.out.println("Doctor ID: " + id);
+            System.out.println("Raw request: " + request);
+            
+            // Convert Map to DoctorDTO manually to handle status conversion
+            DoctorDTO dto = new DoctorDTO();
+            if (request.containsKey("name")) dto.setName((String) request.get("name"));
+            if (request.containsKey("email")) dto.setEmail((String) request.get("email"));
+            if (request.containsKey("phone")) dto.setPhone((String) request.get("phone"));
+            if (request.containsKey("specialityId")) {
+                Object specId = request.get("specialityId");
+                if (specId instanceof Integer) {
+                    dto.setSpecialityId((Integer) specId);
+                } else if (specId instanceof String) {
+                    dto.setSpecialityId(Integer.parseInt((String) specId));
+                }
+            }
+            if (request.containsKey("experienceYears")) {
+                Object exp = request.get("experienceYears");
+                if (exp instanceof Integer) {
+                    dto.setExperienceYears((Integer) exp);
+                } else if (exp instanceof String) {
+                    dto.setExperienceYears(Integer.parseInt((String) exp));
+                }
+            }
+            if (request.containsKey("educationLevel")) dto.setEducationLevel((String) request.get("educationLevel"));
+            if (request.containsKey("bio")) dto.setBio((String) request.get("bio"));
+            
+            // Handle status conversion from string to enum
+            if (request.containsKey("status")) {
+                Object statusObj = request.get("status");
+                if (statusObj instanceof String) {
+                    String statusStr = ((String) statusObj).toUpperCase();
+                    try {
+                        dto.setStatus(se1961.g1.medconnect.enums.DoctorStatus.valueOf(statusStr));
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Invalid status: " + statusStr);
+                        dto.setStatus(null);
+                    }
+                } else if (statusObj instanceof se1961.g1.medconnect.enums.DoctorStatus) {
+                    dto.setStatus((se1961.g1.medconnect.enums.DoctorStatus) statusObj);
+                }
+            }
+            
+            System.out.println("DTO Status: " + dto.getStatus());
+            System.out.println("DTO Name: " + dto.getName());
+            System.out.println("DTO Email: " + dto.getEmail());
+            
             Doctor updated = doctorService.updateDoctor(id, dto);
             
             Map<String, Object> response = new HashMap<>();
@@ -428,12 +522,23 @@ public class AdminController {
             response.put("message", "Cập nhật bác sĩ thành công");
             response.put("data", mapDoctorToResponse(updated));
             
+            System.out.println("✅ Doctor updated successfully");
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error updating doctor: " + e.getMessage());
+            e.printStackTrace();
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            // Return 200 with error message so frontend can show it
+            return ResponseEntity.ok(error);
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error updating doctor: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi không xác định: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
     
@@ -456,6 +561,17 @@ public class AdminController {
         if (doctor.getSpeciality() != null) {
             response.put("specialty", doctor.getSpeciality().getName());
             response.put("specialityId", doctor.getSpeciality().getSpecialityId());
+            response.put("specializationLabel", doctor.getSpeciality().getName());
+        }
+        
+        // Include license information
+        License activeLicense = doctor.getActiveLicense();
+        if (activeLicense != null) {
+            response.put("licenseId", activeLicense.getLicenseId());
+            response.put("license", mapLicenseToResponse(activeLicense));
+        } else {
+            response.put("licenseId", null);
+            response.put("license", null);
         }
         
         return response;
@@ -716,6 +832,23 @@ public class AdminController {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 patient.setDateOfBirth(sdf.parse((String) request.get("dateOfBirth")));
             }
+            // Update status if provided (for toggle active/inactive)
+            if (request.containsKey("status")) {
+                String statusStr = (String) request.get("status");
+                try {
+                    // Convert string to enum
+                    PatientStatus status = PatientStatus.valueOf(statusStr.toUpperCase());
+                    patient.setStatus(status);
+                } catch (IllegalArgumentException e) {
+                    // If enum value doesn't match, try to find by value
+                    for (PatientStatus ps : PatientStatus.values()) {
+                        if (ps.getValue().equalsIgnoreCase(statusStr)) {
+                            patient.setStatus(ps);
+                            break;
+                        }
+                    }
+                }
+            }
 
             Patient updatedPatient = patientService.savePatient(patient);
             
@@ -783,7 +916,7 @@ public class AdminController {
         response.put("phone", patient.getPhone());
         response.put("gender", patient.getGender());
         response.put("bloodType", patient.getBloodType());
-        response.put("status", "active");
+        response.put("status", patient.getStatus() != null ? patient.getStatus().getValue() : "active");
         response.put("avatar", patient.getAvatarUrl());
         
         // Address
@@ -1005,6 +1138,23 @@ public class AdminController {
         response.put("slotTime", appointment.getSlot().getTimeRange());
         response.put("status", appointment.getStatus().name().toLowerCase());
         response.put("createdAt", appointment.getCreatedAt() != null ? appointment.getCreatedAt().toString() : "");
+        
+        // Include video call session timestamps when available
+        // Fetch VideoCallSession explicitly from repository to avoid lazy loading issues
+        try {
+            var session = videoCallSessionRepository.findById(appointment.getAppointmentId()).orElse(null);
+            if (session != null) {
+                response.put("videoCallStart", session.getStartTime() != null ? session.getStartTime().toString() : null);
+                response.put("videoCallEnd", session.getEndTime() != null ? session.getEndTime().toString() : null);
+            } else {
+                response.put("videoCallStart", null);
+                response.put("videoCallEnd", null);
+            }
+        } catch (Exception e) {
+            // If there's any error fetching the session, just set to null
+            response.put("videoCallStart", null);
+            response.put("videoCallEnd", null);
+        }
         
         return response;
     }

@@ -2,17 +2,31 @@ package se1961.g1.medconnect.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import se1961.g1.medconnect.dto.AppointmentDTO;
 import se1961.g1.medconnect.dto.DoctorApplicationDTO;
 import se1961.g1.medconnect.dto.DoctorDTO;
 import se1961.g1.medconnect.enums.Role;
+import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Doctor;
 import se1961.g1.medconnect.pojo.Speciality;
+import se1961.g1.medconnect.repository.AppointmentRepository;
 import se1961.g1.medconnect.repository.DoctorRepository;
+import se1961.g1.medconnect.repository.LicenseRepository;
+import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.repository.ScheduleRepository;
 import se1961.g1.medconnect.repository.SpecialityRepository;
 import se1961.g1.medconnect.repository.UserRepository;
+import se1961.g1.medconnect.repository.VideoCallSessionRepository;
+import se1961.g1.medconnect.pojo.License;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -26,6 +40,18 @@ public class DoctorService {
     private UserRepository userRepository;
     @Autowired
     private FirebaseService firebaseService;
+    @Autowired
+    private AppointmentRepository appointmentRepository;
+    @Autowired
+    private PaymentRepository paymentRepository;
+    @Autowired
+    private VideoCallSessionRepository videoCallSessionRepository;
+    @Autowired
+    private ScheduleRepository scheduleRepository;
+    @Autowired
+    private LicenseRepository licenseRepository;
+    @Autowired
+    private EmailService emailService;
 
     public Optional<Doctor> getDoctor(String uid) throws Exception {
         return doctorRepository.findByFirebaseUid(uid);
@@ -75,6 +101,8 @@ public class DoctorService {
         doctor.setPhone(dto.getPhone());
         doctor.setRole(Role.DOCTOR);
         doctor.setFirebaseUid(firebaseUid); // Use real Firebase UID
+        // Set default avatar for doctor
+        doctor.setAvatarUrl("https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg");
         
         mapDtoToDoctor(dto, doctor);
         return doctorRepository.save(doctor);
@@ -83,6 +111,29 @@ public class DoctorService {
     public Doctor updateDoctor(Long id, DoctorDTO dto) {
         Doctor existing = doctorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
+        
+        // Store original status before update
+        se1961.g1.medconnect.enums.DoctorStatus originalStatus = existing.getStatus();
+        
+        System.out.println("=== Doctor Update Request ===");
+        System.out.println("Doctor ID: " + id);
+        System.out.println("Original status: " + originalStatus);
+        System.out.println("Requested status: " + dto.getStatus());
+        
+        // Validate status transition rules
+        if (dto.getStatus() != null && originalStatus != null) {
+            // Rule 1: Cannot change from ACTIVE to PENDING
+            if (originalStatus == se1961.g1.medconnect.enums.DoctorStatus.ACTIVE 
+                    && dto.getStatus() == se1961.g1.medconnect.enums.DoctorStatus.PENDING) {
+                throw new RuntimeException("Không thể chuyển bác sĩ từ trạng thái ACTIVE về PENDING");
+            }
+            
+            // Rule 2: From PENDING, only allow transition to ACTIVE
+            if (originalStatus == se1961.g1.medconnect.enums.DoctorStatus.PENDING 
+                    && dto.getStatus() != se1961.g1.medconnect.enums.DoctorStatus.ACTIVE) {
+                throw new RuntimeException("Bác sĩ đang ở trạng thái PENDING chỉ có thể được chuyển sang ACTIVE");
+            }
+        }
         
         // Update User info if provided
         if (dto.getName() != null) {
@@ -93,16 +144,130 @@ public class DoctorService {
         }
         // Email không được thay đổi
         
+        // Map DTO to Doctor (this will set the new status)
         mapDtoToDoctor(dto, existing);
+        
+        // Check if doctor is being approved (PENDING -> ACTIVE) AFTER mapping
+        boolean isBeingApproved = originalStatus == se1961.g1.medconnect.enums.DoctorStatus.PENDING 
+                && existing.getStatus() == se1961.g1.medconnect.enums.DoctorStatus.ACTIVE;
+        
+        System.out.println("Status after mapping: " + existing.getStatus());
+        System.out.println("Is being approved: " + isBeingApproved);
+        
+        // If being approved, create Firebase account and send email
+        if (isBeingApproved) {
+            System.out.println("=== Starting Doctor Approval Process ===");
+            System.out.println("Doctor email: " + existing.getEmail());
+            System.out.println("Doctor name: " + existing.getName());
+            
+            try {
+                // Generate random password
+                String tempPassword = generateRandomPassword();
+                System.out.println("Generated password: " + tempPassword);
+                
+                // Check if Firebase account already exists (if firebaseUid is not a placeholder)
+                if (existing.getFirebaseUid() != null && !existing.getFirebaseUid().startsWith("pending-")) {
+                    System.out.println("Firebase account already exists: " + existing.getFirebaseUid());
+                    // Update password instead of creating new account
+                    try {
+                        firebaseService.updateFirebaseUserPassword(existing.getFirebaseUid(), tempPassword);
+                        System.out.println("Updated Firebase password successfully");
+                    } catch (Exception e) {
+                        System.err.println("Failed to update Firebase password: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    // Create Firebase account
+                    System.out.println("Creating new Firebase account...");
+                    String firebaseUid = firebaseService.createFirebaseUser(
+                        existing.getEmail(),
+                        tempPassword,
+                        existing.getName()
+                    );
+                    existing.setFirebaseUid(firebaseUid);
+                    System.out.println("Firebase account created: " + firebaseUid);
+                }
+                
+                // Send approval email with password
+                System.out.println("Sending approval email to: " + existing.getEmail());
+                try {
+                    emailService.sendDoctorApprovalEmail(
+                        existing.getEmail(),
+                        existing.getName(),
+                        tempPassword
+                    );
+                    System.out.println("✅ Approval email sent successfully!");
+                } catch (Exception emailException) {
+                    System.err.println("❌ ERROR: Failed to send approval email");
+                    System.err.println("Email error: " + emailException.getMessage());
+                    emailException.printStackTrace();
+                    // Re-throw to let controller handle it
+                    throw new RuntimeException("Đã phê duyệt bác sĩ nhưng không thể gửi email: " + emailException.getMessage(), emailException);
+                }
+                
+            } catch (RuntimeException e) {
+                // Re-throw RuntimeException (including our custom exceptions)
+                throw e;
+            } catch (Exception e) {
+                System.err.println("❌ ERROR: Failed to create Firebase account");
+                System.err.println("Error message: " + e.getMessage());
+                e.printStackTrace();
+                // Continue with approval even if Firebase fails, but throw if email fails
+                throw new RuntimeException("Không thể tạo tài khoản Firebase: " + e.getMessage(), e);
+            }
+        }
+        
         return doctorRepository.save(existing);
     }
+    
+    /**
+     * Generate random password for doctor approval
+     */
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
+        StringBuilder password = new StringBuilder();
+        for (int i = 0; i < 12; i++) {
+            password.append(chars.charAt((int) (Math.random() * chars.length())));
+        }
+        return password.toString();
+    }
 
+    @Transactional
     public void deleteDoctor(Long id) throws Exception {
-        // Soft delete to avoid FK constraint violations
         Doctor existing = doctorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
-        existing.setStatus(se1961.g1.medconnect.enums.DoctorStatus.INACTIVE);
-        doctorRepository.save(existing);
+
+        // Clean up schedules
+        scheduleRepository.deleteByUser(existing);
+
+        // Clean up appointments and associated records
+        List<Appointment> appointments = appointmentRepository.findByDoctor(existing);
+        for (Appointment appointment : appointments) {
+            // delete payment if any
+            paymentRepository.deleteByAppointment(appointment);
+            // delete video call session if any
+            videoCallSessionRepository.deleteByAppointment(appointment);
+        }
+        if (!appointments.isEmpty()) {
+            appointmentRepository.deleteAll(appointments);
+        }
+
+        // Delete Firebase account
+        if (existing.getFirebaseUid() != null && !existing.getFirebaseUid().isEmpty() && !existing.getFirebaseUid().startsWith("pending-")) {
+        try {
+                System.out.println("Deleting Firebase account for doctor: " + existing.getFirebaseUid());
+            firebaseService.deleteFirebaseUser(existing.getFirebaseUid());
+                System.out.println("✅ Firebase account deleted successfully");
+        } catch (Exception e) {
+            // Log and continue deletion to keep DB consistent
+                System.err.println("❌ Failed to delete Firebase user for doctor id=" + id + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("⚠️ Doctor has no valid Firebase UID (or is pending), skipping Firebase deletion");
+        }
+
+        doctorRepository.delete(existing);
     }
 
     /**
@@ -162,6 +327,8 @@ public class DoctorService {
         doctor.setEmail(dto.getEmail());
         doctor.setPhone(dto.getPhone());
         doctor.setRole(Role.DOCTOR);
+        // Set default avatar for doctor
+        doctor.setAvatarUrl("https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg");
         
         // Generate temporary firebase_uid placeholder
         // Admin will update this with real Firebase UID when approving
@@ -186,6 +353,56 @@ public class DoctorService {
             doctor.setSpeciality(speciality);
         }
         
-        return doctorRepository.save(doctor);
+        // Save doctor first to get ID
+        doctor = doctorRepository.save(doctor);
+        
+        // Parse and save certifications as License records
+        if (dto.getCertifications() != null && !dto.getCertifications().trim().isEmpty()) {
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                List<Map<String, Object>> certifications = objectMapper.readValue(
+                    dto.getCertifications(), 
+                    new TypeReference<List<Map<String, Object>>>() {}
+                );
+                
+                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                
+                for (Map<String, Object> cert : certifications) {
+                    License license = new License();
+                    license.setDoctor(doctor);
+                    license.setLicenseNumber((String) cert.get("certificateNumber"));
+                    
+                    // Parse issue date
+                    if (cert.get("issueDate") != null) {
+                        license.setIssuedDate(LocalDate.parse((String) cert.get("issueDate"), dateFormatter));
+                    }
+                    
+                    // Parse expiry date (optional)
+                    if (cert.get("expiryDate") != null && !((String) cert.get("expiryDate")).isEmpty()) {
+                        license.setExpiryDate(LocalDate.parse((String) cert.get("expiryDate"), dateFormatter));
+                    }
+                    
+                    license.setIssuedBy((String) cert.get("issuingAuthority"));
+                    license.setIssuerTitle((String) cert.get("issuerPosition"));
+                    license.setScopeOfPractice((String) cert.get("scope"));
+                    license.setNotes((String) cert.get("notes"));
+                    license.setIsActive(true);
+                    
+                    // Handle base64 image - store as JSON array string
+                    if (cert.get("base64Image") != null) {
+                        // Store base64 image as JSON array
+                        String base64Image = (String) cert.get("base64Image");
+                        license.setProofImages("[\"" + base64Image + "\"]");
+                    }
+                    
+                    licenseRepository.save(license);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse certifications: " + e.getMessage());
+                // Continue even if license parsing fails
+            }
+        }
+        
+        return doctor;
     }
 }

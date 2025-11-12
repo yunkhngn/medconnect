@@ -28,7 +28,9 @@ const ForgotPassword = () => {
 
     setIsLoading(true);
     try {
+      // Send Firebase password reset email (with valid reset token)
       await sendPasswordResetEmail(auth, email);
+      
       showMessage("Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư.", "success");
 
       setTimeout(() => {

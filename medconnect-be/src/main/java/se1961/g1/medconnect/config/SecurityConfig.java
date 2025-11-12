@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/specialties/**").permitAll()
                 .requestMatchers("/api/specialities/**").permitAll() // backward compatibility
                 .requestMatchers("/api/doctors").permitAll() // public doctor list for dropdowns
+                .requestMatchers("/api/doctor-applications").permitAll() // public doctor application form
                 .requestMatchers("/api/payment/ipn").permitAll() // VNPay webhook
                 .requestMatchers("/api/payment/confirm").permitAll() // VNPay callback  
                 .requestMatchers("/doctor/dashboard/all").permitAll() // public list of doctors for booking
@@ -80,6 +81,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/appointments/doctor").authenticated()
                 .requestMatchers("/api/appointments").authenticated()
                 .requestMatchers("/api/appointments/**").authenticated()
+
+                // Feedback - public summary, authenticated create
+                .requestMatchers("/api/feedback/doctor/*/summary").permitAll() // Public doctor feedback summary
+                .requestMatchers("/api/feedback/**").authenticated() // All other feedback endpoints require auth
+
+                // Reports - authenticated for all
+                .requestMatchers("/api/reports/**").authenticated()
 
                 // Schedule, Licenses
                 .requestMatchers("/api/schedule/**").authenticated()

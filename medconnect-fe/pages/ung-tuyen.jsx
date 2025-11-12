@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardBody, CardHeader, Input, Button, Textarea, Select, SelectItem, Chip, Divider } from "@heroui/react";
+import { Card, CardBody, CardHeader, Input, Button, Textarea, Select, SelectItem, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { Default } from "@/components/layouts/";
 import { useRouter } from "next/router";
 import Float from "@/components/ui/Float";
 import SimpleCaptcha from "@/components/ui/SimpleCaptcha";
+import AddressSelector from "@/components/ui/AddressSelector";
+import { useAddressData } from "@/hooks/useAddressData";
 import Image from "next/image";
-import { DollarSign, Clock, Building, TrendingUp, Users, BookOpen } from "lucide-react";
+import { DollarSign, Clock, Building, TrendingUp, Users, BookOpen, Plus, X, Upload, FileText } from "lucide-react";
 
 // API Configuration
 const API_CONFIG = {
   BASE_URL: 'http://localhost:8080/api',
   ENDPOINTS: {
     SUBMIT_APPLICATION: '/doctor-applications',
-    GET_SPECIALTIES: '/specialities',
+    GET_SPECIALTIES: '/specialties/dropdown',
   },
 };
 
 export default function DoctorApplication() {
   const router = useRouter();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -25,25 +29,57 @@ export default function DoctorApplication() {
     specialty: "",
     experience: "",
     education: "",
-    certifications: "",
+    certifications: [],
     bio: "",
-    clinicAddress: "",
-    workingHours: ""
+    provinceCode: "",
+    districtCode: "",
+    wardCode: "",
+    street: ""
   });
+
+  // Store address names for display
+  const [addressNames, setAddressNames] = useState({
+    province: "",
+    district: "",
+    ward: ""
+  });
+  
+  const [currentCertificate, setCurrentCertificate] = useState({
+    certificateNumber: "",
+    issueDate: "",
+    expiryDate: "",
+    issuingAuthority: "",
+    issuerPosition: "",
+    scope: "",
+    notes: "",
+    imageFile: null,
+    imagePreview: null
+  });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   const [specialties, setSpecialties] = useState([]);
   const [isLoadingSpecialties, setIsLoadingSpecialties] = useState(true);
   const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
 
+  // Use address data hook to get names
+  const { provinces, districts, wards } = useAddressData();
+
   // Fetch specialties from backend
   useEffect(() => {
     const fetchSpecialties = async () => {
       setIsLoadingSpecialties(true);
       try {
-        const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_SPECIALTIES);
+        const response = await fetch(API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_SPECIALTIES, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
         if (response.ok) {
           const data = await response.json();
+          console.log("Fetched specialties:", data);
           // Transform backend data to match frontend format
           const transformedData = data.map(item => ({
             value: item.id.toString(),
@@ -51,14 +87,11 @@ export default function DoctorApplication() {
           }));
           setSpecialties(transformedData);
         } else {
-          console.error("Failed to fetch specialties");
-          // Fallback to empty array
-          setSpecialties([]);
+          console.error("Failed to fetch specialties, status:", response.status);
+          showMessage("Đang sử dụng danh sách chuyên khoa mặc định", "warning");
         }
       } catch (error) {
         console.error("Error fetching specialties:", error);
-        // Fallback to empty array
-        setSpecialties([]);
       } finally {
         setIsLoadingSpecialties(false);
       }
@@ -72,12 +105,132 @@ export default function DoctorApplication() {
     setTimeout(() => setMessage({ text: "", type: "" }), 5000);
   };
 
+  // Helper function to convert File to base64
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleProvinceChange = (code) => {
+    setFormData(prev => ({ ...prev, provinceCode: code, districtCode: null, wardCode: null }));
+    if (code) {
+      const provinceName = provinces.find(p => String(p.code) === String(code))?.name || "";
+      setAddressNames(prev => ({ ...prev, province: provinceName, district: "", ward: "" }));
+    } else {
+      setAddressNames(prev => ({ ...prev, province: "", district: "", ward: "" }));
+    }
+  };
+
+  const handleDistrictChange = (code) => {
+    setFormData(prev => ({ ...prev, districtCode: code, wardCode: null }));
+    if (code) {
+      const districtName = districts.find(d => String(d.code) === String(code))?.name || "";
+      setAddressNames(prev => ({ ...prev, district: districtName, ward: "" }));
+    } else {
+      setAddressNames(prev => ({ ...prev, district: "", ward: "" }));
+    }
+  };
+
+  const handleWardChange = (code) => {
+    setFormData(prev => ({ ...prev, wardCode: code }));
+    if (code) {
+      const wardName = wards.find(w => String(w.code) === String(code))?.name || "";
+      setAddressNames(prev => ({ ...prev, ward: wardName }));
+    } else {
+      setAddressNames(prev => ({ ...prev, ward: "" }));
+    }
+  };
+
+  const handleStreetChange = (e) => {
+    setFormData(prev => ({ ...prev, street: e.target.value }));
+  };
+
+  const handleCertificateInputChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentCertificate(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showMessage("Vui lòng chọn file ảnh!", "error");
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showMessage("Kích thước file không được vượt quá 5MB!", "error");
+        return;
+      }
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setCurrentCertificate(prev => ({
+        ...prev,
+        imageFile: file,
+        imagePreview: previewUrl
+      }));
+    }
+  };
+
+  const handleAddCertificate = () => {
+    // Validate required fields
+    if (!currentCertificate.certificateNumber || !currentCertificate.issueDate) {
+      showMessage("Vui lòng điền số giấy phép và ngày cấp!", "error");
+      return;
+    }
+
+    if (!currentCertificate.imageFile) {
+      showMessage("Vui lòng tải lên hình ảnh giấy phép!", "error");
+      return;
+    }
+
+    // Add certificate to list
+    setFormData(prev => ({
+      ...prev,
+      certifications: [...prev.certifications, { ...currentCertificate, id: Date.now() }]
+    }));
+
+    // Reset form
+    setCurrentCertificate({
+      certificateNumber: "",
+      issueDate: "",
+      expiryDate: "",
+      issuingAuthority: "",
+      issuerPosition: "",
+      scope: "",
+      notes: "",
+      imageFile: null,
+      imagePreview: null
+    });
+
+    onClose();
+    showMessage("Đã thêm chứng chỉ thành công!", "success");
+  };
+
+  const handleRemoveCertificate = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      certifications: prev.certifications.filter(cert => cert.id !== id)
+    }));
+    showMessage("Đã xóa chứng chỉ!", "success");
   };
 
   const handleSubmit = async (e) => {
@@ -96,6 +249,28 @@ export default function DoctorApplication() {
     setIsLoading(true);
 
     try {
+      // Convert image files to base64 for certifications
+      const certificationsWithBase64 = await Promise.all(
+        formData.certifications.map(async (cert) => {
+          const certData = { ...cert };
+          // Remove imageFile and imagePreview, add base64Image if available
+          delete certData.imageFile;
+          delete certData.imagePreview;
+          
+          // Convert imageFile to base64 if exists
+          if (cert.imageFile) {
+            try {
+              const base64 = await fileToBase64(cert.imageFile);
+              certData.base64Image = base64;
+            } catch (error) {
+              console.error("Failed to convert image to base64:", error);
+            }
+          }
+          
+          return certData;
+        })
+      );
+
       // Prepare JSON data for API (match backend DTO)
       const applicationData = {
         fullName: formData.fullName,
@@ -104,10 +279,12 @@ export default function DoctorApplication() {
         specialtyId: parseInt(formData.specialty),  // Send as specialtyId (number)
         experience: parseInt(formData.experience) || 0,
         education: formData.education,
-        certifications: formData.certifications,
+        certifications: JSON.stringify(certificationsWithBase64), // Convert to JSON string for backend
         bio: formData.bio,
-        clinicAddress: formData.clinicAddress,
-        workingHours: formData.workingHours
+        clinicAddress: [formData.street, addressNames.ward, addressNames.district, addressNames.province]
+          .filter(Boolean)
+          .join(", "),
+        workingHours: "" // Remove this field from form
       };
 
       console.log("Submitting application data:", applicationData);
@@ -120,7 +297,31 @@ export default function DoctorApplication() {
         body: JSON.stringify(applicationData),
       });
 
-      const result = await response.json();
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type");
+      let result;
+      
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+        console.log("JSON response:", result);
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response (status " + response.status + "):", text);
+        
+        // Show more specific error messages
+        if (response.status === 404) {
+          throw new Error("API endpoint không tồn tại. Vui lòng kiểm tra backend đang chạy.");
+        } else if (response.status === 500) {
+          throw new Error("Lỗi server: " + (text.substring(0, 100) || "Internal Server Error"));
+        } else if (!response.ok) {
+          throw new Error("Lỗi HTTP " + response.status + ": " + (text.substring(0, 100) || "Unknown error"));
+        } else {
+          throw new Error("Server trả về dữ liệu không hợp lệ (không phải JSON)");
+        }
+      }
 
       if (response.ok && result.success) {
         showMessage(
@@ -216,6 +417,8 @@ export default function DoctorApplication() {
                       className={`p-3 rounded-lg mb-4 sm:mb-6 text-sm ${
                         message.type === "error"
                           ? "bg-red-50 text-red-600 border border-red-200"
+                          : message.type === "warning"
+                          ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
                           : "bg-green-50 text-green-600 border border-green-200"
                       }`}
                     >
@@ -265,8 +468,11 @@ export default function DoctorApplication() {
                           label="Chuyên khoa"
                           name="specialty"
                           placeholder={isLoadingSpecialties ? "Đang tải..." : "Chọn chuyên khoa"}
-                          selectedKeys={formData.specialty ? [formData.specialty] : []}
-                          onChange={(e) => setFormData(prev => ({ ...prev, specialty: e.target.value }))}
+                          selectedKeys={formData.specialty ? [String(formData.specialty)] : []}
+                          onSelectionChange={(keys) => {
+                            const selectedValue = Array.from(keys)[0];
+                            setFormData(prev => ({ ...prev, specialty: selectedValue || "" }));
+                          }}
                           labelPlacement="outside"
                           size="sm"
                           isDisabled={isLoadingSpecialties}
@@ -305,16 +511,77 @@ export default function DoctorApplication() {
                           labelPlacement="outside"
                           size="sm"
                         />
-                        <Textarea
-                          label="Chứng chỉ hành nghề"
-                          name="certifications"
-                          placeholder="Liệt kê các chứng chỉ, bằng cấp..."
-                          value={formData.certifications}
-                          onChange={handleInputChange}
-                          labelPlacement="outside"
-                          minRows={3}
-                          size="sm"
-                        />
+                        
+                        {/* Certifications Section */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-gray-700">Chứng chỉ hành nghề</label>
+                            <Button
+                              size="sm"
+                              color="primary"
+                              variant="flat"
+                              startContent={<Plus className="w-4 h-4" />}
+                              onPress={onOpen}
+                            >
+                              Thêm giấy phép mới
+                            </Button>
+                          </div>
+                          
+                          {/* List of certificates */}
+                          {formData.certifications.length === 0 ? (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                              <p className="text-sm text-gray-500">Chưa có chứng chỉ nào</p>
+                              <p className="text-xs text-gray-400 mt-1">Nhấn "Thêm giấy phép mới" để bắt đầu</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {formData.certifications.map((cert) => (
+                                <Card key={cert.id} className="bg-gray-50 border border-gray-200">
+                                  <CardBody className="p-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex gap-3 flex-1">
+                                        {cert.imagePreview && (
+                                          <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-300 flex-shrink-0">
+                                            <img 
+                                              src={cert.imagePreview} 
+                                              alt="Certificate" 
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-semibold text-sm text-gray-900">
+                                            Số GP: {cert.certificateNumber}
+                                          </p>
+                                          <p className="text-xs text-gray-600 mt-1">
+                                            Ngày cấp: {cert.issueDate}
+                                            {cert.expiryDate && ` • Hết hạn: ${cert.expiryDate}`}
+                                          </p>
+                                          {cert.issuingAuthority && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              Nơi cấp: {cert.issuingAuthority}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <Button
+                                        isIconOnly
+                                        size="sm"
+                                        color="danger"
+                                        variant="flat"
+                                        onPress={() => handleRemoveCertificate(cert.id)}
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </CardBody>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
                         <Textarea
                           label="Giới thiệu bản thân"
                           name="bio"
@@ -333,26 +600,44 @@ export default function DoctorApplication() {
                     {/* Work Info */}
                     <div className="space-y-3 sm:space-y-4">
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900">Thông tin công việc</h3>
-                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                        <Textarea
-                          label="Địa chỉ phòng khám/Bệnh viện"
-                          name="clinicAddress"
-                          placeholder="Nhập địa chỉ nơi làm việc hiện tại (nếu có)"
-                          value={formData.clinicAddress}
-                          onChange={handleInputChange}
-                          labelPlacement="outside"
-                          minRows={2}
-                          size="sm"
-                        />
-                        <Input
-                          label="Thời gian làm việc mong muốn"
-                          name="workingHours"
-                          placeholder="VD: Thứ 2-6, 8h-17h"
-                          value={formData.workingHours}
-                          onChange={handleInputChange}
-                          labelPlacement="outside"
-                          size="sm"
-                        />
+                      <div className="space-y-4">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Địa chỉ phòng khám/Bệnh viện
+                            </label>
+                            <div className="space-y-3">
+                              <AddressSelector
+                                provinceCode={formData.provinceCode}
+                                districtCode={formData.districtCode}
+                                wardCode={formData.wardCode}
+                                onProvinceChange={handleProvinceChange}
+                                onDistrictChange={handleDistrictChange}
+                                onWardChange={handleWardChange}
+                                size="sm"
+                                variant="flat"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Input
+                              label="Số nhà, đường"
+                              name="street"
+                              placeholder="Nhập số nhà, tên đường"
+                              value={formData.street}
+                              onChange={handleStreetChange}
+                              labelPlacement="outside"
+                              size="sm"
+                              variant="flat"
+                              classNames={{
+                                input: 'text-gray-900',
+                                inputWrapper: 'bg-gray-100 hover:bg-gray-200',
+                                base: 'gap-1',
+                                label: 'text-sm font-medium text-gray-700 pb-1',
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -423,6 +708,172 @@ export default function DoctorApplication() {
           </div>
         </div>
       </div>
+
+      {/* Modal for Adding Certificate */}
+      <Modal 
+        isOpen={isOpen} 
+        onClose={onClose}
+        size="2xl"
+        scrollBehavior="inside"
+        backdrop="blur"
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center gap-2 border-b">
+            <FileText className="w-5 h-5 text-primary" />
+            <span>Thêm giấy phép mới</span>
+          </ModalHeader>
+          <ModalBody className="py-6">
+            <div className="space-y-4">
+              {/* Certificate Number & Issue Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  isRequired
+                  label="Số giấy phép"
+                  name="certificateNumber"
+                  placeholder="VD: 000001/BYT-GPHN"
+                  value={currentCertificate.certificateNumber}
+                  onChange={handleCertificateInputChange}
+                  labelPlacement="outside"
+                  description="Định dạng: 6 số / BYT-GPHN"
+                  size="sm"
+                />
+                <Input
+                  isRequired
+                  label="Ngày cấp"
+                  name="issueDate"
+                  type="date"
+                  value={currentCertificate.issueDate}
+                  onChange={handleCertificateInputChange}
+                  labelPlacement="outside"
+                  size="sm"
+                />
+              </div>
+
+              {/* Expiry Date */}
+              <Input
+                label="Ngày hết hạn"
+                name="expiryDate"
+                type="date"
+                value={currentCertificate.expiryDate}
+                onChange={handleCertificateInputChange}
+                labelPlacement="outside"
+                description="Để trống nếu vô thời hạn"
+                size="sm"
+              />
+
+              {/* Issuing Authority & Position */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Nơi cấp"
+                  name="issuingAuthority"
+                  placeholder="Cục Quản lý Khám chữa bệnh - Bộ Y Tế"
+                  value={currentCertificate.issuingAuthority}
+                  onChange={handleCertificateInputChange}
+                  labelPlacement="outside"
+                  size="sm"
+                />
+                <Input
+                  label="Chức danh người cấp"
+                  name="issuerPosition"
+                  placeholder="Cục trưởng"
+                  value={currentCertificate.issuerPosition}
+                  onChange={handleCertificateInputChange}
+                  labelPlacement="outside"
+                  size="sm"
+                />
+              </div>
+
+              {/* Scope */}
+              <Textarea
+                label="Phạm vi hành nghề"
+                name="scope"
+                placeholder="VD: Khám bệnh, chữa bệnh theo chuyên khoa Tim mạch"
+                value={currentCertificate.scope}
+                onChange={handleCertificateInputChange}
+                labelPlacement="outside"
+                minRows={2}
+                size="sm"
+              />
+
+              {/* Notes */}
+              <Textarea
+                label="Ghi chú"
+                name="notes"
+                placeholder="VD: Cấp mới, Gia hạn lần 1..."
+                value={currentCertificate.notes}
+                onChange={handleCertificateInputChange}
+                labelPlacement="outside"
+                minRows={2}
+                size="sm"
+              />
+
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Minh chứng giấy phép (Hình ảnh) <span className="text-red-500">*</span>
+                </label>
+                
+                {currentCertificate.imagePreview ? (
+                  <div className="relative border-2 border-dashed border-primary rounded-lg p-4">
+                    <img 
+                      src={currentCertificate.imagePreview} 
+                      alt="Certificate preview" 
+                      className="w-full h-48 object-contain rounded-lg"
+                    />
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      color="danger"
+                      className="absolute top-2 right-2"
+                      onPress={() => {
+                        URL.revokeObjectURL(currentCertificate.imagePreview);
+                        setCurrentCertificate(prev => ({
+                          ...prev,
+                          imageFile: null,
+                          imagePreview: null
+                        }));
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="certificate-image"
+                    />
+                    <label htmlFor="certificate-image" className="cursor-pointer">
+                      <Upload className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600 font-medium">Nhấn để tải ảnh lên</p>
+                      <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG (tối đa 5MB)</p>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter className="border-t">
+            <Button 
+              color="danger" 
+              variant="flat" 
+              onPress={onClose}
+            >
+              Hủy
+            </Button>
+            <Button 
+              color="primary" 
+              onPress={handleAddCertificate}
+              startContent={<Plus className="w-4 h-4" />}
+            >
+              Thêm mới
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Default>
   );
 }

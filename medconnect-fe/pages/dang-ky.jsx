@@ -7,6 +7,8 @@ import { Default } from "@/components/layouts/";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import { generateWelcomeEmail } from "@/utils/emailTemplates";
+import { sendEmailViaAPI } from "@/utils/emailHelper";
 
 export default function MedConnectRegister() {
   const router = useRouter();
@@ -71,6 +73,19 @@ export default function MedConnectRegister() {
         showMessage(errorText, "error");
         setIsLoading(false);
         return false;
+      }
+
+      // Send welcome email after successful registration
+      try {
+        const { subject, html } = generateWelcomeEmail(
+          extra.name || user.displayName || "Người dùng",
+          extra.email || user.email
+        );
+        await sendEmailViaAPI(extra.email || user.email, subject, html);
+        console.log("✅ Welcome email sent successfully");
+      } catch (emailError) {
+        console.error("⚠️ Failed to send welcome email:", emailError);
+        // Don't block registration if email fails
       }
 
       showMessage("Đăng ký thành công! Đang chuyển hướng...", "success");

@@ -142,34 +142,6 @@ const AdminDashboard = () => {
                 </Card>
               </div>
             </div>
-
-            {/* Filters */}
-            <div className="space-y-4 mt-6">
-              <h3 className="text-lg font-semibold text-gray-900">Bộ lọc</h3>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Trạng thái</label>
-                  <select className="w-full px-3 py-2 border rounded-lg text-sm">
-                    <option>Tất cả</option>
-                    <option>Hoạt động</option>
-                    <option>Không hoạt động</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm text-gray-600 mb-2 block">Chuyên khoa</label>
-                  <select className="w-full px-3 py-2 border rounded-lg text-sm">
-                    <option>Tất cả chuyên khoa</option>
-                    <option>Tim mạch</option>
-                    <option>Nội khoa</option>
-                    <option>Nhi khoa</option>
-                    <option>Da liễu</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
             {/* Quick Actions */}
             <div className="space-y-4 mt-6">
               <h3 className="text-lg font-semibold text-gray-900">Thao tác nhanh</h3>

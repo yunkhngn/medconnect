@@ -43,6 +43,8 @@ const Appointment = () => {
   const rowsPerPage = 10;
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   const [formData, setFormData] = useState({
     patientId: '',
@@ -56,7 +58,6 @@ const Appointment = () => {
     { value: 'all', label: 'Tất cả trạng thái', color: 'default' },
     { value: 'pending', label: 'Chờ xác nhận', color: 'warning' },
     { value: 'confirmed', label: 'Đã xác nhận', color: 'primary' },
-    { value: 'completed', label: 'Hoàn thành', color: 'success' },
     { value: 'cancelled', label: 'Đã hủy', color: 'danger' },
   ];
 
@@ -167,6 +168,41 @@ const Appointment = () => {
     }
   };
 
+  const fetchAvailableSlots = async (doctorId, date) => {
+    if (!doctorId || !date) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    setIsLoadingSlots(true);
+    try {
+      // Format date as YYYY-MM-DD for API
+      const dateStr = date.includes('/') 
+        ? date.split('/').reverse().join('-') // Convert dd/MM/yyyy to yyyy-MM-dd
+        : date; // Already in yyyy-MM-dd format
+      
+      const response = await fetch(
+        `${API_BASE_URL}/appointments/doctor/${doctorId}/available-slots?date=${dateStr}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.availableSlots && Array.isArray(data.availableSlots)) {
+        setAvailableSlots(data.availableSlots);
+      } else {
+        setAvailableSlots([]);
+      }
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      setAvailableSlots([]);
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
   const createAppointment = async () => {
     if (!user) return false;
     
@@ -237,7 +273,7 @@ const Appointment = () => {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          status: formData.status,
+          status: formData.status.toUpperCase(),
         }),
       });
       
@@ -247,6 +283,7 @@ const Appointment = () => {
         toast.success(data.message || 'Cập nhật lịch hẹn thành công!');
         fetchAppointments();
         resetForm();
+        setCurrentAppointment(null);
         return true;
       } else {
         toast.error(data.message || 'Cập nhật thất bại');
@@ -351,12 +388,13 @@ const Appointment = () => {
 
   const handleEdit = (appointment) => {
     setCurrentAppointment(appointment);
+    // When editing, only allow status change
     setFormData({
-      patientId: appointment.patientId,
-      doctorId: appointment.doctorId,
-      appointmentDate: appointment.appointmentDate, // yyyy-MM-dd format
-      slot: appointment.slot,
-      status: appointment.status.toUpperCase(),
+      patientId: appointment.patientId.toString(),
+      doctorId: appointment.doctorId.toString(),
+      appointmentDate: '',
+      slot: '',
+      status: appointment.status.toLowerCase(),
     });
     onOpen();
   };
@@ -375,6 +413,7 @@ const Appointment = () => {
       slot: 'SLOT_1',
       status: 'PENDING',
     });
+    setAvailableSlots([]);
   };
 
   const handleSubmit = async () => {
@@ -417,12 +456,6 @@ const Appointment = () => {
             <p className="text-sm text-gray-600">Đã xác nhận</p>
             <p className="text-2xl font-bold text-green-600">
               {appointments.filter((a) => a.status === 'confirmed').length}
-            </p>
-          </div>
-          <div className="p-4 bg-purple-50 rounded-lg">
-            <p className="text-sm text-gray-600">Hoàn thành</p>
-            <p className="text-2xl font-bold text-purple-600">
-              {appointments.filter((a) => a.status === 'completed').length}
             </p>
           </div>
         </div>
@@ -491,6 +524,10 @@ const Appointment = () => {
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
             placeholder="Chọn ngày"
+            variant="bordered"
+            classNames={{
+              inputWrapper: "focus-within:border-primary focus-within:ring-0"
+            }}
           />
 
           {(selectedPatient !== 'all' || selectedDoctor !== 'all' || selectedDate) && (
@@ -522,6 +559,10 @@ const Appointment = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-xs"
+          variant="bordered"
+          classNames={{
+            inputWrapper: "focus-within:border-primary focus-within:ring-0"
+          }}
           startContent={
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -538,6 +579,8 @@ const Appointment = () => {
           <TableColumn>BỆNH NHÂN</TableColumn>
           <TableColumn>BÁC SĨ</TableColumn>
           <TableColumn>NGÀY & GIỜ KHÁM</TableColumn>
+          <TableColumn>BẮT ĐẦU VIDEO</TableColumn>
+          <TableColumn>KẾT THÚC VIDEO</TableColumn>
           <TableColumn>TRẠNG THÁI</TableColumn>
           <TableColumn>THAO TÁC</TableColumn>
         </TableHeader>
@@ -567,8 +610,18 @@ const Appointment = () => {
                 </div>
               </TableCell>
               <TableCell>
-                <Chip color={getStatusColor(appointment.status)} size="sm">
-                  {statusOptions.find((s) => s.value === appointment.status)?.label}
+                <div className="text-xs">
+                  {appointment.videoCallStart ? new Date(appointment.videoCallStart).toLocaleString('vi-VN') : '—'}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="text-xs">
+                  {appointment.videoCallEnd ? new Date(appointment.videoCallEnd).toLocaleString('vi-VN') : '—'}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Chip color={getStatusColor(appointment.status?.toLowerCase())} size="sm" variant="flat">
+                  {statusOptions.find((s) => s.value === appointment.status?.toLowerCase())?.label || appointment.status || 'N/A'}
                 </Chip>
               </TableCell>
               <TableCell>
@@ -629,81 +682,185 @@ const Appointment = () => {
               </ModalHeader>
               <ModalBody>
                 <div className="space-y-4">
-                  <Select
-                    label="Bệnh nhân"
-                    placeholder="Chọn bệnh nhân"
-                    isDisabled={!!currentAppointment}
-                    selectedKeys={formData.patientId ? new Set([formData.patientId.toString()]) : new Set()}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || '';
-                      setFormData({ ...formData, patientId: value });
-                    }}
-                  >
-                    {patients.map((patient) => (
-                      <SelectItem key={patient.id.toString()} value={patient.id.toString()}>
-                        {patient.fullName || patient.name} (ID: {patient.id})
-                      </SelectItem>
-                    ))}
-                  </Select>
+                  {currentAppointment ? (
+                    // Edit mode: Only show status
+                    <>
+                      <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                        <p className="text-sm text-gray-600">Bệnh nhân: <span className="font-medium text-gray-800">{currentAppointment.patientName}</span></p>
+                        <p className="text-sm text-gray-600">Bác sĩ: <span className="font-medium text-gray-800">{currentAppointment.doctorName}</span></p>
+                        <p className="text-sm text-gray-600">Ngày khám: <span className="font-medium text-gray-800">{new Date(currentAppointment.appointmentDate).toLocaleDateString('vi-VN')}</span></p>
+                        <p className="text-sm text-gray-600">Giờ khám: <span className="font-medium text-gray-800">{currentAppointment.slotTime || currentAppointment.slot}</span></p>
+                      </div>
+                      <Select
+                        label="Trạng thái"
+                        selectedKeys={new Set([formData.status.toUpperCase()])}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, status: (selectedValue || 'PENDING').toLowerCase() });
+                        }}
+                      >
+                        {statusOptions.slice(1).map((item) => (
+                          <SelectItem 
+                            key={item.value.toUpperCase()} 
+                            value={item.value.toUpperCase()}
+                            textValue={item.label}
+                          >
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </Select>
+                    </>
+                  ) : (
+                    // Add mode: Show all fields
+                    <>
+                      <Select
+                        label="Bệnh nhân"
+                        placeholder="Chọn bệnh nhân"
+                        selectedKeys={formData.patientId ? new Set([formData.patientId.toString()]) : new Set()}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, patientId: selectedValue || '' });
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {patients.length === 0 ? (
+                          <SelectItem key="loading" value="loading" isDisabled>
+                            Đang tải...
+                          </SelectItem>
+                        ) : (
+                          patients.map((patient) => {
+                            const displayName = `${patient.fullName || patient.name || `Bệnh nhân #${patient.id}`} (ID: ${patient.id})`;
+                            return (
+                              <SelectItem 
+                                key={patient.id.toString()} 
+                                value={patient.id.toString()}
+                                textValue={displayName}
+                              >
+                                {displayName}
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </Select>
 
-                  <Select
-                    label="Bác sĩ"
-                    placeholder="Chọn bác sĩ"
-                    isDisabled={!!currentAppointment}
-                    selectedKeys={formData.doctorId ? new Set([formData.doctorId.toString()]) : new Set()}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || '';
-                      setFormData({ ...formData, doctorId: value });
-                    }}
-                  >
-                    {doctors.map((doctor) => (
-                      <SelectItem key={doctor.id.toString()} value={doctor.id.toString()}>
-                        {doctor.name}{doctor.speciality ? ` - ${doctor.speciality}` : ''}
-                      </SelectItem>
-                    ))}
-                  </Select>
+                      <Select
+                        label="Bác sĩ"
+                        placeholder="Chọn bác sĩ"
+                        selectedKeys={formData.doctorId ? new Set([formData.doctorId.toString()]) : new Set()}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, doctorId: selectedValue || '', slot: '' }); // Reset slot when doctor changes
+                          setAvailableSlots([]); // Clear slots when doctor changes
+                          // Fetch available slots if date is also selected
+                          if (formData.appointmentDate && selectedValue) {
+                            fetchAvailableSlots(parseInt(selectedValue), formData.appointmentDate);
+                          }
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {doctors.length === 0 ? (
+                          <SelectItem key="loading" value="loading" isDisabled>
+                            Đang tải...
+                          </SelectItem>
+                        ) : (
+                          doctors.map((doctor) => {
+                            const displayName = `${doctor.name || `Bác sĩ #${doctor.id}`}${doctor.speciality ? ` - ${doctor.speciality}` : ''}`;
+                            return (
+                              <SelectItem 
+                                key={doctor.id.toString()} 
+                                value={doctor.id.toString()}
+                                textValue={displayName}
+                              >
+                                {displayName}
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </Select>
 
-                  <Input
-                    label="Ngày khám"
-                    type="date"
-                    isDisabled={!!currentAppointment}
-                    value={formData.appointmentDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, appointmentDate: e.target.value })
-                    }
-                  />
+                      <Input
+                        label="Ngày khám"
+                        type="date"
+                        value={formData.appointmentDate}
+                        onChange={(e) => {
+                          const dateValue = e.target.value;
+                          setFormData({ ...formData, appointmentDate: dateValue, slot: '' }); // Reset slot when date changes
+                          setAvailableSlots([]); // Clear slots when date changes
+                          // Fetch available slots if doctor is also selected
+                          if (formData.doctorId) {
+                            fetchAvailableSlots(parseInt(formData.doctorId), dateValue);
+                          }
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          inputWrapper: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      />
 
-                  <Select
-                    label="Giờ khám (Slot)"
-                    placeholder="Chọn giờ khám"
-                    isDisabled={!!currentAppointment}
-                    selectedKeys={new Set([formData.slot])}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || 'SLOT_1';
-                      setFormData({ ...formData, slot: value });
-                    }}
-                  >
-                    {slotOptions.map((slot) => (
-                      <SelectItem key={slot.value} value={slot.value}>
-                        {slot.label}
-                      </SelectItem>
-                    ))}
-                  </Select>
+                      <Select
+                        label="Giờ khám (Slot)"
+                        placeholder={isLoadingSlots ? "Đang tải..." : (formData.doctorId && formData.appointmentDate ? "Chọn giờ khám" : "Chọn bác sĩ và ngày trước")}
+                        isDisabled={isLoadingSlots || !formData.doctorId || !formData.appointmentDate}
+                        selectedKeys={formData.slot ? new Set([formData.slot]) : new Set()}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, slot: selectedValue || '' });
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {isLoadingSlots ? (
+                          <SelectItem key="loading" value="loading" isDisabled>
+                            Đang tải slot...
+                          </SelectItem>
+                        ) : availableSlots.length === 0 && formData.doctorId && formData.appointmentDate ? (
+                          <SelectItem key="no-slots" value="no-slots" isDisabled>
+                            Không có slot trống
+                          </SelectItem>
+                        ) : (
+                          availableSlots.map((slotValue) => {
+                            const slotOption = slotOptions.find(s => s.value === slotValue);
+                            return (
+                              <SelectItem key={slotValue} value={slotValue}>
+                                {slotOption ? slotOption.label : slotValue}
+                              </SelectItem>
+                            );
+                          })
+                        )}
+                      </Select>
 
-                  <Select
-                    label="Trạng thái"
-                    selectedKeys={new Set([formData.status])}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] || 'PENDING';
-                      setFormData({ ...formData, status: value });
-                    }}
-                  >
-                    {statusOptions.slice(1).map((item) => (
-                      <SelectItem key={item.value.toUpperCase()} value={item.value.toUpperCase()}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </Select>
+                      <Select
+                        label="Trạng thái"
+                        selectedKeys={new Set([formData.status.toUpperCase()])}
+                        onSelectionChange={(keys) => {
+                          const selectedValue = Array.from(keys)[0];
+                          setFormData({ ...formData, status: (selectedValue || 'PENDING').toLowerCase() });
+                        }}
+                        variant="bordered"
+                        classNames={{
+                          trigger: "focus-within:border-primary focus-within:ring-0"
+                        }}
+                      >
+                        {statusOptions.slice(1).filter(item => item.value !== 'completed' && item.value !== 'cancelled').map((item) => (
+                          <SelectItem 
+                            key={item.value.toUpperCase()} 
+                            value={item.value.toUpperCase()}
+                            textValue={item.label}
+                          >
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </Select>
+                    </>
+                  )}
                 </div>
               </ModalBody>
               <ModalFooter>

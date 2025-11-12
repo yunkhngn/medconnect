@@ -98,8 +98,12 @@ export default function AddressSelector({
         size={size}
         variant={variant}
         classNames={{
-          trigger: 'border-gray-300 hover:border-teal-500 focus:border-teal-500',
+          trigger: 'bg-gray-100 hover:bg-gray-200',
+          value: 'text-gray-900',
+          base: 'gap-1',
+          label: 'text-sm font-medium text-gray-700 pb-1',
         }}
+        labelPlacement="outside"
       >
         {provinces.map((province) => (
           <SelectItem key={String(province.code)}>
@@ -122,8 +126,12 @@ export default function AddressSelector({
         size={size}
         variant={variant}
         classNames={{
-          trigger: 'border-gray-300 hover:border-teal-500 focus:border-teal-500',
+          trigger: 'bg-gray-100 hover:bg-gray-200',
+          value: 'text-gray-900',
+          base: 'gap-1',
+          label: 'text-sm font-medium text-gray-700 pb-1',
         }}
+        labelPlacement="outside"
       >
         {districts.map((district) => (
           <SelectItem key={String(district.code)}>
@@ -146,8 +154,12 @@ export default function AddressSelector({
         size={size}
         variant={variant}
         classNames={{
-          trigger: 'border-gray-300 hover:border-teal-500 focus:border-teal-500',
+          trigger: 'bg-gray-100 hover:bg-gray-200',
+          value: 'text-gray-900',
+          base: 'gap-1',
+          label: 'text-sm font-medium text-gray-700 pb-1',
         }}
+        labelPlacement="outside"
       >
         {wards.map((ward) => (
           <SelectItem key={String(ward.code)}>

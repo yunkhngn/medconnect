@@ -121,6 +121,56 @@ medconnect/
 
 ## 🐳 Docker Setup
 
+### Prerequisites
+- Docker Desktop installed and running
+- Docker Compose V2
+- At least 4GB RAM available for containers
+
+### Quick Start
+
+```bash
+# 1. Start all services (DB creates database, Backend creates tables via Hibernate)
+docker-compose up -d --build
+
+# 2. Wait for backend to fully start (creates tables automatically)
+# Check backend logs to confirm it's ready
+docker-compose logs -f be
+
+# 3. Load mock data (after backend is ready - wait ~60 seconds)
+chmod +x load-mock-data.sh
+./load-mock-data.sh
+```
+
+**What happens:**
+1. ✅ Database container starts and creates `MedConnect` database
+2. ✅ Backend starts and **Hibernate auto-creates all tables** from JPA entities
+3. ✅ Mock data script loads sample data:
+   - 2 Admin accounts
+   - 10 Doctors (various specialties)
+   - 10 Patients
+   - 10 Medical specialties
+
+**Test Login Accounts:**
+- **Admin:** `admin.system@medconnect.vn`
+- **Doctor:** `doctor.an@medconnect.vn` 
+- **Patient:** `patient.mai@gmail.com`
+
+> ⚠️ **Note:** Firebase UIDs in mock data are placeholders. Update them after Firebase authentication setup.
+
+### Manual Mock Data Loading
+
+If you need to reload mock data:
+
+```bash
+# Method 1: Using the script
+./load-mock-data.sh
+
+# Method 2: Direct command
+docker exec -it medconnect-db /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "MedConnect@2025" \
+  -d MedConnect -i /scripts/mock-data.sql -C
+```
+
 ### Docker Commands Cheat Sheet
 
 | Command | Description |

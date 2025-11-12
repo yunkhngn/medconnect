@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { generateAppointmentConfirmationEmail } from "@/utils/emailTemplates";
+import { sendEmailViaAPI } from "@/utils/emailHelper";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -154,6 +156,37 @@ export default function DoctorAppointmentsPage() {
 
       if (response.ok) {
         toast.success("Đã xác nhận lịch hẹn");
+        
+        // Send confirmation email to patient
+        try {
+          // Find the confirmed appointment from the list to get patient details
+          const confirmedAppointment = appointments.find(apt => 
+            (apt.appointmentId || apt.id) === appointmentId
+          );
+          
+          if (confirmedAppointment && confirmedAppointment.patient?.email) {
+            const appointmentDate = new Date(confirmedAppointment.date).toLocaleDateString('vi-VN');
+            const appointmentTime = SLOT_TIMES[confirmedAppointment.slot] || confirmedAppointment.slot;
+            
+            const emailDetails = {
+              patientName: confirmedAppointment.patient?.name || 'Bệnh nhân',
+              doctorName: `BS. ${confirmedAppointment.doctor?.name || user?.displayName || 'Bác sĩ'}`,
+              date: appointmentDate,
+              time: appointmentTime,
+              specialty: confirmedAppointment.doctor?.speciality?.name || confirmedAppointment.speciality?.name || 'Chưa xác định',
+              type: confirmedAppointment.type,
+              appointmentId: appointmentId
+            };
+            
+            const { subject, html } = generateAppointmentConfirmationEmail(emailDetails);
+            await sendEmailViaAPI(confirmedAppointment.patient.email, subject, html);
+            console.log("✅ Confirmation email sent to patient");
+          }
+        } catch (emailError) {
+          console.error("⚠️ Failed to send confirmation email:", emailError);
+          // Don't block the confirmation flow if email fails
+        }
+        
         fetchAppointments();
         onClose();
       } else {
@@ -727,36 +760,11 @@ export default function DoctorAppointmentsPage() {
                       )}
                     </div>
 
-                    {/* Reason + Attachments (parsed) */}
+                    {/* Reason */}
                     {(apt.reason) && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-3">
                         <p className="text-xs text-orange-700 font-medium mb-1">Lý do khám:</p>
                         <p className="text-sm text-gray-700 mb-2 whitespace-pre-line">{getDisplayReason(apt)}</p>
-                        {/* Real thumbnails if available via URLs */}
-                        {extractAttachmentUrls(apt).length > 0 ? (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {extractAttachmentUrls(apt).map((url, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setPreviewImgUrl(url); onImgOpen(); }}
-                                className="w-16 h-16 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                              >
-                                <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          (getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {(getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).map((name, i) => (
-                                <Chip key={i} size="sm" variant="flat" color="warning">
-                                  {name}
-                                </Chip>
-                              ))}
-                            </div>
-                          )
-                        )}
                       </div>
                     )}
 
@@ -1125,31 +1133,6 @@ export default function DoctorAppointmentsPage() {
                         </div>
                                 <div className="text-gray-900 bg-orange-50 p-3 rounded-lg">
                                   <p className="mb-2 whitespace-pre-line">{getDisplayReason(selectedAppointment)}</p>
-                                  {/* Thumbnails if backend returns URLs */}
-                                  {extractAttachmentUrls(selectedAppointment).length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                      {extractAttachmentUrls(selectedAppointment).map((url, i) => (
-                                        <button
-                                          key={i}
-                                          type="button"
-                                          onClick={() => { setPreviewImgUrl(url); onImgOpen(); }}
-                                          className="w-20 h-20 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                        >
-                                          <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    (getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).length > 0 && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {(getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).map((name, i) => (
-                                          <Chip key={i} size="sm" variant="flat" color="warning">
-                                            {name}
-                        </Chip>
-                                        ))}
-                                      </div>
-                                    )
-                                  )}
                                 </div>
                               </div>
                             </>
