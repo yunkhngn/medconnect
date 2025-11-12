@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea
@@ -68,9 +68,6 @@ export default function DatLichKham() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [appointmentType, setAppointmentType] = useState("ONLINE");
   const [reason, setReason] = useState("");
-  const [symptomImages, setSymptomImages] = useState([]); // [{name, url, file}]
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [doctorFeedbackSummary, setDoctorFeedbackSummary] = useState(null);
@@ -502,26 +499,6 @@ export default function DatLichKham() {
     try {
       const token = await user.getIdToken();
 
-      // Upload symptom images to backend (Cloudinary) first, get URLs
-      let uploadedUrls = [];
-      if (symptomImages.length > 0) {
-        const uploadOne = async (file) => {
-          const form = new FormData();
-          form.append("file", file);
-          const resp = await fetch("http://localhost:8080/api/medical-photo/upload", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: form
-          });
-          if (!resp.ok) throw new Error(await resp.text());
-          const j = await resp.json();
-          return j.photoUrl;
-        };
-        uploadedUrls = await Promise.all(
-          symptomImages.map((i) => uploadOne(i.file))
-        );
-      }
-
       const response = await fetch("http://localhost:8080/api/appointments", {
         method: "POST",
         headers: {
@@ -533,16 +510,8 @@ export default function DatLichKham() {
           date: selectedDate,
           slot: selectedSlot,
           type: appointmentType,
-          // Store JSON in reason field as requested
-          reason: JSON.stringify({
-            reason: reason || null,
-            attachments: uploadedUrls
-          }),
-          // Keep detail optional for backward compatibility
-          detail: JSON.stringify({
-            reason: reason || null,
-            attachments: uploadedUrls
-          })
+          // Store reason as plain text
+          reason: reason || null
         })
       });
 
@@ -1264,71 +1233,6 @@ export default function DatLichKham() {
                     inputWrapper: "bg-gray-100 hover:bg-gray-200 data-[focus=true]:bg-gray-100",
                   }}
                 />
-
-                {/* Symptom images */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium mb-2">Đính kèm ảnh triệu chứng <span className="text-gray-500">(tùy chọn)</span></label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                      e.target.value = '';
-                    }}
-                    className="hidden"
-                  />
-
-                  {/* Dropzone */}
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      const files = Array.from(e.dataTransfer.files || []);
-                      files.forEach((file) => {
-                        if (!file.type.startsWith('image/')) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          setSymptomImages((prev) => [...prev, { name: file.name, url: ev.target.result, file }]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                    }}
-                    className={`rounded-xl w-full p-6 text-center cursor-pointer transition border-2 border-dashed ${isDragging ? 'bg-teal-50 border-teal-400' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'}`}
-                  >
-                    <p className="text-sm text-gray-700">Kéo & thả ảnh vào đây hoặc <span className="text-teal-600 font-medium">bấm để chọn</span></p>
-                    <p className="text-xs text-gray-500 mt-1">Hỗ trợ nhiều ảnh, định dạng JPEG/PNG</p>
-                  </div>
-
-                  {symptomImages.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      {symptomImages.map((img, idx) => (
-                        <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden relative group border">
-                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setSymptomImages((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 bg-white/80 text-red-600 text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">Ảnh chỉ lưu kèm nội dung ghi chú của bạn khi tạo lịch. Nếu cần gửi ảnh chất lượng cao, vui lòng mang theo hoặc gửi qua kênh chat sau khi đặt lịch.</p>
-                </div>
               </div>
             )}
 

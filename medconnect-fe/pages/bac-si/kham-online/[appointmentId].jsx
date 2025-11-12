@@ -579,8 +579,7 @@ export default function DoctorOnlineExamRoom() {
   // Parse reason safely - handle both object and string formats
   const reasonData = parseReason(appointment.reason);
   const reasonText = reasonData?.reasonText ? String(reasonData.reasonText) : '';
-  const attachments = Array.isArray(reasonData?.attachments) ? reasonData.attachments : [];
-  console.log('[Appointment] reason:', appointment.reason, 'parsed:', { reasonText, attachments });
+  console.log('[Appointment] reason:', appointment.reason, 'parsed:', { reasonText });
   
   // Derive names/avatars for header (doctor view)
   const selfName = auth.currentUser?.displayName || appointment?.doctorName || 'Bác sĩ';
@@ -999,19 +998,6 @@ export default function DoctorOnlineExamRoom() {
               <div className="space-y-3">
                 <h4 className="font-semibold">Lý do khám</h4>
                 <p className="text-sm text-gray-700 whitespace-pre-line">{formatReasonForDisplay(appointment.reason)}</p>
-                {attachments && attachments.length > 0 && (
-                  <div className="space-y-2">
-                    <h5 className="font-medium text-sm">Hình ảnh đính kèm</h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      {attachments.map((attachment, index) => (
-                        <div key={index} className="relative group">
-                          <img src={attachment} alt={`Attachment ${index + 1}`} className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(attachment, '_blank')} />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg flex items-center justify-center transition-all"><Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100" /></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </ModalBody>

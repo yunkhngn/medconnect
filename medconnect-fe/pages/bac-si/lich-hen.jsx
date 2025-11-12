@@ -760,36 +760,11 @@ export default function DoctorAppointmentsPage() {
                       )}
                     </div>
 
-                    {/* Reason + Attachments (parsed) */}
+                    {/* Reason */}
                     {(apt.reason) && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 mb-3">
                         <p className="text-xs text-orange-700 font-medium mb-1">Lý do khám:</p>
                         <p className="text-sm text-gray-700 mb-2 whitespace-pre-line">{getDisplayReason(apt)}</p>
-                        {/* Real thumbnails if available via URLs */}
-                        {extractAttachmentUrls(apt).length > 0 ? (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {extractAttachmentUrls(apt).map((url, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setPreviewImgUrl(url); onImgOpen(); }}
-                                className="w-16 h-16 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                              >
-                                <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          (getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {(getAttachmentNamesFromDetail(apt).length > 0 ? getAttachmentNamesFromDetail(apt) : parseAttachmentsFromReason(apt.reason)).map((name, i) => (
-                                <Chip key={i} size="sm" variant="flat" color="warning">
-                                  {name}
-                                </Chip>
-                              ))}
-                            </div>
-                          )
-                        )}
                       </div>
                     )}
 
@@ -1158,31 +1133,6 @@ export default function DoctorAppointmentsPage() {
                         </div>
                                 <div className="text-gray-900 bg-orange-50 p-3 rounded-lg">
                                   <p className="mb-2 whitespace-pre-line">{getDisplayReason(selectedAppointment)}</p>
-                                  {/* Thumbnails if backend returns URLs */}
-                                  {extractAttachmentUrls(selectedAppointment).length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                      {extractAttachmentUrls(selectedAppointment).map((url, i) => (
-                                        <button
-                                          key={i}
-                                          type="button"
-                                          onClick={() => { setPreviewImgUrl(url); onImgOpen(); }}
-                                          className="w-20 h-20 rounded overflow-hidden border bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                                        >
-                                          <img src={url} alt={`attachment-${i+1}`} className="w-full h-full object-cover" />
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    (getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).length > 0 && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {(getAttachmentNamesFromDetail(selectedAppointment).length > 0 ? getAttachmentNamesFromDetail(selectedAppointment) : parseAttachmentsFromReason(getDisplayReason(selectedAppointment))).map((name, i) => (
-                                          <Chip key={i} size="sm" variant="flat" color="warning">
-                                            {name}
-                        </Chip>
-                                        ))}
-                                      </div>
-                                    )
-                                  )}
                                 </div>
                               </div>
                             </>

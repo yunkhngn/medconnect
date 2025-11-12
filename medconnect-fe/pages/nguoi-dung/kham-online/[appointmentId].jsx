@@ -399,7 +399,6 @@ export default function PatientOnlineExamRoom() {
   // Parse reason safely
   const reasonData = parseReason(appointment.reason);
   const reasonText = reasonData?.reasonText ? String(reasonData.reasonText) : '';
-  const attachments = Array.isArray(reasonData?.attachments) ? reasonData.attachments : [];
 
   // Derive doctor info from appointment (with fallbacks)
   const doctorName = appointment?.doctor?.name || appointment?.doctorName || 'Bác sĩ';
@@ -792,26 +791,6 @@ export default function PatientOnlineExamRoom() {
               <div className="space-y-3">
                 <h4 className="font-semibold">Lý do khám của bạn</h4>
                 <p className="text-sm text-gray-700 whitespace-pre-line">{formatReasonForDisplay(appointment.reason)}</p>
-                {attachments && attachments.length > 0 && (
-                  <div className="space-y-2">
-                    <h5 className="font-medium text-sm">Hình ảnh đính kèm</h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      {attachments.map((attachment, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={attachment}
-                            alt={`Attachment ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => window.open(attachment, '_blank')}
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg flex items-center justify-center transition-all">
-                            <Camera className="w-6 h-6 text-white opacity-0 group-hover:opacity-100" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </ModalBody>

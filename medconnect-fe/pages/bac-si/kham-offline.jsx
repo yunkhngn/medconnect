@@ -59,11 +59,10 @@ export default function OfflineExamListPage() {
       if (typeof reason === 'string' && reason.trim().startsWith('{')) {
         const j = JSON.parse(reason);
         const text = j?.reason || "";
-        const attachments = Array.isArray(j?.attachments) ? j.attachments : [];
-        return { text, attachmentsCount: attachments.length };
+        return { text };
       }
     } catch {}
-    return { text: typeof reason === 'string' ? reason : '', attachmentsCount: 0 };
+    return { text: typeof reason === 'string' ? reason : '' };
   };
 
   useEffect(() => {
@@ -450,9 +449,6 @@ export default function OfflineExamListPage() {
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
                     <p className="text-xs text-orange-700 font-medium mb-1">Lý do khám:</p>
                     <p className="text-sm text-gray-900">{pr.text}</p>
-                    {pr.attachmentsCount > 0 && (
-                      <Chip size="sm" variant="flat" color="warning" className="mt-2">{pr.attachmentsCount} ảnh đính kèm</Chip>
-              )}
             </div>
                 )}
 

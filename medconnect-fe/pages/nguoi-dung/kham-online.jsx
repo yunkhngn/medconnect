@@ -757,39 +757,6 @@ export default function PatientOnlineExamList() {
                         <p className="text-sm text-gray-600 line-clamp-2 whitespace-pre-line">
                           {formatReasonForDisplay(appointment.reason)}
                         </p>
-                        {(() => {
-                          const { attachments } = parseReason(appointment.reason);
-                          if (attachments && attachments.length > 0) {
-                            return (
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {attachments.map((url, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="relative cursor-pointer group"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedImage(url);
-                                      onImageModalOpen();
-                                    }}
-                                  >
-                                    <img
-                                      src={url}
-                                      alt={`Attachment ${idx + 1}`}
-                                      className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
-                                      <span className="text-white text-xs opacity-0 group-hover:opacity-100">Xem</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
                       </div>
 
                       {/* Action buttons */}
@@ -955,38 +922,6 @@ export default function PatientOnlineExamList() {
                 <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">
                   {medicalRecord?.chief_complaint || formatReasonForDisplay(selectedAppointment?.reason) || "Không có thông tin"}
                 </p>
-                {(() => {
-                  const { attachments } = parseReason(selectedAppointment?.reason);
-                  if (attachments && attachments.length > 0) {
-                    return (
-                      <div className="flex flex-wrap gap-2 mt-2 pl-4">
-                        {attachments.map((url, idx) => (
-                          <div
-                            key={idx}
-                            className="relative cursor-pointer group"
-                            onClick={() => {
-                              setSelectedImage(url);
-                              onImageModalOpen();
-                            }}
-                          >
-                            <img
-                              src={url}
-                              alt={`Attachment ${idx + 1}`}
-                              className="w-24 h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-blue-500 transition-colors"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
-                              <span className="text-white text-xs opacity-0 group-hover:opacity-100">Xem</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
                 
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Chẩn đoán</h4>
