@@ -93,9 +93,9 @@ export default function DatLichKham() {
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
     const day = d.getDay(); // 0..6 (Sun..Sat)
-    const diff = (day === 0 ? -6 : 1) - day; // start Monday
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday start
     const monday = new Date(d);
-    monday.setDate(d.getDate() + diff);
+    monday.setDate(diff);
     monday.setHours(0,0,0,0);
     return monday;
   });
@@ -277,7 +277,11 @@ export default function DatLichKham() {
       const dates = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(weekStart);
         d.setDate(weekStart.getDate() + i);
-        return d.toISOString().split('T')[0];
+        // Use local date format to avoid timezone issues
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       });
       const results = {};
       try {
@@ -291,6 +295,7 @@ export default function DatLichKham() {
           }
         });
         await Promise.all(promises);
+        console.log('Weekly available slots:', results);
         setWeeklyAvailable(results);
       } catch (e) {
         setWeeklyAvailable({});
@@ -1020,97 +1025,171 @@ export default function DatLichKham() {
             {/* Weekly Calendar */}
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-sm">
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
-                    const prev = new Date(weekStart);
-                    prev.setDate(prev.getDate() - 7);
-                    setWeekStart(prev);
-                  }}>
-                    Tuần trước
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-xl shadow-sm">
+                  <Button 
+                    size="sm" 
+                    variant="light" 
+                    className="data-[hover=true]:bg-white rounded-lg transition-colors" 
+                    onPress={() => {
+                      const prev = new Date(weekStart);
+                      prev.setDate(prev.getDate() - 7);
+                      setWeekStart(prev);
+                    }}
+                  >
+                    ← Tuần trước
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
-                    const now = new Date();
-                    const day = now.getDay();
-                    const diff = (day === 0 ? -6 : 1) - day;
-                    const monday = new Date(now);
-                    monday.setDate(now.getDate() + diff);
-                    monday.setHours(0,0,0,0);
-                    setWeekStart(monday);
-                  }}>
+                  <Button 
+                    size="sm" 
+                    variant="flat"
+                    color="primary"
+                    className="rounded-lg font-semibold" 
+                    onPress={() => {
+                      const now = new Date();
+                      const day = now.getDay();
+                      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                      const monday = new Date(now);
+                      monday.setDate(diff);
+                      monday.setHours(0,0,0,0);
+                      setWeekStart(monday);
+                    }}
+                  >
                     Tuần hiện tại
                   </Button>
-                  <Button size="sm" variant="light" className="data-[hover=true]:bg-white rounded-lg" onPress={() => {
-                    const next = new Date(weekStart);
-                    next.setDate(next.getDate() + 7);
-                    setWeekStart(next);
-                  }}>
-                    Tuần sau
+                  <Button 
+                    size="sm" 
+                    variant="light" 
+                    className="data-[hover=true]:bg-white rounded-lg transition-colors" 
+                    onPress={() => {
+                      const next = new Date(weekStart);
+                      next.setDate(next.getDate() + 7);
+                      setWeekStart(next);
+                    }}
+                  >
+                    Tuần sau →
                   </Button>
                 </div>
-            </div>
+              </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="grid grid-cols-8 min-w-[920px]">
-                  {/* Header */}
-                  <div className="col-span-1 p-3 font-semibold text-gray-700 bg-gray-50/80 border-r sticky left-0 z-10">Khung giờ</div>
-                  {Array.from({ length: 7 }).map((_, i) => {
-                    const d = new Date(weekStart);
-                    d.setDate(weekStart.getDate() + i);
-                    const dayLabel = d.toLocaleDateString("vi-VN", { weekday: 'short' });
-                    const dateLabel = d.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit' });
-                    const key = d.toISOString().split('T')[0];
-                    return (
-                      <div key={key} className="col-span-1 p-3 text-center font-semibold text-gray-700 bg-gray-50 border-r last:border-r-0">
-                        <div className="text-xs text-gray-500">{dayLabel}</div>
-                        <div className="text-sm">{dateLabel}</div>
-                  </div>
-                    );
-                  })}
-
-                  {/* Body */}
-                  {Object.keys(SLOT_TIMES).map((slotKey) => (
-                    <div key={slotKey} className="contents">
-                      <div className="col-span-1 p-3 font-medium text-gray-600 border-t border-r flex items-center sticky left-0 bg-white/90 z-10">{SLOT_TIMES[slotKey]}</div>
-                      {Array.from({ length: 7 }, (_, i) => {
+              {/* Table Schedule */}
+              <div className="overflow-x-auto rounded-lg border-2 border-gray-300 bg-white shadow-md">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="sticky top-0 bg-gradient-to-r from-gray-50 to-gray-100 z-10 shadow-sm">
+                    <tr>
+                      <th className="border-2 border-gray-300 p-4 text-left font-bold text-gray-800 min-w-[140px] bg-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Clock size={18} className="text-teal-600" />
+                          Khung giờ
+                        </div>
+                      </th>
+                      {Array.from({ length: 7 }).map((_, i) => {
                         const d = new Date(weekStart);
                         d.setDate(weekStart.getDate() + i);
-                        const dateStr = d.toISOString().split('T')[0];
-                        const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
-                        const today = new Date();
-                        today.setHours(0,0,0,0);
-                        const isPast = d < today;
-                        const selectable = available && !isPast;
-                        const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                        const isToday = d.toDateString() === new Date().toDateString();
+                        const dayName = ["CN", "Th 2", "Th 3", "Th 4", "Th 5", "Th 6", "Th 7"][d.getDay()];
+                        
                         return (
-                          <div key={dateStr + slotKey} className="col-span-1 p-2 border-t border-r last:border-r-0 flex items-center justify-center bg-white">
-                            <button
-                              onClick={() => {
-                                if (!selectable) return;
-                                handleDateChange(dateStr);
-                                setSelectedSlot(slotKey);
-                              }}
-                              className={`w-full h-10 rounded-xl text-sm font-medium transition-all duration-200 ease-in-out focus:outline-none
-                                ${isSelected ? 'bg-teal-600 text-white shadow-md ring-2 ring-teal-300' : ''}
-                                ${!isSelected && selectable ? 'bg-teal-50/40 border border-teal-300 hover:bg-teal-100 text-teal-700' : ''}
-                                ${!selectable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}
-                              `}
-                              disabled={!selectable}
-                            >
-                              {isSelected ? 'Đã chọn' : (selectable ? 'Chọn' : '—')}
-                            </button>
-                  </div>
+                          <th 
+                            key={i} 
+                            className={`border-2 border-gray-300 p-3 text-center font-bold min-w-[120px] ${
+                              isToday ? "bg-teal-100 border-teal-400" : "bg-gray-50"
+                            }`}
+                          >
+                            <div className={`text-xs uppercase tracking-wide ${isToday ? "text-teal-700" : "text-gray-600"}`}>
+                              {dayName}
+                            </div>
+                            <div className={`text-lg font-bold mt-1 ${isToday ? "text-teal-700" : "text-gray-800"}`}>
+                              {d.getDate()}-{d.getMonth() + 1}
+                            </div>
+                            {isToday && (
+                              <div className="text-xs text-teal-600 font-semibold mt-1">Hôm nay</div>
+                            )}
+                          </th>
                         );
                       })}
-                  </div>
+                    </tr>
+                  </thead>
+                  
+                  <tbody>
+                    {Object.entries(SLOT_TIMES).map(([slotKey, slotTime], slotIdx) => (
+                      <tr key={slotKey} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="border-2 border-gray-300 p-4 bg-gradient-to-r from-gray-50 to-gray-100 font-semibold text-gray-700">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-500">Ca {slotIdx + 1}</span>
+                            <span className="text-sm">{slotTime}</span>
+                          </div>
+                        </td>
+                        {Array.from({ length: 7 }, (_, i) => {
+                          const d = new Date(weekStart);
+                          d.setDate(weekStart.getDate() + i);
+                          // Use local date format to avoid timezone issues
+                          const year = d.getFullYear();
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const dateStr = `${year}-${month}-${day}`;
+                          
+                          const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const isPast = d < today;
+                          const selectable = available && !isPast;
+                          const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                          const isToday = d.toDateString() === new Date().toDateString();
+                          
+                          return (
+                            <td
+                              key={dateStr + slotKey}
+                              className={`border-2 border-gray-300 p-2 text-center transition-all duration-200 ${
+                                isPast ? "bg-gray-100 opacity-60" : ""
+                              } ${
+                                !isPast && selectable ? "hover:bg-teal-50 hover:border-teal-300" : ""
+                              } ${
+                                isToday ? "bg-teal-50/30" : isPast ? "bg-gray-100" : "bg-white"
+                              }`}
+                            >
+                              {isSelected ? (
+                                <div className="flex items-center justify-center gap-1 text-teal-700 font-semibold py-2">
+                                  <Check size={16} />
+                                  Đã chọn
+                                </div>
+                              ) : selectable ? (
+                                <Button
+                                  size="sm"
+                                  color="primary"
+                                  variant="flat"
+                                  className="w-full"
+                                  onPress={() => {
+                                    handleDateChange(dateStr);
+                                    setSelectedSlot(slotKey);
+                                  }}
+                                >
+                                  Chọn
+                                </Button>
+                              ) : (
+                                <span className="text-gray-400 py-2 block">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     ))}
-                  </div>
+                  </tbody>
+                </table>
               </div>
 
               {/* Legend */}
               <div className="flex items-center justify-end gap-6 text-sm text-gray-600 pt-3">
-                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-600"></span>Đã chọn</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-teal-100 border border-teal-300"></span>Có thể đặt</div>
-                <div className="flex items-center gap-2"><span className="inline-block w-3.5 h-3.5 rounded-md bg-gray-100"></span>Không khả dụng</div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded bg-white border-2 border-teal-600"></span>
+                  Đã chọn
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded bg-white border-2 border-gray-300"></span>
+                  Có thể đặt
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 rounded bg-gray-100 border-2 border-gray-300"></span>
+                  Không khả dụng
+                </div>
               </div>
             </div>
 
