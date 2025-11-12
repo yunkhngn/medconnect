@@ -698,175 +698,7 @@ export default function DatLichKham() {
                 Lọc và xem hồ sơ bác sĩ, sau đó chọn lịch trống trong tuần. Chúng tôi gợi ý các bác sĩ nổi bật theo chuyên khoa và khu vực của bạn.
               </p>
             </div>
-            {previewDoctor && (
-              <Card shadow="lg" className="rounded-2xl overflow-hidden">
-                <div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 text-white">
-                  <div className="flex items-center gap-5">
-                    <Avatar
-                      src={previewDoctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(previewDoctor.name)}&background=0D9488&color=fff`}
-                      className="w-24 h-24 ring-4 ring-white/30"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-3xl font-extrabold leading-tight truncate">{previewDoctor.name}</h3>
-                        <Chip variant="flat" color="primary" size="sm" className="bg-white/20 text-white">{SPECIALTY_MAP[previewDoctor.specialty] || previewDoctor.specialty}</Chip>
-                      </div>
-                      <p className="text-white/90 mt-2 text-sm">
-                        {previewDoctor.bio || "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
-                      </p>
-                    </div>
-                    <div className="hidden md:flex items-center gap-2">
-                      <Button size="sm" variant="bordered" className="border-white/50 text-white" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
-                      <Button size="sm" color="primary" className="bg-white text-teal-700" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
-                    </div>
-                  </div>
-                </div>
-                <CardBody className="p-6 space-y-6">
-                  {/* Stats (minimal) */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
-                      <div className="flex items-center gap-2 text-gray-700"><Star size={18} className="text-yellow-500" /><span className="text-sm">Đánh giá</span></div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">
-                          {loadingFeedback ? "..." : (doctorFeedbackSummary?.averageRating?.toFixed(1) || previewDoctor.rating || "—")}
-                        </p>
-                        {doctorFeedbackSummary?.totalFeedbacks > 0 && (
-                          <p className="text-xs text-gray-500">({doctorFeedbackSummary.totalFeedbacks} đánh giá)</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
-                      <div className="flex items-center gap-2 text-gray-700"><Award size={18} className="text-teal-600" /><span className="text-sm">Năm KN</span></div>
-                      <p className="text-2xl font-bold">{previewDoctor.experience_years || previewDoctor.experienceYears || "—"}</p>
-                    </div>
-                    {doctorFeedbackSummary?.totalFeedbacks > 0 && (
-                      <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-2 text-gray-700"><MessageSquare size={18} className="text-blue-500" /><span className="text-sm">Feedback</span></div>
-                        <p className="text-2xl font-bold">{doctorFeedbackSummary.totalFeedbacks}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Contacts */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Điện thoại</p>
-                      <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Email</p>
-                      <p className="font-medium truncate">{previewDoctor.email || "doctor@medconnect.vn"}</p>
-                    </div>
-                  </div>
-
-                  {/* Education & License */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Trình độ</p>
-                      <p className="font-medium">{previewDoctor.education_level || "—"}</p>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Chứng chỉ hành nghề</p>
-                      <p className="font-medium">{previewDoctor.licenseId ? `#${previewDoctor.licenseId}` : "—"}</p>
-                    </div>
-                  </div>
-
-                  {/* Address + Map (moved below, bigger) */}
-                  <div className="space-y-2">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-500">Địa chỉ phòng khám</p>
-                      <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
-                    </div>
-                    <div className="rounded-xl overflow-hidden bg-gray-100">
-                      {originAddr && destAddr && process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ? (
-                        <RouteMap
-                          originAddress={originAddr}
-                          destinationAddress={destAddr}
-                          apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}
-                        />
-                      ) : (
-                        <>
-                          {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
-                          {!loadingMap && embedUrl && (
-                            <iframe
-                              src={embedUrl}
-                              className="w-full h-96 border-0"
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
-                              allowFullScreen
-                            />
-                          )}
-                          {!loadingMap && !embedUrl && mapUrl && (
-                            <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
-                          )}
-                          {!loadingMap && !embedUrl && !mapUrl && mapError && (
-                            <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
-                          )}
-                        </>
-                      )}
-                      {routeUrl && (
-                        <div className="p-3 bg-white/70 border-t flex justify-end">
-                          <Button as={"a"} href={routeUrl} target="_blank" rel="noopener" color="primary" size="sm">
-                            Mở trên Google Maps
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Real Feedback Reviews */}
-                  <div className="mt-2">
-                    <p className="font-semibold mb-2 flex items-center gap-2">
-                      <MessageSquare size={18} />
-                      {loadingFeedback ? "Đang tải đánh giá..." : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? "3 đánh giá gần nhất" : "Chưa có đánh giá"}
-                    </p>
-                    {loadingFeedback ? (
-                      <div className="text-center py-4 text-gray-500">Đang tải...</div>
-                    ) : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? (
-                      <div className="space-y-2 text-sm">
-                        {doctorFeedbackSummary.recentFeedbacks.map((fb, idx) => (
-                          <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-gray-900">{fb.patientName || 'Bệnh nhân'}</span>
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    size={14}
-                                    className={`${
-                                      star <= fb.rating
-                                        ? 'text-yellow-400 fill-current'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            {fb.comment && (
-                              <p className="mt-1 text-gray-700">"{fb.comment}"</p>
-                            )}
-                            {fb.createdAt && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-4 rounded-lg bg-gray-50 text-center text-gray-500 text-sm">
-                        Chưa có đánh giá nào cho bác sĩ này
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex md:hidden gap-3 mt-5">
-                    <Button variant="light" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
-                    <Button color="primary" onPress={() => handleSelectDoctor(previewDoctor)}>Xem lịch & đặt</Button>
-                  </div>
-                </CardBody>
-              </Card>
-            )}
+            
             {/* Filters */}
             <div className="space-y-4 bg-white/70 p-4 rounded-2xl shadow-sm">
               <div className="grid grid-cols-12 gap-3 items-stretch">
@@ -1006,6 +838,192 @@ export default function DatLichKham() {
                 </Card>
               ))}
             </div>
+            )}
+            
+            {/* Preview Doctor Card - Moved Below List */}
+            {previewDoctor && (
+              <Card shadow="lg" className="rounded-2xl overflow-hidden mt-6">
+                <div className="bg-gradient-to-r from-teal-600 to-cyan-600 p-6 text-white">
+                  <div className="flex items-center gap-5">
+                    <Avatar
+                      src={previewDoctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(previewDoctor.name)}&background=0D9488&color=fff`}
+                      className="w-24 h-24 ring-4 ring-white/30"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-3xl font-extrabold leading-tight truncate">{previewDoctor.name}</h3>
+                        <Chip variant="flat" color="primary" size="sm" className="bg-white/20 text-white">{SPECIALTY_MAP[previewDoctor.specialty] || previewDoctor.specialty}</Chip>
+                      </div>
+                      <p className="text-white/90 mt-2 text-sm">
+                        {previewDoctor.bio || "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
+                      </p>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2">
+                      <Button size="sm" variant="bordered" className="border-white/50 text-white" onPress={() => setPreviewDoctor(null)}>Đóng</Button>
+                    </div>
+                  </div>
+                </div>
+                <CardBody className="p-6 space-y-6">
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2 text-gray-700"><Star size={18} className="text-yellow-500" /><span className="text-sm">Đánh giá</span></div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">
+                          {loadingFeedback ? "..." : (doctorFeedbackSummary?.averageRating?.toFixed(1) || previewDoctor.rating || "—")}
+                        </p>
+                        {doctorFeedbackSummary?.totalFeedbacks > 0 && (
+                          <p className="text-xs text-gray-500">({doctorFeedbackSummary.totalFeedbacks} đánh giá)</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2 text-gray-700"><Award size={18} className="text-teal-600" /><span className="text-sm">Năm KN</span></div>
+                      <p className="text-2xl font-bold">{previewDoctor.experience_years || previewDoctor.experienceYears || "—"}</p>
+                    </div>
+                    {doctorFeedbackSummary?.totalFeedbacks > 0 && (
+                      <div className="rounded-xl p-4 bg-white/80 flex items-center justify-between shadow-sm">
+                        <div className="flex items-center gap-2 text-gray-700"><MessageSquare size={18} className="text-blue-500" /><span className="text-sm">Feedback</span></div>
+                        <p className="text-2xl font-bold">{doctorFeedbackSummary.totalFeedbacks}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contacts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Điện thoại</p>
+                      <p className="font-medium">{previewDoctor.phone || "+84 000 000 000"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Email</p>
+                      <p className="font-medium truncate">{previewDoctor.email || "doctor@medconnect.vn"}</p>
+                    </div>
+                  </div>
+
+                  {/* Education & License */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Trình độ</p>
+                      <p className="font-medium">{previewDoctor.education_level || "—"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Chứng chỉ hành nghề</p>
+                      <p className="font-medium">{previewDoctor.licenseId ? `#${previewDoctor.licenseId}` : "—"}</p>
+                    </div>
+                  </div>
+
+                  {/* Address + Map */}
+                  <div className="space-y-2">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-500">Địa chỉ phòng khám</p>
+                      <p className="font-medium">{previewDoctor.displayAddress || previewDoctor.clinicAddress || previewDoctor.province_name || "—"}</p>
+                    </div>
+                    <div className="rounded-xl overflow-hidden bg-gray-100">
+                      {originAddr && destAddr && process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ? (
+                        <RouteMap
+                          originAddress={originAddr}
+                          destinationAddress={destAddr}
+                          apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY}
+                        />
+                      ) : (
+                        <>
+                          {loadingMap && <div className="h-80 animate-pulse bg-gray-200" />}
+                          {!loadingMap && embedUrl && (
+                            <iframe
+                              src={embedUrl}
+                              className="w-full h-96 border-0"
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              allowFullScreen
+                            />
+                          )}
+                          {!loadingMap && !embedUrl && mapUrl && (
+                            <img src={mapUrl} alt="Vị trí phòng khám" className="w-full h-96 object-cover" onError={() => { setMapError(true); setMapUrl(""); }} />
+                          )}
+                          {!loadingMap && !embedUrl && !mapUrl && mapError && (
+                            <div className="h-80 flex items-center justify-center text-sm text-gray-500">Không thể tải bản đồ cho địa chỉ này</div>
+                          )}
+                        </>
+                      )}
+                      {routeUrl && (
+                        <div className="p-3 bg-white/70 border-t flex justify-end">
+                          <Button as={"a"} href={routeUrl} target="_blank" rel="noopener" color="primary" size="sm">
+                            Mở trên Google Maps
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Feedback Reviews */}
+                  <div className="mt-2">
+                    <p className="font-semibold mb-2 flex items-center gap-2">
+                      <MessageSquare size={18} />
+                      {loadingFeedback ? "Đang tải đánh giá..." : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? "3 đánh giá gần nhất" : "Chưa có đánh giá"}
+                    </p>
+                    {loadingFeedback ? (
+                      <div className="text-center py-4 text-gray-500">Đang tải...</div>
+                    ) : doctorFeedbackSummary?.recentFeedbacks?.length > 0 ? (
+                      <div className="space-y-2 text-sm">
+                        {doctorFeedbackSummary.recentFeedbacks.map((fb, idx) => (
+                          <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-gray-900">{fb.patientName || 'Bệnh nhân'}</span>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    size={14}
+                                    className={`${
+                                      star <= fb.rating
+                                        ? 'text-yellow-400 fill-current'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {fb.comment && (
+                              <p className="mt-1 text-gray-700">"{fb.comment}"</p>
+                            )}
+                            {fb.createdAt && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-lg bg-gray-50 text-center text-gray-500 text-sm">
+                        Chưa có đánh giá nào cho bác sĩ này
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons - Bigger at bottom */}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8 pt-6 border-t border-gray-200">
+                    <Button 
+                      variant="bordered" 
+                      size="lg"
+                      className="flex-1"
+                      onPress={() => setPreviewDoctor(null)}
+                    >
+                      Đóng
+                    </Button>
+                    <Button 
+                      color="primary" 
+                      size="lg"
+                      className="flex-1 font-semibold text-lg"
+                      onPress={() => handleSelectDoctor(previewDoctor)}
+                      endContent={<ChevronRight size={20} />}
+                    >
+                      Xem lịch & đặt
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
             )}
           </CardBody>
         </Card>
