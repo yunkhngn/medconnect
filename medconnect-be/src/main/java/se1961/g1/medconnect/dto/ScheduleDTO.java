@@ -3,6 +3,7 @@ package se1961.g1.medconnect.dto;
 import lombok.Data;
 import se1961.g1.medconnect.enums.ScheduleStatus;
 import se1961.g1.medconnect.enums.Slot;
+import se1961.g1.medconnect.pojo.Appointment;
 import se1961.g1.medconnect.pojo.Schedule;
 
 import java.time.LocalDate;

@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import se1961.g1.medconnect.enums.PaymentStatus;
-
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
