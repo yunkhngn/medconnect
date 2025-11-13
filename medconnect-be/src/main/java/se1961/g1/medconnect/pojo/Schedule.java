@@ -9,7 +9,6 @@ import se1961.g1.medconnect.enums.ScheduleStatus;
 import se1961.g1.medconnect.enums.Slot;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 @Entity
 @Table(name = "Schedule", uniqueConstraints = {@UniqueConstraint(

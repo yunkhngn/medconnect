@@ -153,7 +153,6 @@ public class AccessToken2 {
         try {
             byte[] data = Utils.decompress(Utils.base64Decode(token.substring(Utils.VERSION_LENGTH)));
             ByteBuf buff = new ByteBuf(data);
-            String signature = buff.readString();
             this.appId = buff.readString();
             this.issueTs = buff.readInt();
             this.expire = buff.readInt();
