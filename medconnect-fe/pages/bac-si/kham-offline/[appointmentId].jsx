@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Button, Card, CardBody, CardHeader, Input, Textarea, Select, SelectItem, Chip, Divider } from "@heroui/react";
-import { Calendar, Save, ArrowLeft, Plus, Clock, FileText, Stethoscope, Pill, AlertCircle, X } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Input, Textarea, Select, SelectItem, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
+import { Calendar, Save, ArrowLeft, Plus, Clock, FileText, Stethoscope, Pill, AlertCircle, X, Sparkles, Loader2 } from "lucide-react";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import Grid from "@/components/layouts/Grid";
 import ToastNotification from "@/components/ui/ToastNotification";
@@ -107,6 +107,10 @@ export default function OfflineExamDetailPage() {
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
   const [icdCode, setIcdCode] = useState("");
   const [medicationInput, setMedicationInput] = useState({ name: "", dosage: "", frequency: "", duration: "" });
+  const [aiSummary, setAiSummary] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [hasAiSummary, setHasAiSummary] = useState(false);
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onOpenChange: onConfirmOpenChange } = useDisclosure();
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => setUser(u));
@@ -191,7 +195,74 @@ export default function OfflineExamDetailPage() {
   const addMedication = () => { if(!medicationInput.name.trim()) return; setRecord((p)=>({...p, prescriptions:[...p.prescriptions, {...medicationInput}] })); setMedicationInput({name:"",dosage:"",frequency:"",duration:""}); };
   const removeMedication = (i) => setRecord((p)=>({...p, prescriptions:p.prescriptions.filter((_,idx)=>idx!==i)}));
 
-  const handleSave = async () => {
+  // Generate AI summary from prescription data
+  const generateAISummary = async () => {
+    setIsGeneratingSummary(true);
+    try {
+      // Simulate AI generation - in production, call actual AI API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const summaryParts = [];
+      
+      // Add chief complaint
+      if (record.chief_complaint) {
+        summaryParts.push(`Bệnh nhân đến khám với lý do: ${record.chief_complaint}.`);
+      }
+      
+      // Add diagnosis
+      if (record.diagnosis.primary) {
+        summaryParts.push(`Chẩn đoán chính: ${record.diagnosis.primary}.`);
+      }
+      if (record.diagnosis.secondary && record.diagnosis.secondary.length > 0) {
+        summaryParts.push(`Chẩn đoán phụ: ${record.diagnosis.secondary.join(", ")}.`);
+      }
+      if (record.diagnosis.icd_codes && record.diagnosis.icd_codes.length > 0) {
+        summaryParts.push(`Mã ICD-10: ${record.diagnosis.icd_codes.join(", ")}.`);
+      }
+      
+      // Add vital signs if available
+      const vitalSigns = record.vital_signs || {};
+      const vitalParts = [];
+      if (vitalSigns.temperature) vitalParts.push(`Nhiệt độ: ${vitalSigns.temperature}°C`);
+      if (vitalSigns.blood_pressure) vitalParts.push(`Huyết áp: ${vitalSigns.blood_pressure} mmHg`);
+      if (vitalSigns.heart_rate) vitalParts.push(`Nhịp tim: ${vitalSigns.heart_rate} bpm`);
+      if (vitalParts.length > 0) {
+        summaryParts.push(`Dấu hiệu sinh tồn: ${vitalParts.join(", ")}.`);
+      }
+      
+      // Add prescriptions
+      if (record.prescriptions && record.prescriptions.length > 0) {
+        const meds = record.prescriptions.map(m => 
+          `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`
+        ).join(", ");
+        summaryParts.push(`Đơn thuốc: ${meds}.`);
+      }
+      
+      // Add physical exam if available
+      const physicalExam = record.physical_exam || {};
+      const examParts = [];
+      if (physicalExam.general) examParts.push(`Tổng quát: ${physicalExam.general}`);
+      if (physicalExam.cardiovascular) examParts.push(`Tim mạch: ${physicalExam.cardiovascular}`);
+      if (physicalExam.respiratory) examParts.push(`Hô hấp: ${physicalExam.respiratory}`);
+      if (examParts.length > 0) {
+        summaryParts.push(`Khám lâm sàng: ${examParts.join("; ")}.`);
+      }
+      
+      const summary = summaryParts.length > 0 
+        ? summaryParts.join(" ") 
+        : "Chưa có đủ thông tin để tạo tóm tắt.";
+      
+      setAiSummary(summary);
+      setHasAiSummary(true);
+    } catch (error) {
+      toast.error("Không thể tạo tóm tắt AI");
+      console.error("AI Summary generation error:", error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const performSave = async () => {
     if (!user) { toast.error("Vui lòng đăng nhập"); return; }
     if (!appointmentId || !patientUserId) { toast.error("Thiếu thông tin lịch hẹn/bệnh nhân"); return; }
     if (!record.chief_complaint || !record.diagnosis.primary) { toast.error("Nhập lý do khám và chẩn đoán chính"); return; }
@@ -200,11 +271,30 @@ export default function OfflineExamDetailPage() {
       const token = await user.getIdToken();
       // Merge với bản ghi cũ để không làm mất dữ liệu khi cập nhật
       const mergedToSave = isFinished && previousEntry ? mergeRecord(previousEntry, record) : record;
+      
+      // Merge AI summary into notes if exists
+      let finalNotes = mergedToSave.notes || "";
+      if (hasAiSummary && aiSummary.trim()) {
+        if (finalNotes) {
+          finalNotes = `${finalNotes}\n\n---\n\nTóm tắt AI:\n${aiSummary}`;
+        } else {
+          finalNotes = `Tóm tắt AI:\n${aiSummary}`;
+        }
+      }
+      
       const doctor_name = appointmentInfo?.doctor?.name || user?.displayName || "";
       const doctor_id = appointmentInfo?.doctor?.id || user?.uid || "";
       const visit_time = mergedToSave.visit_time || new Date().toTimeString().slice(0,5);
       const visit_id = previousEntry?.visit_id || mergedToSave.visit_id || `V${Date.now()}`;
-      const entry = { visit_id, ...mergedToSave, visit_time, doctor_name, doctor_id, appointment_id:Number(appointmentId) };
+      const entry = { 
+        visit_id, 
+        ...mergedToSave, 
+        notes: finalNotes,
+        visit_time, 
+        doctor_name, 
+        doctor_id, 
+        appointment_id:Number(appointmentId) 
+      };
       const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ entry }) });
       if (!resp.ok) throw new Error((await resp.json()).error || "Lưu bệnh án thất bại");
       if (!isFinished) {
@@ -581,7 +671,63 @@ export default function OfflineExamDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Ghi chú - Section 4 */}
+      {/* AI Summary - Section 4 */}
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-indigo-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Sparkles className="text-indigo-600" size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">Tóm tắt AI</h2>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="pt-6 space-y-4">
+          <div className="flex gap-2">
+            <Button
+              color="secondary"
+              variant="flat"
+              onClick={generateAISummary}
+              isLoading={isGeneratingSummary}
+              startContent={isGeneratingSummary ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+              className="font-medium"
+            >
+              {isGeneratingSummary ? "Đang tạo tóm tắt..." : "Tạo tóm tắt"}
+            </Button>
+            {hasAiSummary && (
+              <Button
+                variant="light"
+                color="danger"
+                onClick={() => {
+                  setAiSummary("");
+                  setHasAiSummary(false);
+                }}
+                className="font-medium"
+              >
+                Xóa tóm tắt
+              </Button>
+            )}
+          </div>
+          {hasAiSummary && (
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Tóm tắt AI sẽ xuất hiện ở đây..."
+                value={aiSummary}
+                onValueChange={setAiSummary}
+                variant="bordered"
+                minRows={4}
+                classNames={{
+                  input: "font-medium text-gray-900",
+                  inputWrapper: "border-gray-300 hover:border-indigo-400 transition-colors"
+                }}
+              />
+              <p className="text-xs text-gray-500 italic">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Ghi chú - Section 5 */}
       <Card className="shadow-md border-0 bg-gradient-to-br from-white to-purple-50/30">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
@@ -634,7 +780,43 @@ export default function OfflineExamDetailPage() {
   return (
     <DoctorFrame title={`Khám offline ca ${appointmentId || ""}`}>
       <ToastNotification toast={toast} />
-        <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+      <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+      
+      {/* Confirm Modal for AI Summary */}
+      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange}>
+        <ModalContent>
+          <ModalHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="text-amber-500" size={20} />
+              <span>Xác nhận lưu với tóm tắt AI</span>
+            </div>
+          </ModalHeader>
+          <ModalBody>
+            <p className="text-gray-700">
+              Bạn đã sử dụng tóm tắt được tạo bởi AI. Vui lòng xác nhận rằng bạn đã đọc kỹ và kiểm tra nội dung tóm tắt này trước khi lưu.
+            </p>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Nội dung tóm tắt AI:</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{aiSummary}</p>
+            </div>
+            <p className="text-xs text-gray-500 italic mt-3">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onConfirmOpenChange}>
+              Hủy
+            </Button>
+            <Button
+              color="primary"
+              onPress={() => {
+                onConfirmOpenChange();
+                performSave();
+              }}
+            >
+              Đã đọc kỹ, xác nhận lưu
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </DoctorFrame>
   );
 }

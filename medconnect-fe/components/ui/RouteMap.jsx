@@ -75,11 +75,19 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
           shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
         });
       }
-      const from = fromOverride || (await geocode(originAddress));
       const to = await geocode(destinationAddress);
-      if (aborted || !from || !to || !containerRef.current || !LRef) return;
+      if (aborted || !to || !containerRef.current || !LRef) return;
 
-      mapInstance = LRef.map(containerRef.current).setView([from.lat, from.lon], 13);
+      // Mặc định chỉ hiển thị marker phòng khám (không có route)
+      // Chỉ vẽ route khi có fromOverride (vị trí hiện tại)
+      const from = fromOverride || (originAddress ? await geocode(originAddress) : null);
+      
+      // Set view center: nếu có from thì center giữa 2 điểm, nếu không thì center ở destination
+      const centerLat = from ? (from.lat + to.lat) / 2 : to.lat;
+      const centerLon = from ? (from.lon + to.lon) / 2 : to.lon;
+      const zoom = from ? 13 : 14;
+      
+      mapInstance = LRef.map(containerRef.current).setView([centerLat, centerLon], zoom);
       LRef.tileLayer(
         `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${apiKey}`,
         { attribution: "© OpenStreetMap contributors" }
@@ -97,41 +105,51 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
       const homeIcon = makeDivIcon('#22c55e', '🏠');
       const officeIcon = makeDivIcon('#0ea5a9', '🏥');
 
-      LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
+      // Chỉ vẽ origin marker khi có from (từ vị trí hiện tại hoặc originAddress)
+      if (from) {
+        LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
+      }
+      // Luôn vẽ destination marker (phòng khám)
       LRef.marker([to.lat, to.lon], { icon: officeIcon }).addTo(mapInstance);
 
-      try {
-        const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
-        let json = null;
-        const cached = sessionStorage.getItem(rKey);
-        if (cached) {
-          json = JSON.parse(cached);
-        } else {
-          const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
-          const res = await fetch(routeUrl);
-          if (res.ok) json = await res.json();
-          if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
-        }
-        if (json) {
-          const geom = json?.features?.[0]?.geometry;
-          let coords = [];
-          if (geom?.type === "LineString") coords = geom.coordinates;
-          else if (geom?.type === "MultiLineString") coords = geom.coordinates.flat();
-          if (coords.length) {
-            const latlngs = coords.map(([lon, lat]) => [lat, lon]);
-            const poly = LRef.polyline(latlngs, { color: "#2563EB", weight: 5 }).addTo(mapInstance);
-            mapInstance.fitBounds(poly.getBounds(), { padding: [20, 20] });
+      // Chỉ vẽ route khi có from (đặc biệt là từ vị trí hiện tại)
+      if (from) {
+        try {
+          const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
+          let json = null;
+          const cached = sessionStorage.getItem(rKey);
+          if (cached) {
+            json = JSON.parse(cached);
           } else {
-            mapInstance.fitBounds(
-              LRef.latLngBounds([
-                [from.lat, from.lon],
-                [to.lat, to.lon],
-              ])
-            );
+            const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
+            const res = await fetch(routeUrl);
+            if (res.ok) json = await res.json();
+            if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
           }
+          if (json) {
+            const geom = json?.features?.[0]?.geometry;
+            let coords = [];
+            if (geom?.type === "LineString") coords = geom.coordinates;
+            else if (geom?.type === "MultiLineString") coords = geom.coordinates.flat();
+            if (coords.length) {
+              const latlngs = coords.map(([lon, lat]) => [lat, lon]);
+              const poly = LRef.polyline(latlngs, { color: "#2563EB", weight: 5 }).addTo(mapInstance);
+              mapInstance.fitBounds(poly.getBounds(), { padding: [20, 20] });
+            } else {
+              mapInstance.fitBounds(
+                LRef.latLngBounds([
+                  [from.lat, from.lon],
+                  [to.lat, to.lon],
+                ])
+              );
+            }
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
+      } else {
+        // Không có route, chỉ fit bounds cho destination marker
+        mapInstance.setView([to.lat, to.lon], 14);
       }
     };
 
@@ -169,9 +187,9 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
           <button
             onClick={() => setFromOverride(null)}
             className="px-3 py-1.5 rounded-lg bg-white/90 border text-sm hover:bg-white"
-            title="Quay lại dùng địa chỉ hồ sơ"
+            title="Xem lại vị trí phòng khám"
           >
-            Dùng địa chỉ hồ sơ
+            Xem vị trí phòng khám
           </button>
         ) : (
           <button
@@ -180,7 +198,7 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
             disabled={isGettingLocation}
             title="Sử dụng vị trí hiện tại để tính đường đi"
           >
-            {isGettingLocation ? 'Đang lấy vị trí...' : 'Dùng vị trí hiện tại'}
+            {isGettingLocation ? 'Đang lấy vị trí...' : 'Chỉ đường đi'}
           </button>
         )}
       </div>

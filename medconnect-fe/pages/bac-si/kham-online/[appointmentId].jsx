@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Button, Card, CardHeader, CardBody, Avatar, Input, Divider, Chip, Textarea, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send, Search, Activity, CheckCircle, AlertCircle, Star } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Maximize2, MessageSquare, User, Calendar, Clock, Phone, Mail, MapPin, FileText, Camera, Send, Search, Activity, CheckCircle, AlertCircle, Star, Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { auth } from "@/lib/firebase";
@@ -61,6 +61,10 @@ export default function DoctorOnlineExamRoom() {
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
   const [medicationInput, setMedicationInput] = useState({ name: "", dosage: "", frequency: "", duration: "" });
   const draftKey = typeof window !== 'undefined' && appointmentId ? `emr_draft_${appointmentId}` : null;
+  const [aiSummary, setAiSummary] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [hasAiSummary, setHasAiSummary] = useState(false);
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onOpenChange: onConfirmOpenChange } = useDisclosure();
   // EMR profile in modal (hooks must be before any early returns)
   const [emrEntries, setEmrEntries] = useState([]);
   const [emrLoading, setEmrLoading] = useState(false);
@@ -496,7 +500,63 @@ export default function DoctorOnlineExamRoom() {
     }
   };
 
-  const handleEndAppointment = async () => {
+  // Generate AI summary from EMR data
+  const generateAISummary = async () => {
+    setIsGeneratingSummary(true);
+    try {
+      // Simulate AI generation - in production, call actual AI API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const summaryParts = [];
+      
+      // Add chief complaint
+      if (emr.chief_complaint) {
+        summaryParts.push(`Bệnh nhân đến khám với lý do: ${emr.chief_complaint}.`);
+      }
+      
+      // Add diagnosis
+      if (emr.diagnosis_primary) {
+        summaryParts.push(`Chẩn đoán chính: ${emr.diagnosis_primary}.`);
+      }
+      if (emr.secondary && emr.secondary.length > 0) {
+        summaryParts.push(`Chẩn đoán phụ: ${emr.secondary.join(", ")}.`);
+      }
+      if (emr.icd_codes && emr.icd_codes.length > 0) {
+        summaryParts.push(`Mã ICD-10: ${emr.icd_codes.join(", ")}.`);
+      }
+      
+      // Add vital signs if available
+      const vitalSigns = emr.vital_signs || {};
+      const vitalParts = [];
+      if (vitalSigns.temperature) vitalParts.push(`Nhiệt độ: ${vitalSigns.temperature}°C`);
+      if (vitalSigns.blood_pressure) vitalParts.push(`Huyết áp: ${vitalSigns.blood_pressure} mmHg`);
+      if (vitalSigns.heart_rate) vitalParts.push(`Nhịp tim: ${vitalSigns.heart_rate} bpm`);
+      if (vitalParts.length > 0) {
+        summaryParts.push(`Dấu hiệu sinh tồn: ${vitalParts.join(", ")}.`);
+      }
+      
+      // Add prescriptions
+      if (emr.prescriptions && emr.prescriptions.length > 0) {
+        const meds = emr.prescriptions.map(m => 
+          `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`
+        ).join(", ");
+        summaryParts.push(`Đơn thuốc: ${meds}.`);
+      }
+      
+      const summary = summaryParts.length > 0 
+        ? summaryParts.join(" ") 
+        : "Chưa có đủ thông tin để tạo tóm tắt.";
+      
+      setAiSummary(summary);
+      setHasAiSummary(true);
+    } catch (error) {
+      console.error("AI Summary generation error:", error);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const performEndAppointment = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return;
@@ -507,6 +567,16 @@ export default function DoctorOnlineExamRoom() {
         const draft = raw ? JSON.parse(raw) : null;
         const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? null;
         if (draft && patientUserId) {
+          // Merge AI summary into notes if exists
+          let finalNotes = draft.notes || "";
+          if (hasAiSummary && aiSummary.trim()) {
+            if (finalNotes) {
+              finalNotes = `${finalNotes}\n\n---\n\nTóm tắt AI:\n${aiSummary}`;
+            } else {
+              finalNotes = `Tóm tắt AI:\n${aiSummary}`;
+            }
+          }
+          
           const medicalEntry = {
             visit_id: `V${Date.now()}`,
             visit_date: new Date().toISOString().split('T')[0],
@@ -519,7 +589,7 @@ export default function DoctorOnlineExamRoom() {
             diagnosis: { primary: draft.diagnosis_primary || '', icd_codes: draft.icd_codes || [], secondary: draft.secondary || [] },
             vital_signs: draft.vital_signs || {},
             prescriptions: draft.prescriptions || [],
-            notes: draft.notes || ''
+            notes: finalNotes
           };
           await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, {
             method: 'POST',
@@ -543,6 +613,16 @@ export default function DoctorOnlineExamRoom() {
     } catch (error) {
       console.error("Failed to end appointment:", error);
     }
+  };
+
+  const handleEndAppointment = async () => {
+    // If AI summary exists, show confirm modal
+    if (hasAiSummary && aiSummary.trim()) {
+      onConfirmOpen();
+      return;
+    }
+    
+    await performEndAppointment();
   };
 
   if (loading) return (
@@ -705,6 +785,54 @@ export default function DoctorOnlineExamRoom() {
           ) : (
             <div className="flex-1 h-full overflow-y-auto bg-white">
               <div className="p-6 space-y-8">
+                {/* AI Summary */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="text-indigo-600" size={18} />
+                    <label className="text-sm font-semibold">Tóm tắt AI</label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      color="secondary"
+                      variant="flat"
+                      size="sm"
+                      onClick={generateAISummary}
+                      isLoading={isGeneratingSummary}
+                      startContent={isGeneratingSummary ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                      className="font-medium"
+                    >
+                      {isGeneratingSummary ? "Đang tạo..." : "Tạo tóm tắt"}
+                    </Button>
+                    {hasAiSummary && (
+                      <Button
+                        variant="light"
+                        color="danger"
+                        size="sm"
+                        onClick={() => {
+                          setAiSummary("");
+                          setHasAiSummary(false);
+                        }}
+                        className="font-medium"
+                      >
+                        Xóa
+                      </Button>
+                    )}
+                  </div>
+                  {hasAiSummary && (
+                    <div className="space-y-2">
+                      <Textarea
+                        placeholder="Tóm tắt AI sẽ xuất hiện ở đây..."
+                        value={aiSummary}
+                        onValueChange={setAiSummary}
+                        variant="bordered"
+                        minRows={4}
+                        labelPlacement="outside"
+                      />
+                      <p className="text-xs text-gray-500 italic">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Ghi chú đưa lên đầu, rộng hơn */}
                 <Textarea
                   label="Ghi chú phiên khám"
@@ -1018,6 +1146,42 @@ export default function DoctorOnlineExamRoom() {
           <ModalFooter>
             <Button variant="light" onPress={() => { setShowExtendPrompt(false); handleEndAppointment(); }}>Kết thúc</Button>
             <Button color="primary" onPress={() => { setExtended(true); setShowExtendPrompt(false); setOneMinuteWarn(false); }}>Gia hạn 10 phút</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      
+      {/* Confirm Modal for AI Summary */}
+      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange}>
+        <ModalContent>
+          <ModalHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="text-amber-500" size={20} />
+              <span>Xác nhận lưu với tóm tắt AI</span>
+            </div>
+          </ModalHeader>
+          <ModalBody>
+            <p className="text-gray-700">
+              Bạn đã sử dụng tóm tắt được tạo bởi AI. Vui lòng xác nhận rằng bạn đã đọc kỹ và kiểm tra nội dung tóm tắt này trước khi lưu.
+            </p>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Nội dung tóm tắt AI:</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{aiSummary}</p>
+            </div>
+            <p className="text-xs text-gray-500 italic mt-3">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onConfirmOpenChange}>
+              Hủy
+            </Button>
+            <Button
+              color="primary"
+              onPress={() => {
+                onConfirmOpenChange();
+                performEndAppointment();
+              }}
+            >
+              Đã đọc kỹ, xác nhận lưu
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
