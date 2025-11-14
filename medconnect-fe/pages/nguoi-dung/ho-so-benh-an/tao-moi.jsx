@@ -41,6 +41,7 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import BHYTInput from "@/components/ui/BHYTInput";
 import AddressSelector from "@/components/ui/AddressSelector";
+import { getApiUrl } from "@/utils/api";
 import { useAddressData } from "@/hooks/useAddressData";
 
 export default function CreateEMRPage() {
@@ -105,7 +106,7 @@ export default function CreateEMRPage() {
     const loadPatientProfile = async () => {
       try {
         const token = await user.getIdToken();
-        const response = await fetch("http://localhost:8080/api/patient/profile", {
+        const response = await fetch(`${getApiUrl()}/patient/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -210,7 +211,7 @@ export default function CreateEMRPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch("http://localhost:8080/api/medical-photo/upload", {
+        const response = await fetch(`${getApiUrl()}/medical-photo/upload`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -391,7 +392,7 @@ export default function CreateEMRPage() {
         medical_records: [],
       };
 
-      const response = await fetch("http://localhost:8080/api/medical-records", {
+      const response = await fetch(`${getApiUrl()}/medical-records`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

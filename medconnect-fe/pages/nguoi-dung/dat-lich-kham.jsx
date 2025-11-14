@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useAddressData } from "@/hooks/useAddressData";
+import { getApiUrl, getBaseUrl } from "@/utils/api";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -198,7 +199,7 @@ export default function DatLichKham() {
   const fetchDoctors = async () => {
     setLoadingDoctors(true);
     try {
-      const response = await fetch("http://localhost:8080/doctor/dashboard/all");
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/all`);
       if (response.ok) {
         const data = await response.json();
         console.log("Fetched doctors:", data.length, "doctors");
@@ -284,7 +285,7 @@ export default function DatLichKham() {
       const results = {};
       try {
         const promises = dates.map(async (dateStr) => {
-          const resp = await fetch(`http://localhost:8080/api/appointments/doctor/${selectedDoctor.id}/available-slots?date=${dateStr}`);
+          const resp = await fetch(`${getApiUrl()}/appointments/doctor/${selectedDoctor.id}/available-slots?date=${dateStr}`);
           if (resp.ok) {
             const data = await resp.json();
             results[dateStr] = data.availableSlots || [];
@@ -306,7 +307,7 @@ export default function DatLichKham() {
     setLoadingSlots(true);
     try {
       const response = await fetch(
-        `http://localhost:8080/api/appointments/doctor/${selectedDoctor.id}/available-slots?date=${selectedDate}`
+        `${apiUrl}/appointments/doctor/${selectedDoctor.id}/available-slots?date=${selectedDate}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -331,7 +332,7 @@ export default function DatLichKham() {
     if (doctor && doctor.id) {
       setLoadingFeedback(true);
       try {
-        const response = await fetch(`http://localhost:8080/api/feedback/doctor/${doctor.id}/summary`);
+        const response = await fetch(`${getApiUrl()}/feedback/doctor/${doctor.id}/summary`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
@@ -434,7 +435,7 @@ export default function DatLichKham() {
       try {
         if (!previewDoctor || !user) { setRouteUrl(""); return; }
         const token = await user.getIdToken();
-        const res = await fetch('http://localhost:8080/api/patient/profile', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${getApiUrl()}/patient/profile`, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) { setRouteUrl(""); return; }
         const profile = await res.json();
         const addrParts = [];
@@ -505,7 +506,7 @@ export default function DatLichKham() {
     try {
       const token = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8080/api/appointments", {
+      const response = await fetch(`${getApiUrl()}/appointments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1364,4 +1365,3 @@ export default function DatLichKham() {
     </PatientFrame>
   );
 }
-

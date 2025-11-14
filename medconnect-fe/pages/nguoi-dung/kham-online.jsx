@@ -8,6 +8,7 @@ import Grid from "@/components/layouts/Grid";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import { auth } from "@/lib/firebase";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { getApiUrl, getBaseUrl } from "@/utils/api";
 import DOMPurify from 'dompurify';
 
 export default function PatientOnlineExamList() {
@@ -48,7 +49,7 @@ export default function PatientOnlineExamList() {
         const ids = (appointments || []).map(a => a.id || a.appointmentId).filter(Boolean);
         const results = await Promise.all(ids.map(async (id) => {
           try {
-            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            const resp = await fetch(`${getApiUrl()}/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             if (!resp.ok) return [id, { hasPaid: false }];
             const data = await resp.json();
             return [id, { hasPaid: !!(data.hasPaid || data.status === 'PAID'), status: data.status || (data.hasPaid ? 'PAID' : 'UNPAID') }];
@@ -79,7 +80,7 @@ export default function PatientOnlineExamList() {
       // Fetch appointment details to get full patient info
       let aptData = null;
       try {
-        const aptResp = await fetch(`http://localhost:8080/api/appointments/${apt.id}`, {
+        const aptResp = await fetch(`${getApiUrl()}/appointments/${apt.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (aptResp.ok) {
@@ -113,7 +114,7 @@ export default function PatientOnlineExamList() {
       
       if (patientUserId) {
         // Fetch medical record entries for this patient
-        const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`, {
+        const resp = await fetch(`${getApiUrl()}/medical-records/patient/${patientUserId}/entries`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -252,7 +253,7 @@ export default function PatientOnlineExamList() {
         }
       } else {
         // Fallback: try old endpoint
-        const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
+        const resp = await fetch(`${getApiUrl()}/medical-records/appointment/${apt.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (resp.ok) {
@@ -281,7 +282,7 @@ export default function PatientOnlineExamList() {
       const token = await user.getIdToken();
       const aptId = apt.id || apt.appointmentId;
       if (aptId) {
-        const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+        const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (feedbackResp.ok) {
@@ -315,7 +316,7 @@ export default function PatientOnlineExamList() {
           const token = await user.getIdToken();
           const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
           if (aptId) {
-            const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+            const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             if (feedbackResp.ok) {
@@ -348,7 +349,7 @@ export default function PatientOnlineExamList() {
       if (!user) return;
       const token = await user.getIdToken();
       const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
-      const response = await fetch('http://localhost:8080/api/feedback', {
+      const response = await fetch(`${getApiUrl()}/feedback`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -364,7 +365,7 @@ export default function PatientOnlineExamList() {
       if (data.success) {
         // Fetch feedback from server to get complete data
         try {
-          const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+          const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (feedbackResp.ok) {
@@ -404,7 +405,7 @@ export default function PatientOnlineExamList() {
       if (!user) return;
       
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/my?type=ONLINE`, {
+      const response = await fetch(`${getApiUrl()}/appointments/my?type=ONLINE`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -505,7 +506,7 @@ export default function PatientOnlineExamList() {
     try {
       const user = auth.currentUser; if (!user) return;
       const token = await user.getIdToken();
-      const resp = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/cancel`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+      const resp = await fetch(`${getApiUrl()}/appointments/${appointmentId}/cancel`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
       if (resp.ok) {
         setAppointments(prev => prev.map(a => ( (a.id||a.appointmentId)===appointmentId ? { ...a, status: 'CANCELLED' } : a)));
       }
@@ -1270,7 +1271,7 @@ export default function PatientOnlineExamList() {
                   if (!user) return;
                   const token = await user.getIdToken();
                   const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
-                  const response = await fetch('http://localhost:8080/api/reports', {
+                  const response = await fetch(`${getApiUrl()}/reports`, {
                     method: 'POST',
                     headers: {
                       'Authorization': `Bearer ${token}`,

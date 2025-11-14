@@ -9,6 +9,7 @@ import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
 import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
+import { getApiUrl } from "@/utils/api";
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
 
@@ -86,7 +87,7 @@ export default function PatientOnlineExamRoom() {
         const user = auth.currentUser;
         if (!user) return;
         const token = await user.getIdToken();
-        const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+        const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -163,7 +164,7 @@ export default function PatientOnlineExamRoom() {
     const fetchToken = async () => {
       try {
         const tokenResp = await fetch(
-          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+          `${getApiUrl()}/agora/token?channel=${appointmentId}&uid=${agoraUid}`
         );
         if (tokenResp.ok) {
           const data = await tokenResp.json();
@@ -195,7 +196,7 @@ export default function PatientOnlineExamRoom() {
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+        const response = await fetch(`${getApiUrl()}/feedback/appointment/${appointmentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -229,7 +230,7 @@ export default function PatientOnlineExamRoom() {
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8080/api/feedback', {
+      const response = await fetch(`${getApiUrl()}/feedback`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -246,7 +247,7 @@ export default function PatientOnlineExamRoom() {
       if (data.success) {
         // Fetch feedback from server to get complete data
         try {
-          const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+          const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${appointmentId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (feedbackResp.ok) {
@@ -323,7 +324,7 @@ export default function PatientOnlineExamRoom() {
       if (!user) return;
 
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+      const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -539,7 +540,7 @@ export default function PatientOnlineExamRoom() {
                       const user = auth.currentUser;
                       if (!user) return;
                       const token = await user.getIdToken();
-                      const response = await fetch('http://localhost:8080/api/reports', {
+                      const response = await fetch(`${getApiUrl()}/reports`, {
                         method: 'POST',
                         headers: {
                           'Authorization': `Bearer ${token}`,

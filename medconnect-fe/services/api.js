@@ -1,6 +1,9 @@
 // Centralized API configuration and helper functions
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Use centralized API utility
+import { getApiUrl } from '../utils/api';
+
+const API_BASE_URL = getApiUrl();
 
 /**
  * Helper to make authenticated API calls

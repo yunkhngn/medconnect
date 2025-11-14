@@ -5,6 +5,7 @@ import { Button, Card, CardBody, CardHeader, Divider, Modal, ModalContent, Modal
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
+import { getApiUrl } from "@/utils/api";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import DOMPurify from 'dompurify';
@@ -38,7 +39,7 @@ export default function AppointmentsPage() {
     setLoading(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("http://localhost:8080/api/appointments/my", {
+      const response = await fetch(`${getApiUrl()}/appointments/my`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -55,7 +56,7 @@ export default function AppointmentsPage() {
             const id = apt.id || apt.appointmentId;
             if (!id) return null;
             try {
-              const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, {
+              const resp = await fetch(`${getApiUrl()}/payment/appointment/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
               });
               if (resp.ok) {
@@ -162,7 +163,7 @@ export default function AppointmentsPage() {
       const token = await user.getIdToken();
       const id = apt.id || apt.appointmentId;
       if (!id) return;
-      const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${id}`, {
+      const resp = await fetch(`${getApiUrl()}/medical-records/appointment/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (resp.ok) {

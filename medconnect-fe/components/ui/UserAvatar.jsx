@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { User } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { useAvatar } from '@/hooks/useAvatar';
+import { getApiUrl } from '@/utils/api';
 
 /**
  * UserAvatar Component - Hiển thị avatar với priority:
@@ -34,7 +35,7 @@ const UserAvatar = forwardRef(({
         try {
           // Fetch custom avatar from backend
           const token = await firebaseUser.getIdToken();
-          const response = await fetch('http://localhost:8080/api/avatar', {
+          const response = await fetch(`${getApiUrl()}/avatar`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           

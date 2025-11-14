@@ -1,4 +1,5 @@
 // Utils for role-based redirects without AuthGuard dependency
+import { getApiUrl } from "./api";
 
 export const getRoleRedirectPath = (role) => {
   switch (role?.toUpperCase()) {
@@ -27,7 +28,7 @@ export const autoRedirectByUserRole = async (router, firebaseUser) => {
 
     // If no role in claims, try to get from backend
     if (!role) {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/user/role`, {
         headers: {
           'Authorization': `Bearer ${await firebaseUser.getIdToken()}`

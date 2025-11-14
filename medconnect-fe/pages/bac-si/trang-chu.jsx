@@ -34,6 +34,7 @@ import { Grid } from "@/components/layouts";
 import { auth } from "@/lib/firebase";
 import { ToastNotification } from "@/components/ui";
 import { useToast, useAvatar } from "@/hooks";
+import { getApiUrl, getBaseUrl } from "@/utils/api";
 
 export default function DoctorDashboard() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function DoctorDashboard() {
       const token = await firebaseUser.getIdToken();
       
       // Fetch doctor profile from backend
-      const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -106,7 +107,7 @@ export default function DoctorDashboard() {
       const endDate = new Date(today);
       endDate.setDate(today.getDate() + 30);
       
-      const url = new URL("http://localhost:8080/api/appointments/doctor");
+      const url = new URL(`${getApiUrl()}/appointments/doctor`);
       url.searchParams.append("startDate", startDate.toISOString().split('T')[0]);
       url.searchParams.append("endDate", endDate.toISOString().split('T')[0]);
       

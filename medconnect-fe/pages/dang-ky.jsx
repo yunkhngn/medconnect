@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { generateWelcomeEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
+import { getApiUrl } from "@/utils/api";
 
 export default function MedConnectRegister() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function MedConnectRegister() {
       await user.reload();
       const idToken = await user.getIdToken(true);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const apiUrl = getApiUrl();
       const body = {
         name: extra.name || user.displayName || "",
         email: extra.email || user.email || "",

@@ -85,7 +85,7 @@ const Nav = () => {
       await signOut(auth);
 
       // OPTIONAL: If you use a server-side session cookie, you can call your backend logout endpoint here
-      // await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/auth/logout`, {
+      // await fetch(`${getApiUrl()}/auth/logout`, {
       //   method: "POST",
       //   credentials: "include",
       // });

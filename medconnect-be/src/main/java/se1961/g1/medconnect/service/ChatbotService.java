@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @Service
 public class ChatbotService {
 
-    @Value("${gemini.api-key:${GEMINI_API_KEY:}}")
+    @Value("${gemini.api-key:}")
     private String geminiApiKey;
 
     private static final String DATASET_PATH = "dataset/";
@@ -134,8 +134,9 @@ public class ChatbotService {
     public String generateResponse(String userMessage) {
         try {
             if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-                System.err.println("[ChatbotService] GEMINI_API_KEY is not configured");
-                throw new RuntimeException("GEMINI_API_KEY chưa được cấu hình. Vui lòng kiểm tra environment variable.");
+                System.err.println("[ChatbotService] GEMINI_API_KEY is not configured - chatbot will be disabled");
+                // Don't throw exception, just return error response - chatbot is optional
+                return "Chatbot service is not configured. Please set GEMINI_API_KEY environment variable.";
             }
             System.out.println("[ChatbotService] GEMINI_API_KEY is configured (length: " + geminiApiKey.length() + ")");
 

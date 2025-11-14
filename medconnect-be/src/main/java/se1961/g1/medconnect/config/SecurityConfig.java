@@ -121,8 +121,8 @@ public class SecurityConfig {
         cfg.setAllowedOrigins(List.of(
             "https://medconnects.app",
             "https://www.medconnects.app",
-            "http://localhost:3000"
-            // nếu deploy FE lên Vercel, thêm origin tại đây, ví dụ: "https://your-app.vercel.app"
+            "http://localhost:3000",
+            "http://localhost:8080" // For local development
         ));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));            // gồm Authorization

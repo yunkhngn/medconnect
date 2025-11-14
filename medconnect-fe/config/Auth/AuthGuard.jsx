@@ -4,6 +4,7 @@ import { routeConfig } from "./routeConfig";
 import { useAuth } from "@/contexts/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { getApiUrl } from "@/utils/api";
 
 const AuthGuard = ({ children }) => {
   const router = useRouter();
@@ -37,7 +38,7 @@ const AuthGuard = ({ children }) => {
           try {
             const token = await user.getIdToken();
             const response = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/user/role`,
+              `${getApiUrl()}/user/role`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -136,7 +137,7 @@ const AuthGuard = ({ children }) => {
         console.log('[AuthGuard] User found, checking role...');
         const token = await user.getIdToken();
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/user/role`,
+          `${getApiUrl()}/user/role`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

@@ -9,6 +9,7 @@ import { Button, Card, CardBody, CardHeader, Divider, Input, Chip, Select, Selec
 import { auth } from "@/lib/firebase";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import DOMPurify from 'dompurify';
+import { getApiUrl } from "@/utils/api";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -81,7 +82,7 @@ export default function OfflineExamListPage() {
         const start = base.toISOString().split('T')[0];
         const endDate = new Date(base); endDate.setDate(base.getDate()+14);
         const end = endDate.toISOString().split('T')[0];
-        const url = new URL("http://localhost:8080/api/appointments/doctor");
+        const url = new URL(`${getApiUrl()}/appointments/doctor`);
         url.searchParams.append("startDate", start);
         url.searchParams.append("endDate", end);
         const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
@@ -105,7 +106,7 @@ export default function OfflineExamListPage() {
         const ids = (appointments||[]).map(a=>a.appointmentId || a.id).filter(Boolean);
         const results = await Promise.all(ids.map(async (id)=>{
           try {
-            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            const resp = await fetch(`${getApiUrl()}/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             if (!resp.ok) return [id, { hasPaid:false }];
             const data = await resp.json();
             return [id, { hasPaid: !!(data.hasPaid || data.status==='PAID'), status: data.status || 'UNPAID' }];
@@ -135,7 +136,7 @@ export default function OfflineExamListPage() {
       
       if (patientUserId) {
         // Fetch medical record entries for this patient
-        const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`, {
+        const resp = await fetch(`${getApiUrl()}/medical-records/patient/${patientUserId}/entries`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -230,7 +231,7 @@ export default function OfflineExamListPage() {
       const token = await user.getIdToken();
       const aptId = apt.appointmentId || apt.id;
       if (aptId) {
-        const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+        const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (feedbackResp.ok) {
@@ -258,7 +259,7 @@ export default function OfflineExamListPage() {
           const token = await user.getIdToken();
           const aptId = selectedAppointment.appointmentId || selectedAppointment.id;
           if (aptId) {
-            const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+            const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             if (feedbackResp.ok) {

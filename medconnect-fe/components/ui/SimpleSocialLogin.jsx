@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { getRoleRedirectPath } from "@/utils/roleRedirect";
 import { generateWelcomeEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
+import { getApiUrl } from "@/utils/api";
 
 export default function SimpleSocialLogin({ buttonText = "Đăng nhập với Google", showMessage }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function SimpleSocialLogin({ buttonText = "Đăng nhập với Go
       const user = result.user;
       const token = await user.getIdToken();
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const apiUrl = getApiUrl();
       
       // Try login first
       const loginResponse = await fetch(`${apiUrl}/auth/login`, {

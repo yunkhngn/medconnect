@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import RedirectByRole from "../config/Auth/redirectByRole";
 import getUserRole from "../config/Auth/GetUserRole";
+import { getApiUrl } from "@/utils/api";
 
 export default function MedConnectLogin() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function MedConnectLogin() {
       setIsLoading(true);
       const idToken = await user.getIdToken();
       console.log(idToken);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: "POST",
         headers: {
@@ -158,7 +159,7 @@ export default function MedConnectLogin() {
     if (role) {
       try {
         const idToken = await firebaseUser.getIdToken();
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+        const apiUrl = getApiUrl();
         const statusResponse = await fetch(`${apiUrl}/user/role`, {
           headers: {
             Authorization: `Bearer ${idToken}`,

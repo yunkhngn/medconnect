@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # SQL Server Database
   db:
@@ -22,7 +20,10 @@ services:
     command: >
       /bin/bash -c "
       /opt/mssql/bin/sqlservr &
-      sleep 30s &&
+      sleep 45s &&
+      for i in {1..30}; do
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $${SA_PASSWORD} -Q 'SELECT 1' -C && break || sleep 2
+      done &&
       /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $${SA_PASSWORD} -d master -i /scripts/createdb.sql -C &&
       echo 'Database MedConnect created successfully!' &&
       wait
@@ -45,7 +46,7 @@ services:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - DB_USER=${DB_USER:-sa}
       - DB_PASSWORD=${DB_PASSWORD:-${DB_SA_PASSWORD:-MedConnect@2025}}
-      - SPRING_DATASOURCE_URL=jdbc:sqlserver://db:1433;databaseName=MedConnect;encrypt=true;trustServerCertificate=true
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://db:1433;databaseName=MedConnect;encrypt=true;trustServerCertificate=true;loginTimeout=60;connectRetryCount=5;connectRetryInterval=5
       # Firebase
       - FIREBASE_TYPE=${FIREBASE_TYPE}
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-${NEXT_PUBLIC_FIREBASE_PROJECT_ID}}
@@ -71,14 +72,21 @@ services:
       - VNPAY_RETURN_URL=${VNPAY_RETURN_URL:-http://localhost:8080/api/payment/confirm}
       - VNPAY_IPN_URL=${VNPAY_IPN_URL:-http://localhost:8080/api/payment/ipn}
       # Agora
-      - AGORA_APP_ID=${AGORA_APP_ID}
-      - AGORA_CERTIFICATE=${AGORA_CERTIFICATE}
+      - AGORA_APP_ID=${AGORA_APP_ID:-}
+      - AGORA_CERTIFICATE=${AGORA_CERTIFICATE:-}
+      # Gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
-        restart: true
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
     networks:
       - medconnect-network
     restart: unless-stopped
@@ -176,3 +184,4 @@ volumes:
     driver: local
   caddy_config:
     driver: local
+

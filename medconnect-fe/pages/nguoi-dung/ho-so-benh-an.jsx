@@ -15,6 +15,7 @@ import {
 } from "@heroui/react";
 import { PatientFrame, Grid } from "@/components/layouts/";
 import DOMPurify from 'dompurify';
+import { getApiUrl } from "@/utils/api";
 import {
   FileText,
   Calendar,
@@ -68,7 +69,7 @@ export default function HoSoBenhAn() {
         const userId = user.uid;
 
         // Fetch profile first
-        const profileResponse = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+        const profileResponse = await fetch(`${getApiUrl()}/medical-records/my-profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -81,7 +82,7 @@ export default function HoSoBenhAn() {
         }
 
         // Fetch medical record entries
-        const entriesResponse = await fetch(`http://localhost:8080/api/medical-records/patient/${userId}/entries`, {
+        const entriesResponse = await fetch(`${getApiUrl()}/medical-records/patient/${userId}/entries`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
