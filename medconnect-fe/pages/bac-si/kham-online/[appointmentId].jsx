@@ -1091,7 +1091,7 @@ export default function DoctorOnlineExamRoom() {
               <Divider />
               {appointmentFeedback && (
                 <>
-                  <div className="space-y-3">
+              <div className="space-y-3">
                     <h4 className="font-semibold">Đánh giá từ bệnh nhân</h4>
                     <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                       <div className="flex items-center gap-2 mb-2">
@@ -1106,10 +1106,10 @@ export default function DoctorOnlineExamRoom() {
                                   : 'text-gray-300'
                               }`}
                             />
-                          ))}
-                        </div>
+                      ))}
+                    </div>
                         <span className="text-sm text-gray-600">({appointmentFeedback.rating}/5)</span>
-                      </div>
+                  </div>
                       {appointmentFeedback.comment && (
                         <p className="text-sm text-gray-700 italic">"{appointmentFeedback.comment}"</p>
                       )}

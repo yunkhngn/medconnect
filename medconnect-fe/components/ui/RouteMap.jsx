@@ -87,9 +87,9 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey, do
         for (const addr of uniqueCandidates) {
           const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(addr)}&filter=countrycode:vn&limit=1&lang=vi&apiKey=${apiKey}`;
           console.log("[RouteMap] Trying geocode:", addr);
-          const res = await fetch(url);
+        const res = await fetch(url);
           if (!res.ok) continue;
-          const data = await res.json();
+        const data = await res.json();
           const feature = data?.features?.[0];
           if (feature?.geometry?.coordinates) {
             found = feature.geometry.coordinates; // [lon, lat]
@@ -175,45 +175,45 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey, do
 
       // Chỉ vẽ origin marker khi có from (từ vị trí hiện tại hoặc originAddress)
       if (from) {
-        LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
+      LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
       }
       // Luôn vẽ destination marker (phòng khám)
       LRef.marker([to.lat, to.lon], { icon: officeIcon }).addTo(mapInstance);
 
       // Chỉ vẽ route khi có from (đặc biệt là từ vị trí hiện tại)
       if (from) {
-        try {
-          const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
-          let json = null;
-          const cached = sessionStorage.getItem(rKey);
-          if (cached) {
-            json = JSON.parse(cached);
+      try {
+        const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
+        let json = null;
+        const cached = sessionStorage.getItem(rKey);
+        if (cached) {
+          json = JSON.parse(cached);
+        } else {
+          const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
+          const res = await fetch(routeUrl);
+          if (res.ok) json = await res.json();
+          if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
+        }
+        if (json) {
+          const geom = json?.features?.[0]?.geometry;
+          let coords = [];
+          if (geom?.type === "LineString") coords = geom.coordinates;
+          else if (geom?.type === "MultiLineString") coords = geom.coordinates.flat();
+          if (coords.length) {
+            const latlngs = coords.map(([lon, lat]) => [lat, lon]);
+            const poly = LRef.polyline(latlngs, { color: "#2563EB", weight: 5 }).addTo(mapInstance);
+            mapInstance.fitBounds(poly.getBounds(), { padding: [20, 20] });
           } else {
-            const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
-            const res = await fetch(routeUrl);
-            if (res.ok) json = await res.json();
-            if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
+            mapInstance.fitBounds(
+              LRef.latLngBounds([
+                [from.lat, from.lon],
+                [to.lat, to.lon],
+              ])
+            );
           }
-          if (json) {
-            const geom = json?.features?.[0]?.geometry;
-            let coords = [];
-            if (geom?.type === "LineString") coords = geom.coordinates;
-            else if (geom?.type === "MultiLineString") coords = geom.coordinates.flat();
-            if (coords.length) {
-              const latlngs = coords.map(([lon, lat]) => [lat, lon]);
-              const poly = LRef.polyline(latlngs, { color: "#2563EB", weight: 5 }).addTo(mapInstance);
-              mapInstance.fitBounds(poly.getBounds(), { padding: [20, 20] });
-            } else {
-              mapInstance.fitBounds(
-                LRef.latLngBounds([
-                  [from.lat, from.lon],
-                  [to.lat, to.lon],
-                ])
-              );
-            }
-          }
-        } catch {
-          // ignore
+        }
+      } catch {
+        // ignore
         }
       } else {
         // Không có route, chỉ fit bounds cho destination marker

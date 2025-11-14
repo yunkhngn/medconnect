@@ -76,11 +76,14 @@ public class FirebaseFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
         // Skip filter for public endpoints that don't need authentication
+        // Handle both /api/chatbot and /api/api/chatbot (in case of URL duplication)
         return path.startsWith("/api/auth") || 
                path.startsWith("/actuator") ||
                path.startsWith("/api/specialities") ||
                path.startsWith("/api/payment/ipn") ||
                path.startsWith("/api/agora") ||
+               path.startsWith("/api/chatbot") || // Skip filter for chatbot endpoint
+               path.startsWith("/api/api/chatbot") || // Handle duplicate /api/api case
                path.startsWith("/doctor/dashboard/all") ||
                path.matches("/api/appointments/doctor/\\d+/available-slots.*");
     }

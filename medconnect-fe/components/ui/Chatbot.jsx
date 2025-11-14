@@ -18,7 +18,7 @@ const Chatbot = () => {
   const [questionCount, setQuestionCount] = useState(0);
   const [resetTime, setResetTime] = useState(Date.now());
   const messagesEndRef = useRef(null);
-  const { sendMessage, loading, error } = useGemini();
+  const { sendMessage, loading, error, isInCooldown, resetChat } = useGemini();
 
   // Draggable floating button position (snap to edges)
   const [btnPos, setBtnPos] = useState({ x: null, y: null });
@@ -238,6 +238,17 @@ const Chatbot = () => {
   }, [messages]);
 
   const handleSend = async () => {
+    // STRICT: Block if in cooldown or loading
+    if (isInCooldown()) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `⚠️ Đã vượt quá giới hạn API. Vui lòng đợi một lúc trước khi thử lại.`,
+        timestamp: new Date(),
+        isError: true
+      }]);
+      return;
+    }
+
     if (!input.trim() || loading) return;
 
     if (questionCount >= MAX_QUESTIONS) {
@@ -247,6 +258,11 @@ const Chatbot = () => {
         content: `Bạn đã hết lượt hỏi (${MAX_QUESTIONS} câu/phút). Vui lòng chờ ${timeLeft}s.`,
         timestamp: new Date()
       }]);
+      return;
+    }
+
+    // Prevent sending if already loading
+    if (loading) {
       return;
     }
 
@@ -263,10 +279,12 @@ const Chatbot = () => {
         timestamp: new Date()
       }]);
     } catch (err) {
+      const errorMessage = err.message || 'Xin lỗi, đã có lỗi xảy ra.';
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: err.message || 'Xin lỗi, đã có lỗi xảy ra.',
-        timestamp: new Date()
+        content: `⚠️ ${errorMessage}`,
+        timestamp: new Date(),
+        isError: true
       }]);
     }
   };
@@ -326,6 +344,25 @@ const Chatbot = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Reset Cooldown Button (only show if in cooldown) */}
+                {isInCooldown() && (
+                  <button
+                    onClick={() => {
+                      resetChat();
+                      setMessages(prev => [...prev, {
+                        role: 'assistant',
+                        content: '✅ Đã reset cooldown. Bạn có thể thử lại.',
+                        timestamp: new Date()
+                      }]);
+                    }}
+                    className="w-10 h-10 rounded-2xl hover:bg-green-100 flex items-center justify-center transition-all duration-200 hover:scale-105 bg-green-50 border border-green-200"
+                    title="Reset cooldown để test"
+                  >
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                )}
                 {/* Fullscreen Toggle */}
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
@@ -429,14 +466,14 @@ const Chatbot = () => {
                 <div className="flex-1 relative">
                   <input
                     type="text"
-                    placeholder="Nhập triệu chứng..."
+                    placeholder={isInCooldown() ? "Đã vượt quá giới hạn API. Vui lòng đợi..." : "Nhập triệu chứng..."}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    disabled={loading || questionCount >= MAX_QUESTIONS}
+                    disabled={loading || questionCount >= MAX_QUESTIONS || isInCooldown()}
                     className="w-full px-5 py-4 text-sm bg-white/60 backdrop-blur-sm border border-white/30 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500 transition-all duration-200"
                   />
-                  {input.trim() && (
+                  {input.trim() && !isInCooldown() && (
                     <button
                       onClick={() => setInput('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-gray-200 flex items-center justify-center transition-colors"
@@ -449,8 +486,9 @@ const Chatbot = () => {
                 </div>
                 <button
                   onClick={handleSend}
-                  disabled={!input.trim() || loading || questionCount >= MAX_QUESTIONS}
+                  disabled={!input.trim() || loading || questionCount >= MAX_QUESTIONS || isInCooldown()}
                   className="w-14 h-14 rounded-3xl bg-gradient-to-r from-sky-600 to-sky-500 text-white hover:from-sky-700 hover:to-sky-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl disabled:hover:scale-100 transform rotate-12 hover:rotate-0"
+                  title={isInCooldown() ? "Đã vượt quá giới hạn API" : "Gửi tin nhắn"}
                 >
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

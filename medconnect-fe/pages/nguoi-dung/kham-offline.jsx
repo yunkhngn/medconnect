@@ -698,15 +698,15 @@ export default function PatientOfflineExamList() {
                     )}
                     {appointment.status === "FINISHED" && (
                       <>
-                        <Button
-                          color="default"
-                          size="sm"
-                          variant="flat"
-                          className="flex-1"
-                          onPress={() => openAppointmentModal(appointment)}
-                        >
-                          Xem lại
-                        </Button>
+                      <Button
+                        color="default"
+                        size="sm"
+                        variant="flat"
+                        className="flex-1"
+                        onPress={() => openAppointmentModal(appointment)}
+                      >
+                        Xem lại
+                      </Button>
                         <Button
                           color="warning"
                           size="sm"
@@ -935,7 +935,7 @@ export default function PatientOfflineExamList() {
                             </p>
                           )}
                         </div>
-                      </div>
+              </div>
                     ) : (
                       <div className="space-y-4">
                         <div>

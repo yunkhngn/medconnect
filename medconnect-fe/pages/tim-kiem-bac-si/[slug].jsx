@@ -136,12 +136,12 @@ export default function DoctorDetail() {
     if (doctor.displayAddress) {
       address = doctor.displayAddress;
     } else {
-      const parts = [
-        doctor.clinicAddress,
-        doctor.ward_name,
-        doctor.district_name,
-        doctor.province_name,
-      ].filter(Boolean);
+    const parts = [
+      doctor.clinicAddress,
+      doctor.ward_name,
+      doctor.district_name,
+      doctor.province_name,
+    ].filter(Boolean);
       address = parts.join(", ");
     }
     // Thêm "Vietnam" vào cuối nếu chưa có để geocoding chính xác hơn
@@ -164,7 +164,7 @@ export default function DoctorDetail() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Đang tải thông tin bác sĩ...</p>
+          <p className="text-gray-600">Đang tải thông tin bác sĩ...</p>
           </div>
         </div>
       </Default>
@@ -187,16 +187,16 @@ export default function DoctorDetail() {
           </div>
           <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
             <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-              <CardBody className="text-center py-12">
+            <CardBody className="text-center py-12">
                 <p className="text-gray-700 font-medium text-lg mb-4">Không tìm thấy bác sĩ</p>
-                <Button
+              <Button
                   color="primary"
-                  onPress={() => router.push("/tim-kiem-bac-si")}
-                >
-                  Quay lại danh sách
-                </Button>
-              </CardBody>
-            </Card>
+                onPress={() => router.push("/tim-kiem-bac-si")}
+              >
+                Quay lại danh sách
+              </Button>
+            </CardBody>
+          </Card>
           </div>
         </div>
       </Default>
@@ -228,14 +228,14 @@ export default function DoctorDetail() {
           <div className="max-w-7xl mx-auto">
             {/* Back Button */}
             <Float variant="fadeInUp" delay={0.1}>
-              <Button
-                variant="light"
+          <Button
+            variant="light"
                 className="mb-6 bg-white/80 backdrop-blur-sm"
-                startContent={<ArrowLeft size={20} />}
-                onPress={() => router.push("/tim-kiem-bac-si")}
-              >
-                Quay lại
-              </Button>
+            startContent={<ArrowLeft size={20} />}
+            onPress={() => router.push("/tim-kiem-bac-si")}
+          >
+            Quay lại
+          </Button>
             </Float>
 
             {/* Header Card */}
@@ -243,29 +243,29 @@ export default function DoctorDetail() {
               <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
                 <CardBody className="p-6 md:p-8">
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                    <Avatar
-                      src={
-                        doctor.avatar ||
-                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          doctor.name || "BS"
+            <Avatar
+              src={
+                doctor.avatar ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  doctor.name || "BS"
                         )}&background=0D9488&color=fff&size=128`
-                      }
+              }
                       className="w-32 h-32 ring-4 ring-blue-100"
-                      showFallback
-                    />
+              showFallback
+            />
                     <div className="flex-1">
                       <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
                         {doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name}
                       </h1>
                       <div className="flex flex-wrap items-center gap-3 mb-3">
-                        <Chip
-                          variant="flat"
+              <Chip
+                variant="flat"
                           color="primary"
-                          size="lg"
+                size="lg"
                           className="font-semibold"
-                        >
-                          {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
-                        </Chip>
+              >
+                {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
+              </Chip>
                         {feedbackSummary?.averageRating && (
                           <div className="flex items-center gap-1">
                             <Star className="text-yellow-500 fill-current" size={20} />
@@ -276,150 +276,150 @@ export default function DoctorDetail() {
                           </div>
                         )}
                       </div>
-                      {address && (
+              {address && (
                         <p className="text-gray-700 flex items-center gap-2">
                           <MapPin size={18} className="text-blue-600" />
                           <span>{address}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                </p>
+              )}
+            </div>
+          </div>
                 </CardBody>
               </Card>
             </Float>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Main Info */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* About */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Main Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* About */}
                 <Float variant="fadeInUp" delay={0.3}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+              <CardHeader>
                       <h2 className="text-xl font-semibold text-gray-900">Giới thiệu</h2>
-                    </CardHeader>
-                    <Divider />
-                    <CardBody>
+              </CardHeader>
+              <Divider />
+              <CardBody>
                       <p className="text-gray-700 whitespace-pre-line leading-relaxed">
-                        {doctor.bio ||
-                          "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
-                      </p>
-                    </CardBody>
-                  </Card>
+                  {doctor.bio ||
+                    "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
+                </p>
+              </CardBody>
+            </Card>
                 </Float>
 
-                {/* Map */}
-                {address && mapApiKey && (
+            {/* Map */}
+            {address && mapApiKey && (
                   <Float variant="fadeInUp" delay={0.4}>
                     <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                      <CardHeader>
+                <CardHeader>
                         <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900">
-                          <MapPin className="text-teal-600" size={24} />
-                          Vị trí phòng khám
-                        </h2>
-                      </CardHeader>
-                      <Divider />
-                      <CardBody>
-                        <RouteMap
-                          originAddress=""
-                          destinationAddress={address}
-                          apiKey={mapApiKey}
+                    <MapPin className="text-teal-600" size={24} />
+                    Vị trí phòng khám
+                  </h2>
+                </CardHeader>
+                <Divider />
+                <CardBody>
+                  <RouteMap
+                    originAddress=""
+                    destinationAddress={address}
+                    apiKey={mapApiKey}
                           doctorData={doctor}
-                        />
-                      </CardBody>
-                    </Card>
+                  />
+                </CardBody>
+              </Card>
                   </Float>
-                )}
+            )}
 
-                {/* Feedback */}
+            {/* Feedback */}
                 <Float variant="fadeInUp" delay={0.5}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+              <CardHeader>
                       <h2 className="text-xl font-semibold text-gray-900">Đánh giá từ bệnh nhân</h2>
-                    </CardHeader>
-                    <Divider />
-                    <CardBody>
-                      {loadingFeedback ? (
+              </CardHeader>
+              <Divider />
+              <CardBody>
+                {loadingFeedback ? (
                         <div className="text-center py-8">
                           <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-                          <p className="text-gray-500">Đang tải đánh giá...</p>
+                  <p className="text-gray-500">Đang tải đánh giá...</p>
                         </div>
-                      ) : feedbackSummary ? (
-                        <div className="space-y-6">
-                          {/* Summary */}
+                ) : feedbackSummary ? (
+                  <div className="space-y-6">
+                    {/* Summary */}
                           <div className="text-center p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <Star className="text-yellow-500 fill-current" size={32} />
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Star className="text-yellow-500 fill-current" size={32} />
                               <span className="text-4xl font-bold text-gray-900">
-                                {feedbackSummary.averageRating?.toFixed(1) || "—"}
-                              </span>
+                          {feedbackSummary.averageRating?.toFixed(1) || "—"}
+                        </span>
                               <span className="text-gray-600 text-xl">/ 5.0</span>
-                            </div>
+                      </div>
                             <p className="text-gray-700 font-medium">
-                              Dựa trên {feedbackSummary.totalFeedbacks || 0} đánh giá
-                            </p>
-                          </div>
+                        Dựa trên {feedbackSummary.totalFeedbacks || 0} đánh giá
+                      </p>
+                    </div>
 
-                          {/* Recent Feedbacks */}
-                          {recentFeedbacks && recentFeedbacks.length > 0 ? (
-                            <div className="space-y-4">
+                    {/* Recent Feedbacks */}
+                    {recentFeedbacks && recentFeedbacks.length > 0 ? (
+                      <div className="space-y-4">
                               <h3 className="font-semibold text-gray-900">Đánh giá gần đây</h3>
-                              {recentFeedbacks.map((feedback, idx) => (
-                                <div
-                                  key={idx}
+                        {recentFeedbacks.map((feedback, idx) => (
+                          <div
+                            key={idx}
                                   className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                                >
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className="flex gap-1">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star
-                                          key={star}
-                                          className={`w-5 h-5 ${
-                                            star <= (feedback.rating || 0)
-                                              ? "text-yellow-400 fill-current"
-                                              : "text-gray-300"
-                                          }`}
-                                        />
-                                      ))}
-                                    </div>
-                                    {feedback.createdAt && (
-                                      <span className="text-xs text-gray-500">
-                                        {new Date(feedback.createdAt).toLocaleDateString(
-                                          "vi-VN"
-                                        )}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {feedback.comment && (
-                                    <p className="text-gray-700">{feedback.comment}</p>
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-5 h-5 ${
+                                      star <= (feedback.rating || 0)
+                                        ? "text-yellow-400 fill-current"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              {feedback.createdAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(feedback.createdAt).toLocaleDateString(
+                                    "vi-VN"
                                   )}
-                                </div>
-                              ))}
+                                </span>
+                              )}
                             </div>
-                          ) : (
-                            <p className="text-gray-500 text-center py-4">
-                              Chưa có đánh giá nào
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-center py-4">
-                          Chưa có đánh giá nào
-                        </p>
-                      )}
-                    </CardBody>
-                  </Card>
+                            {feedback.comment && (
+                              <p className="text-gray-700">{feedback.comment}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">
+                        Chưa có đánh giá nào
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">
+                    Chưa có đánh giá nào
+                  </p>
+                )}
+              </CardBody>
+            </Card>
                 </Float>
-              </div>
+          </div>
 
-              {/* Right Column - Sidebar */}
-              <div className="space-y-6">
-                {/* Quick Info */}
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Info */}
                 <Float variant="fadeInUp" delay={0.3}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardHeader>
+              <CardHeader>
                       <h3 className="text-lg font-semibold text-gray-900">Thông tin nhanh</h3>
-                    </CardHeader>
-                    <Divider />
-                    <CardBody className="space-y-4">
+              </CardHeader>
+              <Divider />
+              <CardBody className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-yellow-100 rounded-lg">
                     <Star className="text-yellow-600" size={20} />
@@ -497,28 +497,28 @@ export default function DoctorDetail() {
             </Card>
                 </Float>
 
-                {/* Action Buttons */}
+            {/* Action Buttons */}
                 <Float variant="fadeInUp" delay={0.4}>
                   <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
-                    <CardBody className="space-y-3">
-                      <Button
-                        color="primary"
-                        size="lg"
+              <CardBody className="space-y-3">
+                <Button
+                  color="primary"
+                  size="lg"
                         className="w-full font-semibold"
-                        onPress={() => router.push("/dang-nhap")}
-                      >
-                        Đăng nhập để đặt lịch
-                      </Button>
-                      <Button
-                        variant="bordered"
-                        size="lg"
+                  onPress={() => router.push("/dang-nhap")}
+                >
+                  Đăng nhập để đặt lịch
+                </Button>
+                <Button
+                  variant="bordered"
+                  size="lg"
                         className="w-full font-semibold"
-                        onPress={() => router.push("/tim-kiem-bac-si")}
-                      >
-                        Xem bác sĩ khác
-                      </Button>
-                    </CardBody>
-                  </Card>
+                  onPress={() => router.push("/tim-kiem-bac-si")}
+                >
+                  Xem bác sĩ khác
+                </Button>
+              </CardBody>
+            </Card>
                 </Float>
               </div>
             </div>
