@@ -18,6 +18,7 @@ import { PatientFrame, Grid } from "@/components/layouts/";
 import ToastNotification from "@/components/ui/ToastNotification";
 import AddressSelector from "@/components/ui/AddressSelector";
 import { useToast } from "@/hooks/useToast";
+import { getApiUrl } from "@/utils/api";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useAddressData } from "@/hooks/useAddressData";
 import BHYTInput from "@/components/ui/BHYTInput";
@@ -116,7 +117,7 @@ export default function PatientProfileWithFrame() {
     try {
       const token = await firebaseUser.getIdToken();
 
-      const response = await fetch("http://localhost:8080/api/patient/profile", {
+      const response = await fetch(`${getApiUrl()}/patient/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -126,7 +127,7 @@ export default function PatientProfileWithFrame() {
         const data = await response.json();
         setPatient({ ...patient, ...data });
 
-        const avatarResponse = await fetch("http://localhost:8080/api/avatar", {
+        const avatarResponse = await fetch(`${getApiUrl()}/avatar`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (avatarResponse.ok) {
@@ -270,7 +271,7 @@ export default function PatientProfileWithFrame() {
     try {
       const token = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8080/api/patient/profile", {
+      const response = await fetch(`${getApiUrl()}/patient/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

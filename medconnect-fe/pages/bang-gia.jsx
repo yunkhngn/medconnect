@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import ToastNotification from '@/components/ui/ToastNotification';
 import Float from '@/components/ui/Float';
 import Image from 'next/image';
+import { getApiUrl } from "@/utils/api";
 
 const PricingPage = () => {
   const [selectedType, setSelectedType] = useState('all');
@@ -65,7 +66,7 @@ const PricingPage = () => {
   const fetchSpecialties = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/specialties/dropdown');
+      const response = await fetch(`${getApiUrl()}/specialties/dropdown`);
       
       if (response.ok) {
         const data = await response.json();

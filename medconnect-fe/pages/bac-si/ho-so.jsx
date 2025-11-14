@@ -28,6 +28,7 @@ import AddressSelector from "@/components/ui/AddressSelector";
 import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useAddressData } from "@/hooks/useAddressData";
+import { getApiUrl, getBaseUrl } from "@/utils/api";
 import { auth } from "@/lib/firebase";
 
 export default function DoctorProfile() {
@@ -119,7 +120,7 @@ export default function DoctorProfile() {
 
   const fetchSpecialities = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/specialties");
+      const response = await fetch(`${getApiUrl()}/specialties`);
       if (response.ok) {
         const data = await response.json();
         console.log("[Specialities] Fetched data:", data);
@@ -157,7 +158,7 @@ export default function DoctorProfile() {
       const token = await firebaseUser.getIdToken();
 
       // Fetch doctor profile
-      const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -200,7 +201,7 @@ export default function DoctorProfile() {
 
         // Fetch avatar from backend API
         try {
-          const avatarResponse = await fetch(`http://localhost:8080/api/avatar`, {
+          const avatarResponse = await fetch(`${getApiUrl()}/avatar`, {
             headers: { Authorization: `Bearer ${token}` }
           });
 
@@ -237,7 +238,7 @@ export default function DoctorProfile() {
     setLoadingLicenses(true);
     try {
       const token = await firebaseUser.getIdToken();
-      const response = await fetch("http://localhost:8080/api/licenses/my", {
+      const response = await fetch(`${getApiUrl()}/licenses/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
@@ -339,7 +340,7 @@ export default function DoctorProfile() {
 
       console.log("[Update Profile] Payload:", payload);
 
-      const response = await fetch("http://localhost:8080/doctor/dashboard/profile", {
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -397,7 +398,7 @@ export default function DoctorProfile() {
       });
 
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8080/api/licenses/upload-images', {
+      const response = await fetch(`${getApiUrl()}/licenses/upload-images`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -489,8 +490,8 @@ export default function DoctorProfile() {
       const token = await user.getIdToken();
       const licenseId = editingLicense?.licenseId || editingLicense?.license_id;
       const url = editingLicense
-        ? `http://localhost:8080/api/licenses/my/${licenseId}`
-        : "http://localhost:8080/api/licenses/my";
+        ? `${getApiUrl()}/licenses/my/${licenseId}`
+        : `${getApiUrl()}/licenses/my`;
 
       const response = await fetch(url, {
         method: editingLicense ? "PATCH" : "POST",
@@ -538,7 +539,7 @@ export default function DoctorProfile() {
       const token = await user.getIdToken();
       const licenseId = deletingLicense.licenseId || deletingLicense.license_id;
 
-      const response = await fetch(`http://localhost:8080/api/licenses/my/${licenseId}`, {
+      const response = await fetch(`${getApiUrl()}/licenses/my/${licenseId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });

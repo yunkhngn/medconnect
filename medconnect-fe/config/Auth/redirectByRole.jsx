@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { auth } from "../../lib/firebase";
+import { getApiUrl } from "@/utils/api";
 
 export default function RedirectByRole() {
     const router = useRouter();
@@ -27,7 +28,7 @@ export default function RedirectByRole() {
                 const token = await user.getIdToken();
 
                 const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}/user/role`,
+                    `${getApiUrl()}/user/role`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,

@@ -7,7 +7,7 @@ import Float from "@/components/ui/Float";
 import { useState, useEffect } from "react";
 import { Stethoscope, Award, Star } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL } from "@/utils/api";
 
 const SPECIALTY_MAP = {
   TIM_MACH: "Tim mạch",

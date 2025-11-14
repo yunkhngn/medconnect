@@ -21,10 +21,11 @@ import {
   Pagination,
   Textarea,
 } from '@heroui/react';
+import { getApiUrl } from "@/utils/api";
 
 // API Configuration - Based on schema: id, doctor_id, amount, period, status, transaction_id, notes, created_at
 const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
+  BASE_URL: getApiUrl(),
   ENDPOINTS: {
     GET_DOCTOR_PAYMENTS: '/doctor-payments',
     CREATE_DOCTOR_PAYMENT: '/doctor-payments',

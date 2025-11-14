@@ -10,8 +10,9 @@ import Image from "next/image";
 import { DollarSign, Clock, Building, TrendingUp, Users, BookOpen, Plus, X, Upload, FileText } from "lucide-react";
 
 // API Configuration
+import { getApiUrl } from "@/utils/api";
 const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
+  BASE_URL: getApiUrl(),
   ENDPOINTS: {
     SUBMIT_APPLICATION: '/doctor-applications',
     GET_SPECIALTIES: '/specialties/dropdown',

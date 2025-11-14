@@ -18,6 +18,7 @@ import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { generateAppointmentConfirmationEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
+import { getApiUrl } from "@/utils/api";
 import DOMPurify from 'dompurify';
 
 const SLOT_TIMES = {
@@ -92,7 +93,7 @@ export default function DoctorAppointmentsPage() {
       const endDate = new Date(today);
       endDate.setDate(today.getDate() + 60);
       
-      const url = new URL("http://localhost:8080/api/appointments/doctor");
+      const url = new URL(`${getApiUrl()}/appointments/doctor`);
       url.searchParams.append("startDate", startDate.toISOString().split('T')[0]);
       url.searchParams.append("endDate", endDate.toISOString().split('T')[0]);
       
@@ -150,7 +151,7 @@ export default function DoctorAppointmentsPage() {
     setProcessing(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/confirm`, {
+      const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}/confirm`, {
         method: "PATCH",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -206,7 +207,7 @@ export default function DoctorAppointmentsPage() {
     setProcessing(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/deny`, {
+      const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}/deny`, {
         method: "PATCH",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -231,7 +232,7 @@ export default function DoctorAppointmentsPage() {
     setEmrLoading(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/emr/firebase/${patientFirebaseUid}`, {
+      const response = await fetch(`${getApiUrl()}/emr/firebase/${patientFirebaseUid}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
@@ -254,7 +255,7 @@ export default function DoctorAppointmentsPage() {
     try {
       console.log('[EMR Modal] Fetching EMR from API...');
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/emr/firebase/${patientFirebaseUid}`, {
+      const response = await fetch(`${getApiUrl()}/emr/firebase/${patientFirebaseUid}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 

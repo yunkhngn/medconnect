@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/useToast";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/lib/firebase";
+import { getApiUrl, getBaseUrl } from "@/utils/api";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 export default function DoctorSettings() {
@@ -56,7 +57,7 @@ export default function DoctorSettings() {
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
 
-      const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -92,7 +93,7 @@ export default function DoctorSettings() {
         return;
       }
 
-      const response = await fetch('http://localhost:8080/doctor/dashboard/profile', {
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -141,7 +142,7 @@ export default function DoctorSettings() {
       // Update backend
       const token = await auth.currentUser?.getIdToken();
       if (token) {
-        await fetch('http://localhost:8080/api/avatar', {
+        await fetch(`${getApiUrl()}/avatar`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

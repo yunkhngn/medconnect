@@ -24,7 +24,7 @@ import {
   Pagination,
 } from '@heroui/react';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+import { API_BASE_URL } from "@/utils/api";
 
 const Appointment = () => {
   const { user } = useAuth();

@@ -29,6 +29,7 @@ import {
   Camera
 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
+import { getApiUrl } from "@/utils/api";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 
 const Setting = () => {
@@ -79,7 +80,7 @@ const Setting = () => {
       // Try to get additional info from backend
       try {
         const token = await firebaseUser.getIdToken();
-        const response = await fetch('http://localhost:8080/api/user/profile', {
+        const response = await fetch(`${getApiUrl()}/user/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -134,7 +135,7 @@ const Setting = () => {
 
       // Try to update via backend API
       try {
-        const response = await fetch('http://localhost:8080/api/user/profile', {
+        const response = await fetch(`${getApiUrl()}/user/profile`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -242,7 +243,7 @@ const Setting = () => {
       // Update backend
       const token = await auth.currentUser?.getIdToken();
       if (token) {
-        await fetch('http://localhost:8080/api/avatar', {
+        await fetch(`${getApiUrl()}/avatar`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

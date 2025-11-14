@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/useToast";
 import { auth } from "@/lib/firebase";
 import { parseReason } from "@/utils/appointmentUtils";
 import { useGemini } from "@/hooks/useGemini";
+import { getApiUrl } from "@/utils/api";
 
 export default function OfflineExamDetailPage() {
   const router = useRouter();
@@ -137,7 +138,7 @@ export default function OfflineExamDetailPage() {
     (async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+        const res = await fetch(`${getApiUrl()}/appointments/${appointmentId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error("Không tìm thấy lịch hẹn");
@@ -177,7 +178,7 @@ export default function OfflineExamDetailPage() {
         try {
           const pid = String(data.patient?.id || "");
           if (pid) {
-            const emrUrl = `http://localhost:8080/api/medical-records/patient/${pid}`;
+            const emrUrl = `${getApiUrl()}/medical-records/patient/${pid}`;
             const emrResp = await fetch(emrUrl, { headers: { Authorization: `Bearer ${token}` } });
             if (emrResp.ok) {
               const emrData = await emrResp.json();
@@ -207,7 +208,7 @@ export default function OfflineExamDetailPage() {
         }
         // Chỉ đánh dấu bắt đầu khi lịch chưa hoàn thành
         if (String(data?.status).toUpperCase() !== "FINISHED") {
-          await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
+          await fetch(`${getApiUrl()}/appointments/${appointmentId}/start`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
         }
       } catch (e) { toast.error(e.message || "Không thể tải lịch hẹn"); }
     })();
@@ -343,10 +344,10 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
         doctor_id, 
         appointment_id:Number(appointmentId) 
       };
-      const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ entry }) });
+      const resp = await fetch(`${getApiUrl()}/medical-records/patient/${patientUserId}/add-entry`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ entry }) });
       if (!resp.ok) throw new Error((await resp.json()).error || "Lưu bệnh án thất bại");
       if (!isFinished) {
-        await fetch(`http://localhost:8080/api/appointments/${appointmentId}/finish`, { method:"PATCH", headers:{ Authorization:`Bearer ${token}` } });
+        await fetch(`${getApiUrl()}/appointments/${appointmentId}/finish`, { method:"PATCH", headers:{ Authorization:`Bearer ${token}` } });
         toast.success("Đã lưu bệnh án và hoàn thành lịch hẹn");
       } else {
         toast.success("Đã cập nhật bệnh án cho lịch hẹn đã hoàn thành");

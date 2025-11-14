@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { getRoleRedirectPath } from "@/utils/roleRedirect";
 import { generateWelcomeEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
+import { getApiUrl } from "@/utils/api";
 
 export default function SocialLoginButtons({ onSuccess, onError, autoRedirect = false }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +61,7 @@ export default function SocialLoginButtons({ onSuccess, onError, autoRedirect = 
 
   const handleBackendAuthentication = async (user, token, providerName) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const apiUrl = getApiUrl();
       
       // First, try login
       const loginResponse = await fetch(`${apiUrl}/auth/login`, {
