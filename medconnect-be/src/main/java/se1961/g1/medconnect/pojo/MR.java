@@ -19,10 +19,6 @@ public class MR {
     @Column(columnDefinition = "NVARCHAR(MAX)")
     private String detail;
 
-    @ManyToOne
-    @JoinColumn(name = "doctor_id")
-    private Doctor doctor;
-
     @OneToOne
     @JoinColumn(name = "patient_id")
     private Patient patient;
