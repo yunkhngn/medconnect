@@ -451,9 +451,13 @@ export default function PatientOnlineExamList() {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status, appointmentId) => {
+    if (status === "PENDING") {
+      const payInfo = appointmentId ? paymentByAptId[appointmentId] : null;
+      const hasPaid = payInfo?.hasPaid || false;
+      return hasPaid ? "Chờ bác sĩ xác nhận" : "Chờ thanh toán";
+    }
     switch (status) {
-      case "PENDING": return "Chờ bác sĩ xác nhận";
       case "CONFIRMED": return "Đã xác nhận";
       case "ONGOING": return "Đang khám";
       case "FINISHED": return "Hoàn thành";

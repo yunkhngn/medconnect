@@ -397,7 +397,11 @@ export default function PatientOfflineExamList() {
 
   const getStatusText = (status) => {
     switch (status) {
-      case "PENDING": return "Chờ bác sĩ xác nhận";
+      case "PENDING": {
+        // This function is called without appointmentId, so we can't check payment here
+        // The actual status text is handled in the component where payment info is available
+        return "Chờ xác nhận";
+      }
       case "CONFIRMED": return "Đã xác nhận";
       case "ONGOING": return "Đang khám";
       case "FINISHED": return "Hoàn thành";

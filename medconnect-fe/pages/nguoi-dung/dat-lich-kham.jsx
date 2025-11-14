@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import {
   Card, CardBody, CardHeader, Button, Avatar, Chip, Input, Select, SelectItem, Divider, RadioGroup, Radio, Textarea, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter
 } from "@heroui/react";
-import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone, MessageSquare, Shield, Info } from "lucide-react";
+import { Calendar, Clock, User, Stethoscope, Video, MapPin, ChevronRight, Check, AlertCircle, Filter, Star, Award, Users as UsersIcon, Phone, MessageSquare } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import RouteMap from "@/components/ui/RouteMap";
 import Grid from "@/components/layouts/Grid";
@@ -59,9 +59,6 @@ export default function DatLichKham() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
 
-  // Privacy Policy Modal
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   // Booking flow steps
   const [currentStep, setCurrentStep] = useState(1);
@@ -494,13 +491,6 @@ export default function DatLichKham() {
   };
 
   const handleConfirmBooking = async () => {
-    // Kiểm tra đồng ý chính sách bảo vệ dữ liệu cá nhân
-    if (!acceptedPrivacy) {
-      setShowPrivacyModal(true);
-      toast.error("Vui lòng đọc và đồng ý với chính sách bảo vệ dữ liệu cá nhân");
-      return;
-    }
-
     if (!selectedSlot) {
       toast.error("Vui lòng chọn khung giờ");
       return;
@@ -1251,24 +1241,6 @@ export default function DatLichKham() {
                   }}
                 />
 
-                {/* Privacy Notice */}
-                <div className="mt-4 bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
-                  <div className="flex items-start gap-2">
-                    <Shield size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-blue-900">
-                      <p className="font-semibold mb-1">Bảo vệ dữ liệu cá nhân</p>
-                      <p>
-                        Thông tin sức khỏe của bạn là dữ liệu nhạy cảm và sẽ được bảo vệ theo Nghị định 13/2023/NĐ-CP. 
-                        <button 
-                          onClick={() => setShowPrivacyModal(true)}
-                          className="text-blue-700 underline ml-1 font-medium hover:text-blue-800"
-                        >
-                          Xem chi tiết
-                        </button>
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
@@ -1387,175 +1359,6 @@ export default function DatLichKham() {
     <PatientFrame>
       <ToastNotification toast={toast} />
       
-      {/* Privacy Policy Modal - Nghị định 13/2023/NĐ-CP */}
-      <Modal 
-        isOpen={showPrivacyModal} 
-        onClose={() => setShowPrivacyModal(false)}
-        size="3xl"
-        scrollBehavior="inside"
-        backdrop="blur"
-      >
-        <ModalContent>
-          <ModalHeader className="flex gap-2 items-center border-b">
-            <Shield className="text-teal-600" size={24} />
-            <div>
-              <h3 className="text-xl font-bold">Thông báo về Bảo vệ Dữ liệu Cá nhân</h3>
-              <p className="text-sm text-gray-600 font-normal">Theo Nghị định 13/2023/NĐ-CP</p>
-            </div>
-          </ModalHeader>
-          <ModalBody className="py-6">
-            <div className="space-y-4 text-sm">
-              {/* Thông báo chính */}
-              <div className="bg-teal-50 border-l-4 border-teal-500 p-4 rounded">
-                <h4 className="font-semibold text-teal-900 mb-2 flex items-center gap-2">
-                  <Info size={18} />
-                  Thông báo về việc xử lý dữ liệu cá nhân nhạy cảm
-                </h4>
-                <p className="text-gray-700">
-                  MedConnect cam kết bảo vệ dữ liệu cá nhân của bạn theo đúng quy định của pháp luật Việt Nam, 
-                  đặc biệt là Nghị định 13/2023/NĐ-CP về Bảo vệ dữ liệu cá nhân.
-                </p>
-              </div>
-
-              {/* Dữ liệu được thu thập */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">1. Dữ liệu cá nhân nhạy cảm được xử lý</h4>
-                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
-                  <li>Thông tin sức khỏe: Lý do khám, triệu chứng, hình ảnh triệu chứng, lịch sử bệnh</li>
-                  <li>Dữ liệu sinh trắc học: Ảnh khuôn mặt (nếu có)</li>
-                  <li>Thông tin cá nhân: Họ tên, số điện thoại, email, địa chỉ</li>
-                  <li>Thông tin bảo hiểm y tế (nếu có)</li>
-                </ul>
-              </div>
-
-              {/* Mục đích xử lý */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">2. Mục đích xử lý dữ liệu</h4>
-                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
-                  <li>Đặt lịch và quản lý cuộc hẹn khám bệnh</li>
-                  <li>Hỗ trợ bác sĩ trong việc chẩn đoán và điều trị</li>
-                  <li>Lưu trữ hồ sơ bệnh án điện tử</li>
-                  <li>Cải thiện chất lượng dịch vụ y tế</li>
-                  <li>Thực hiện các nghĩa vụ pháp lý</li>
-                </ul>
-              </div>
-
-              {/* Quyền của chủ thể dữ liệu */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">3. Quyền của bạn (Điều 9 Nghị định 13)</h4>
-                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
-                  <li>Quyền được biết về việc xử lý dữ liệu cá nhân của mình</li>
-                  <li>Quyền đồng ý hoặc không đồng ý cho xử lý dữ liệu</li>
-                  <li>Quyền truy cập, chỉnh sửa, bổ sung dữ liệu cá nhân</li>
-                  <li>Quyền rút lại sự đồng ý</li>
-                  <li>Quyền xóa dữ liệu cá nhân</li>
-                  <li>Quyền hạn chế xử lý dữ liệu</li>
-                  <li>Quyền yêu cầu cung cấp bản sao dữ liệu</li>
-                  <li>Quyền phản đối xử lý dữ liệu</li>
-                  <li>Quyền khiếu nại, tố cáo, khởi kiện</li>
-                  <li>Quyền yêu cầu bồi thường thiệt hại</li>
-                  <li>Quyền tự bảo vệ theo quy định của pháp luật</li>
-                </ul>
-              </div>
-
-              {/* Thời gian lưu trữ */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">4. Thời gian lưu trữ dữ liệu</h4>
-                <p className="text-gray-700">
-                  Dữ liệu của bạn sẽ được lưu trữ theo quy định của pháp luật về hồ sơ bệnh án và chỉ trong thời gian cần thiết 
-                  để thực hiện mục đích đã nêu. Bạn có quyền yêu cầu xóa dữ liệu bất cứ lúc nào.
-                </p>
-              </div>
-
-              {/* Biện pháp bảo mật */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">5. Biện pháp bảo mật (Điều 20 Nghị định 13)</h4>
-                <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
-                  <li>Mã hóa dữ liệu nhạy cảm khi truyền và lưu trữ</li>
-                  <li>Kiểm soát truy cập nghiêm ngặt - chỉ bác sĩ và nhân viên được ủy quyền</li>
-                  <li>Ghi log và giám sát các hoạt động xử lý dữ liệu</li>
-                  <li>Sao lưu và khôi phục dữ liệu định kỳ</li>
-                  <li>Đào tạo nhân viên về bảo vệ dữ liệu cá nhân</li>
-                </ul>
-              </div>
-
-              {/* Chia sẻ dữ liệu */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">6. Chia sẻ dữ liệu với bên thứ ba</h4>
-                <p className="text-gray-700">
-                  Dữ liệu của bạn chỉ được chia sẻ với bác sĩ phụ trách và các nhân viên y tế liên quan trực tiếp đến việc chăm sóc sức khỏe của bạn. 
-                  Chúng tôi không bán hoặc chia sẻ dữ liệu của bạn cho bên thứ ba vì mục đích thương mại.
-                </p>
-              </div>
-
-              {/* Thông báo vi phạm */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">7. Thông báo vi phạm (Điều 23 Nghị định 13)</h4>
-                <p className="text-gray-700">
-                  Nếu phát hiện có vi phạm an toàn dữ liệu, chúng tôi sẽ thông báo cho bạn trong vòng 72 giờ và thực hiện các biện pháp 
-                  khắc phục theo quy định tại Điều 23 Nghị định 13/2023/NĐ-CP.
-                </p>
-              </div>
-
-              {/* Cơ quan chuyên trách */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">8. Cơ quan chuyên trách bảo vệ dữ liệu cá nhân</h4>
-                <p className="text-gray-700">
-                  <strong>Cục An ninh mạng và phòng, chống tội phạm sử dụng công nghệ cao - Bộ Công an</strong>
-                </p>
-                <p className="text-gray-600 text-xs mt-1">
-                  Cổng thông tin quốc gia về bảo vệ dữ liệu cá nhân: Bạn có thể khiếu nại vi phạm về bảo vệ dữ liệu cá nhân tại đây.
-                </p>
-              </div>
-
-              {/* Liên hệ */}
-              <div className="bg-gray-50 p-4 rounded border">
-                <h4 className="font-semibold text-gray-900 mb-2">9. Liên hệ với chúng tôi</h4>
-                <p className="text-gray-700">
-                  Nếu bạn có câu hỏi hoặc muốn thực hiện quyền của mình, vui lòng liên hệ:
-                </p>
-                <ul className="mt-2 space-y-1 text-gray-700">
-                  <li><strong>Email:</strong> privacy@medconnect.vn</li>
-                  <li><strong>Hotline:</strong> 1900-xxxx</li>
-                  <li><strong>Địa chỉ:</strong> [Địa chỉ công ty]</li>
-                </ul>
-              </div>
-
-              {/* Đồng ý */}
-              <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-                <p className="text-gray-700">
-                  <strong>Lưu ý quan trọng:</strong> Bằng việc tiếp tục sử dụng dịch vụ đặt lịch khám, bạn xác nhận đã đọc, 
-                  hiểu và đồng ý với việc MedConnect xử lý dữ liệu cá nhân nhạy cảm của bạn theo các điều khoản đã nêu trên.
-                </p>
-              </div>
-            </div>
-          </ModalBody>
-          <ModalFooter className="border-t">
-            <Button 
-              variant="flat" 
-              onPress={() => {
-                setShowPrivacyModal(false);
-                setAcceptedPrivacy(false);
-              }}
-            >
-              Từ chối
-            </Button>
-            <Button 
-              color="primary" 
-              onPress={async () => {
-                setAcceptedPrivacy(true);
-                setShowPrivacyModal(false);
-                // Tự động process thanh toán sau khi accept privacy
-                await handleConfirmBooking();
-              }}
-              className="font-semibold"
-              isLoading={loading}
-            >
-              Tôi đã đọc và đồng ý
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
 
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
     </PatientFrame>

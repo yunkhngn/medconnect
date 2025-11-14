@@ -68,7 +68,7 @@ export const useGemini = () => {
       });
 
       // Simple prompt without complex instructions
-      const prompt = `Bạn là trợ lý y tế AI của MedConnect. Hãy tư vấn ngắn gọn về: ${message}\n\nLưu ý: Đây chỉ là tư vấn sơ bộ, bạn nên đặt lịch khám bác sĩ.`;
+      const prompt = `Bạn là trợ lý y tế AI của MedConnect. Hãy tư vấn ngắn gọn về: ${message}\n\nLưu ý: Thông tin từ AI chỉ mang tính chất tham khảo, có thể đúng hoặc chưa chính xác.`;
 
       let chatSession = chatRef.current;
       

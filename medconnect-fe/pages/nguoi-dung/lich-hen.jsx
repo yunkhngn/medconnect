@@ -21,6 +21,7 @@ export default function AppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [rxLoading, setRxLoading] = useState(false);
   const [prescription, setPrescription] = useState(null);
+  const [paymentByAptId, setPaymentByAptId] = useState({}); // { [id]: { hasPaid, status } }
 
   useEffect(() => {
     if (authLoading) return;
@@ -46,6 +47,38 @@ export default function AppointmentsPage() {
         const data = await response.json();
         console.log("[Patient Schedule] /api/appointments/my ->", data);
         setAppointments(data);
+        
+        // Fetch payment status for each appointment
+        if (data.length > 0) {
+          const paymentPromises = data.map(async (apt) => {
+            const id = apt.id || apt.appointmentId;
+            if (!id) return null;
+            try {
+              const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (resp.ok) {
+                const payData = await resp.json();
+                return { id, payment: payData };
+              }
+            } catch (e) {
+              console.error(`Failed to fetch payment for appointment ${id}:`, e);
+            }
+            return null;
+          });
+          
+          const paymentResults = await Promise.all(paymentPromises);
+          const paymentMap = {};
+          paymentResults.forEach(result => {
+            if (result && result.payment) {
+              paymentMap[result.id] = {
+                hasPaid: result.payment.hasPaid || false,
+                status: result.payment.status
+              };
+            }
+          });
+          setPaymentByAptId(paymentMap);
+        }
       } else {
         console.error("[Patient Schedule] Fetch failed:", response.status);
         toast.error("Không thể tải danh sách lịch hẹn");
@@ -429,13 +462,18 @@ function getSlotData(date, slot) {
                     {isEmpty && (
                       <div className="py-6 text-gray-400 text-xs italic">—</div>
                     )}
-                    {isReserved && (
-                      <div className="py-3">
-                        <Chip color="warning" size="sm" variant="solid" className="font-semibold">
-                          Chờ bác sĩ xác nhận
-                        </Chip>
-                      </div>
-                    )}
+                    {isReserved && (() => {
+                      const aptId = slotData.appointment?.id || slotData.appointment?.appointmentId;
+                      const payInfo = aptId ? paymentByAptId[aptId] : null;
+                      const hasPaid = payInfo?.hasPaid || false;
+                      return (
+                        <div className="py-3">
+                          <Chip color="warning" size="sm" variant="solid" className="font-semibold">
+                            {hasPaid ? "Chờ bác sĩ xác nhận" : "Chờ thanh toán"}
+                          </Chip>
+                        </div>
+                      );
+                    })()}
                     {isBusy && slotData.appointment && (
                       <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-3 shadow-sm">
                         <div className="w-10 h-10 rounded-full bg-green-200 border-2 border-green-400 flex items-center justify-center mx-auto mb-2">
@@ -471,6 +509,9 @@ function getSlotData(date, slot) {
               {upcoming.map((a, idx) => {
                 const isPending = a.status === "PENDING";
                 const slotTime = SLOTS.find(s=>s.id===a.slot)?.time || a.slot;
+                const aptId = a.id || a.appointmentId;
+                const payInfo = aptId ? paymentByAptId[aptId] : null;
+                const hasPaid = payInfo?.hasPaid || false;
                 return (
                   <Card key={idx} className={`hover:shadow-md transition rounded-2xl ${isPending ? 'border-4 border-yellow-400' : 'border-2 border-gray-200'}`}>
                     <CardBody className="p-5">
@@ -487,7 +528,7 @@ function getSlotData(date, slot) {
                           <h3 className="text-xl font-bold text-gray-900 mb-2">{a.doctor?.name || 'Bác sĩ'}</h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             <UiChip size="sm" variant="flat" color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')}>
-                              {getStatusLabel(a.status)}
+                              {a.status === "PENDING" ? (hasPaid ? "Chờ bác sĩ xác nhận" : "Chờ thanh toán") : getStatusLabel(a.status)}
                             </UiChip>
                             {a.type === "ONLINE" ? (
                               <Chip size="sm" variant="flat" color="success" startContent={<Globe size={12}/>}>Khám online</Chip>
@@ -542,15 +583,26 @@ function getSlotData(date, slot) {
                       <Divider className="my-4" />
                       <div className="flex gap-2">
                         {a.status === "PENDING" ? (
-                          <Button 
-                            size="sm" 
-                            color="default" 
-                            variant="flat"
-                            className="flex-1"
-                            isDisabled
-                          >
-                            Chờ xác nhận
-                          </Button>
+                          hasPaid ? (
+                            <Button 
+                              size="sm" 
+                              color="default" 
+                              variant="flat"
+                              className="flex-1"
+                              isDisabled
+                            >
+                              Chờ bác sĩ xác nhận
+                            </Button>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              color="primary" 
+                              className="flex-1"
+                              onClick={() => router.push(`/nguoi-dung/dat-lich-kham/thanh-toan?appointmentId=${aptId}`)}
+                            >
+                              Thanh toán
+                            </Button>
+                          )
                         ) : a.status === "CONFIRMED" ? (
                           <Button 
                             size="sm" 

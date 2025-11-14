@@ -8,9 +8,12 @@ import Grid from "@/components/layouts/Grid";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import { auth } from "@/lib/firebase";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { useToast } from "@/hooks/useToast";
+import ToastNotification from "@/components/ui/ToastNotification";
 
 export default function DoctorOnlineExamList() {
   const router = useRouter();
+  const toast = useToast();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -379,8 +382,66 @@ export default function DoctorOnlineExamList() {
     return (text && typeof text === 'string' && text.trim()) ? text : "Không rõ";
   };
 
-  const handleStartExam = (appointmentId) => {
-    router.push(`/bac-si/kham-online/${appointmentId}`);
+  const handleStartExam = async (appointmentId) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        toast.error("Vui lòng đăng nhập");
+        return;
+      }
+      const token = await user.getIdToken();
+      
+      // Tìm appointment để kiểm tra status
+      const appointment = appointments.find(apt => (apt.id || apt.appointmentId) === appointmentId);
+      if (!appointment) {
+        toast.error("Không tìm thấy lịch hẹn");
+        return;
+      }
+      
+      // Nếu đã ONGOING, chỉ cần chuyển trang, không cần start lại
+      if (appointment.status === "ONGOING") {
+        router.push(`/bac-si/kham-online/${appointmentId}`);
+        return;
+      }
+      
+      // Nếu status là PENDING, cần confirm trước
+      if (appointment.status === "PENDING") {
+        const confirmResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/confirm`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        if (!confirmResponse.ok) {
+          toast.error("Không thể xác nhận lịch hẹn");
+          return;
+        }
+      }
+      
+      // Start appointment (cho PENDING hoặc CONFIRMED)
+      const startResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (startResponse.ok) {
+        toast.success("Đã bắt đầu cuộc khám");
+        // Refresh appointments list
+        await fetchOnlineAppointments();
+        // Chuyển đến trang detail
+        router.push(`/bac-si/kham-online/${appointmentId}`);
+      } else {
+        toast.error("Không thể bắt đầu cuộc khám");
+      }
+    } catch (error) {
+      console.error("Error starting exam:", error);
+      toast.error("Lỗi khi bắt đầu cuộc khám");
+    }
   };
 
   if (loading) {
@@ -573,9 +634,9 @@ export default function DoctorOnlineExamList() {
                   <div className="flex items-start gap-4 mb-4">
                     <div className="relative">
                       <img 
-                        src={appointment.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.patientName||'BN')}&background=0D9488&color=fff`} 
+                        src={appointment.patient?.idPhotoUrl || appointment.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.patientName||'BN')}&background=0D9488&color=fff`} 
                         className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-400" 
-                        alt="avatar"
+                        alt="Ảnh thẻ bệnh nhân"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -692,10 +753,17 @@ export default function DoctorOnlineExamList() {
                       <Button
                         color="warning"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 relative z-10"
+                        isDisabled={false}
                         onPress={(e) => { 
                           e?.stopPropagation?.(); 
+                          e?.preventDefault?.();
                           handleStartExam(appointment.id); 
+                        }}
+                        onClick={(e) => {
+                          e?.stopPropagation?.();
+                          e?.preventDefault?.();
+                          handleStartExam(appointment.id);
                         }}
                       >
                         Tiếp tục khám
@@ -727,6 +795,7 @@ export default function DoctorOnlineExamList() {
 
   return (
     <DoctorFrame title="Khám online">
+      <ToastNotification toast={toast} />
       <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
 
       {/* Modal for prescription or details */}
@@ -767,7 +836,18 @@ export default function DoctorOnlineExamList() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <MapPin className="w-4 h-4" />
-                  <span>Địa chỉ: {selectedAppointment.patientAddress || "Chưa có"}</span>
+                  <span>Địa chỉ: {
+                    selectedAppointment.patient?.address 
+                      ? (typeof selectedAppointment.patient.address === 'object' 
+                          ? (selectedAppointment.patient.address?.full || [
+                              selectedAppointment.patient.address?.address_detail,
+                              selectedAppointment.patient.address?.ward_name,
+                              selectedAppointment.patient.address?.district_name,
+                              selectedAppointment.patient.address?.province_name
+                            ].filter(Boolean).join(', '))
+                          : selectedAppointment.patient.address)
+                      : (selectedAppointment.patientAddress || "Chưa có")
+                  }</span>
                 </div>
                 <Divider className="my-4" />
                 <h4 className="text-sm font-medium text-gray-700">Lý do khám</h4>
