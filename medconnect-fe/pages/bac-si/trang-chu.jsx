@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { 
   Calendar, 
   Users, 
@@ -15,7 +16,8 @@ import {
   User,
   Stethoscope,
   Award,
-  BarChart3
+  BarChart3,
+  Plus
 } from "lucide-react";
 import {
   Card,
@@ -34,6 +36,7 @@ import { ToastNotification } from "@/components/ui";
 import { useToast, useAvatar } from "@/hooks";
 
 export default function DoctorDashboard() {
+  const router = useRouter();
   const toast = useToast();
   const { getAvatarUrl } = useAvatar();
   const [user, setUser] = useState(null);
@@ -143,16 +146,29 @@ export default function DoctorDashboard() {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const thisWeekStart = new Date(today);
     thisWeekStart.setDate(today.getDate() - today.getDay());
+    thisWeekStart.setHours(0, 0, 0, 0); // Set to start of day
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Helper function to normalize date to start of day for comparison
+    const normalizeDate = (date) => {
+      const d = new Date(date);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    };
+
     const todayAppts = appointments.filter(apt => {
-      const aptDate = new Date(apt.date);
-      return aptDate.toDateString() === today.toDateString();
+      const aptDate = normalizeDate(apt.date);
+      return aptDate.getTime() === today.getTime();
     });
 
+    // Tuần này: từ đầu tuần đến cuối tuần (7 ngày, bao gồm hôm nay)
+    const thisWeekEnd = new Date(thisWeekStart);
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+    thisWeekEnd.setHours(23, 59, 59, 999); // Set to end of day
     const weekAppts = appointments.filter(apt => {
-      const aptDate = new Date(apt.date);
-      return aptDate >= thisWeekStart && aptDate <= now;
+      const aptDate = normalizeDate(apt.date);
+      const weekStart = normalizeDate(thisWeekStart);
+      const weekEnd = normalizeDate(thisWeekEnd);
+      return aptDate >= weekStart && aptDate <= weekEnd;
     });
 
     const monthAppts = appointments.filter(apt => {
@@ -160,7 +176,7 @@ export default function DoctorDashboard() {
       return aptDate >= thisMonthStart && aptDate <= now;
     });
 
-    const completedToday = todayAppts.filter(apt => apt.status === "COMPLETED").length;
+    const completedToday = todayAppts.filter(apt => apt.status === "COMPLETED" || apt.status === "FINISHED").length;
     const uniquePatients = new Set(monthAppts.map(apt => apt.patient?.firebaseUid).filter(Boolean)).size;
 
     setStats({
@@ -279,10 +295,20 @@ export default function DoctorDashboard() {
           />
           <h3 className="text-lg font-bold mb-1">{doctorInfo?.name || "Bác sĩ"}</h3>
           <p className="text-sm text-teal-50 mb-3">{doctorInfo?.email}</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {doctorInfo?.experience_years > 0 && (
           <Chip size="sm" variant="flat" className="bg-white/20 text-white">
+                <Award size={14} className="inline mr-1" />
+                {doctorInfo.experience_years} năm kinh nghiệm
+              </Chip>
+            )}
+            {doctorInfo?.specialization && (
+              <Chip size="sm" variant="flat" className="bg-white/20 text-white border border-white/30">
             <Stethoscope size={14} className="inline mr-1" />
-            {doctorInfo?.specialization || "Chuyên khoa"}
+                {doctorInfo.specialization}
           </Chip>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -394,18 +420,51 @@ export default function DoctorDashboard() {
     </div>
   );
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Chào buổi sáng";
+    if (hour < 18) return "Chào buổi chiều";
+    return "Chào buổi tối";
+  };
+
   // Main Content
   const rightPanel = (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Welcome Banner */}
+      <Card className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white">
+        <CardBody className="p-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">
-          Xin chào, {doctorInfo?.name || "Bác sĩ"}! 👋
+              <h1 className="text-3xl font-bold mb-2">
+                {getGreeting()}, {doctorInfo?.name || "Bác sĩ"}!
         </h1>
-        <p className="text-gray-600">
-          {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              <p className="text-teal-100 text-lg">
+                Chúc bạn một ngày tràn đầy sức khỏe và năng lượng
         </p>
                 </div>
+            <div className="flex gap-3">
+              <Button
+                color="default"
+                variant="flat"
+                className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                startContent={<Calendar size={18} />}
+                onClick={() => router.push("/bac-si/lich-hen")}
+              >
+                Lịch hẹn
+              </Button>
+              <Button
+                color="default"
+                variant="flat"
+                className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                startContent={<Plus size={18} />}
+                onClick={() => router.push("/bac-si/lich-lam-viec")}
+              >
+                Lịch làm việc
+              </Button>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
 
       {/* Stats Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -500,42 +559,56 @@ export default function DoctorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Appointments */}
         <Card className="shadow-sm">
-          <CardHeader>
+          <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 pb-3">
+            <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
+                <div className="p-2 bg-teal-100 rounded-lg">
               <Clock size={18} className="text-teal-600" />
+                </div>
+                <div>
               <h3 className="text-lg font-semibold text-gray-900">Lịch hẹn hôm nay</h3>
+                  <p className="text-xs text-gray-600 mt-0.5">{todayAppointments.length} lịch hẹn</p>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mt-1">{todayAppointments.length} lịch hẹn</p>
           </CardHeader>
           <Divider />
           <CardBody className="p-0 max-h-96 overflow-y-auto">
             {todayAppointments.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">Không có lịch hẹn</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Calendar size={32} className="text-teal-300" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">Không có lịch hẹn</p>
+                <p className="text-xs text-gray-400 mt-1">Hôm nay bạn không có lịch hẹn nào</p>
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-gray-100">
                 {todayAppointments.map((apt) => (
-                  <div key={apt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-12 rounded bg-teal-500 flex-shrink-0" />
+                  <div key={apt.appointmentId} className="p-4 hover:bg-teal-50/50 transition-colors group">
+                    <div className="flex items-start gap-3">
+                      <div className="w-1 h-full min-h-[60px] rounded-full bg-gradient-to-t from-teal-500 to-teal-400 hover:from-teal-600 hover:to-teal-500 transition-all flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Clock size={14} className="text-teal-600 flex-shrink-0" />
-                            <span className="text-sm font-semibold text-gray-900">{SLOT_TIMES[apt.slot]}</span>
+                            <div className="p-1.5 bg-teal-100 rounded group-hover:bg-teal-200 transition-colors">
+                              <Clock size={14} className="text-teal-600" />
+                            </div>
+                            <span className="text-sm font-bold text-gray-900">{SLOT_TIMES[apt.slot]}</span>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
                             <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold text-xs">
                               {getStatusText(apt.status)}
                             </Chip>
                             {apt.type === "ONLINE" && (
-                              <Chip size="sm" color="secondary" variant="flat" className="text-xs">Online</Chip>
+                              <Chip size="sm" color="secondary" variant="flat" className="text-xs font-medium">Online</Chip>
                             )}
                           </div>
                         </div>
-                        <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
+                        <div className="flex items-center gap-2">
+                          <User size={14} className="text-gray-400" />
+                          <p className="text-sm text-gray-900 font-semibold">{apt.patient?.name || "N/A"}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -547,45 +620,59 @@ export default function DoctorDashboard() {
 
         {/* Upcoming Appointments */}
         <Card className="shadow-sm">
-          <CardHeader>
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 pb-3">
+            <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
               <Calendar size={18} className="text-blue-600" />
+                </div>
+                <div>
               <h3 className="text-lg font-semibold text-gray-900">Lịch hẹn sắp tới</h3>
+                  <p className="text-xs text-gray-600 mt-0.5">5 ngày tới</p>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 mt-1">5 ngày tới</p>
           </CardHeader>
           <Divider />
           <CardBody className="p-0 max-h-96 overflow-y-auto">
             {upcomingAppointments.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">Chưa có lịch hẹn</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Calendar size={32} className="text-blue-300" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">Chưa có lịch hẹn</p>
+                <p className="text-xs text-gray-400 mt-1">Không có lịch hẹn trong 5 ngày tới</p>
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-gray-100">
                 {upcomingAppointments.map((apt) => (
-                  <div key={apt.appointmentId} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-12 rounded bg-blue-500 flex-shrink-0" />
+                  <div key={apt.appointmentId} className="p-4 hover:bg-blue-50/50 transition-colors group">
+                    <div className="flex items-start gap-3">
+                      <div className="w-1 h-full min-h-[60px] rounded-full bg-gradient-to-t from-blue-500 to-blue-400 hover:from-blue-600 hover:to-blue-500 transition-all flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Calendar size={14} className="text-blue-600 flex-shrink-0" />
-                            <span className="text-sm font-semibold text-gray-900">
+                            <div className="p-1.5 bg-blue-100 rounded group-hover:bg-blue-200 transition-colors">
+                              <Calendar size={14} className="text-blue-600" />
+                            </div>
+                            <span className="text-sm font-bold text-gray-900">
                               {new Date(apt.date).toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' })}
                             </span>
-                            <span className="text-sm text-gray-600">• {SLOT_TIMES[apt.slot]}</span>
+                            <span className="text-sm text-gray-600 font-medium">• {SLOT_TIMES[apt.slot]}</span>
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
                             <Chip size="sm" color={getStatusColor(apt.status)} variant="solid" className="font-semibold text-xs">
                               {getStatusText(apt.status)}
                             </Chip>
                             {apt.type === "ONLINE" && (
-                              <Chip size="sm" color="secondary" variant="flat" className="text-xs">Online</Chip>
+                              <Chip size="sm" color="secondary" variant="flat" className="text-xs font-medium">Online</Chip>
                             )}
                           </div>
                         </div>
-                        <p className="text-sm text-gray-900 font-medium">{apt.patient?.name || "N/A"}</p>
+                        <div className="flex items-center gap-2">
+                          <User size={14} className="text-gray-400" />
+                          <p className="text-sm text-gray-900 font-semibold">{apt.patient?.name || "N/A"}</p>
+                        </div>
                       </div>
                     </div>
                   </div>

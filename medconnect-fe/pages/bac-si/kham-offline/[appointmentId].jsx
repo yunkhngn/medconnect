@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Button, Card, CardBody, CardHeader, Input, Textarea, Select, SelectItem, Chip, Divider } from "@heroui/react";
-import { Calendar, Save, ArrowLeft, Plus, Clock, FileText, Stethoscope, Pill, AlertCircle, X } from "lucide-react";
+import { Button, Card, CardBody, CardHeader, Input, Textarea, Select, SelectItem, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
+import { Calendar, Save, ArrowLeft, Plus, Clock, FileText, Stethoscope, Pill, AlertCircle, X, Sparkles, Loader2 } from "lucide-react";
 import DoctorFrame from "@/components/layouts/Doctor/Frame";
 import Grid from "@/components/layouts/Grid";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useToast } from "@/hooks/useToast";
 import { auth } from "@/lib/firebase";
 import { parseReason } from "@/utils/appointmentUtils";
+import { useGemini } from "@/hooks/useGemini";
 
 export default function OfflineExamDetailPage() {
   const router = useRouter();
   const toast = useToast();
   const { appointmentId } = router.query || {};
+  const { sendMessage: sendGeminiMessage, loading: geminiLoading } = useGemini();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [patientUserId, setPatientUserId] = useState("");
@@ -60,6 +62,16 @@ export default function OfflineExamDetailPage() {
       };
       // Parse reason properly - handle both object and string formats
       let chiefComplaint = src.chief_complaint || src.complaint || "";
+      
+      // Ensure chief_complaint is always a string
+      if (typeof chiefComplaint === 'object' && chiefComplaint !== null) {
+        // If chief_complaint is an object, try to extract text
+        const parsed = parseReason(chiefComplaint);
+        chiefComplaint = parsed.reasonText || "";
+      } else if (typeof chiefComplaint !== 'string') {
+        chiefComplaint = String(chiefComplaint || "");
+      }
+      
       if (!chiefComplaint && src.reason) {
         // If reason is an object, parse it to get reasonText
         if (typeof src.reason === 'object' && src.reason !== null) {
@@ -73,6 +85,9 @@ export default function OfflineExamDetailPage() {
           chiefComplaint = String(src.reason || "");
         }
       }
+      
+      // Final safety check: ensure it's always a string
+      chiefComplaint = typeof chiefComplaint === 'string' ? chiefComplaint : String(chiefComplaint || "");
       
       return {
         visit_id: src.visit_id || n.visit_id,
@@ -107,6 +122,10 @@ export default function OfflineExamDetailPage() {
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
   const [icdCode, setIcdCode] = useState("");
   const [medicationInput, setMedicationInput] = useState({ name: "", dosage: "", frequency: "", duration: "" });
+  const [aiSummary, setAiSummary] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [hasAiSummary, setHasAiSummary] = useState(false);
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onOpenChange: onConfirmOpenChange } = useDisclosure();
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => setUser(u));
@@ -138,12 +157,21 @@ export default function OfflineExamDetailPage() {
         } catch (_) {
           reasonText = data?.reason || "";
         }
+        // Parse reasonText to ensure it's a string
+        let finalReasonText = reasonText;
+        if (typeof reasonText === 'object' && reasonText !== null) {
+          const parsed = parseReason(reasonText);
+          finalReasonText = parsed.reasonText || "";
+        } else if (typeof reasonText !== 'string') {
+          finalReasonText = String(reasonText || "");
+        }
+        
         setRecord((prev) => ({
           ...prev,
           visit_date: data.date || prev.visit_date,
           visit_time: (data.time || data.startTime || prev.visit_time || new Date().toTimeString().slice(0,5)),
           visit_type: (data.type||"OFFLINE").toString().toLowerCase(),
-          chief_complaint: reasonText || prev.chief_complaint
+          chief_complaint: finalReasonText || prev.chief_complaint
         }));
         // Try prefill from existing EMR (keep old information when editing finished appointments)
         try {
@@ -191,7 +219,105 @@ export default function OfflineExamDetailPage() {
   const addMedication = () => { if(!medicationInput.name.trim()) return; setRecord((p)=>({...p, prescriptions:[...p.prescriptions, {...medicationInput}] })); setMedicationInput({name:"",dosage:"",frequency:"",duration:""}); };
   const removeMedication = (i) => setRecord((p)=>({...p, prescriptions:p.prescriptions.filter((_,idx)=>idx!==i)}));
 
-  const handleSave = async () => {
+  // Generate AI summary from prescription data - hướng về bệnh nhân
+  const generateAISummary = async () => {
+    setIsGeneratingSummary(true);
+    try {
+      // Chuẩn bị dữ liệu để gửi cho AI
+      const recordData = {
+        chief_complaint: record.chief_complaint || "",
+        diagnosis_primary: record.diagnosis?.primary || "",
+        diagnosis_secondary: record.diagnosis?.secondary || [],
+        icd_codes: record.diagnosis?.icd_codes || [],
+        vital_signs: record.vital_signs || {},
+        prescriptions: record.prescriptions || [],
+        physical_exam: record.physical_exam || {},
+        notes: record.notes || ""
+      };
+
+      // Tạo prompt chi tiết, hướng về bệnh nhân
+      const physicalExamParts = [];
+      if (recordData.physical_exam.general) physicalExamParts.push(`Tổng quát: ${recordData.physical_exam.general}`);
+      if (recordData.physical_exam.cardiovascular) physicalExamParts.push(`Tim mạch: ${recordData.physical_exam.cardiovascular}`);
+      if (recordData.physical_exam.respiratory) physicalExamParts.push(`Hô hấp: ${recordData.physical_exam.respiratory}`);
+
+      const prompt = `Bạn là bác sĩ đang tạo tóm tắt cho bệnh nhân sau khi khám. Hãy viết một tóm tắt dễ hiểu, thân thiện, hướng về bệnh nhân (dùng "bạn" thay vì "bệnh nhân"). 
+
+Thông tin khám bệnh:
+- Lý do khám: ${recordData.chief_complaint || "Chưa có"}
+- Chẩn đoán chính: ${recordData.diagnosis_primary || "Chưa có"}
+- Chẩn đoán phụ: ${recordData.diagnosis_secondary.join(", ") || "Không có"}
+- Mã ICD-10: ${recordData.icd_codes.join(", ") || "Chưa có"}
+- Dấu hiệu sinh tồn: ${recordData.vital_signs.temperature ? `Nhiệt độ: ${recordData.vital_signs.temperature}°C` : ""} ${recordData.vital_signs.blood_pressure ? `Huyết áp: ${recordData.vital_signs.blood_pressure} mmHg` : ""} ${recordData.vital_signs.heart_rate ? `Nhịp tim: ${recordData.vital_signs.heart_rate} bpm` : ""}
+- Khám lâm sàng: ${physicalExamParts.join("; ") || "Không có"}
+- Đơn thuốc: ${recordData.prescriptions.map(m => `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`).join(", ") || "Không có"}
+- Ghi chú: ${recordData.notes || "Không có"}
+
+Hãy tạo tóm tắt với các phần sau (viết bằng tiếng Việt, dễ hiểu, thân thiện):
+1. **Chẩn đoán**: Giải thích cho bệnh nhân biết họ đang bị gì (dùng "bạn" thay vì "bệnh nhân")
+2. **Đơn thuốc**: Liệt kê từng thuốc bác sĩ kê, liều lượng, tần suất uống (bao nhiêu lần/ngày), thời gian uống
+3. **Hướng dẫn sinh hoạt**: Nên ăn uống, nghỉ ngơi, vận động như thế nào
+4. **Lưu ý**: Những điều cần chú ý, khi nào cần tái khám, dấu hiệu cần đến bệnh viện ngay
+
+Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùng "bạn" thay vì "bệnh nhân".`;
+
+      // Gọi Gemini API
+      const summary = await sendGeminiMessage(prompt);
+      
+      setAiSummary(summary);
+      setHasAiSummary(true);
+      
+      // Tự động điền vào notes với format: [notes hiện tại] + "Tóm tắt của AI:\n\n" + [summary]
+      // Nếu đã có "Tóm tắt của AI:" thì replace, không append
+      const currentNotes = record.notes || "";
+      let newNotes;
+      
+      if (currentNotes.includes("Tóm tắt của AI:")) {
+        // Replace phần AI summary cũ
+        const parts = currentNotes.split("Tóm tắt của AI:");
+        const beforeAI = parts[0].trim();
+        newNotes = beforeAI 
+          ? `${beforeAI}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      } else {
+        // Append mới
+        newNotes = currentNotes 
+          ? `${currentNotes}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      }
+      
+      setRecord(prev => ({
+        ...prev,
+        notes: newNotes
+      }));
+    } catch (error) {
+      console.error("AI Summary generation error:", error);
+      toast.error("Không thể tạo tóm tắt AI. Đang tạo tóm tắt đơn giản...");
+      // Fallback: tạo summary đơn giản nếu AI lỗi
+      const summaryParts = [];
+      if (record.chief_complaint) {
+        summaryParts.push(`Bạn đến khám với lý do: ${record.chief_complaint}.`);
+      }
+      if (record.diagnosis?.primary) {
+        summaryParts.push(`Bác sĩ chẩn đoán bạn đang bị: ${record.diagnosis.primary}.`);
+      }
+      if (record.prescriptions && record.prescriptions.length > 0) {
+        const meds = record.prescriptions.map(m => 
+          `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`
+        ).join(", ");
+        summaryParts.push(`Bác sĩ kê đơn thuốc: ${meds}.`);
+      }
+      const fallbackSummary = summaryParts.length > 0 
+        ? summaryParts.join(" ") 
+        : "Chưa có đủ thông tin để tạo tóm tắt.";
+      setAiSummary(fallbackSummary);
+      setHasAiSummary(true);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const performSave = async () => {
     if (!user) { toast.error("Vui lòng đăng nhập"); return; }
     if (!appointmentId || !patientUserId) { toast.error("Thiếu thông tin lịch hẹn/bệnh nhân"); return; }
     if (!record.chief_complaint || !record.diagnosis.primary) { toast.error("Nhập lý do khám và chẩn đoán chính"); return; }
@@ -200,11 +326,23 @@ export default function OfflineExamDetailPage() {
       const token = await user.getIdToken();
       // Merge với bản ghi cũ để không làm mất dữ liệu khi cập nhật
       const mergedToSave = isFinished && previousEntry ? mergeRecord(previousEntry, record) : record;
+      
+      // Notes should already contain AI summary from generateAISummary, so we use it directly
+      let finalNotes = mergedToSave.notes || "";
+      
       const doctor_name = appointmentInfo?.doctor?.name || user?.displayName || "";
       const doctor_id = appointmentInfo?.doctor?.id || user?.uid || "";
       const visit_time = mergedToSave.visit_time || new Date().toTimeString().slice(0,5);
       const visit_id = previousEntry?.visit_id || mergedToSave.visit_id || `V${Date.now()}`;
-      const entry = { visit_id, ...mergedToSave, visit_time, doctor_name, doctor_id, appointment_id:Number(appointmentId) };
+      const entry = { 
+        visit_id, 
+        ...mergedToSave, 
+        notes: finalNotes,
+        visit_time, 
+        doctor_name, 
+        doctor_id, 
+        appointment_id:Number(appointmentId) 
+      };
       const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body: JSON.stringify({ entry }) });
       if (!resp.ok) throw new Error((await resp.json()).error || "Lưu bệnh án thất bại");
       if (!isFinished) {
@@ -340,8 +478,8 @@ export default function OfflineExamDetailPage() {
               Lý do khám <span className="text-red-500">*</span>
             </label>
             <Textarea 
-              value={record.chief_complaint} 
-              onValueChange={(v)=>setRecord({...record, chief_complaint:v})} 
+              value={typeof record.chief_complaint === 'string' ? record.chief_complaint : (record.chief_complaint ? String(record.chief_complaint) : "")} 
+              onValueChange={(v)=>setRecord({...record, chief_complaint: typeof v === 'string' ? v : String(v || "")})} 
               variant="bordered"
               placeholder="Nhập lý do khám của bệnh nhân..."
               minRows={3}
@@ -581,7 +719,74 @@ export default function OfflineExamDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Ghi chú - Section 4 */}
+      {/* AI Summary - Section 4 */}
+      <Card className="shadow-md border-0 bg-gradient-to-br from-white to-indigo-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Sparkles className="text-indigo-600" size={20} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">Tóm tắt AI</h2>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="pt-6 space-y-4">
+          <div className="flex gap-2">
+            <Button
+              color="secondary"
+              variant="flat"
+              onClick={generateAISummary}
+              isLoading={isGeneratingSummary}
+              startContent={isGeneratingSummary ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
+              className="font-medium"
+            >
+              {isGeneratingSummary ? "Đang tạo tóm tắt..." : "Tạo tóm tắt"}
+            </Button>
+            {hasAiSummary && (
+              <Button
+                variant="light"
+                color="danger"
+                onClick={() => {
+                  setAiSummary("");
+                  setHasAiSummary(false);
+                  
+                  // Xóa phần "Tóm tắt của AI:" trong notes
+                  const currentNotes = record.notes || "";
+                  if (currentNotes.includes("Tóm tắt của AI:")) {
+                    const parts = currentNotes.split("Tóm tắt của AI:");
+                    const beforeAI = parts[0].trim();
+                    setRecord(prev => ({
+                      ...prev,
+                      notes: beforeAI
+                    }));
+                  }
+                }}
+                className="font-medium"
+              >
+                Xóa tóm tắt
+              </Button>
+            )}
+          </div>
+          {hasAiSummary && (
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Tóm tắt AI sẽ xuất hiện ở đây..."
+                value={aiSummary}
+                onValueChange={setAiSummary}
+                variant="bordered"
+                minRows={4}
+                classNames={{
+                  input: "font-medium text-gray-900",
+                  inputWrapper: "border-gray-300 hover:border-indigo-400 transition-colors"
+                }}
+              />
+              <p className="text-xs text-gray-500 italic">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Ghi chú - Section 5 */}
       <Card className="shadow-md border-0 bg-gradient-to-br from-white to-purple-50/30">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
@@ -593,17 +798,24 @@ export default function OfflineExamDetailPage() {
         </CardHeader>
         <Divider />
         <CardBody className="pt-6">
+          <div className="space-y-2">
           <Textarea 
-            placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám..." 
+              placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp" 
             value={record.notes} 
             onValueChange={(v)=>setRecord({...record, notes:v})} 
             variant="bordered" 
-            minRows={4}
+              minRows={6}
             classNames={{
-              input: "font-medium text-gray-900",
+                input: "font-medium text-gray-900 leading-relaxed",
               inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
             }}
           />
+            {record.notes && (
+              <div className="text-xs text-gray-500 bg-purple-50 p-2 rounded border border-purple-100">
+                <strong>Tip:</strong> Dùng <code className="bg-white px-1 rounded">**text**</code> để in đậm, ví dụ: <code className="bg-white px-1 rounded">**Chẩn đoán:**</code>
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -620,7 +832,7 @@ export default function OfflineExamDetailPage() {
         <Button 
           color="primary" 
           startContent={<Save size={18}/>} 
-          onClick={handleSave} 
+          onClick={performSave} 
           isLoading={saving}
           className="font-medium"
           size="lg"
@@ -635,6 +847,42 @@ export default function OfflineExamDetailPage() {
     <DoctorFrame title={`Khám offline ca ${appointmentId || ""}`}>
       <ToastNotification toast={toast} />
         <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+      
+      {/* Confirm Modal for AI Summary */}
+      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange} size="2xl" scrollBehavior="inside">
+        <ModalContent className="max-h-[90vh]">
+          <ModalHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="text-amber-500" size={20} />
+              <span>Xác nhận lưu với tóm tắt AI</span>
+            </div>
+          </ModalHeader>
+          <ModalBody className="overflow-y-auto max-h-[calc(90vh-180px)]">
+            <p className="text-gray-700">
+              Bạn đã sử dụng tóm tắt được tạo bởi AI. Vui lòng xác nhận rằng bạn đã đọc kỹ và kiểm tra nội dung tóm tắt này trước khi lưu.
+            </p>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-[400px] overflow-y-auto">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Nội dung tóm tắt AI:</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">{aiSummary}</p>
+            </div>
+            <p className="text-xs text-gray-500 italic mt-3">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onConfirmOpenChange}>
+              Hủy
+            </Button>
+            <Button
+              color="primary"
+              onPress={() => {
+                onConfirmOpenChange();
+                performSave();
+              }}
+            >
+              Đã đọc kỹ, xác nhận lưu
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </DoctorFrame>
   );
 }

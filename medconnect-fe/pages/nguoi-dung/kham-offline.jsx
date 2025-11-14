@@ -8,6 +8,7 @@ import Grid from "@/components/layouts/Grid";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import { auth } from "@/lib/firebase";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import DOMPurify from 'dompurify';
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -397,7 +398,11 @@ export default function PatientOfflineExamList() {
 
   const getStatusText = (status) => {
     switch (status) {
-      case "PENDING": return "Chờ bác sĩ xác nhận";
+      case "PENDING": {
+        // This function is called without appointmentId, so we can't check payment here
+        // The actual status text is handled in the component where payment info is available
+        return "Chờ xác nhận";
+      }
       case "CONFIRMED": return "Đã xác nhận";
       case "ONGOING": return "Đang khám";
       case "FINISHED": return "Hoàn thành";
@@ -698,15 +703,15 @@ export default function PatientOfflineExamList() {
                     )}
                     {appointment.status === "FINISHED" && (
                       <>
-                        <Button
-                          color="default"
-                          size="sm"
-                          variant="flat"
-                          className="flex-1"
-                          onPress={() => openAppointmentModal(appointment)}
-                        >
-                          Xem lại
-                        </Button>
+                      <Button
+                        color="default"
+                        size="sm"
+                        variant="flat"
+                        className="flex-1"
+                        onPress={() => openAppointmentModal(appointment)}
+                      >
+                        Xem lại
+                      </Button>
                         <Button
                           color="warning"
                           size="sm"
@@ -894,11 +899,31 @@ export default function PatientOfflineExamList() {
                 )}
                 
                 <Divider className="my-4" />
-                <h4 className="text-sm font-medium text-gray-700">Ghi chú</h4>
-                {medicalRecord?.notes ? (
-                  <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">{medicalRecord.notes}</p>
-                ) : prescription?.note ? (
-                  <p className="text-sm text-gray-600 whitespace-pre-line break-words pl-4">{prescription.note}</p>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Ghi chú</h4>
+                {(medicalRecord?.notes || prescription?.note) ? (
+                  <div className="text-sm text-gray-600 whitespace-pre-line break-words pl-4 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed">
+                    {(medicalRecord?.notes || prescription?.note || "").split('\n').map((line, idx) => {
+                      // Format bold text **text**
+                      let formattedLine = line;
+                      formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                      
+                      // Format numbered sections (1., 2., etc.)
+                      if (/^\d+\.\s/.test(line.trim())) {
+                        return (
+                          <div key={idx} className="mb-2 first:mt-0">
+                            <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                          </div>
+                        );
+                      }
+                      
+                      // Regular paragraph
+                      return (
+                        <div key={idx} className="mb-1.5 last:mb-0">
+                          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <p className="text-sm text-gray-400 pl-4 italic">Không có ghi chú</p>
                 )}
@@ -935,7 +960,7 @@ export default function PatientOfflineExamList() {
                             </p>
                           )}
                         </div>
-                      </div>
+              </div>
                     ) : (
                       <div className="space-y-4">
                         <div>

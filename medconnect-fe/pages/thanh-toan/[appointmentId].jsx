@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
-  Card, CardBody, CardHeader, Button, Divider, Chip, Spinner
+  Card, CardBody, CardHeader, Button, Divider, Chip, Spinner, Checkbox
 } from "@heroui/react";
-import { CreditCard, Calendar, User, Clock, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { CreditCard, Calendar, User, Clock, CheckCircle, AlertCircle, ArrowRight, Shield } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
+import { parseBHYT, BENEFIT_LEVELS } from "@/utils/bhytHelper";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 09:50",
@@ -28,6 +29,10 @@ export default function PaymentPage() {
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [consultationFee, setConsultationFee] = useState(0);
+  const [patientProfile, setPatientProfile] = useState(null);
+  const [useInsurance, setUseInsurance] = useState(false);
+  const [insuranceDiscount, setInsuranceDiscount] = useState(0);
+  const [insuranceInfo, setInsuranceInfo] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,10 +67,71 @@ export default function PaymentPage() {
     return new Intl.NumberFormat('vi-VN').format(price) + ' VND';
   };
 
+  // Calculate discount based on BHYT benefit level
+  const calculateInsuranceDiscount = (fee, benefitLevel) => {
+    if (!benefitLevel || !BENEFIT_LEVELS[benefitLevel]) return 0;
+    
+    const rate = BENEFIT_LEVELS[benefitLevel].rate;
+    // Parse rate like "80%" to get percentage
+    const percentage = parseFloat(rate.replace('%', ''));
+    
+    // Discount = fee * (100 - percentage) / 100
+    // For example: 80% coverage means 20% discount
+    const discountPercent = 100 - percentage;
+    return Math.round(fee * discountPercent / 100);
+  };
+
+  // Update discount when insurance checkbox changes
+  useEffect(() => {
+    if (useInsurance && insuranceInfo && consultationFee > 0) {
+      const discount = calculateInsuranceDiscount(consultationFee, insuranceInfo.benefitLevel);
+      setInsuranceDiscount(discount);
+    } else {
+      setInsuranceDiscount(0);
+    }
+  }, [useInsurance, insuranceInfo, consultationFee]);
+
+  const finalAmount = consultationFee - insuranceDiscount;
+
   const fetchAppointmentAndPayment = async () => {
     setLoading(true);
     try {
       const token = await user.getIdToken();
+
+      // Fetch patient profile to get BHYT info
+      try {
+        const profileResponse = await fetch("http://localhost:8080/api/patient/profile", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          setPatientProfile(profileData);
+          
+          // Parse BHYT if available
+          if (profileData.insurance_number || profileData.socialInsurance) {
+            const bhytCode = profileData.insurance_number || profileData.socialInsurance;
+            const parsed = parseBHYT(bhytCode);
+            if (parsed) {
+              setInsuranceInfo(parsed);
+              
+              // Check if BHYT is still valid
+              const validTo = profileData.insurance_valid_to || profileData.insuranceValidTo;
+              if (validTo) {
+                const expiryDate = new Date(validTo);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (expiryDate >= today) {
+                  // BHYT is valid, can use
+                } else {
+                  toast.error("Thẻ BHYT đã hết hạn. Không thể sử dụng để giảm giá.");
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching patient profile:", error);
+      }
 
       // Fetch appointment details
       const aptResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
@@ -130,7 +196,10 @@ export default function PaymentPage() {
         },
         body: JSON.stringify({
           appointmentId: parseInt(appointmentId),
-          returnUrl: `${window.location.origin}/thanh-toan/callback?appointmentId=${appointmentId}`
+          returnUrl: `${window.location.origin}/thanh-toan/callback?appointmentId=${appointmentId}`,
+          useInsurance: useInsurance,
+          insuranceDiscount: useInsurance ? insuranceDiscount : 0,
+          finalAmount: finalAmount
         })
       });
 
@@ -220,10 +289,53 @@ export default function PaymentPage() {
             
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Phí khám bệnh:</span>
-              <span className="text-2xl font-bold text-teal-600">{formatPrice(consultationFee)}</span>
+              <span className="text-lg font-semibold text-gray-900">{formatPrice(consultationFee)}</span>
             </div>
+            
+            {/* BHYT Checkbox */}
+            {insuranceInfo && (
+              <>
+                <Divider className="my-3" />
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <Checkbox
+                    isSelected={useInsurance}
+                    onValueChange={setUseInsurance}
+                    classNames={{
+                      label: "text-sm"
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Shield size={16} className="text-blue-600" />
+                      <span className="font-medium text-blue-900">Sử dụng Bảo hiểm Y tế</span>
+                    </div>
+                  </Checkbox>
+                  {useInsurance && (
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Mã BHYT:</span>
+                        <span className="font-medium">{insuranceInfo.formatted}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Mức hưởng:</span>
+                        <span className="font-medium text-green-600">{insuranceInfo.benefitRate}</span>
+                      </div>
+                      {insuranceDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Giảm giá BHYT:</span>
+                          <span className="font-semibold">-{formatPrice(insuranceDiscount)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <Divider />
+          <div className="flex justify-between items-center pt-2">
+            <span className="text-gray-700 font-semibold text-lg">Tổng thanh toán:</span>
+            <span className="text-2xl font-bold text-teal-600">{formatPrice(finalAmount)}</span>
+          </div>
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-semibold text-blue-900 mb-2">Phương thức thanh toán</h4>
             <div className="space-y-2">
@@ -335,11 +447,18 @@ export default function PaymentPage() {
               </div>
             )}
             
+            {useInsurance && insuranceDiscount > 0 && (
+              <div className="flex justify-between items-center text-sm text-green-600 mt-2">
+                <span>Giảm giá BHYT ({insuranceInfo?.benefitRate}):</span>
+                <span className="font-semibold">-{formatPrice(insuranceDiscount)}</span>
+              </div>
+            )}
+            
             <Divider className="my-3" />
             
             <div className="flex justify-between items-center">
               <span className="text-gray-700 font-medium">Tổng thanh toán:</span>
-              <span className="text-3xl font-bold text-teal-600">{formatPrice(consultationFee)}</span>
+              <span className="text-3xl font-bold text-teal-600">{formatPrice(finalAmount)}</span>
             </div>
           </div>
 

@@ -177,7 +177,7 @@ const ChinhSachBaoMat = () => {
                   </ul>
                 </CardBody>
               </Card>
-            </Float>
+                      </Float>
 
             {/* Section 6: Quyền của người dùng */}
             <Float variant="fadeInUp" delay={0.7}>
@@ -267,12 +267,12 @@ const ChinhSachBaoMat = () => {
             <Float variant="fadeInUp" delay={1.0}>
               <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
                 <CardBody className="p-8 md:p-12">
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-6">
-                    Liên hệ về vấn đề bảo mật
-                  </h3>
-                  <p className="text-gray-700 text-base md:text-lg mb-6">
+                    <h3 className="text-2xl font-semibold text-gray-900 mb-6">
+                      Liên hệ về vấn đề bảo mật
+                    </h3>
+                    <p className="text-gray-700 text-base md:text-lg mb-6">
                     Nếu bạn có bất kỳ câu hỏi nào về chính sách bảo mật này, vui lòng liên hệ với chúng tôi qua:
-                  </p>
+                    </p>
                   <div className="space-y-4 text-gray-700">
                     <div className="flex items-center space-x-3 text-base md:text-lg">
                       <Mail className="text-teal-600" size={20} />

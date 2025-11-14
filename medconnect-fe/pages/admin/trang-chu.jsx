@@ -13,7 +13,23 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  Progress,
+  Divider,
 } from '@heroui/react';
+import {
+  User,
+  Users,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  Activity,
+  FileText,
+  Plus,
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+} from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -116,278 +132,405 @@ const AdminDashboard = () => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}M`;
+    } else if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(0)}K`;
+    }
+    return amount?.toString() || '0';
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Chào buổi sáng';
+    if (hour < 18) return 'Chào buổi chiều';
+    return 'Chào buổi tối';
+  };
+
   return (
     <AdminFrame title="Dashboard">
       <Grid
         leftChildren={
-          <>
+          <div className="space-y-4">
             {/* Stats Summary */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Thống kê</h3>
-              
-              <div className="space-y-3">
-                <Card className="bg-blue-50 border-blue-200">
-                  <CardBody className="p-3">
-                    <p className="text-xs text-gray-600 mb-1">Tổng bác sĩ</p>
-                    <p className="text-2xl font-bold text-blue-600">{stats.totalDoctors}</p>
-                    <p className="text-xs text-green-600 mt-1">+5%</p>
-                  </CardBody>
-                </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Activity size={16} className="text-blue-600" />
+                  Thống kê
+                </h4>
+              </CardHeader>
+              <CardBody className="space-y-3 pt-0">
+                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <User size={16} className="text-blue-600" />
+                    <span className="text-sm text-gray-700">Tổng bác sĩ</span>
+                  </div>
+                  <span className="font-bold text-blue-600">{stats.totalDoctors}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} className="text-green-600" />
+                    <span className="text-sm text-gray-700">Tổng bệnh nhân</span>
+                  </div>
+                  <span className="font-bold text-green-600">{stats.totalPatients || 0}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} className="text-purple-600" />
+                    <span className="text-sm text-gray-700">Tổng lịch hẹn</span>
+                  </div>
+                  <span className="font-bold text-purple-600">{stats.totalAppointments}</span>
+                </div>
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-600">Tỷ lệ hoàn thành</span>
+                    <span className="text-xs font-semibold text-green-600">
+                      {stats.totalAppointments > 0 
+                        ? Math.round((stats.completedAppointments / stats.totalAppointments) * 100)
+                        : 0}%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={stats.totalAppointments > 0 
+                      ? (stats.completedAppointments / stats.totalAppointments) * 100 
+                      : 0} 
+                    color="success" 
+                    size="sm"
+                  />
+                </div>
+              </CardBody>
+            </Card>
 
-                <Card className="bg-green-50 border-green-200">
-                  <CardBody className="p-3">
-                    <p className="text-xs text-gray-600 mb-1">Đang hoạt động</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.totalPatients || 0}</p>
-                  </CardBody>
-                </Card>
-              </div>
-            </div>
             {/* Quick Actions */}
-            <div className="space-y-4 mt-6">
-              <h3 className="text-lg font-semibold text-gray-900">Thao tác nhanh</h3>
-              
-              <div className="space-y-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <h4 className="text-sm font-semibold text-gray-700">Thao tác nhanh</h4>
+              </CardHeader>
+              <CardBody className="space-y-2 pt-0">
                 <Button
-                  fullWidth
                   color="primary"
                   variant="flat"
+                  fullWidth
+                  size="sm"
                   onPress={() => window.location.href = '/admin/bac-si'}
-                  startContent={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  }
+                  startContent={<Plus size={16} />}
                 >
-                  Thêm bác sĩ mới
+                  Thêm bác sĩ
                 </Button>
                 <Button
+                  color="secondary"
+                  variant="flat"
                   fullWidth
+                  size="sm"
+                  onPress={() => window.location.href = '/admin/lich-hen'}
+                  startContent={<Calendar size={16} />}
+                >
+                  Quản lý lịch hẹn
+                </Button>
+                <Button
                   color="success"
                   variant="flat"
+                  fullWidth
+                  size="sm"
                   onPress={() => {
-                    // Export dashboard to PDF
                     if (typeof window !== 'undefined') {
                       window.print();
                     }
                   }}
-                  startContent={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                  }
+                  startContent={<FileText size={16} />}
                 >
                   Tạo báo cáo
                 </Button>
-              </div>
-            </div>
-          </>
+              </CardBody>
+            </Card>
+          </div>
         }
         rightChildren={
           <div className="space-y-6">
-            {/* Welcome Header */}
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Chào mừng trở lại, Admin! 👋
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Đây là tổng quan về hệ thống MedConnect
-              </p>
+            {/* Welcome Header Banner */}
+            <Card className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+              <CardBody className="p-8">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h1 className="text-3xl font-bold mb-2">
+                      {getGreeting()}, Admin! 👋
+                    </h1>
+                    <p className="text-blue-100 text-lg">
+                      Đây là tổng quan về hệ thống MedConnect
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      color="default"
+                      variant="flat"
+                      className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                      onPress={() => window.location.href = '/admin/bac-si'}
+                      startContent={<Plus size={18} />}
+                    >
+                      Thêm bác sĩ
+                    </Button>
+                    <Button
+                      color="default"
+                      variant="flat"
+                      className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                      onPress={() => window.location.href = '/admin/lich-hen'}
+                      startContent={<Calendar size={18} />}
+                    >
+                      Quản lý lịch hẹn
+                    </Button>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Total Doctors */}
+                <Card className="border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600 mb-1">Tổng bác sĩ</p>
+                        <p className="text-3xl font-bold text-blue-600">
+                          {stats.totalDoctors}
+                        </p>
+                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                          <TrendingUp size={12} />
+                          +5% so với tháng trước
+                        </p>
+                      </div>
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+                        <User size={28} className="text-blue-600" />
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+
+                {/* Total Patients */}
+                <Card className="border border-green-100 shadow-sm hover:shadow-md transition-shadow">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600 mb-1">Tổng bệnh nhân</p>
+                        <p className="text-3xl font-bold text-green-600">
+                          {stats.totalPatients}
+                        </p>
+                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                          <TrendingUp size={12} />
+                          +12% so với tháng trước
+                        </p>
+                      </div>
+                      <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl flex items-center justify-center">
+                        <Users size={28} className="text-green-600" />
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+
+                {/* Total Appointments */}
+                <Card className="border border-purple-100 shadow-sm hover:shadow-md transition-shadow">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600 mb-1">Tổng lịch hẹn</p>
+                        <p className="text-3xl font-bold text-purple-600">
+                          {stats.totalAppointments}
+                        </p>
+                        <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
+                          <Clock size={12} />
+                          {stats.pendingAppointments} chờ xác nhận
+                        </p>
+                      </div>
+                      <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
+                        <Calendar size={28} className="text-purple-600" />
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+
+                {/* Total Revenue */}
+                <Card className="border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-600 mb-1">Tổng doanh thu</p>
+                        <p className="text-3xl font-bold text-orange-600">
+                          {formatCurrency(stats.totalRevenue)} VNĐ
+                        </p>
+                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                          <TrendingUp size={12} />
+                          +8% so với tháng trước
+                        </p>
+                      </div>
+                      <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center">
+                        <DollarSign size={28} className="text-orange-600" />
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              </div>
+
+              {/* Recent Appointments Table */}
+              <Card className="shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-100">
+                  <div className="flex justify-between items-center w-full">
+                    <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                      <Calendar size={22} className="text-purple-600" />
+                      Lịch hẹn gần đây
+                    </h3>
+                    <Button 
+                      size="sm" 
+                      variant="light" 
+                      color="primary"
+                      endContent={<ArrowRight size={16} />}
+                      onPress={() => window.location.href = '/admin/lich-hen'}
+                    >
+                      Xem tất cả
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardBody className="p-0">
+                  <Table 
+                    removeWrapper 
+                    aria-label="Recent appointments" 
+                    isLoading={isLoading}
+                    classNames={{
+                      wrapper: "min-h-[200px]",
+                    }}
+                  >
+                    <TableHeader>
+                      <TableColumn>BỆNH NHÂN</TableColumn>
+                      <TableColumn>BÁC SĨ</TableColumn>
+                      <TableColumn>NGÀY GIỜ</TableColumn>
+                      <TableColumn>TRẠNG THÁI</TableColumn>
+                    </TableHeader>
+                    <TableBody emptyContent="Không có dữ liệu">
+                      {recentAppointments.map((appointment) => (
+                        <TableRow key={appointment.id} className="hover:bg-gray-50 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User size={16} className="text-gray-400" />
+                              <span className="font-medium">{appointment.patientName || 'N/A'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-gray-700">{appointment.doctorName || 'N/A'}</span>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div>
+                              <p className="font-medium">{appointment.date && new Date(appointment.date).toLocaleDateString('vi-VN')}</p>
+                              <p className="text-xs text-gray-500">{appointment.slot}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              size="sm" 
+                              color={getStatusColor(appointment.status)}
+                              variant="flat"
+                            >
+                              {getStatusLabel(appointment.status)}
+                            </Chip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardBody>
+              </Card>
+
+              {/* Activity Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border border-green-100 shadow-sm">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                        <CheckCircle size={16} className="text-green-600" />
+                        Tỷ lệ hoàn thành
+                      </h4>
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <TrendingUp size={12} />
+                        +3.2%
+                      </span>
+                    </div>
+                    <div className="flex items-end gap-2 mb-3">
+                      <p className="text-3xl font-bold text-gray-900">
+                        {stats.totalAppointments > 0 
+                          ? ((stats.completedAppointments / stats.totalAppointments) * 100).toFixed(1)
+                          : '0.0'
+                        }%
+                      </p>
+                    </div>
+                    <Progress
+                      value={stats.totalAppointments > 0 
+                        ? (stats.completedAppointments / stats.totalAppointments) * 100
+                        : 0}
+                      color="success"
+                      className="w-full"
+                      classNames={{
+                        indicator: "bg-gradient-to-r from-green-500 to-emerald-500",
+                      }}
+                    />
+                  </CardBody>
+                </Card>
+
+                <Card className="border border-blue-100 shadow-sm">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                        <Activity size={16} className="text-blue-600" />
+                        Bác sĩ hoạt động
+                      </h4>
+                    </div>
+                    <div className="flex items-end gap-2 mb-3">
+                      <p className="text-3xl font-bold text-gray-900">
+                        {Math.floor((stats.totalDoctors * 0.92))}
+                      </p>
+                      <span className="text-sm text-gray-500 mb-1">/ {stats.totalDoctors}</span>
+                    </div>
+                    <Progress
+                      value={stats.totalDoctors > 0 ? (Math.floor((stats.totalDoctors * 0.92)) / stats.totalDoctors) * 100 : 0}
+                      color="primary"
+                      className="w-full"
+                      classNames={{
+                        indicator: "bg-gradient-to-r from-blue-500 to-indigo-500",
+                      }}
+                    />
+                  </CardBody>
+                </Card>
+
+                <Card className="border border-orange-100 shadow-sm">
+                  <CardBody className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                        <DollarSign size={16} className="text-orange-600" />
+                        Doanh thu TB/ngày
+                      </h4>
+                    </div>
+                    <div className="flex items-end gap-2 mb-3">
+                      <p className="text-3xl font-bold text-gray-900">
+                        {stats.totalRevenue > 0 && stats.totalAppointments > 0
+                          ? formatCurrency(stats.totalRevenue / stats.totalAppointments)
+                          : '0'
+                        }
+                      </p>
+                      <span className="text-xs text-gray-500 mb-1">VNĐ</span>
+                    </div>
+                    <Progress
+                      value={stats.totalRevenue > 0 ? 78 : 0}
+                      color="warning"
+                      className="w-full"
+                      classNames={{
+                        indicator: "bg-gradient-to-r from-orange-500 to-amber-500",
+                      }}
+                    />
+                  </CardBody>
+                </Card>
+              </div>
             </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Total Doctors */}
-          <Card>
-            <CardBody className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tổng bác sĩ</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {stats.totalDoctors}
-                  </p>
-                  <p className="text-xs text-green-600 mt-2">+5% so với tháng trước</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Total Patients */}
-          <Card>
-            <CardBody className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tổng bệnh nhân</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {stats.totalPatients}
-                  </p>
-                  <p className="text-xs text-green-600 mt-2">+12% so với tháng trước</p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Total Appointments */}
-          <Card>
-            <CardBody className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tổng lịch hẹn</p>
-                  <p className="text-3xl font-bold text-purple-600">
-                    {stats.totalAppointments}
-                  </p>
-                  <p className="text-xs text-yellow-600 mt-2">
-                    {stats.pendingAppointments} chờ xác nhận
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Total Revenue */}
-          <Card>
-            <CardBody className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tổng doanh thu</p>
-                  <p className="text-3xl font-bold text-orange-600">
-                    {stats.totalRevenue >= 1000000 
-                      ? `${(stats.totalRevenue / 1000000).toFixed(1)}M`
-                      : stats.totalRevenue >= 1000
-                      ? `${(stats.totalRevenue / 1000).toFixed(0)}K`
-                      : `${stats.totalRevenue || 0}`
-                    }
-                  </p>
-                  <p className="text-xs text-green-600 mt-2">+8% so với tháng trước</p>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-
-        {/* Recent Appointments Table */}
-        <Card className="p-2">
-          <CardHeader className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold">Lịch hẹn gần đây</h3>
-            <Button size="sm" variant="light" color="primary">
-              Xem tất cả
-            </Button>
-          </CardHeader>
-          <CardBody>
-            <Table removeWrapper aria-label="Recent appointments" isLoading={isLoading}>
-              <TableHeader>
-                <TableColumn>BỆNH NHÂN</TableColumn>
-                <TableColumn>BÁC SĨ</TableColumn>
-                <TableColumn>NGÀY GIỜ</TableColumn>
-                  <TableColumn>TRẠNG THÁI</TableColumn>
-                </TableHeader>
-                <TableBody emptyContent="Không có dữ liệu">
-                  {recentAppointments.map((appointment) => (
-                    <TableRow key={appointment.id}>
-                      <TableCell>{appointment.patientName}</TableCell>
-                      <TableCell>{appointment.doctorName}</TableCell>
-                      <TableCell className="text-sm">
-                        <div>
-                          <p>{appointment.date && new Date(appointment.date).toLocaleDateString('vi-VN')}</p>
-                          <p className="text-xs text-gray-500">{appointment.slot}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Chip size="sm" color={getStatusColor(appointment.status)}>
-                          {getStatusLabel(appointment.status)}
-                        </Chip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardBody>
-          </Card>
-
-        {/* Activity Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardBody className="p-6">
-              <h4 className="text-sm text-gray-600 mb-2">Tỷ lệ hoàn thành</h4>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.totalAppointments > 0 
-                    ? ((stats.completedAppointments / stats.totalAppointments) * 100).toFixed(1)
-                    : '0.0'
-                  }%
-                </p>
-                <span className="text-xs text-green-600 mb-1">↑ 3.2%</span>
-              </div>
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-600 h-2 rounded-full"
-                  style={{
-                    width: `${stats.totalAppointments > 0 
-                      ? (stats.completedAppointments / stats.totalAppointments) * 100
-                      : 0}%`,
-                  }}
-                ></div>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="p-6">
-              <h4 className="text-sm text-gray-600 mb-2">Bác sĩ hoạt động</h4>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl font-bold text-gray-900">
-                  {Math.floor((stats.totalDoctors * 0.92))}
-                </p>
-                <span className="text-xs text-gray-500 mb-1">/ {stats.totalDoctors}</span>
-              </div>
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '92%' }}></div>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="p-6">
-              <h4 className="text-sm text-gray-600 mb-2">Doanh thu trung bình/ngày</h4>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.totalRevenue > 0 && stats.totalAppointments > 0
-                    ? (stats.totalRevenue / stats.totalAppointments / 1000).toFixed(0)
-                    : '0'
-                  }K
-                </p>
-                <span className="text-xs text-gray-500 mb-1">VNĐ</span>
-              </div>
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-orange-600 h-2 rounded-full" style={{ 
-                  width: `${stats.totalRevenue > 0 ? '78%' : '0%'}` 
-                }}></div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-          </div>
-        }
-      />
+          }
+        />
     </AdminFrame>
   );
 };
