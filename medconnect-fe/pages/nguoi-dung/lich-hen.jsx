@@ -7,6 +7,7 @@ import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
+import DOMPurify from 'dompurify';
 
 
 export default function AppointmentsPage() {
@@ -467,11 +468,11 @@ function getSlotData(date, slot) {
                       const payInfo = aptId ? paymentByAptId[aptId] : null;
                       const hasPaid = payInfo?.hasPaid || false;
                       return (
-                        <div className="py-3">
-                          <Chip color="warning" size="sm" variant="solid" className="font-semibold">
+                      <div className="py-3">
+                        <Chip color="warning" size="sm" variant="solid" className="font-semibold">
                             {hasPaid ? "Chờ bác sĩ xác nhận" : "Chờ thanh toán"}
-                          </Chip>
-                        </div>
+                        </Chip>
+                      </div>
                       );
                     })()}
                     {isBusy && slotData.appointment && (
@@ -584,13 +585,13 @@ function getSlotData(date, slot) {
                       <div className="flex gap-2">
                         {a.status === "PENDING" ? (
                           hasPaid ? (
-                            <Button 
-                              size="sm" 
-                              color="default" 
-                              variant="flat"
-                              className="flex-1"
-                              isDisabled
-                            >
+                          <Button 
+                            size="sm" 
+                            color="default" 
+                            variant="flat"
+                            className="flex-1"
+                            isDisabled
+                          >
                               Chờ bác sĩ xác nhận
                             </Button>
                           ) : (
@@ -601,7 +602,7 @@ function getSlotData(date, slot) {
                               onClick={() => router.push(`/nguoi-dung/dat-lich-kham/thanh-toan?appointmentId=${aptId}`)}
                             >
                               Thanh toán
-                            </Button>
+                          </Button>
                           )
                         ) : a.status === "CONFIRMED" ? (
                           <Button 
@@ -773,8 +774,34 @@ function getSlotData(date, slot) {
                   <p className="text-gray-500">Chưa có đơn thuốc</p>
                 )}
                 <Divider />
-                <h4 className="font-medium text-gray-800">Ghi chú</h4>
-                <p className="text-gray-700">{prescription?.note || 'Không có ghi chú'}</p>
+                <h4 className="font-medium text-gray-800 mb-2">Ghi chú</h4>
+                {prescription?.note ? (
+                  <div className="text-gray-700 whitespace-pre-line leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    {prescription.note.split('\n').map((line, idx) => {
+                      // Format bold text **text**
+                      let formattedLine = line;
+                      formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                      
+                      // Format numbered sections (1., 2., etc.)
+                      if (/^\d+\.\s/.test(line.trim())) {
+                        return (
+                          <div key={idx} className="mb-2 first:mt-0">
+                            <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                          </div>
+                        );
+                      }
+                      
+                      // Regular paragraph
+                      return (
+                        <div key={idx} className="mb-1.5 last:mb-0">
+                          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">Không có ghi chú</p>
+                )}
               </div>
             ) : (
               <div className="text-center py-8">Chọn một lịch để xem chi tiết</div>

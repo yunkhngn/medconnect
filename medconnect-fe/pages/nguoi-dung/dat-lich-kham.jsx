@@ -672,8 +672,8 @@ export default function DatLichKham() {
               <p className="text-sm text-teal-900">
                 Lọc và xem hồ sơ bác sĩ, sau đó chọn lịch trống trong tuần. Chúng tôi gợi ý các bác sĩ nổi bật theo chuyên khoa và khu vực của bạn.
               </p>
-            </div>
-            
+                  </div>
+
             {/* Filters */}
             <div className="space-y-4 bg-white/70 p-4 rounded-2xl shadow-sm">
               <div className="grid grid-cols-12 gap-3 items-stretch">
@@ -1036,9 +1036,9 @@ export default function DatLichKham() {
                     variant="light" 
                     className="data-[hover=true]:bg-white rounded-lg transition-colors" 
                     onPress={() => {
-                      const prev = new Date(weekStart);
-                      prev.setDate(prev.getDate() - 7);
-                      setWeekStart(prev);
+                    const prev = new Date(weekStart);
+                    prev.setDate(prev.getDate() - 7);
+                    setWeekStart(prev);
                     }}
                   >
                     ← Tuần trước
@@ -1049,13 +1049,13 @@ export default function DatLichKham() {
                     color="primary"
                     className="rounded-lg font-semibold" 
                     onPress={() => {
-                      const now = new Date();
-                      const day = now.getDay();
+                    const now = new Date();
+                    const day = now.getDay();
                       const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-                      const monday = new Date(now);
+                    const monday = new Date(now);
                       monday.setDate(diff);
-                      monday.setHours(0,0,0,0);
-                      setWeekStart(monday);
+                    monday.setHours(0,0,0,0);
+                    setWeekStart(monday);
                     }}
                   >
                     Tuần hiện tại
@@ -1065,15 +1065,15 @@ export default function DatLichKham() {
                     variant="light" 
                     className="data-[hover=true]:bg-white rounded-lg transition-colors" 
                     onPress={() => {
-                      const next = new Date(weekStart);
-                      next.setDate(next.getDate() + 7);
-                      setWeekStart(next);
+                    const next = new Date(weekStart);
+                    next.setDate(next.getDate() + 7);
+                    setWeekStart(next);
                     }}
                   >
                     Tuần sau →
                   </Button>
                 </div>
-              </div>
+            </div>
 
               {/* Table Schedule */}
               <div className="overflow-x-auto rounded-lg border-2 border-gray-300 bg-white shadow-md">
@@ -1086,13 +1086,13 @@ export default function DatLichKham() {
                           Khung giờ
                         </div>
                       </th>
-                      {Array.from({ length: 7 }).map((_, i) => {
-                        const d = new Date(weekStart);
-                        d.setDate(weekStart.getDate() + i);
+                  {Array.from({ length: 7 }).map((_, i) => {
+                    const d = new Date(weekStart);
+                    d.setDate(weekStart.getDate() + i);
                         const isToday = d.toDateString() === new Date().toDateString();
                         const dayName = ["CN", "Th 2", "Th 3", "Th 4", "Th 5", "Th 6", "Th 7"][d.getDay()];
                         
-                        return (
+                    return (
                           <th 
                             key={i} 
                             className={`border-2 border-gray-300 p-3 text-center font-bold min-w-[120px] ${
@@ -1101,7 +1101,7 @@ export default function DatLichKham() {
                           >
                             <div className={`text-xs uppercase tracking-wide ${isToday ? "text-teal-700" : "text-gray-600"}`}>
                               {dayName}
-                            </div>
+                  </div>
                             <div className={`text-lg font-bold mt-1 ${isToday ? "text-teal-700" : "text-gray-800"}`}>
                               {d.getDate()}-{d.getMonth() + 1}
                             </div>
@@ -1109,8 +1109,8 @@ export default function DatLichKham() {
                               <div className="text-xs text-teal-600 font-semibold mt-1">Hôm nay</div>
                             )}
                           </th>
-                        );
-                      })}
+                    );
+                  })}
                     </tr>
                   </thead>
                   
@@ -1123,24 +1123,24 @@ export default function DatLichKham() {
                             <span className="text-sm">{slotTime}</span>
                           </div>
                         </td>
-                        {Array.from({ length: 7 }, (_, i) => {
-                          const d = new Date(weekStart);
-                          d.setDate(weekStart.getDate() + i);
+                      {Array.from({ length: 7 }, (_, i) => {
+                        const d = new Date(weekStart);
+                        d.setDate(weekStart.getDate() + i);
                           // Use local date format to avoid timezone issues
                           const year = d.getFullYear();
                           const month = String(d.getMonth() + 1).padStart(2, '0');
                           const day = String(d.getDate()).padStart(2, '0');
                           const dateStr = `${year}-${month}-${day}`;
                           
-                          const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
-                          const today = new Date();
-                          today.setHours(0,0,0,0);
-                          const isPast = d < today;
-                          const selectable = available && !isPast;
-                          const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
+                        const available = (weeklyAvailable[dateStr] || []).includes(slotKey);
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const isPast = d < today;
+                        const selectable = available && !isPast;
+                        const isSelected = selectedDate === dateStr && selectedSlot === slotKey;
                           const isToday = d.toDateString() === new Date().toDateString();
                           
-                          return (
+                        return (
                             <td
                               key={dateStr + slotKey}
                               className={`border-2 border-gray-300 p-2 text-center transition-all duration-200 ${
@@ -1163,9 +1163,9 @@ export default function DatLichKham() {
                                   variant="flat"
                                   className="w-full"
                                   onPress={() => {
-                                    handleDateChange(dateStr);
-                                    setSelectedSlot(slotKey);
-                                  }}
+                                handleDateChange(dateStr);
+                                setSelectedSlot(slotKey);
+                              }}
                                 >
                                   Chọn
                                 </Button>
@@ -1173,8 +1173,8 @@ export default function DatLichKham() {
                                 <span className="text-gray-400 py-2 block">—</span>
                               )}
                             </td>
-                          );
-                        })}
+                        );
+                      })}
                       </tr>
                     ))}
                   </tbody>

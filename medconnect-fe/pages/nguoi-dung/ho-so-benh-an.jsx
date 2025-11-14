@@ -14,6 +14,7 @@ import {
   Avatar,
 } from "@heroui/react";
 import { PatientFrame, Grid } from "@/components/layouts/";
+import DOMPurify from 'dompurify';
 import {
   FileText,
   Calendar,
@@ -405,10 +406,12 @@ export default function HoSoBenhAn() {
                 const visitDate = record.visit_date || record.encounter?.started_at;
                 const visitDateStr = visitDate ? new Date(visitDate).toLocaleDateString('vi-VN') : 'N/A';
                 const visitTimeStr = record.visit_time ? ` ${record.visit_time}` : '';
+                const totalRecords = medicalRecords.length;
+                const recordNumber = totalRecords - index;
                 
                 return `
                 <div class="record-item">
-                  <div class="record-header">Lần khám ${medicalRecords.length - index} - ${record.visit_type === 'online' ? 'Online' : 'Tại phòng khám'}</div>
+                  <div class="record-header">Lần khám ${recordNumber} - ${record.visit_type === 'online' ? 'Online' : 'Tại phòng khám'}</div>
                   <div class="info-row">
                     <div class="info-label">Ngày khám:</div>
                     <div class="info-value">${visitDateStr}${visitTimeStr}</div>
@@ -747,11 +750,14 @@ export default function HoSoBenhAn() {
                   ? `${new Date(visitDate).toLocaleDateString("vi-VN")}${visitTime ? ` - ${visitTime}` : ""}`
                   : "Không rõ ngày";
 
+                const totalRecords = medicalRecords.length;
+                const recordNumber = totalRecords - index;
+
                 return (
                   <AccordionItem
                     key={index}
-                    aria-label={`Lần khám ${index + 1}`}
-                    title={`Lần khám ${medicalRecords.length - index}`}
+                    aria-label={`Lần khám ${recordNumber}`}
+                    title={`Lần khám ${recordNumber}`}
                     subtitle={subtitle}
                     startContent={
                       <Chip size="sm" color={record.visit_type === "online" ? "primary" : "success"}>
@@ -860,8 +866,30 @@ export default function HoSoBenhAn() {
 
                       {record.notes && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-700">Ghi chú:</p>
-                          <p className="text-sm text-gray-600">{record.notes}</p>
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Ghi chú:</p>
+                          <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            {record.notes.split('\n').map((line, idx) => {
+                              // Format bold text **text**
+                              let formattedLine = line;
+                              formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                              
+                              // Format numbered sections (1., 2., etc.)
+                              if (/^\d+\.\s/.test(line.trim())) {
+                                return (
+                                  <div key={idx} className="mb-2 first:mt-0">
+                                    <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                  </div>
+                                );
+                              }
+                              
+                              // Regular paragraph
+                              return (
+                                <div key={idx} className="mb-1.5 last:mb-0">
+                                  <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                </div>
+                              );
+                            })}
+                          </div>
                 </div>
               )}
             </div>

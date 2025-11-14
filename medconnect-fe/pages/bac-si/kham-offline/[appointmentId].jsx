@@ -62,6 +62,16 @@ export default function OfflineExamDetailPage() {
       };
       // Parse reason properly - handle both object and string formats
       let chiefComplaint = src.chief_complaint || src.complaint || "";
+      
+      // Ensure chief_complaint is always a string
+      if (typeof chiefComplaint === 'object' && chiefComplaint !== null) {
+        // If chief_complaint is an object, try to extract text
+        const parsed = parseReason(chiefComplaint);
+        chiefComplaint = parsed.reasonText || "";
+      } else if (typeof chiefComplaint !== 'string') {
+        chiefComplaint = String(chiefComplaint || "");
+      }
+      
       if (!chiefComplaint && src.reason) {
         // If reason is an object, parse it to get reasonText
         if (typeof src.reason === 'object' && src.reason !== null) {
@@ -75,6 +85,9 @@ export default function OfflineExamDetailPage() {
           chiefComplaint = String(src.reason || "");
         }
       }
+      
+      // Final safety check: ensure it's always a string
+      chiefComplaint = typeof chiefComplaint === 'string' ? chiefComplaint : String(chiefComplaint || "");
       
       return {
         visit_id: src.visit_id || n.visit_id,
@@ -144,12 +157,21 @@ export default function OfflineExamDetailPage() {
         } catch (_) {
           reasonText = data?.reason || "";
         }
+        // Parse reasonText to ensure it's a string
+        let finalReasonText = reasonText;
+        if (typeof reasonText === 'object' && reasonText !== null) {
+          const parsed = parseReason(reasonText);
+          finalReasonText = parsed.reasonText || "";
+        } else if (typeof reasonText !== 'string') {
+          finalReasonText = String(reasonText || "");
+        }
+        
         setRecord((prev) => ({
           ...prev,
           visit_date: data.date || prev.visit_date,
           visit_time: (data.time || data.startTime || prev.visit_time || new Date().toTimeString().slice(0,5)),
           visit_type: (data.type||"OFFLINE").toString().toLowerCase(),
-          chief_complaint: reasonText || prev.chief_complaint
+          chief_complaint: finalReasonText || prev.chief_complaint
         }));
         // Try prefill from existing EMR (keep old information when editing finished appointments)
         try {
@@ -456,8 +478,8 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
               Lý do khám <span className="text-red-500">*</span>
             </label>
             <Textarea 
-              value={record.chief_complaint} 
-              onValueChange={(v)=>setRecord({...record, chief_complaint:v})} 
+              value={typeof record.chief_complaint === 'string' ? record.chief_complaint : (record.chief_complaint ? String(record.chief_complaint) : "")} 
+              onValueChange={(v)=>setRecord({...record, chief_complaint: typeof v === 'string' ? v : String(v || "")})} 
               variant="bordered"
               placeholder="Nhập lý do khám của bệnh nhân..."
               minRows={3}
@@ -776,17 +798,24 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
         </CardHeader>
         <Divider />
         <CardBody className="pt-6">
-          <Textarea 
-            placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám..." 
-            value={record.notes} 
-            onValueChange={(v)=>setRecord({...record, notes:v})} 
-            variant="bordered" 
-            minRows={4}
-            classNames={{
-              input: "font-medium text-gray-900",
-              inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
-            }}
-          />
+          <div className="space-y-2">
+            <Textarea 
+              placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp" 
+              value={record.notes} 
+              onValueChange={(v)=>setRecord({...record, notes:v})} 
+              variant="bordered" 
+              minRows={6}
+              classNames={{
+                input: "font-medium text-gray-900 leading-relaxed",
+                inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
+              }}
+            />
+            {record.notes && (
+              <div className="text-xs text-gray-500 bg-purple-50 p-2 rounded border border-purple-100">
+                <strong>Tip:</strong> Dùng <code className="bg-white px-1 rounded">**text**</code> để in đậm, ví dụ: <code className="bg-white px-1 rounded">**Chẩn đoán:**</code>
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -803,7 +832,7 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
         <Button 
           color="primary" 
           startContent={<Save size={18}/>} 
-          onClick={handleSave} 
+          onClick={performSave} 
           isLoading={saving}
           className="font-medium"
           size="lg"
@@ -817,7 +846,7 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
   return (
     <DoctorFrame title={`Khám offline ca ${appointmentId || ""}`}>
       <ToastNotification toast={toast} />
-      <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+        <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
       
       {/* Confirm Modal for AI Summary */}
       <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange} size="2xl" scrollBehavior="inside">

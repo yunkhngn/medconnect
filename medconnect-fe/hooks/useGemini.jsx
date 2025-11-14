@@ -83,10 +83,10 @@ export const useGemini = () => {
       const result = await chatSession.sendMessage(prompt);
       const response = await result.response;
       const text = response.text();
-
+      
       setLoading(false);
       return text || 'Xin lỗi, tôi không thể trả lời câu hỏi này.';
-
+      
     } catch (err) {
       console.error('Chatbot API error:', err);
       

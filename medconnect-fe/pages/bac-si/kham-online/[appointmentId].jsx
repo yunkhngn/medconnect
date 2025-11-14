@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
 import { useGemini } from "@/hooks/useGemini";
+import DOMPurify from 'dompurify';
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
 
@@ -791,15 +792,26 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
                 </div>
 
                 {/* Ghi chú đưa lên đầu, rộng hơn */}
-                <Textarea
-                  label="Ghi chú phiên khám"
-                  placeholder="Ghi chú tổng quan, tóm tắt triệu chứng, diễn biến..."
-                  value={emr.notes}
-                  onValueChange={(v)=>setEmr(prev=>({...prev, notes: v}))}
-                  variant="bordered"
-                  minRows={10}
-                  labelPlacement="outside"
-                />
+                <div className="space-y-2">
+                  <Textarea
+                    label="Ghi chú phiên khám"
+                    placeholder="Ghi chú tổng quan, tóm tắt triệu chứng, diễn biến...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp"
+                    value={emr.notes}
+                    onValueChange={(v)=>setEmr(prev=>({...prev, notes: v}))}
+                    variant="bordered"
+                    minRows={10}
+                    labelPlacement="outside"
+                    classNames={{
+                      input: "font-medium text-gray-900 leading-relaxed",
+                      inputWrapper: "border-gray-300 hover:border-blue-400 transition-colors"
+                    }}
+                  />
+                  {emr.notes && (
+                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded border border-blue-100">
+                      <strong>Tip:</strong> Dùng <code className="bg-white px-1 rounded">**text**</code> để in đậm, ví dụ: <code className="bg-white px-1 rounded">**Chẩn đoán:**</code>
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 gap-3">
                   <Input
                     label="Lý do khám"
@@ -1005,8 +1017,30 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
                             {/* Notes */}
                             {notes && (
                               <div>
-                                <div className="text-sm font-semibold text-gray-900 mb-1">Ghi chú</div>
-                                <div className="text-xs text-gray-700 whitespace-pre-line">{notes}</div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Ghi chú</div>
+                                <div className="text-xs text-gray-700 whitespace-pre-line leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                  {notes.split('\n').map((line, idx) => {
+                                    // Format bold text **text**
+                                    let formattedLine = line;
+                                    formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                                    
+                                    // Format numbered sections (1., 2., etc.)
+                                    if (/^\d+\.\s/.test(line.trim())) {
+                                      return (
+                                        <div key={idx} className="mb-2 first:mt-0">
+                                          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    // Regular paragraph
+                                    return (
+                                      <div key={idx} className="mb-1.5 last:mb-0">
+                                        <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
                             

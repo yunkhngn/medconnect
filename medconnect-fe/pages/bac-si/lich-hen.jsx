@@ -18,6 +18,7 @@ import { useRouter } from "next/router";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { generateAppointmentConfirmationEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
+import DOMPurify from 'dompurify';
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 08:00",
@@ -1449,7 +1450,7 @@ export default function DoctorAppointmentsPage() {
                       <Divider />
                       <CardBody>
                         <Accordion>
-                          {patientEmr.medical_records.map((record, index) => {
+                          {(patientEmr.medical_records || []).map((record, index) => {
                             // Get doctor name with multiple fallbacks
                             const getDoctorName = () => {
                               // Try various field names from record
@@ -1467,13 +1468,16 @@ export default function DoctorAppointmentsPage() {
                               return "N/A";
                             };
                             
+                            const totalRecords = (patientEmr.medical_records || []).length;
+                            const recordNumber = totalRecords - index;
+                            
                             return (
                             <AccordionItem
                               key={index}
                               title={
                                 <div className="flex items-center justify-between w-full">
                                   <span className="font-semibold">
-                                    Lần khám #{patientEmr.medical_records.length - index}
+                                    Lần khám #{recordNumber}
                                   </span>
                                   <Chip size="sm" variant="flat" color="primary">
                                     {formatMedicalRecordDate(record.visit_date || record.date)}
@@ -1602,8 +1606,30 @@ export default function DoctorAppointmentsPage() {
 
                                 {record.notes && (
                                   <div>
-                                    <p className="text-xs text-gray-600 mb-1">Ghi chú</p>
-                                    <p className="text-sm bg-blue-50 p-2 rounded">{record.notes}</p>
+                                    <p className="text-xs text-gray-600 mb-2 font-semibold">Ghi chú</p>
+                                    <div className="text-sm bg-blue-50 p-4 rounded-lg border border-blue-100 whitespace-pre-line leading-relaxed">
+                                      {record.notes.split('\n').map((line, idx) => {
+                                        // Format bold text **text**
+                                        let formattedLine = line;
+                                        formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                                        
+                                        // Format numbered sections (1., 2., etc.)
+                                        if (/^\d+\.\s/.test(line.trim())) {
+                                          return (
+                                            <div key={idx} className="mb-2 first:mt-0">
+                                              <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                            </div>
+                                          );
+                                        }
+                                        
+                                        // Regular paragraph
+                                        return (
+                                          <div key={idx} className="mb-1.5 last:mb-0">
+                                            <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
                                 )}
                               </div>

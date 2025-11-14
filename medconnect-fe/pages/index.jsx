@@ -366,21 +366,21 @@ export default function HomePage() {
             </div>
           </Float>
           {loadingDoctors ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {[1, 2, 3, 4].map((i) => (
-                <Float key={i} variant="fadeInUp" delay={i * 0.05}>
+              <Float key={i} variant="fadeInUp" delay={i * 0.05}>
                   <Card className="border-none shadow-sm">
-                    <CardBody className="p-4 sm:p-6 text-center">
+                  <CardBody className="p-4 sm:p-6 text-center">
                       <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 rounded-full" />
                       <Skeleton className="h-5 w-32 mx-auto mb-2" />
                       <Skeleton className="h-4 w-24 mx-auto mb-2" />
                       <Skeleton className="h-4 w-20 mx-auto mb-4" />
                       <Skeleton className="h-9 w-full rounded-lg" />
-                    </CardBody>
-                  </Card>
-                </Float>
-              ))}
-            </div>
+                  </CardBody>
+                </Card>
+              </Float>
+            ))}
+          </div>
           ) : doctors.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {doctors.map((d, i) => {

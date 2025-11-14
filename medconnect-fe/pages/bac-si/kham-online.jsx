@@ -10,6 +10,7 @@ import { auth } from "@/lib/firebase";
 import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
+import DOMPurify from 'dompurify';
 
 export default function DoctorOnlineExamList() {
   const router = useRouter();
@@ -400,7 +401,7 @@ export default function DoctorOnlineExamList() {
       
       // Nếu đã ONGOING, chỉ cần chuyển trang, không cần start lại
       if (appointment.status === "ONGOING") {
-        router.push(`/bac-si/kham-online/${appointmentId}`);
+    router.push(`/bac-si/kham-online/${appointmentId}`);
         return;
       }
       
@@ -763,7 +764,7 @@ export default function DoctorOnlineExamList() {
                         onClick={(e) => {
                           e?.stopPropagation?.();
                           e?.preventDefault?.();
-                          handleStartExam(appointment.id);
+                          handleStartExam(appointment.id); 
                         }}
                       >
                         Tiếp tục khám
@@ -934,10 +935,30 @@ export default function DoctorOnlineExamList() {
                   <p className="text-sm text-gray-500">Không có đơn thuốc</p>
                 )}
                 <Divider className="my-4" />
-                <h4 className="text-sm font-medium text-gray-700">Ghi chú</h4>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
-                  {medicalRecord?.notes || prescription?.note || "Không có ghi chú"}
-                </p>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Ghi chú</h4>
+                <div className="text-sm text-gray-600 whitespace-pre-line break-words bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed">
+                  {(medicalRecord?.notes || prescription?.note || "Không có ghi chú").split('\n').map((line, idx) => {
+                    // Format bold text **text**
+                    let formattedLine = line;
+                    formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                    
+                    // Format numbered sections (1., 2., etc.)
+                    if (/^\d+\.\s/.test(line.trim())) {
+                      return (
+                        <div key={idx} className="mb-2 first:mt-0">
+                          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                        </div>
+                      );
+                    }
+                    
+                    // Regular paragraph
+                    return (
+                      <div key={idx} className="mb-1.5 last:mb-0">
+                        <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
                 </Tab>
                 <Tab key="feedback" title="Đánh giá">
@@ -970,7 +991,7 @@ export default function DoctorOnlineExamList() {
                             </p>
                           )}
                         </div>
-                      </div>
+              </div>
                     ) : (
                       <div className="text-center py-8">
                         <p className="text-gray-500">Chưa có đánh giá từ bệnh nhân</p>
