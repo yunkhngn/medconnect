@@ -1542,11 +1542,14 @@ export default function DatLichKham() {
             </Button>
             <Button 
               color="primary" 
-              onPress={() => {
-                setShowPrivacyModal(false);
+              onPress={async () => {
                 setAcceptedPrivacy(true);
+                setShowPrivacyModal(false);
+                // Tự động process thanh toán sau khi accept privacy
+                await handleConfirmBooking();
               }}
               className="font-semibold"
+              isLoading={loading}
             >
               Tôi đã đọc và đồng ý
             </Button>

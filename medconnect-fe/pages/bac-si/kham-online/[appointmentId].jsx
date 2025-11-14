@@ -54,10 +54,7 @@ export default function DoctorOnlineExamRoom() {
     vital_signs: { temperature:"", blood_pressure:"", heart_rate:"", oxygen_saturation:"", weight:"", height:"" }, 
     prescriptions: [] 
   });
-  const [icdQuery, setIcdQuery] = useState("");
-  const [icdResults, setIcdResults] = useState([]);
-  const [icdLoading, setIcdLoading] = useState(false);
-  const [icdError,   setIcdError]   = useState("");
+  const [icdCode, setIcdCode] = useState("");
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
   const [medicationInput, setMedicationInput] = useState({ name: "", dosage: "", frequency: "", duration: "" });
   const draftKey = typeof window !== 'undefined' && appointmentId ? `emr_draft_${appointmentId}` : null;
@@ -189,96 +186,6 @@ export default function DoctorOnlineExamRoom() {
     try { if (draftKey) localStorage.setItem(draftKey, JSON.stringify(emr)); } catch {}
   };
 
-  // ICD-10 search effect (must be before any early returns)
-  useEffect(() => {
-    if (!icdQuery || icdQuery.trim().length < 2) { setIcdResults([]); setIcdLoading(false); setIcdError(""); return; }
-    const t = setTimeout(async () => {
-      try {
-        setIcdLoading(true); setIcdError("");
-        const query = icdQuery.trim().toUpperCase();
-        // Check if query looks like ICD-10 code pattern (e.g., A19, A19.0, A19.9, A19.90)
-        const isCodePattern = /^[A-Z][0-9][0-9](\.[0-9]+)*$/i.test(query);
-        
-        let results = [];
-        
-        if (isCodePattern) {
-          // For code search, extract base code (e.g., A19 from A19.0)
-          const baseCode = query.split('.')[0]; // Get A19 from A19.0
-          
-          // Strategy 1: Search with base code (e.g., "A19")
-          try {
-            const resp1 = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(baseCode)}&maxList=100`);
-            if (resp1.ok) {
-              const data1 = await resp1.json();
-              const codes1 = data1?.[2] || [];
-              const names1 = data1?.[3] || [];
-              console.log('[ICD-10] Base search:', baseCode, 'got', codes1.length, 'results');
-              // Filter to show codes starting with baseCode (case-insensitive)
-              results = codes1.map((c, i) => ({ code: String(c || ''), name: String(names1[i] || '') }))
-                .filter(r => r.code && r.code.toUpperCase().startsWith(baseCode.toUpperCase()));
-              console.log('[ICD-10] Filtered results:', results.length);
-            }
-          } catch (e) {
-            console.error('[ICD-10] Base search error:', e);
-          }
-          
-          // Strategy 2: If no results, try searching code field only
-          if (results.length === 0) {
-            try {
-              const resp2 = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code&terms=${encodeURIComponent(baseCode)}&maxList=100`);
-              if (resp2.ok) {
-                const data2 = await resp2.json();
-                const codes2 = data2?.[2] || [];
-                const names2 = data2?.[3] || [];
-                console.log('[ICD-10] Code-only search:', codes2.length, 'results');
-                results = codes2.map((c, i) => ({ code: String(c || ''), name: String(names2[i] || '') }))
-                  .filter(r => r.code && r.code.toUpperCase().startsWith(baseCode.toUpperCase()));
-              }
-            } catch (e) {
-              console.error('[ICD-10] Code-only search error:', e);
-            }
-          }
-          
-          // Strategy 3: Try exact match
-          if (results.length === 0 && query.includes('.')) {
-            try {
-              const resp3 = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(query)}&maxList=30`);
-              if (resp3.ok) {
-                const data3 = await resp3.json();
-                const codes3 = data3?.[2] || [];
-                const names3 = data3?.[3] || [];
-                results = codes3.map((c, i) => ({ code: String(c || ''), name: String(names3[i] || '') }));
-              }
-            } catch (e) {
-              console.error('[ICD-10] Exact match error:', e);
-            }
-          }
-        } else {
-          // For text search, use normal search
-          try {
-            const resp = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(query)}&maxList=20`);
-            if (resp.ok) {
-              const data = await resp.json();
-              const codes = data?.[2] || [];
-              const names = data?.[3] || [];
-              results = codes.map((c, i) => ({ code: String(c || ''), name: String(names[i] || '') }));
-            }
-          } catch (e) {
-            console.error('[ICD-10] Text search error:', e);
-          }
-        }
-        
-        setIcdResults(results);
-      } catch (e) {
-        console.error('[ICD-10] Search error:', e);
-        setIcdResults([]);
-        setIcdError("Không lấy được gợi ý");
-      } finally {
-        setIcdLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [icdQuery]);
 
   // Fetch feedback when patient info modal opens
   useEffect(() => {
@@ -549,6 +456,30 @@ export default function DoctorOnlineExamRoom() {
       
       setAiSummary(summary);
       setHasAiSummary(true);
+      
+      // Tự động điền vào notes với format: [notes hiện tại] + "Tóm tắt của AI:\n\n" + [summary]
+      // Nếu đã có "Tóm tắt của AI:" thì replace, không append
+      const currentNotes = emr.notes || "";
+      let newNotes;
+      
+      if (currentNotes.includes("Tóm tắt của AI:")) {
+        // Replace phần AI summary cũ
+        const parts = currentNotes.split("Tóm tắt của AI:");
+        const beforeAI = parts[0].trim();
+        newNotes = beforeAI 
+          ? `${beforeAI}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      } else {
+        // Append mới
+        newNotes = currentNotes 
+          ? `${currentNotes}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      }
+      
+      setEmr(prev => ({
+        ...prev,
+        notes: newNotes
+      }));
     } catch (error) {
       console.error("AI Summary generation error:", error);
     } finally {
@@ -567,15 +498,9 @@ export default function DoctorOnlineExamRoom() {
         const draft = raw ? JSON.parse(raw) : null;
         const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? null;
         if (draft && patientUserId) {
-          // Merge AI summary into notes if exists
+          // Merge AI summary into notes if exists (already merged in generateAISummary, but keep this as fallback)
           let finalNotes = draft.notes || "";
-          if (hasAiSummary && aiSummary.trim()) {
-            if (finalNotes) {
-              finalNotes = `${finalNotes}\n\n---\n\nTóm tắt AI:\n${aiSummary}`;
-            } else {
-              finalNotes = `Tóm tắt AI:\n${aiSummary}`;
-            }
-          }
+          // Notes should already contain AI summary from generateAISummary, so we don't need to merge again
           
           const medicalEntry = {
             visit_id: `V${Date.now()}`,
@@ -811,6 +736,17 @@ export default function DoctorOnlineExamRoom() {
                         onClick={() => {
                           setAiSummary("");
                           setHasAiSummary(false);
+                          
+                          // Xóa phần "Tóm tắt của AI:" trong notes
+                          const currentNotes = emr.notes || "";
+                          if (currentNotes.includes("Tóm tắt của AI:")) {
+                            const parts = currentNotes.split("Tóm tắt của AI:");
+                            const beforeAI = parts[0].trim();
+                            setEmr(prev => ({
+                              ...prev,
+                              notes: beforeAI
+                            }));
+                          }
                         }}
                         className="font-medium"
                       >
@@ -861,29 +797,10 @@ export default function DoctorOnlineExamRoom() {
                     labelPlacement="outside"
                   />
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Tìm nhanh ICD-10</label>
-                    <div className="relative">
-                      <Input
-                        placeholder="Gõ tên bệnh hoặc mã (≥2 ký tự)"
-                        value={icdQuery}
-                        onValueChange={setIcdQuery}
-                        variant="bordered"
-                      />
-                      {(icdLoading || icdResults.length>0 || icdError) && (
-                        <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-auto rounded-md border border-gray-200 bg-white z-10 shadow-sm">
-                          {icdLoading && <div className="px-3 py-2 text-sm text-gray-500">Đang tải...</div>}
-                          {!icdLoading && icdError && <div className="px-3 py-2 text-sm text-red-600">{icdError}</div>}
-                          {!icdLoading && !icdError && icdResults.map((it, idx)=> (
-                            <button key={idx} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setEmr(prev=>({...prev, icd_codes:[...(Array.isArray(prev.icd_codes)?prev.icd_codes:[]), it.code]})); setIcdQuery(""); }}>
-                              <span className="font-semibold mr-2">{it.code}</span>
-                              <span className="text-gray-700">{it.name}</span>
-                            </button>
-                          ))}
-                          {!icdLoading && !icdError && icdResults.length===0 && icdQuery.trim().length>=2 && (
-                            <div className="px-3 py-2 text-sm text-gray-500">Không có gợi ý</div>
-                          )}
-                        </div>
-                      )}
+                    <label className="text-sm font-medium mb-1 block">Mã ICD-10</label>
+                    <div className="flex gap-2">
+                      <Input placeholder="VD: J03.9" value={icdCode} onValueChange={setIcdCode} variant="bordered" />
+                      <Button variant="flat" onPress={()=>{ if(icdCode.trim()){ setEmr(prev=>({...prev, icd_codes:[...(Array.isArray(prev.icd_codes)?prev.icd_codes:[]), icdCode.trim()]})); setIcdCode(""); } }}>Thêm</Button>
                     </div>
                     {emr.icd_codes.length>0 && (
                       <div className="flex flex-wrap gap-2 mt-2">

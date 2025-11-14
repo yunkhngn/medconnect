@@ -1449,7 +1449,25 @@ export default function DoctorAppointmentsPage() {
                       <Divider />
                       <CardBody>
                         <Accordion>
-                          {patientEmr.medical_records.map((record, index) => (
+                          {patientEmr.medical_records.map((record, index) => {
+                            // Get doctor name with multiple fallbacks
+                            const getDoctorName = () => {
+                              // Try various field names from record
+                              if (record.doctor_name) return record.doctor_name;
+                              if (record.doctorName) return record.doctorName;
+                              if (record.doctor?.name) return record.doctor.name;
+                              if (record.doctor && typeof record.doctor === 'object' && record.doctor.name) {
+                                return record.doctor.name;
+                              }
+                              // Fallback to current user (doctor viewing the record)
+                              if (user?.displayName) return user.displayName;
+                              if (user?.name) return user.name;
+                              // Try to get from appointment if available
+                              if (selectedAppointment?.doctor?.name) return selectedAppointment.doctor.name;
+                              return "N/A";
+                            };
+                            
+                            return (
                             <AccordionItem
                               key={index}
                               title={
@@ -1475,7 +1493,7 @@ export default function DoctorAppointmentsPage() {
                       </div>
                       <div>
                                     <p className="text-xs text-gray-600">Bác sĩ</p>
-                                    <p className="font-medium">{record.doctor_name || "N/A"}</p>
+                                    <p className="font-medium">{getDoctorName()}</p>
                       </div>
                       <div>
                                     <p className="text-xs text-gray-600">Loại khám</p>
@@ -1590,7 +1608,8 @@ export default function DoctorAppointmentsPage() {
                                 )}
                               </div>
                             </AccordionItem>
-                          ))}
+                            );
+                          })}
                         </Accordion>
                       </CardBody>
                     </Card>

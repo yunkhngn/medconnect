@@ -254,6 +254,30 @@ export default function OfflineExamDetailPage() {
       
       setAiSummary(summary);
       setHasAiSummary(true);
+      
+      // Tự động điền vào notes với format: [notes hiện tại] + "Tóm tắt của AI:\n\n" + [summary]
+      // Nếu đã có "Tóm tắt của AI:" thì replace, không append
+      const currentNotes = record.notes || "";
+      let newNotes;
+      
+      if (currentNotes.includes("Tóm tắt của AI:")) {
+        // Replace phần AI summary cũ
+        const parts = currentNotes.split("Tóm tắt của AI:");
+        const beforeAI = parts[0].trim();
+        newNotes = beforeAI 
+          ? `${beforeAI}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      } else {
+        // Append mới
+        newNotes = currentNotes 
+          ? `${currentNotes}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      }
+      
+      setRecord(prev => ({
+        ...prev,
+        notes: newNotes
+      }));
     } catch (error) {
       toast.error("Không thể tạo tóm tắt AI");
       console.error("AI Summary generation error:", error);
@@ -272,15 +296,8 @@ export default function OfflineExamDetailPage() {
       // Merge với bản ghi cũ để không làm mất dữ liệu khi cập nhật
       const mergedToSave = isFinished && previousEntry ? mergeRecord(previousEntry, record) : record;
       
-      // Merge AI summary into notes if exists
+      // Notes should already contain AI summary from generateAISummary, so we use it directly
       let finalNotes = mergedToSave.notes || "";
-      if (hasAiSummary && aiSummary.trim()) {
-        if (finalNotes) {
-          finalNotes = `${finalNotes}\n\n---\n\nTóm tắt AI:\n${aiSummary}`;
-        } else {
-          finalNotes = `Tóm tắt AI:\n${aiSummary}`;
-        }
-      }
       
       const doctor_name = appointmentInfo?.doctor?.name || user?.displayName || "";
       const doctor_id = appointmentInfo?.doctor?.id || user?.uid || "";
@@ -701,6 +718,17 @@ export default function OfflineExamDetailPage() {
                 onClick={() => {
                   setAiSummary("");
                   setHasAiSummary(false);
+                  
+                  // Xóa phần "Tóm tắt của AI:" trong notes
+                  const currentNotes = record.notes || "";
+                  if (currentNotes.includes("Tóm tắt của AI:")) {
+                    const parts = currentNotes.split("Tóm tắt của AI:");
+                    const beforeAI = parts[0].trim();
+                    setRecord(prev => ({
+                      ...prev,
+                      notes: beforeAI
+                    }));
+                  }
                 }}
                 className="font-medium"
               >
