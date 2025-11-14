@@ -322,6 +322,7 @@ export default function DoctorDetail() {
                           originAddress=""
                           destinationAddress={address}
                           apiKey={mapApiKey}
+                          doctorData={doctor}
                         />
                       </CardBody>
                     </Card>

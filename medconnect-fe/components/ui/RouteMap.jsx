@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function RouteMap({ originAddress, destinationAddress, apiKey }) {
+export default function RouteMap({ originAddress, destinationAddress, apiKey, doctorData = null }) {
   const containerRef = useRef(null);
   const [visible, setVisible] = useState(false);
   const [fromOverride, setFromOverride] = useState(null); // {lat, lon} when using current location
@@ -30,51 +30,84 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
     let aborted = false;
     let LRef = null;
 
-    const geocode = async (text) => {
+    const geocode = async (text, doctorData = null) => {
       try {
         if (!text || !text.trim()) {
           console.warn("[RouteMap] Empty address text");
           return null;
         }
-        const cacheKey = `geo_${text}`;
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const v = JSON.parse(cached);
-          if (v && typeof v.lat === 'number' && typeof v.lon === 'number') {
-            console.log("[RouteMap] Using cached geocode:", text, "->", v);
-            return v;
+        // Không dùng cache để tránh tọa độ sai, hoặc có thể thêm version key để invalidate cache
+        // const cacheKey = `geo_${text}`;
+        // const cached = sessionStorage.getItem(cacheKey);
+        // if (cached) {
+        //   const v = JSON.parse(cached);
+        //   if (v && typeof v.lat === 'number' && typeof v.lon === 'number') {
+        //     console.log("[RouteMap] Using cached geocode:", text, "->", v);
+        //     return v;
+        //   }
+        // }
+        
+        // Sử dụng cách geocode giống như trong dat-lich-kham.jsx
+        // Thử nhiều candidates với thứ tự ưu tiên
+        const candidates = [];
+        
+        // Nếu có doctorData, thử các địa chỉ từ doctor data
+        if (doctorData) {
+          if (doctorData.displayAddress) {
+            candidates.push(doctorData.displayAddress);
+          }
+          const parts = [
+            doctorData.clinicAddress,
+            doctorData.ward_name,
+            doctorData.district_name,
+            doctorData.province_name,
+          ].filter(Boolean);
+          if (parts.length > 0) {
+            candidates.push(parts.join(", "));
+          }
+          if (doctorData.province_name) {
+            candidates.push(doctorData.province_name);
           }
         }
-        // Sử dụng cách geocode giống như trong dat-lich-kham.jsx
-        // Thử nhiều candidates và filter countrycode:vn với lang=vi
-        const candidates = [
-          text,
-          text.replace(/, Vietnam$/, "").trim(), // Thử không có ", Vietnam"
-        ].filter(Boolean);
+        
+        // Thêm text hiện tại và các biến thể
+        candidates.push(text);
+        if (text.includes(", Vietnam")) {
+          candidates.push(text.replace(/, Vietnam$/, "").trim());
+        } else {
+          candidates.push(`${text}, Vietnam`);
+        }
+        
+        // Loại bỏ duplicates
+        const uniqueCandidates = [...new Set(candidates)].filter(Boolean);
+        console.log("[RouteMap] Geocoding candidates:", uniqueCandidates);
         
         let found = null;
-        for (const addr of candidates) {
+        let bestFeature = null;
+        for (const addr of uniqueCandidates) {
           const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(addr)}&filter=countrycode:vn&limit=1&lang=vi&apiKey=${apiKey}`;
-          console.log("[RouteMap] Geocoding:", addr);
+          console.log("[RouteMap] Trying geocode:", addr);
           const res = await fetch(url);
           if (!res.ok) continue;
           const data = await res.json();
           const feature = data?.features?.[0];
           if (feature?.geometry?.coordinates) {
             found = feature.geometry.coordinates; // [lon, lat]
-            console.log("[RouteMap] Geocoded:", addr, "->", found, "Location:", feature.properties?.formatted || feature.properties?.name);
+            bestFeature = feature;
+            console.log("[RouteMap] Geocoded successfully:", addr, "->", found, "Location:", feature.properties?.formatted || feature.properties?.name);
             break;
           }
         }
         
         if (!found) {
-          console.warn("[RouteMap] No valid coordinates found for:", text);
+          console.warn("[RouteMap] No valid coordinates found for any candidate:", uniqueCandidates);
           return null;
         }
         
         const [lon, lat] = found;
         const out = { lat, lon };
-        sessionStorage.setItem(cacheKey, JSON.stringify(out));
+        // Cache với key bao gồm cả text gốc để dễ debug
+        // sessionStorage.setItem(`geo_${text}`, JSON.stringify(out));
         return out;
       } catch (err) {
         console.error("[RouteMap] Geocoding error:", err);
@@ -197,7 +230,7 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
       aborted = true;
       if (mapInstance) mapInstance.remove();
     };
-  }, [originAddress, fromOverride, destinationAddress, apiKey, visible]);
+  }, [originAddress, fromOverride, destinationAddress, apiKey, visible, doctorData]);
 
   const requestCurrentLocation = () => {
     if (!('geolocation' in navigator)) return;
