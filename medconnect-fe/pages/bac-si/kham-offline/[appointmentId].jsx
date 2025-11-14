@@ -799,17 +799,17 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
         <Divider />
         <CardBody className="pt-6">
           <div className="space-y-2">
-            <Textarea 
+          <Textarea 
               placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp" 
-              value={record.notes} 
-              onValueChange={(v)=>setRecord({...record, notes:v})} 
-              variant="bordered" 
+            value={record.notes} 
+            onValueChange={(v)=>setRecord({...record, notes:v})} 
+            variant="bordered" 
               minRows={6}
-              classNames={{
+            classNames={{
                 input: "font-medium text-gray-900 leading-relaxed",
-                inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
-              }}
-            />
+              inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
+            }}
+          />
             {record.notes && (
               <div className="text-xs text-gray-500 bg-purple-50 p-2 rounded border border-purple-100">
                 <strong>Tip:</strong> Dùng <code className="bg-white px-1 rounded">**text**</code> để in đậm, ví dụ: <code className="bg-white px-1 rounded">**Chẩn đoán:**</code>

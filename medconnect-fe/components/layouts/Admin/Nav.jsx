@@ -87,36 +87,31 @@ const Nav = () => {
           </Link>
         ))}
       </nav>
-
-      {/* User Avatar */}
-      <div className="p-4 border-t border-gray-100">
-        <div className="flex items-center justify-center">
-          <Dropdown placement="right-start">
+      <div className="p-4 border-t border-gray-100 flex items-center justify-center">
+          <Dropdown placement="top">
             <DropdownTrigger>
-              <UserAvatar 
-                size={40}
-                asButton
-              />
+            <UserAvatar 
+               size={40}
+               asButton
+             />
             </DropdownTrigger>
-            <DropdownMenu aria-label="User Actions">
-              <DropdownItem key="settings" textValue="Settings">
-                <Link href="/admin/cai-dat" className="w-full block">
-                  Cài đặt
-                </Link>
-              </DropdownItem>
-              <DropdownItem 
-                key="logout" 
-                className="bg-gray-100 text-red-600"
-                color="danger"
-                variant="flat"
-                onClick={handleLogout}
-              >
-                Đăng xuất
-              </DropdownItem>
-            </DropdownMenu>
-          </Dropdown>
-        </div>
-      </div>
+           <DropdownMenu aria-label="User Actions">
+             <DropdownItem key="settings">
+               <Link href="/admin/cai-dat" className="w-full block">
+                 Cài đặt
+               </Link>
+             </DropdownItem>
+             <DropdownItem
+               key="logout"
+               color="danger"
+               className="text-red-600"
+               onClick={handleLogout}
+             >
+               Đăng xuất
+             </DropdownItem>
+           </DropdownMenu>
+         </Dropdown>
+       </div>
     </div>
   );
 };
