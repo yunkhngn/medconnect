@@ -4,7 +4,7 @@ import Meta from '../Meta'
 
 const Frame = ({children, title}) => {
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-gray-200">
       <Meta title={title} />
       <Nav />
       <div className="fixed left-35 top-5 right-5 bottom-5 h-[calc(100vh-2.5rem)] overflow-hidden">

@@ -32,23 +32,52 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
 
     const geocode = async (text) => {
       try {
+        if (!text || !text.trim()) {
+          console.warn("[RouteMap] Empty address text");
+          return null;
+        }
         const cacheKey = `geo_${text}`;
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
           const v = JSON.parse(cached);
-          if (v && typeof v.lat === 'number' && typeof v.lon === 'number') return v;
+          if (v && typeof v.lat === 'number' && typeof v.lon === 'number') {
+            console.log("[RouteMap] Using cached geocode:", text, "->", v);
+            return v;
+          }
         }
-        const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text)}&limit=1&apiKey=${apiKey}`;
-        const res = await fetch(url);
-        if (!res.ok) return null;
-        const data = await res.json();
-        const f = data?.features?.[0];
-        if (!f?.geometry?.coordinates) return null;
-        const [lon, lat] = f.geometry.coordinates;
+        // Sử dụng cách geocode giống như trong dat-lich-kham.jsx
+        // Thử nhiều candidates và filter countrycode:vn với lang=vi
+        const candidates = [
+          text,
+          text.replace(/, Vietnam$/, "").trim(), // Thử không có ", Vietnam"
+        ].filter(Boolean);
+        
+        let found = null;
+        for (const addr of candidates) {
+          const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(addr)}&filter=countrycode:vn&limit=1&lang=vi&apiKey=${apiKey}`;
+          console.log("[RouteMap] Geocoding:", addr);
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const feature = data?.features?.[0];
+          if (feature?.geometry?.coordinates) {
+            found = feature.geometry.coordinates; // [lon, lat]
+            console.log("[RouteMap] Geocoded:", addr, "->", found, "Location:", feature.properties?.formatted || feature.properties?.name);
+            break;
+          }
+        }
+        
+        if (!found) {
+          console.warn("[RouteMap] No valid coordinates found for:", text);
+          return null;
+        }
+        
+        const [lon, lat] = found;
         const out = { lat, lon };
         sessionStorage.setItem(cacheKey, JSON.stringify(out));
         return out;
-      } catch {
+      } catch (err) {
+        console.error("[RouteMap] Geocoding error:", err);
         return null;
       }
     };
@@ -76,7 +105,13 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
         });
       }
       const to = await geocode(destinationAddress);
-      if (aborted || !to || !containerRef.current || !LRef) return;
+      if (aborted || !to || !containerRef.current || !LRef) {
+        if (!to) {
+          console.error("[RouteMap] Failed to geocode destination:", destinationAddress);
+        }
+        return;
+      }
+      console.log("[RouteMap] Destination geocoded successfully:", to);
 
       // Mặc định chỉ hiển thị marker phòng khám (không có route)
       // Chỉ vẽ route khi có fromOverride (vị trí hiện tại)

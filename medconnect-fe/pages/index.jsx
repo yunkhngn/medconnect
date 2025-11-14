@@ -204,6 +204,37 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ABOUT MEDCONNECT */}
+      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-12 sm:py-16 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <Float variant="fadeInUp">
+            <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+              <CardBody className="p-6 sm:p-8 md:p-12">
+                <div className="text-center mb-8">
+                  <Chip color="primary" variant="flat" className="mb-4 bg-blue-50">
+                    Về MedConnect
+                  </Chip>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    Nền tảng kết nối bệnh nhân và bác sĩ
+                  </h2>
+                </div>
+                <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed">
+                  <p className="text-base sm:text-lg md:text-xl mb-4">
+                    MedConnect cung cấp một nền tảng web liền mạch kết nối bệnh nhân với đúng bác sĩ một cách nhanh chóng và hiệu quả. Bằng cách cho phép đặt lịch hẹn từ xa, tư vấn trực tuyến và lên lịch theo thời gian thực, MedConnect loại bỏ khoảng cách di chuyển xa và thời gian chờ đợi.
+                  </p>
+                  <p className="text-base sm:text-lg md:text-xl mb-4">
+                    Bệnh nhân có thể tiếp cận dịch vụ chăm sóc chuyên khoa từ bất kỳ đâu, trong khi bác sĩ được hưởng lợi từ một hệ thống tự động giúp giảm khối lượng công việc hành chính, hợp lý hóa việc theo dõi và cải thiện quản lý thực hành tổng thể.
+                  </p>
+                  <p className="text-base sm:text-lg md:text-xl font-semibold text-primary">
+                    MedConnect mang đến trải nghiệm chăm sóc sức khỏe nhanh hơn, tiện lợi hơn và hiệu quả hơn cho cả hai bên.
+                  </p>
+                </div>
+              </CardBody>
+            </Card>
+          </Float>
+        </div>
+      </section>
+
       {/* FEATURE STRIP */}
       <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-12 sm:py-16">
         <div className="max-w-6xl mx-auto">

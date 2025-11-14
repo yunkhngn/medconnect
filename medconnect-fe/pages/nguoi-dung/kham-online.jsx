@@ -1094,7 +1094,7 @@ export default function PatientOnlineExamList() {
                             </p>
                           )}
                         </div>
-                      </div>
+              </div>
                     ) : (
                       <div className="space-y-4">
                         <div>

@@ -32,13 +32,60 @@ const Chatbot = () => {
     setPanelSide((nextPos.x ?? vw - 80) > vw / 2 ? 'right' : 'left');
   };
 
-  // Ensure initial position at bottom-right (after mount when we know viewport size)
+  // Load position from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const vw = window.innerWidth; const vh = window.innerHeight;
-      const init = { x: Math.max(16, vw - 16 - 64), y: Math.max(16, vh - 16 - 64) };
+      const saved = localStorage.getItem('chatbot_button_position');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+            setBtnPos(parsed);
+            updatePanelSide(parsed);
+            return;
+          }
+        } catch (e) {
+          console.warn('[Chatbot] Failed to parse saved position:', e);
+        }
+      }
+      // Default position: bottom-right, but avoid scroll button area
+      // ScrollUp button: bottom-24 (96px) right-6 (24px), size w-16 h-16 (64px)
+      const vw = window.innerWidth; 
+      const vh = window.innerHeight;
+      const scrollButtonSize = 64; // w-16 h-16 = 64px
+      const scrollButtonRight = 24; // right-6 = 24px
+      const scrollButtonBottom = 96; // bottom-24 = 96px
+      const chatbotSize = 64;
+      const margin = 16; // Minimum gap between buttons
+      
+      // Calculate scroll button area
+      const scrollButtonX = vw - scrollButtonRight - scrollButtonSize;
+      const scrollButtonY = vh - scrollButtonBottom - scrollButtonSize;
+      
+      // Place chatbot to avoid scroll button - try positions with margin
+      let initX = vw - 16 - chatbotSize; // Default bottom-right
+      let initY = vh - 16 - chatbotSize;
+      
+      // If would overlap, move left or up
+      if (initX < scrollButtonX + scrollButtonSize + margin && 
+          initY < scrollButtonY + scrollButtonSize + margin) {
+        // Move left of scroll button
+        initX = scrollButtonX - chatbotSize - margin;
+        // If still too close to left edge, move up instead
+        if (initX < 16) {
+          initX = vw - 16 - chatbotSize;
+          initY = scrollButtonY - chatbotSize - margin;
+        }
+      }
+      
+      const init = { 
+        x: Math.max(16, initX), 
+        y: Math.max(16, initY)
+      };
       setBtnPos(init);
       updatePanelSide(init);
+      localStorage.setItem('chatbot_button_position', JSON.stringify(init));
+      
       const onResize = () => updatePanelSide();
       window.addEventListener('resize', onResize);
       return () => window.removeEventListener('resize', onResize);
@@ -57,20 +104,65 @@ const Chatbot = () => {
   const onBtnMouseUp = () => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    const vw = window.innerWidth; const vh = window.innerHeight;
+    const vw = window.innerWidth; 
+    const vh = window.innerHeight;
     const size = 64; // button size
+    const margin = 16; // Minimum gap between buttons
+    
+    // ScrollUp button position: bottom-24 (96px) right-6 (24px), size 64px
+    const scrollButtonSize = 64;
+    const scrollButtonRight = 24;
+    const scrollButtonBottom = 96;
+    const scrollButtonX = vw - scrollButtonRight - scrollButtonSize;
+    const scrollButtonY = vh - scrollButtonBottom - scrollButtonSize;
+    
+    // Calculate scroll button area with margin
+    const scrollButtonArea = {
+      x: scrollButtonX - margin,
+      y: scrollButtonY - margin,
+      width: scrollButtonSize + margin * 2,
+      height: scrollButtonSize + margin * 2,
+    };
+    
+    // Candidates for snap positions
     const candidates = [
       { x: 16, y: 16 }, // TL
       { x: vw - size - 16, y: 16 }, // TR
       { x: 16, y: vh - size - 16 }, // BL
-      { x: vw - size - 16, y: vh - size - 16 }, // BR
+      // BR positions: try different positions to avoid scroll button
+      { x: scrollButtonX - size - margin, y: vh - size - 16 }, // Left of scroll button
+      { x: vw - size - 16, y: scrollButtonY - size - margin }, // Above scroll button
+      { x: scrollButtonX - size - margin, y: scrollButtonY - size - margin }, // Above-left of scroll button
       { x: 16, y: (vh - size) / 2 }, // ML
       { x: vw - size - 16, y: (vh - size) / 2 }, // MR
     ];
+    
+    // Filter out candidates that overlap with scroll button area
+    const validCandidates = candidates.filter(c => {
+      const chatbotRight = c.x + size;
+      const chatbotBottom = c.y + size;
+      const scrollLeft = scrollButtonArea.x;
+      const scrollTop = scrollButtonArea.y;
+      const scrollRight = scrollLeft + scrollButtonArea.width;
+      const scrollBottom = scrollTop + scrollButtonArea.height;
+      
+      // Check if chatbot overlaps with scroll button area (with margin)
+      const overlaps = c.x < scrollRight && chatbotRight > scrollLeft && 
+                       c.y < scrollBottom && chatbotBottom > scrollTop;
+      return !overlaps;
+    });
+    
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-    const best = candidates.reduce((best, c) => (dist(btnPos, c) < dist(btnPos, best) ? c : best), candidates[0]);
+    const best = validCandidates.length > 0
+      ? validCandidates.reduce((best, c) => (dist(btnPos, c) < dist(btnPos, best) ? c : best), validCandidates[0])
+      : { x: 16, y: 16 }; // Fallback to top-left if all positions conflict
+    
     setBtnPos(best);
     updatePanelSide(best);
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chatbot_button_position', JSON.stringify(best));
+    }
   };
   useEffect(() => {
     window.addEventListener('mousemove', onBtnMouseMove);

@@ -21,8 +21,16 @@ import {
   Phone,
   Filter,
   ChevronRight,
+  Loader2,
+  Mail,
+  GraduationCap,
+  FileText,
+  Clock,
+  Users,
 } from "lucide-react";
 import { useAddressData } from "@/hooks/useAddressData";
+import Float from "@/components/ui/Float";
+import Image from "next/image";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -183,23 +191,58 @@ export default function TimKiemBacSi() {
     router.push(`/tim-kiem-bac-si/${slug}`);
   };
 
-  return (
-    <Default title="Tìm kiếm bác sĩ - MedConnect">
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-4xl font-bold mb-2">Tìm kiếm bác sĩ</h1>
-            <p className="text-teal-100">
-              Tìm kiếm và xem thông tin chi tiết về các bác sĩ trong hệ thống
-            </p>
+  if (loading) {
+    return (
+      <Default title="Tìm kiếm bác sĩ - MedConnect">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Đang tải danh sách bác sĩ...</p>
           </div>
         </div>
+      </Default>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
-        <Card className="mb-6 shadow-lg">
-          <CardBody className="p-6">
+  return (
+    <Default title="Tìm kiếm bác sĩ - MedConnect">
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Background with blur */}
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/cover.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+          <div className="absolute inset-0 bg-blue-500/5"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <Float variant="fadeInUp" delay={0.1}>
+              <div className="text-center mb-12">
+                <Chip color="primary" variant="flat" className="mb-4 bg-white/90 backdrop-blur-sm">
+                  Tìm kiếm bác sĩ phù hợp với bạn
+                </Chip>
+                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                  Tìm kiếm Bác sĩ
+                </h1>
+                <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+                  Tìm kiếm và xem thông tin chi tiết về các bác sĩ trong hệ thống
+                </p>
+              </div>
+            </Float>
+            {/* Filters */}
+            <Float variant="fadeInUp" delay={0.2}>
+              <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-6 md:p-8">
             <div className="space-y-4">
               {/* Search */}
               <Input
@@ -308,128 +351,209 @@ export default function TimKiemBacSi() {
             </div>
           </CardBody>
         </Card>
+            </Float>
 
-        {/* Results Count */}
-        <div className="mb-4 flex justify-between items-center">
-          <p className="text-gray-600">
-            Tìm thấy <span className="font-semibold">{filteredDoctors.length}</span> bác sĩ
-          </p>
-        </div>
+            {/* Results Count */}
+            <Float variant="fadeInUp" delay={0.4}>
+              <div className="mb-6 flex justify-between items-center">
+                <p className="text-gray-700 font-medium">
+                  Tìm thấy <span className="font-bold text-blue-600">{filteredDoctors.length}</span> bác sĩ
+                </p>
+              </div>
+            </Float>
 
-        {/* Doctor Cards Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardBody className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-full bg-gray-200" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-1/2" />
-                      <div className="h-3 bg-gray-100 rounded w-2/3" />
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-        ) : filteredDoctors.length === 0 ? (
-          <Card>
-            <CardBody className="text-center py-12">
-              <p className="text-gray-600 font-medium">Không tìm thấy bác sĩ</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
-              </p>
-            </CardBody>
-          </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              {paginatedDoctors.map((doctor) => (
-                <Card
-                  key={doctor.id}
-                  isPressable
-                  onPress={() => handleDoctorClick(doctor)}
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
-                >
-                  <CardBody className="p-5">
-                    <div className="flex items-start gap-4">
-                      <Avatar
-                        src={
-                          doctor.avatar ||
-                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            doctor.name || "BS"
-                          )}&background=0D9488&color=fff`
-                        }
-                        className="w-16 h-16"
-                        showFallback
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-2">
-                          <p className="font-semibold text-base truncate">
-                            {doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name}
-                          </p>
-                          <Chip size="sm" variant="flat" color="primary">
-                            {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
-                          </Chip>
-                        </div>
-                        {doctor.displayAddress && (
-                          <p className="text-xs text-gray-500 flex items-center gap-1 mb-2">
-                            <MapPin size={12} />
-                            <span className="truncate">{doctor.displayAddress}</span>
-                          </p>
-                        )}
-                        {doctor.bio && (
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2 mb-3">
-                            {doctor.bio}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Star size={14} className="text-yellow-500 fill-current" />
-                            <span className="font-medium">
-                              {doctorRatings[doctor.id] 
-                                ? doctorRatings[doctor.id].toFixed(1) 
-                                : doctor.rating || "—"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Award size={14} className="text-teal-600" />
-                            <span>
-                              {doctor.experience_years || doctor.experienceYears || "—"} năm
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          color="primary"
-                          variant="flat"
-                          className="mt-4 w-full"
-                          endContent={<ChevronRight size={16} />}
-                        >
-                          Xem chi tiết
-                        </Button>
-                      </div>
-                    </div>
+            {/* Doctor Cards Grid */}
+            {filteredDoctors.length === 0 ? (
+              <Float variant="fadeInUp" delay={0.5}>
+                <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                  <CardBody className="text-center py-12">
+                    <p className="text-gray-700 font-medium text-lg">Không tìm thấy bác sĩ</p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm
+                    </p>
                   </CardBody>
                 </Card>
-              ))}
-            </div>
+              </Float>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {paginatedDoctors.map((doctor, index) => (
+                    <Float key={doctor.id} variant="fadeInUp" delay={0.5 + index * 0.05}>
+                      <Card
+                        isPressable
+                        onPress={() => handleDoctorClick(doctor)}
+                        className="bg-white/90 backdrop-blur-md border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.01]"
+                      >
+                        <CardBody className="p-6">
+                          <div className="flex items-start gap-5">
+                            <Avatar
+                              src={
+                                doctor.avatar ||
+                                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                  doctor.name || "BS"
+                                )}&background=0D9488&color=fff`
+                              }
+                              className="w-24 h-24 ring-2 ring-blue-100 flex-shrink-0"
+                              showFallback
+                            />
+                            <div className="flex-1 min-w-0">
+                              {/* Header */}
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                                    <p className="font-bold text-xl text-gray-900 truncate">
+                                      {doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name}
+                                    </p>
+                                    <Chip size="sm" variant="flat" color="primary" className="text-xs font-semibold">
+                                      {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
+                                    </Chip>
+                                  </div>
+                                  {doctor.displayAddress && (
+                                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-2">
+                                      <MapPin size={14} className="text-blue-600 flex-shrink-0" />
+                                      <span className="line-clamp-1">{doctor.displayAddress}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center">
-                <Pagination
-                  total={totalPages}
-                  page={page}
-                  onChange={setPage}
-                  showControls
-                />
-              </div>
+                              {/* Bio */}
+                              {doctor.bio && (
+                                <p className="text-sm text-gray-700 line-clamp-2 mb-4 leading-relaxed">
+                                  {doctor.bio}
+                                </p>
+                              )}
+
+                              {/* Stats Row 1 */}
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-100">
+                                  <Star size={16} className="text-yellow-500 fill-current flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-xs text-gray-600">Đánh giá</p>
+                                    <p className="font-bold text-sm text-gray-900">
+                                      {doctorRatings[doctor.id] 
+                                        ? doctorRatings[doctor.id].toFixed(1) 
+                                        : doctor.rating || "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 p-2 bg-teal-50 rounded-lg border border-teal-100">
+                                  <Award size={16} className="text-teal-600 flex-shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-xs text-gray-600">Kinh nghiệm</p>
+                                    <p className="font-bold text-sm text-gray-900">
+                                      {doctor.experience_years || doctor.experienceYears || "—"} năm
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Stats Row 2 */}
+                              <div className="grid grid-cols-2 gap-3 mb-4">
+                                {doctor.education_level && (
+                                  <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                                    <GraduationCap size={16} className="text-blue-600 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-xs text-gray-600">Trình độ</p>
+                                      <p className="font-semibold text-xs text-gray-900 truncate">
+                                        {doctor.education_level}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                                {doctor.licenseId && (
+                                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-100">
+                                    <FileText size={16} className="text-green-600 flex-shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-xs text-gray-600">Chứng chỉ</p>
+                                      <p className="font-semibold text-xs text-gray-900 truncate">
+                                        #{doctor.licenseId}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                                {!doctor.education_level && !doctor.licenseId && (
+                                  <>
+                                    <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg border border-purple-100">
+                                      <Users size={16} className="text-purple-600 flex-shrink-0" />
+                                      <div className="min-w-0">
+                                        <p className="text-xs text-gray-600">Bệnh nhân</p>
+                                        <p className="font-bold text-sm text-gray-900">
+                                          {doctorRatings[doctor.id] ? "50+" : "—"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-100">
+                                      <Clock size={16} className="text-orange-600 flex-shrink-0" />
+                                      <div className="min-w-0">
+                                        <p className="text-xs text-gray-600">Thời gian</p>
+                                        <p className="font-semibold text-xs text-gray-900">
+                                          30-45 phút
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Contact Info */}
+                              {(doctor.phone || doctor.email) && (
+                                <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-gray-200">
+                                  {doctor.phone && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                                      <Phone size={12} className="text-gray-500" />
+                                      <span className="truncate">{doctor.phone}</span>
+                                    </div>
+                                  )}
+                                  {doctor.email && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-600">
+                                      <Mail size={12} className="text-gray-500" />
+                                      <span className="truncate max-w-[150px]">{doctor.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Action Button */}
+                              <Button
+                                size="md"
+                                color="primary"
+                                variant="flat"
+                                className="w-full font-semibold"
+                                endContent={<ChevronRight size={18} />}
+                              >
+                                Xem chi tiết
+                              </Button>
+                            </div>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    </Float>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <Float variant="fadeInUp" delay={0.8}>
+                    <div className="flex justify-center">
+                      <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-xl">
+                        <CardBody className="p-4">
+                          <Pagination
+                            total={totalPages}
+                            page={page}
+                            onChange={setPage}
+                            showControls
+                            color="primary"
+                          />
+                        </CardBody>
+                      </Card>
+                    </div>
+                  </Float>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
       </div>
     </Default>
   );

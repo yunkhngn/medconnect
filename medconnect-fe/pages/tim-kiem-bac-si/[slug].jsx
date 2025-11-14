@@ -23,9 +23,12 @@ import {
   FileText,
   ArrowLeft,
   Navigation,
+  Loader2,
 } from "lucide-react";
 import RouteMap from "@/components/ui/RouteMap";
 import { useAddressData } from "@/hooks/useAddressData";
+import Float from "@/components/ui/Float";
+import Image from "next/image";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -129,21 +132,40 @@ export default function DoctorDetail() {
 
   const formatAddress = (doctor) => {
     if (!doctor) return "";
-    if (doctor.displayAddress) return doctor.displayAddress;
-    const parts = [
-      doctor.clinicAddress,
-      doctor.ward_name,
-      doctor.district_name,
-      doctor.province_name,
-    ].filter(Boolean);
-    return parts.join(", ");
+    let address = "";
+    if (doctor.displayAddress) {
+      address = doctor.displayAddress;
+    } else {
+      const parts = [
+        doctor.clinicAddress,
+        doctor.ward_name,
+        doctor.district_name,
+        doctor.province_name,
+      ].filter(Boolean);
+      address = parts.join(", ");
+    }
+    // Thêm "Vietnam" vào cuối nếu chưa có để geocoding chính xác hơn
+    if (address && !address.toLowerCase().includes("vietnam") && !address.toLowerCase().includes("việt nam")) {
+      address = `${address}, Vietnam`;
+    }
+    console.log("[DoctorDetail] Formatted address:", address, "from doctor:", {
+      displayAddress: doctor.displayAddress,
+      clinicAddress: doctor.clinicAddress,
+      ward: doctor.ward_name,
+      district: doctor.district_name,
+      province: doctor.province_name,
+    });
+    return address;
   };
 
   if (loading) {
     return (
       <Default title="Đang tải - MedConnect">
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <p className="text-gray-600">Đang tải thông tin bác sĩ...</p>
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Đang tải thông tin bác sĩ...</p>
+          </div>
         </div>
       </Default>
     );
@@ -152,18 +174,30 @@ export default function DoctorDetail() {
   if (!doctor) {
     return (
       <Default title="Không tìm thấy - MedConnect">
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <Card>
-            <CardBody className="text-center py-12">
-              <p className="text-gray-600 font-medium">Không tìm thấy bác sĩ</p>
-              <Button
-                className="mt-4"
-                onPress={() => router.push("/tim-kiem-bac-si")}
-              >
-                Quay lại danh sách
-              </Button>
-            </CardBody>
-          </Card>
+        <div className="min-h-screen relative overflow-hidden">
+          <div className="absolute inset-0">
+            <Image
+              src="/assets/homepage/cover.jpg"
+              alt="Background"
+              fill
+              className="object-cover"
+              priority
+            />
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+          </div>
+          <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
+            <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+              <CardBody className="text-center py-12">
+                <p className="text-gray-700 font-medium text-lg mb-4">Không tìm thấy bác sĩ</p>
+                <Button
+                  color="primary"
+                  onPress={() => router.push("/tim-kiem-bac-si")}
+                >
+                  Quay lại danh sách
+                </Button>
+              </CardBody>
+            </Card>
+          </div>
         </div>
       </Default>
     );
@@ -173,172 +207,218 @@ export default function DoctorDetail() {
 
   return (
     <Default title={`${doctor.name} - MedConnect`}>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Button
-            variant="light"
-            className="text-white mb-4"
-            startContent={<ArrowLeft size={20} />}
-            onPress={() => router.push("/tim-kiem-bac-si")}
-          >
-            Quay lại
-          </Button>
-          <div className="flex items-center gap-6">
-            <Avatar
-              src={
-                doctor.avatar ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  doctor.name || "BS"
-                )}&background=fff&color=0D9488&size=128`
-              }
-              className="w-32 h-32 border-4 border-white"
-              showFallback
-            />
-            <div>
-              <h1 className="text-4xl font-bold mb-2">{doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name}</h1>
-              <Chip
-                variant="flat"
-                className="bg-white/20 text-white mb-2"
-                size="lg"
-              >
-                {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
-              </Chip>
-              {address && (
-                <p className="text-teal-100 flex items-center gap-2 mt-2">
-                  <MapPin size={18} />
-                  {address}
-                </p>
-              )}
-            </div>
-          </div>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Background with blur */}
+        <div className="absolute inset-0">
+          <Image
+            src="/assets/homepage/cover.jpg"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-3xl"></div>
+          <div className="absolute inset-0 bg-blue-500/5"></div>
+          <div className="absolute top-20 left-20 w-72 h-72 bg-blue-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-teal-200/20 rounded-full blur-3xl"></div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* About */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-xl font-semibold">Giới thiệu</h2>
-              </CardHeader>
-              <Divider />
-              <CardBody>
-                <p className="text-gray-700 whitespace-pre-line">
-                  {doctor.bio ||
-                    "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
-                </p>
-              </CardBody>
-            </Card>
+        {/* Content */}
+        <div className="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Back Button */}
+            <Float variant="fadeInUp" delay={0.1}>
+              <Button
+                variant="light"
+                className="mb-6 bg-white/80 backdrop-blur-sm"
+                startContent={<ArrowLeft size={20} />}
+                onPress={() => router.push("/tim-kiem-bac-si")}
+              >
+                Quay lại
+              </Button>
+            </Float>
 
-            {/* Map */}
-            {address && mapApiKey && (
-              <Card>
-                <CardHeader>
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <MapPin className="text-teal-600" size={24} />
-                    Vị trí phòng khám
-                  </h2>
-                </CardHeader>
-                <Divider />
-                <CardBody>
-                  <RouteMap
-                    originAddress=""
-                    destinationAddress={address}
-                    apiKey={mapApiKey}
-                  />
+            {/* Header Card */}
+            <Float variant="fadeInUp" delay={0.2}>
+              <Card className="mb-8 bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                <CardBody className="p-6 md:p-8">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                    <Avatar
+                      src={
+                        doctor.avatar ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          doctor.name || "BS"
+                        )}&background=0D9488&color=fff&size=128`
+                      }
+                      className="w-32 h-32 ring-4 ring-blue-100"
+                      showFallback
+                    />
+                    <div className="flex-1">
+                      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                        {doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name}
+                      </h1>
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
+                        <Chip
+                          variant="flat"
+                          color="primary"
+                          size="lg"
+                          className="font-semibold"
+                        >
+                          {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
+                        </Chip>
+                        {feedbackSummary?.averageRating && (
+                          <div className="flex items-center gap-1">
+                            <Star className="text-yellow-500 fill-current" size={20} />
+                            <span className="font-semibold text-lg">
+                              {feedbackSummary.averageRating.toFixed(1)}
+                            </span>
+                            <span className="text-gray-600 text-sm">/ 5.0</span>
+                          </div>
+                        )}
+                      </div>
+                      {address && (
+                        <p className="text-gray-700 flex items-center gap-2">
+                          <MapPin size={18} className="text-blue-600" />
+                          <span>{address}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </CardBody>
               </Card>
-            )}
-
-            {/* Feedback */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-xl font-semibold">Đánh giá từ bệnh nhân</h2>
-              </CardHeader>
-              <Divider />
-              <CardBody>
-                {loadingFeedback ? (
-                  <p className="text-gray-500">Đang tải đánh giá...</p>
-                ) : feedbackSummary ? (
-                  <div className="space-y-6">
-                    {/* Summary */}
-                    <div className="text-center p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <Star className="text-yellow-500 fill-current" size={32} />
-                        <span className="text-4xl font-bold">
-                          {feedbackSummary.averageRating?.toFixed(1) || "—"}
-                        </span>
-                        <span className="text-gray-600">/ 5.0</span>
-                      </div>
-                      <p className="text-gray-600">
-                        Dựa trên {feedbackSummary.totalFeedbacks || 0} đánh giá
+            </Float>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Main Info */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* About */}
+                <Float variant="fadeInUp" delay={0.3}>
+                  <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                    <CardHeader>
+                      <h2 className="text-xl font-semibold text-gray-900">Giới thiệu</h2>
+                    </CardHeader>
+                    <Divider />
+                    <CardBody>
+                      <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+                        {doctor.bio ||
+                          "Bác sĩ tận tâm, giàu kinh nghiệm và được người bệnh tin tưởng."}
                       </p>
-                    </div>
+                    </CardBody>
+                  </Card>
+                </Float>
 
-                    {/* Recent Feedbacks */}
-                    {recentFeedbacks && recentFeedbacks.length > 0 ? (
-                      <div className="space-y-4">
-                        <h3 className="font-semibold">Đánh giá gần đây</h3>
-                        {recentFeedbacks.map((feedback, idx) => (
-                          <div
-                            key={idx}
-                            className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="flex gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className={`w-5 h-5 ${
-                                      star <= (feedback.rating || 0)
-                                        ? "text-yellow-400 fill-current"
-                                        : "text-gray-300"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                              {feedback.createdAt && (
-                                <span className="text-xs text-gray-500">
-                                  {new Date(feedback.createdAt).toLocaleDateString(
-                                    "vi-VN"
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                            {feedback.comment && (
-                              <p className="text-gray-700">{feedback.comment}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">
-                        Chưa có đánh giá nào
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-4">
-                    Chưa có đánh giá nào
-                  </p>
+                {/* Map */}
+                {address && mapApiKey && (
+                  <Float variant="fadeInUp" delay={0.4}>
+                    <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                      <CardHeader>
+                        <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900">
+                          <MapPin className="text-teal-600" size={24} />
+                          Vị trí phòng khám
+                        </h2>
+                      </CardHeader>
+                      <Divider />
+                      <CardBody>
+                        <RouteMap
+                          originAddress=""
+                          destinationAddress={address}
+                          apiKey={mapApiKey}
+                        />
+                      </CardBody>
+                    </Card>
+                  </Float>
                 )}
-              </CardBody>
-            </Card>
-          </div>
 
-          {/* Right Column - Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Info */}
-            <Card>
-              <CardHeader>
-                <h3 className="text-lg font-semibold">Thông tin nhanh</h3>
-              </CardHeader>
-              <Divider />
-              <CardBody className="space-y-4">
+                {/* Feedback */}
+                <Float variant="fadeInUp" delay={0.5}>
+                  <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                    <CardHeader>
+                      <h2 className="text-xl font-semibold text-gray-900">Đánh giá từ bệnh nhân</h2>
+                    </CardHeader>
+                    <Divider />
+                    <CardBody>
+                      {loadingFeedback ? (
+                        <div className="text-center py-8">
+                          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+                          <p className="text-gray-500">Đang tải đánh giá...</p>
+                        </div>
+                      ) : feedbackSummary ? (
+                        <div className="space-y-6">
+                          {/* Summary */}
+                          <div className="text-center p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <Star className="text-yellow-500 fill-current" size={32} />
+                              <span className="text-4xl font-bold text-gray-900">
+                                {feedbackSummary.averageRating?.toFixed(1) || "—"}
+                              </span>
+                              <span className="text-gray-600 text-xl">/ 5.0</span>
+                            </div>
+                            <p className="text-gray-700 font-medium">
+                              Dựa trên {feedbackSummary.totalFeedbacks || 0} đánh giá
+                            </p>
+                          </div>
+
+                          {/* Recent Feedbacks */}
+                          {recentFeedbacks && recentFeedbacks.length > 0 ? (
+                            <div className="space-y-4">
+                              <h3 className="font-semibold text-gray-900">Đánh giá gần đây</h3>
+                              {recentFeedbacks.map((feedback, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div className="flex gap-1">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                          key={star}
+                                          className={`w-5 h-5 ${
+                                            star <= (feedback.rating || 0)
+                                              ? "text-yellow-400 fill-current"
+                                              : "text-gray-300"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                    {feedback.createdAt && (
+                                      <span className="text-xs text-gray-500">
+                                        {new Date(feedback.createdAt).toLocaleDateString(
+                                          "vi-VN"
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {feedback.comment && (
+                                    <p className="text-gray-700">{feedback.comment}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-center py-4">
+                              Chưa có đánh giá nào
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">
+                          Chưa có đánh giá nào
+                        </p>
+                      )}
+                    </CardBody>
+                  </Card>
+                </Float>
+              </div>
+
+              {/* Right Column - Sidebar */}
+              <div className="space-y-6">
+                {/* Quick Info */}
+                <Float variant="fadeInUp" delay={0.3}>
+                  <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                    <CardHeader>
+                      <h3 className="text-lg font-semibold text-gray-900">Thông tin nhanh</h3>
+                    </CardHeader>
+                    <Divider />
+                    <CardBody className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-yellow-100 rounded-lg">
                     <Star className="text-yellow-600" size={20} />
@@ -414,31 +494,35 @@ export default function DoctorDetail() {
                 )}
               </CardBody>
             </Card>
+                </Float>
 
-            {/* Action Buttons */}
-            <Card>
-              <CardBody className="space-y-3">
-                <Button
-                  color="primary"
-                  size="lg"
-                  className="w-full"
-                  onPress={() => router.push("/dang-nhap")}
-                >
-                  Đăng nhập để đặt lịch
-                </Button>
-                <Button
-                  variant="bordered"
-                  size="lg"
-                  className="w-full"
-                  onPress={() => router.push("/tim-kiem-bac-si")}
-                >
-                  Xem bác sĩ khác
-                </Button>
-              </CardBody>
-            </Card>
+                {/* Action Buttons */}
+                <Float variant="fadeInUp" delay={0.4}>
+                  <Card className="bg-white/90 backdrop-blur-md border border-white/20 shadow-2xl">
+                    <CardBody className="space-y-3">
+                      <Button
+                        color="primary"
+                        size="lg"
+                        className="w-full font-semibold"
+                        onPress={() => router.push("/dang-nhap")}
+                      >
+                        Đăng nhập để đặt lịch
+                      </Button>
+                      <Button
+                        variant="bordered"
+                        size="lg"
+                        className="w-full font-semibold"
+                        onPress={() => router.push("/tim-kiem-bac-si")}
+                      >
+                        Xem bác sĩ khác
+                      </Button>
+                    </CardBody>
+                  </Card>
+                </Float>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </Default>
   );
