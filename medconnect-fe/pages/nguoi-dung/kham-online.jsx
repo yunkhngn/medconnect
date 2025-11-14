@@ -1306,3 +1306,4 @@ export default function PatientOnlineExamList() {
       </Modal>
     </PatientFrame>
   );
+}
