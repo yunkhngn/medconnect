@@ -205,7 +205,7 @@ export default function DoctorOnlineExamRoom() {
           const data = await response.json();
           if (data.success && data.data) {
             setAppointmentFeedback(data.data);
-          } else {
+        } else {
             setAppointmentFeedback(null);
           }
         }
@@ -793,14 +793,14 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
 
                 {/* Ghi chú đưa lên đầu, rộng hơn */}
                 <div className="space-y-2">
-                  <Textarea
-                    label="Ghi chú phiên khám"
+                <Textarea
+                  label="Ghi chú phiên khám"
                     placeholder="Ghi chú tổng quan, tóm tắt triệu chứng, diễn biến...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp"
-                    value={emr.notes}
-                    onValueChange={(v)=>setEmr(prev=>({...prev, notes: v}))}
-                    variant="bordered"
-                    minRows={10}
-                    labelPlacement="outside"
+                  value={emr.notes}
+                  onValueChange={(v)=>setEmr(prev=>({...prev, notes: v}))}
+                  variant="bordered"
+                  minRows={10}
+                  labelPlacement="outside"
                     classNames={{
                       input: "font-medium text-gray-900 leading-relaxed",
                       inputWrapper: "border-gray-300 hover:border-blue-400 transition-colors"

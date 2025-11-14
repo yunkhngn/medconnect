@@ -74,9 +74,45 @@ export default function PatientDashboard() {
         console.log("No EMR found");
       }
 
-      // TODO: Fetch appointments when API is ready
-      // const aptRes = await fetch("http://localhost:8080/api/appointments/my", {...});
-      // setAppointments(aptData);
+      // Fetch appointments
+      try {
+        const aptRes = await fetch("http://localhost:8080/api/appointments/my", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (aptRes.ok) {
+          const aptData = await aptRes.json();
+          setAppointments(aptData);
+          
+          // Calculate stats
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          
+          const normalizeDate = (date) => {
+            const d = new Date(date);
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+          };
+          
+          const upcoming = aptData.filter(apt => {
+            const aptDate = normalizeDate(apt.date || apt.appointmentDate);
+            return aptDate >= today && (apt.status === "PENDING" || apt.status === "CONFIRMED");
+          });
+          
+          const completed = aptData.filter(apt => {
+            return apt.status === "COMPLETED" || apt.status === "FINISHED";
+          });
+          
+          setStats(prev => ({
+            ...prev,
+            totalAppointments: aptData.length,
+            upcomingAppointments: upcoming.length,
+            completedAppointments: completed.length
+          }));
+        } else {
+          console.error("Failed to fetch appointments:", aptRes.status);
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+      }
 
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -345,7 +381,15 @@ export default function PatientDashboard() {
         </CardHeader>
         <Divider />
         <CardBody>
-          {appointments.length === 0 ? (
+          {(() => {
+            const upcomingApts = appointments.filter(apt => {
+              const aptDate = new Date(apt.date || apt.appointmentDate);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              return aptDate >= today && (apt.status === "PENDING" || apt.status === "CONFIRMED");
+            });
+            return upcomingApts.length === 0;
+          })() ? (
             <div className="text-center py-12">
               <Calendar className="mx-auto text-gray-300 mb-4" size={48} />
               <p className="text-gray-500 mb-4">Bạn chưa có lịch hẹn nào</p>
@@ -360,35 +404,98 @@ export default function PatientDashboard() {
             </div>
             ) : (
               <div className="space-y-4">
-              {appointments.map((apt) => (
-                <Card key={apt.id} shadow="none" className="border">
+              {appointments
+                .filter(apt => {
+                  const aptDate = new Date(apt.date || apt.appointmentDate);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return aptDate >= today && (apt.status === "PENDING" || apt.status === "CONFIRMED");
+                })
+                .sort((a, b) => {
+                  const dateA = new Date(a.date || a.appointmentDate);
+                  const dateB = new Date(b.date || b.appointmentDate);
+                  return dateA - dateB;
+                })
+                .slice(0, 5)
+                .map((apt) => {
+                  const aptDate = new Date(apt.date || apt.appointmentDate);
+                  const slotTimes = {
+                    SLOT_1: "07:30 - 08:00",
+                    SLOT_2: "08:15 - 08:45",
+                    SLOT_3: "09:00 - 09:30",
+                    SLOT_4: "09:45 - 10:15",
+                    SLOT_5: "10:30 - 11:00",
+                    SLOT_6: "11:15 - 11:45",
+                    SLOT_7: "13:00 - 13:30",
+                    SLOT_8: "13:45 - 14:15",
+                    SLOT_9: "14:30 - 15:00",
+                    SLOT_10: "15:15 - 15:45",
+                    SLOT_11: "16:00 - 16:30",
+                    SLOT_12: "16:45 - 17:15"
+                  };
+                  
+                  const getStatusColor = (status) => {
+                    switch (status) {
+                      case "CONFIRMED": return "success";
+                      case "PENDING": return "warning";
+                      case "COMPLETED": case "FINISHED": return "primary";
+                      case "CANCELLED": return "danger";
+                      default: return "default";
+                    }
+                  };
+                  
+                  const getStatusText = (status) => {
+                    switch (status) {
+                      case "CONFIRMED": return "Đã xác nhận";
+                      case "PENDING": return "Chờ xác nhận";
+                      case "COMPLETED": case "FINISHED": return "Hoàn thành";
+                      case "CANCELLED": return "Đã hủy";
+                      default: return status;
+                    }
+                  };
+                  
+                  return (
+                    <Card key={apt.id || apt.appointmentId} shadow="none" className="hover:shadow-md transition-shadow">
                   <CardBody className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex gap-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex gap-3 flex-1">
                         <Avatar
-                          src={apt.doctor?.avatar || null}
+                              src={apt.doctor?.avatar || apt.doctorAvatar || null}
+                              name={apt.doctor?.name || apt.doctorName || "BS"}
                           size="lg"
-                          showFallback
+                              showFallback
                         />
-                        <div>
-                          <p className="font-semibold">{apt.doctor?.name}</p>
-                          <p className="text-sm text-gray-600">{apt.specialty}</p>
-                          <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{formatReasonForDisplay(apt.reason)}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900">{apt.doctor?.name || apt.doctorName || "Bác sĩ"}</p>
+                              <p className="text-sm text-gray-600">{apt.specialty || apt.doctor?.specialization || "Chuyên khoa"}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Calendar size={14} className="text-gray-400" />
+                                <span className="text-sm text-gray-500">
+                                  {aptDate.toLocaleDateString('vi-VN')} • {slotTimes[apt.slot] || apt.time || "N/A"}
+                                </span>
+                              </div>
+                              {apt.reason && (
+                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                  {formatReasonForDisplay(apt.reason)}
+                                </p>
+                              )}
                         </div>
                     </div>
-                      <div className="text-right">
-                        <Chip size="sm" color="primary" variant="flat">
-                          {apt.status}
+                          <div className="text-right flex-shrink-0">
+                            <Chip size="sm" color={getStatusColor(apt.status)} variant="flat" className="mb-2">
+                              {getStatusText(apt.status)}
+                            </Chip>
+                            {apt.type === "ONLINE" && (
+                              <Chip size="sm" color="secondary" variant="flat" className="text-xs">
+                                Online
                         </Chip>
-                        <p className="text-sm mt-2 flex items-center gap-1">
-                          <Clock size={14} />
-                          {apt.time}
-                    </p>
+                            )}
                   </div>
                     </div>
                   </CardBody>
                 </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
         </CardBody>
