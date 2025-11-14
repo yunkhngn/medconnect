@@ -84,7 +84,7 @@ const Setting = () => {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
-        });
+  });
 
         if (response.ok) {
           const data = await response.json();
@@ -279,7 +279,7 @@ const Setting = () => {
       <Card className="shadow-lg">
         <CardBody className="p-6 text-center">
           <div className="relative inline-block mb-4">
-            <Avatar
+          <Avatar
               src={avatarUrl}
               className="w-32 h-32 mx-auto"
               showFallback
@@ -403,8 +403,8 @@ const Setting = () => {
               size="lg"
               className="font-semibold"
             >
-              Lưu thay đổi
-            </Button>
+            Lưu thay đổi
+          </Button>
           </div>
         </CardBody>
       </Card>
@@ -466,11 +466,11 @@ const Setting = () => {
           />
 
           <div className="space-y-2">
-            <Input
+          <Input
               type={showNewPassword ? "text" : "password"}
-              label="Mật khẩu mới"
+            label="Mật khẩu mới"
               placeholder="Nhập mật khẩu mới"
-              value={passwordData.newPassword}
+            value={passwordData.newPassword}
               onValueChange={(v) => setPasswordData({ ...passwordData, newPassword: v })}
               variant="bordered"
               labelPlacement="outside"
@@ -545,8 +545,8 @@ const Setting = () => {
               isLoading={changingPassword}
               className="font-semibold"
             >
-              Đổi mật khẩu
-            </Button>
+            Đổi mật khẩu
+          </Button>
           </div>
         </CardBody>
       </Card>

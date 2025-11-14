@@ -284,154 +284,154 @@ export default function DoctorSettings() {
           </div>
         </CardBody>
       </Card>
-    </div>
+        </div>
   );
 
   // Right Panel - Settings Forms
   const rightPanel = (
     <div className="space-y-6">
 
-      {/* Security Section */}
-      <Card className="shadow-lg">
-        <CardHeader className="flex gap-3 bg-gradient-to-r from-purple-50 to-pink-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Lock size={24} className="text-purple-600" />
+        {/* Security Section */}
+        <Card className="shadow-lg">
+          <CardHeader className="flex gap-3 bg-gradient-to-r from-purple-50 to-pink-50">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Lock size={24} className="text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">Bảo mật</h3>
+                <p className="text-sm text-gray-600">Thay đổi mật khẩu đăng nhập</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-800">Bảo mật</h3>
-              <p className="text-sm text-gray-600">Thay đổi mật khẩu đăng nhập</p>
-            </div>
-          </div>
-        </CardHeader>
-        <Divider />
+          </CardHeader>
+          <Divider />
         <CardBody className="p-6 space-y-4">
-          {/* Security Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-semibold mb-1">Lưu ý bảo mật:</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-700">
-                <li>Mật khẩu phải có ít nhất 6 ký tự</li>
-                <li>Nên sử dụng kết hợp chữ hoa, chữ thường và số</li>
-                <li>Không chia sẻ mật khẩu với bất kỳ ai</li>
-              </ul>
+            {/* Security Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-1">Lưu ý bảo mật:</p>
+                <ul className="list-disc list-inside space-y-1 text-blue-700">
+                  <li>Mật khẩu phải có ít nhất 6 ký tự</li>
+                  <li>Nên sử dụng kết hợp chữ hoa, chữ thường và số</li>
+                  <li>Không chia sẻ mật khẩu với bất kỳ ai</li>
+                </ul>
+              </div>
             </div>
-          </div>
 
-          <Input
-            type={showCurrentPassword ? "text" : "password"}
-            label="Mật khẩu hiện tại"
-            placeholder="Nhập mật khẩu hiện tại"
-            value={security.currentPassword}
-            onValueChange={(v) => setSecurity({ ...security, currentPassword: v })}
-            variant="bordered"
-            labelPlacement="outside"
-            startContent={<Key className="text-default-400" size={20} />}
-            endContent={
-              <button
-                type="button"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="focus:outline-none"
-              >
-                {showCurrentPassword ? (
-                  <EyeOff className="text-default-400" size={20} />
-                ) : (
-                  <Eye className="text-default-400" size={20} />
-                )}
-              </button>
-            }
-            classNames={{
-              input: "text-base",
-              inputWrapper: "border-default-200 hover:border-purple-500 focus-within:!border-purple-500"
-            }}
-          />
+              <Input
+                type={showCurrentPassword ? "text" : "password"}
+                label="Mật khẩu hiện tại"
+                placeholder="Nhập mật khẩu hiện tại"
+                value={security.currentPassword}
+                onValueChange={(v) => setSecurity({ ...security, currentPassword: v })}
+                variant="bordered"
+                labelPlacement="outside"
+                startContent={<Key className="text-default-400" size={20} />}
+                endContent={
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="focus:outline-none"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="text-default-400" size={20} />
+                    ) : (
+                      <Eye className="text-default-400" size={20} />
+                    )}
+                  </button>
+                }
+                classNames={{
+                  input: "text-base",
+                  inputWrapper: "border-default-200 hover:border-purple-500 focus-within:!border-purple-500"
+                }}
+              />
 
-          <div className="space-y-2">
-            <Input
-              type={showNewPassword ? "text" : "password"}
-              label="Mật khẩu mới"
-              placeholder="Nhập mật khẩu mới"
-              value={security.newPassword}
-              onValueChange={(v) => setSecurity({ ...security, newPassword: v })}
-              variant="bordered"
-              labelPlacement="outside"
-              startContent={<Lock className="text-default-400" size={20} />}
-              endContent={
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="focus:outline-none"
-                >
-                  {showNewPassword ? (
-                    <EyeOff className="text-default-400" size={20} />
-                  ) : (
-                    <Eye className="text-default-400" size={20} />
-                  )}
-                </button>
-              }
-              classNames={{
-                input: "text-base",
-                inputWrapper: "border-default-200 hover:border-purple-500 focus-within:!border-purple-500"
-              }}
-            />
-            {passwordStrength && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Độ mạnh:</span>
+              <div className="space-y-2">
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  label="Mật khẩu mới"
+                  placeholder="Nhập mật khẩu mới"
+                  value={security.newPassword}
+                  onValueChange={(v) => setSecurity({ ...security, newPassword: v })}
+                  variant="bordered"
+                  labelPlacement="outside"
+                  startContent={<Lock className="text-default-400" size={20} />}
+                  endContent={
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="focus:outline-none"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="text-default-400" size={20} />
+                      ) : (
+                        <Eye className="text-default-400" size={20} />
+                      )}
+                    </button>
+                  }
+                  classNames={{
+                    input: "text-base",
+                    inputWrapper: "border-default-200 hover:border-purple-500 focus-within:!border-purple-500"
+                  }}
+                />
+                {passwordStrength && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Độ mạnh:</span>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                   passwordStrength.color === 'danger' ? 'bg-red-100 text-red-700' :
                   passwordStrength.color === 'warning' ? 'bg-yellow-100 text-yellow-700' :
                   passwordStrength.color === 'success' ? 'bg-green-100 text-green-700' :
                   'bg-blue-100 text-blue-700'
                 }`}>
-                  {passwordStrength.label}
+                      {passwordStrength.label}
                 </span>
-              </div>
-            )}
-          </div>
-
-          <Input
-            type={showConfirmPassword ? "text" : "password"}
-            label="Xác nhận mật khẩu mới"
-            placeholder="Nhập lại mật khẩu mới"
-            value={security.confirmPassword}
-            onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })}
-            variant="bordered"
-            labelPlacement="outside"
-            startContent={<ShieldCheck className="text-default-400" size={20} />}
-            endContent={
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="focus:outline-none"
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className="text-default-400" size={20} />
-                ) : (
-                  <Eye className="text-default-400" size={20} />
+                  </div>
                 )}
-              </button>
-            }
-            classNames={{
-              input: "text-base",
-              inputWrapper: "border-default-200 hover:border-purple-500 focus-within:!border-purple-500"
-            }}
-          />
+              </div>
+
+              <Input
+                type={showConfirmPassword ? "text" : "password"}
+                label="Xác nhận mật khẩu mới"
+                placeholder="Nhập lại mật khẩu mới"
+                value={security.confirmPassword}
+                onValueChange={(v) => setSecurity({ ...security, confirmPassword: v })}
+                variant="bordered"
+                labelPlacement="outside"
+                startContent={<ShieldCheck className="text-default-400" size={20} />}
+                endContent={
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="focus:outline-none"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="text-default-400" size={20} />
+                    ) : (
+                      <Eye className="text-default-400" size={20} />
+                    )}
+                  </button>
+                }
+                classNames={{
+                  input: "text-base",
+                  inputWrapper: "border-default-200 hover:border-purple-500 focus-within:!border-purple-500"
+                }}
+              />
 
           <div className="flex justify-end pt-2">
-            <Button
-              color="secondary"
-              size="lg"
-              startContent={<Key size={20} />}
-              onPress={handleChangePassword}
-              isLoading={changingPassword}
-              className="font-semibold"
-            >
-              Đổi mật khẩu
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
+              <Button
+                color="secondary"
+                size="lg"
+                startContent={<Key size={20} />}
+                onPress={handleChangePassword}
+                isLoading={changingPassword}
+                className="font-semibold"
+              >
+                Đổi mật khẩu
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
     </div>
   );
 
@@ -448,13 +448,13 @@ export default function DoctorSettings() {
   return (
     <DoctorFrame title="Cài đặt">
       <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
-      <ToastNotification
-        message={toast.toast.message}
-        type={toast.toast.type}
-        isVisible={toast.toast.isVisible}
-        onClose={toast.hideToast}
-        duration={toast.toast.duration}
-      />
+        <ToastNotification
+          message={toast.toast.message}
+          type={toast.toast.type}
+          isVisible={toast.toast.isVisible}
+          onClose={toast.hideToast}
+          duration={toast.toast.duration}
+        />
     </DoctorFrame>
   );
 }
