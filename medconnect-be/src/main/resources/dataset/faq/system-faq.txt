@@ -1,0 +1,171 @@
+# FAQ - Câu hỏi về Hệ thống MedConnect
+
+## Giới thiệu về MedConnect
+
+Q: MedConnect là gì?
+A: MedConnect là nền tảng y tế trực tuyến kết nối bệnh nhân với bác sĩ được xác minh. Cho phép đặt lịch khám trực tiếp hoặc tư vấn qua video call, quản lý hồ sơ bệnh án điện tử, và thanh toán trực tuyến an toàn.
+
+Q: MedConnect hoạt động từ khi nào?
+A: MedConnect được phát triển bởi nhóm SWP391 - G1 SE1961, ra mắt năm 2025 nhằm giải quyết bài toán tiếp cận y tế tại Việt Nam.
+
+Q: MedConnect có ứng dụng mobile không?
+A: Hiện tại MedConnect là web application, tối ưu hoàn toàn cho cả desktop và mobile browser. Native mobile app đang trong kế hoạch phát triển.
+
+Q: MedConnect hoạt động ở đâu?
+A: MedConnect phục vụ toàn quốc Việt Nam. Bạn có thể tìm bác sĩ theo địa điểm hoặc khám online từ bất kỳ đâu có internet.
+
+## Tính năng chính
+
+Q: Những tính năng nào có sẵn?
+A: - Tìm kiếm bác sĩ theo chuyên khoa, địa điểm, đánh giá
+- Đặt lịch khám trực tiếp hoặc online
+- Tư vấn qua video call HD (Agora)
+- Quản lý hồ sơ bệnh án điện tử
+- Toa thuốc và đơn thuốc điện tử
+- Thanh toán trực tuyến (VietQR, VNPAY, MoMo)
+- Đánh giá và review bác sĩ
+- Thông báo realtime (Firebase)
+- Chatbot AI tư vấn sức khỏe
+
+Q: Có thể khám bệnh qua video không?
+A: Có, MedConnect hỗ trợ khám bệnh từ xa qua video call sử dụng công nghệ Agora với chất lượng HD và bảo mật cao.
+
+Q: Hồ sơ bệnh án điện tử hoạt động như thế nào?
+A: Mỗi lần khám, bác sĩ sẽ ghi chép vào hồ sơ điện tử gồm: Chẩn đoán, Triệu chứng, Toa thuốc, Lời dặn. Bạn có thể xem, tải xuống và chia sẻ với bác sĩ khác khi cần.
+
+Q: Có chatbot hỗ trợ không?
+A: Có, MedConnect tích hợp AI Chatbot (Gemini) để: Tư vấn sơ bộ về triệu chứng, Hướng dẫn sử dụng hệ thống, Trả lời câu hỏi về chính sách. LƯU Ý: Đây chỉ là tư vấn bước đầu, không thay thế bác sĩ.
+
+## Bảo mật và Quyền riêng tư
+
+Q: Dữ liệu của tôi có an toàn không?
+A: Hoàn toàn an toàn. MedConnect sử dụng: Mã hóa SSL/TLS cho tất cả kết nối, Mã hóa database cho dữ liệu nhạy cảm, Xác thực Firebase, Tuân thủ Nghị định 13/2023/NĐ-CP.
+
+Q: Ai có thể truy cập thông tin y tế của tôi?
+A: Chỉ bạn và bác sĩ được bạn ủy quyền. Admin hệ thống chỉ có quyền kỹ thuật (không xem nội dung y tế) để troubleshoot khi cần.
+
+Q: Video call có được ghi lại không?
+A: KHÔNG. Video call sử dụng Agora với mã hóa end-to-end, không được ghi lại và không có bên thứ ba nào có thể truy cập.
+
+Q: MedConnect có bán dữ liệu người dùng không?
+A: TUYỆT ĐỐI KHÔNG. Dữ liệu chỉ dùng cho mục đích vận hành nền tảng. Không bán, không chia sẻ với bên thứ ba (trừ đối tác thanh toán được mã hóa).
+
+## Công nghệ sử dụng
+
+Q: MedConnect được xây dựng bằng công nghệ gì?
+A: - Frontend: Next.js 15, React 18, TailwindCSS, HeroUI
+- Backend: Java Spring Boot 3.5, Spring Security
+- Database: Microsoft SQL Server
+- Authentication: Firebase Auth
+- Video Call: Agora RTC
+- Payment: VietQR, VNPAY, MoMo
+- AI: Google Gemini API
+- Hosting: Docker, Caddy
+
+Q: Tại sao chọn các công nghệ này?
+A: - Next.js: Performance cao, SEO tốt, SSR/SSG
+- Spring Boot: Bảo mật, scalable, enterprise-grade
+- Agora: Video call chất lượng cao, độ trễ thấp
+- Firebase: Authentication mạnh mẽ, dễ tích hợp social login
+- Gemini: AI tiên tiến nhất hiện nay
+
+Q: Hệ thống có thể mở rộng không?
+A: Có, kiến trúc microservices và containerization (Docker) cho phép scale dễ dàng khi lượng người dùng tăng.
+
+## Tuân thủ Pháp luật
+
+Q: MedConnect có hợp pháp không?
+A: Có, MedConnect tuân thủ đầy đủ:
+- Luật Khám chữa bệnh 2009
+- Thông tư 49/2017/TT-BYT về khám chữa bệnh từ xa
+- Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân
+- Nghị định 52/2013/NĐ-CP về thương mại điện tử
+
+Q: Bác sĩ trên nền tảng có được xác minh không?
+A: Có, TẤT CẢ bác sĩ đều phải: Submit chứng chỉ hành nghề, Giấy phép của Bộ Y tế, Được admin kiểm duyệt kỹ lưỡng trước khi kích hoạt.
+
+Q: Đơn thuốc điện tử có hợp lệ không?
+A: Có, tuân thủ Thông tư 46/2017/TT-BYT về đơn thuốc. Đơn thuốc có: Thông tin bác sĩ đầy đủ, Số chứng chỉ hành nghề, Chữ ký điện tử, Timestamp.
+
+Q: Trách nhiệm pháp lý của MedConnect là gì?
+A: MedConnect là nền tảng công nghệ (technology provider), chịu trách nhiệm về: Vận hành hệ thống, Bảo mật dữ liệu, Xác minh bác sĩ. KHÔNG chịu trách nhiệm về quyết định y khoa (do bác sĩ chịu trách nhiệm).
+
+## Thanh toán và Giá cả
+
+Q: Phí sử dụng MedConnect là bao nhiêu?
+A: - Bệnh nhân: MIỄN PHÍ đăng ký và sử dụng. Chỉ trả phí khám cho bác sĩ.
+- Bác sĩ: Nền tảng giữ 15% phí hoa hồng từ mỗi lịch khám.
+
+Q: Phí khám được tính như thế nào?
+A: Mỗi bác sĩ tự set phí khám của mình dựa trên: Kinh nghiệm, Chuyên môn, Chuyên khoa. Phí hiển thị rõ ràng trước khi đặt lịch.
+
+Q: Có chi phí ẩn không?
+A: KHÔNG có chi phí ẩn. Giá hiển thị là giá cuối cùng bạn trả. Phí thanh toán (nếu có) do cổng thanh toán thu (thường < 1%).
+
+## Hỗ trợ và Liên hệ
+
+Q: Làm sao để liên hệ support?
+A: - Email: support@medconnect.vn
+- Hotline bệnh nhân: 1900 xxxx
+- Hotline bác sĩ: 1900 yyyy
+- Live chat: Góc dưới phải màn hình
+- Địa chỉ: FPT University, Hòa Lạc, Hà Nội
+
+Q: Thời gian làm việc?
+A: - Hotline: 8:00 - 22:00 (cả tuần)
+- Email: 24/7 (phản hồi trong 24h)
+- Live chat: 8:00 - 22:00
+
+Q: Có hỗ trợ tiếng Anh không?
+A: Hiện tại MedConnect chỉ hỗ trợ tiếng Việt. Hỗ trợ đa ngôn ngữ đang trong kế hoạch phát triển.
+
+## Roadmap và Tương lai
+
+Q: Tính năng nào sẽ ra mắt tiếp theo?
+A: - Mobile app (iOS & Android)
+- Tích hợp BHYT (Bảo hiểm y tế)
+- AI chẩn đoán hỗ trợ từ hình ảnh
+- Đặt thuốc online
+- Kết nối phòng xét nghiệm
+- Telemedicine cho bệnh mãn tính
+
+Q: Có kế hoạch mở rộng quốc tế không?
+A: Hiện tập trung phát triển thị trường Việt Nam. Mở rộng ASEAN trong kế hoạch dài hạn.
+
+Q: Làm sao để góp ý cải thiện?
+A: Rất hoan nghênh! Gửi ý kiến qua: Form "Góp ý" trong website, Email feedback@medconnect.vn, Đánh giá trên trang chủ.
+
+## Vấn đề Kỹ thuật
+
+Q: Trình duyệt nào được hỗ trợ?
+A: Khuyến nghị: Chrome 90+, Edge 90+, Safari 14+, Firefox 90+. Không hỗ trợ Internet Explorer.
+
+Q: Yêu cầu tốc độ Internet?
+A: - Đặt lịch, xem thông tin: 1Mbps
+- Video call (bệnh nhân): 2Mbps
+- Video call (bác sĩ): 5Mbps
+
+Q: Có thể dùng trên điện thoại không?
+A: Có, website responsive hoàn toàn, tối ưu cho mobile. Mở trình duyệt và truy cập bình thường.
+
+Q: Làm sao để báo lỗi (bug)?
+A: Email: bug-report@medconnect.vn với: Mô tả lỗi, Screenshot, Trình duyệt đang dùng, Thao tác dẫn đến lỗi.
+
+## So sánh với Đối thủ
+
+Q: MedConnect khác gì với các nền tảng khác?
+A: - Video call chất lượng cao hơn (Agora vs WebRTC thông thường)
+- AI Chatbot thông minh với RAG
+- Hồ sơ bệnh án điện tử đầy đủ
+- Quy trình xác minh bác sĩ nghiêm ngặt
+- Bảo mật chuẩn enterprise
+- UI/UX hiện đại, dễ dùng
+
+Q: Tại sao nên chọn MedConnect?
+A: - Bác sĩ được verify 100%
+- Bảo mật thông tin tuyệt đối
+- Công nghệ mới nhất
+- Hỗ trợ 24/7
+- Giá cả minh bạch
+- Made in Vietnam 🇻🇳
+

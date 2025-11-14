@@ -1,0 +1,640 @@
+{
+  "diseases": [
+    {
+      "id": "hypertension",
+      "name_vi": "Tăng huyết áp",
+      "name_en": "Hypertension",
+      "icd10": "I10",
+      "category": "Tim mạch",
+      "description": "Tăng huyết áp là tình trạng huyết áp động mạch tăng cao liên tục, định nghĩa là huyết áp tâm thu ≥140 mmHg và/hoặc huyết áp tâm trương ≥90 mmHg.",
+      "risk_factors": [
+        "Tuổi cao",
+        "Béo phì (BMI > 25)",
+        "Hút thuốc lá",
+        "Stress kéo dài",
+        "Ăn mặn",
+        "Tiền sử gia đình",
+        "Thiếu vận động",
+        "Rượu bia"
+      ],
+      "symptoms": [
+        {
+          "name": "Đau đầu vùng gáy",
+          "severity": "Trung bình",
+          "medical_term": "Occipital Headache"
+        },
+        {
+          "name": "Chóng mặt",
+          "severity": "Thường gặp",
+          "medical_term": "Vertigo"
+        },
+        {
+          "name": "Đánh trống ngực",
+          "severity": "Thường gặp",
+          "medical_term": "Palpitations"
+        },
+        {
+          "name": "Mệt mỏi",
+          "severity": "Nhẹ-Trung bình",
+          "medical_term": "Fatigue"
+        },
+        {
+          "name": "Khó thở khi gắng sức",
+          "severity": "Tiến triển",
+          "medical_term": "Exertional Dyspnea"
+        },
+        {
+          "name": "Chảy máu cam",
+          "severity": "Nặng (khủng hoảng HA)",
+          "medical_term": "Epistaxis"
+        }
+      ],
+      "complications": [
+        "Đột quỵ (Stroke)",
+        "Nhồi máu cơ tim (MI)",
+        "Suy tim (Heart Failure)",
+        "Suy thận mạn (CKD)",
+        "Bệnh võng mạc (Retinopathy)"
+      ],
+      "diagnostic_criteria": "BP ≥140/90 mmHg đo trong 2 lần khám khác nhau",
+      "treatment_approach": "Thay đổi lối sống + Thuốc hạ huyết áp (ACE inhibitors, ARB, Beta blockers, CCB, Diuretics)"
+    },
+    {
+      "id": "diabetes_mellitus_type2",
+      "name_vi": "Đái tháo đường típ 2",
+      "name_en": "Diabetes Mellitus Type 2",
+      "icd10": "E11",
+      "category": "Nội tiết",
+      "description": "Bệnh chuyển hóa mạn tính đặc trưng bởi tăng đường huyết do kháng insulin và/hoặc giảm tiết insulin.",
+      "risk_factors": [
+        "Tuổi > 45",
+        "Béo phì (BMI > 23 với người Châu Á)",
+        "Tiền sử gia đình",
+        "Tiền sản giật",
+        "Hội chứng buồng trứng đa nang (PCOS)",
+        "Ít vận động",
+        "Chế độ ăn giàu đường, tinh bột"
+      ],
+      "symptoms": [
+        {
+          "name": "Đái nhiều (tiểu nhiều)",
+          "severity": "Điển hình",
+          "medical_term": "Polyuria"
+        },
+        {
+          "name": "Khát nước nhiều",
+          "severity": "Điển hình",
+          "medical_term": "Polydipsia"
+        },
+        {
+          "name": "Ăn nhiều nhưng vẫn gầy",
+          "severity": "Điển hình",
+          "medical_term": "Polyphagia with Weight Loss"
+        },
+        {
+          "name": "Mệt mỏi",
+          "severity": "Thường gặp",
+          "medical_term": "Fatigue"
+        },
+        {
+          "name": "Mờ mắt",
+          "severity": "Thường gặp",
+          "medical_term": "Blurred Vision"
+        },
+        {
+          "name": "Vết thương lâu lành",
+          "severity": "Tiến triển",
+          "medical_term": "Delayed Wound Healing"
+        },
+        {
+          "name": "Tê bì chi",
+          "severity": "Biến chứng",
+          "medical_term": "Peripheral Neuropathy"
+        }
+      ],
+      "complications": [
+        "Bệnh thận do ĐTĐ (Diabetic Nephropathy)",
+        "Bệnh võng mạc do ĐTĐ (Diabetic Retinopathy)",
+        "Bệnh thần kinh ngoại biên (Peripheral Neuropathy)",
+        "Bệnh mạch vành (CAD)",
+        "Loét bàn chân đái tháo đường (Diabetic Foot Ulcer)"
+      ],
+      "diagnostic_criteria": "Glucose máu lúc đói ≥126 mg/dL hoặc HbA1c ≥6.5% hoặc Glucose máu bất kỳ ≥200 mg/dL + triệu chứng",
+      "treatment_approach": "Thay đổi lối sống + Metformin + Thuốc hạ đường huyết khác (Sulfonylureas, DPP-4i, SGLT2i, GLP-1 RA) hoặc Insulin"
+    },
+    {
+      "id": "pneumonia",
+      "name_vi": "Viêm phổi",
+      "name_en": "Pneumonia",
+      "icd10": "J18",
+      "category": "Hô hấp",
+      "description": "Nhiễm trùng cấp tính nhu mô phổi do vi khuẩn, virus hoặc nấm gây ra.",
+      "risk_factors": [
+        "Tuổi < 5 hoặc > 65",
+        "Suy giảm miễn dịch",
+        "Bệnh phổi mạn tính (COPD, Asthma)",
+        "Hút thuốc",
+        "Tiếp xúc với người bệnh",
+        "Suy dinh dưỡng"
+      ],
+      "symptoms": [
+        {
+          "name": "Sốt cao > 38.5°C",
+          "severity": "Điển hình",
+          "medical_term": "High Fever"
+        },
+        {
+          "name": "Ho có đờm mủ, đờm máu",
+          "severity": "Điển hình",
+          "medical_term": "Productive Cough with Purulent/Bloody Sputum"
+        },
+        {
+          "name": "Khó thở",
+          "severity": "Nặng",
+          "medical_term": "Dyspnea"
+        },
+        {
+          "name": "Đau ngực khi thở sâu",
+          "severity": "Thường gặp",
+          "medical_term": "Pleuritic Chest Pain"
+        },
+        {
+          "name": "Rales ẩm khi nghe phổi",
+          "severity": "Dấu hiệu lâm sàng",
+          "medical_term": "Crackles/Rales"
+        },
+        {
+          "name": "Tím tái",
+          "severity": "Nặng",
+          "medical_term": "Cyanosis"
+        }
+      ],
+      "complications": [
+        "Suy hô hấp (Respiratory Failure)",
+        "Tràn dịch màng phổi (Pleural Effusion)",
+        "Áp xe phổi (Lung Abscess)",
+        "Nhiễm trùng huyết (Sepsis)",
+        "ARDS (Acute Respiratory Distress Syndrome)"
+      ],
+      "diagnostic_criteria": "X-quang phổi thấy thâm nhiễm + triệu chứng lâm sàng + CRP, WBC tăng",
+      "treatment_approach": "Kháng sinh (Amoxicillin/Clavulanate, Azithromycin, Ceftriaxone) + Hỗ trợ (Oxy, Dịch truyền)"
+    },
+    {
+      "id": "gastritis",
+      "name_vi": "Viêm loét dạ dày",
+      "name_en": "Gastritis/Peptic Ulcer Disease",
+      "icd10": "K29",
+      "category": "Tiêu hóa",
+      "description": "Viêm niêm mạc dạ dày do nhiễm H.pylori, thuốc NSAIDs, stress hoặc các nguyên nhân khác.",
+      "risk_factors": [
+        "Nhiễm Helicobacter pylori",
+        "Dùng NSAIDs kéo dài",
+        "Hút thuốc, uống rượu",
+        "Stress kéo dài",
+        "Ăn cay nóng, không đều"
+      ],
+      "symptoms": [
+        {
+          "name": "Đau thượng vị",
+          "severity": "Điển hình",
+          "medical_term": "Epigastric Pain"
+        },
+        {
+          "name": "Nóng rát thượng vị",
+          "severity": "Thường gặp",
+          "medical_term": "Epigastric Burning"
+        },
+        {
+          "name": "Ợ hơi, ợ chua",
+          "severity": "Thường gặp",
+          "medical_term": "Belching, Acid Regurgitation"
+        },
+        {
+          "name": "Buồn nôn, nôn",
+          "severity": "Trung bình",
+          "medical_term": "Nausea, Vomiting"
+        },
+        {
+          "name": "Đầy bụng, khó tiêu",
+          "severity": "Thường gặp",
+          "medical_term": "Dyspepsia"
+        },
+        {
+          "name": "Nôn máu, đi cầu phân đen",
+          "severity": "Nặng - Biến chứng",
+          "medical_term": "Hematemesis, Melena"
+        }
+      ],
+      "complications": [
+        "Chảy máu tiêu hóa (GI Bleeding)",
+        "Thủng dạ dày (Perforation)",
+        "Hẹp môn vị (Pyloric Stenosis)",
+        "Ung thư dạ dày (Gastric Cancer)"
+      ],
+      "diagnostic_criteria": "Nội soi dạ dày thấy viêm/loét + Test H.pylori dương tính",
+      "treatment_approach": "PPI (Omeprazole, Esomeprazole) + Diệt H.pylori (Triple/Quadruple therapy) + Tránh NSAIDs, rượu"
+    },
+    {
+      "id": "stroke",
+      "name_vi": "Đột quỵ",
+      "name_en": "Stroke (CVA)",
+      "icd10": "I64",
+      "category": "Thần kinh",
+      "description": "Tổn thương não cấp tính do thiếu máu cục bộ (nhồi máu não) hoặc xuất huyết não.",
+      "risk_factors": [
+        "Tăng huyết áp",
+        "Đái tháo đường",
+        "Rối loạn lipid máu",
+        "Hút thuốc",
+        "Rung nhĩ (Atrial Fibrillation)",
+        "Tiền sử đột quỵ/TIA",
+        "Tuổi cao"
+      ],
+      "symptoms": [
+        {
+          "name": "Liệt nửa người",
+          "severity": "Nặng",
+          "medical_term": "Hemiplegia/Hemiparesis"
+        },
+        {
+          "name": "Méo miệng",
+          "severity": "Điển hình",
+          "medical_term": "Facial Droop"
+        },
+        {
+          "name": "Nói lắp, nói khó",
+          "severity": "Điển hình",
+          "medical_term": "Dysarthria, Aphasia"
+        },
+        {
+          "name": "Tê bì nửa người",
+          "severity": "Thường gặp",
+          "medical_term": "Hemisensory Loss"
+        },
+        {
+          "name": "Giảm thị lực đột ngột",
+          "severity": "Có thể gặp",
+          "medical_term": "Sudden Vision Loss"
+        },
+        {
+          "name": "Chóng mặt, mất thăng bằng",
+          "severity": "Thường gặp",
+          "medical_term": "Vertigo, Ataxia"
+        },
+        {
+          "name": "Rối loạn ý thức",
+          "severity": "Nặng",
+          "medical_term": "Altered Consciousness"
+        }
+      ],
+      "complications": [
+        "Tử vong",
+        "Liệt vĩnh viễn",
+        "Rối loạn ngôn ngữ",
+        "Sa sút trí tuệ sau đột quỵ",
+        "Đột quỵ tái phát"
+      ],
+      "diagnostic_criteria": "CT/MRI não thấy tổn thương + triệu chứng thần kinh khu trú đột ngột. FAST test (+)",
+      "treatment_approach": "Đột quỵ thiếu máu: Tiêu sợi huyết (tPA) trong 4.5h, Lấy huyết khối. Đột quỵ xuất huyết: Kiểm soát HA, phẫu thuật (nếu cần)"
+    },
+    {
+      "id": "osteoarthritis",
+      "name_vi": "Thoái hóa khớp",
+      "name_en": "Osteoarthritis",
+      "icd10": "M19",
+      "category": "Cơ xương khớp",
+      "description": "Bệnh thoái hóa sụn khớp mạn tính, thường gặp ở khớp gối, háng, cột sống, bàn tay.",
+      "risk_factors": [
+        "Tuổi cao > 50",
+        "Béo phì",
+        "Chấn thương khớp cũ",
+        "Yếu tố di truyền",
+        "Nghề nghiệp (mang vác nặng)",
+        "Giới tính nữ (sau mãn kinh)"
+      ],
+      "symptoms": [
+        {
+          "name": "Đau khớp khi vận động",
+          "severity": "Điển hình",
+          "medical_term": "Mechanical Joint Pain"
+        },
+        {
+          "name": "Cứng khớp buổi sáng < 30 phút",
+          "severity": "Thường gặp",
+          "medical_term": "Morning Stiffness"
+        },
+        {
+          "name": "Kêu răng rắc khi cử động",
+          "severity": "Thường gặp",
+          "medical_term": "Crepitus"
+        },
+        {
+          "name": "Hạn chế vận động khớp",
+          "severity": "Tiến triển",
+          "medical_term": "Limited Range of Motion"
+        },
+        {
+          "name": "Sưng khớp nhẹ",
+          "severity": "Có thể gặp",
+          "medical_term": "Mild Joint Swelling"
+        },
+        {
+          "name": "Biến dạng khớp",
+          "severity": "Giai đoạn muộn",
+          "medical_term": "Joint Deformity"
+        }
+      ],
+      "complications": [
+        "Mất khả năng vận động",
+        "Biến dạng khớp vĩnh viễn",
+        "Giảm chất lượng cuộc sống",
+        "Phụ thuộc người chăm sóc"
+      ],
+      "diagnostic_criteria": "X-quang thấy hẹp khe khớp, gai xương (osteophytes), xơ cứng xương dưới sụn + triệu chứng lâm sàng",
+      "treatment_approach": "Giảm cân, Vật lý trị liệu, NSAIDs, Glucosamine, Chondroitin, Tiêm corticosteroid, Phẫu thuật thay khớp (nếu nặng)"
+    },
+    {
+      "id": "depression",
+      "name_vi": "Trầm cảm",
+      "name_en": "Major Depressive Disorder",
+      "icd10": "F32",
+      "category": "Tâm thần",
+      "description": "Rối loạn tâm trạng đặc trưng bởi buồn chán kéo dài, mất hứng thú với cuộc sống, ảnh hưởng chức năng hàng ngày.",
+      "risk_factors": [
+        "Tiền sử gia đình",
+        "Stress kéo dài",
+        "Mất mát, sốc tâm lý",
+        "Bệnh lý mạn tính",
+        "Lạm dụng chất kích thích",
+        "Giới tính nữ (cao gấp 2)"
+      ],
+      "symptoms": [
+        {
+          "name": "Buồn chán kéo dài > 2 tuần",
+          "severity": "Điển hình",
+          "medical_term": "Persistent Sadness"
+        },
+        {
+          "name": "Mất hứng thú với mọi thứ",
+          "severity": "Điển hình",
+          "medical_term": "Anhedonia"
+        },
+        {
+          "name": "Mất ngủ hoặc ngủ quá nhiều",
+          "severity": "Thường gặp",
+          "medical_term": "Insomnia/Hypersomnia"
+        },
+        {
+          "name": "Mệt mỏi, chán nản",
+          "severity": "Thường gặp",
+          "medical_term": "Fatigue, Loss of Energy"
+        },
+        {
+          "name": "Tự ti, cảm giác vô giá trị",
+          "severity": "Điển hình",
+          "medical_term": "Worthlessness, Guilt"
+        },
+        {
+          "name": "Khó tập trung",
+          "severity": "Thường gặp",
+          "medical_term": "Poor Concentration"
+        },
+        {
+          "name": "Suy nghĩ về cái chết, tự sát",
+          "severity": "Nặng - KHẨN CẤP",
+          "medical_term": "Suicidal Ideation"
+        }
+      ],
+      "complications": [
+        "Tự sát",
+        "Lạm dụng rượu, ma túy",
+        "Mất việc, tan vỡ gia đình",
+        "Bệnh lý thể chất (tim mạch, tiêu hóa)"
+      ],
+      "diagnostic_criteria": "PHQ-9 ≥10 hoặc DSM-5: ≥5 triệu chứng trong 2 tuần, có ít nhất 1 triệu chứng là buồn chán hoặc mất hứng thú",
+      "treatment_approach": "Tâm lý trị liệu (CBT, IPT) + Thuốc chống trầm cảm (SSRIs: Sertraline, Escitalopram; SNRIs: Venlafaxine)"
+    },
+    {
+      "id": "asthma",
+      "name_vi": "Hen phế quản",
+      "name_en": "Asthma",
+      "icd10": "J45",
+      "category": "Hô hấp",
+      "description": "Bệnh viêm mạn tính đường thở đặc trưng bởi tắc nghẽn đường thở hồi phục, tăng phản ứng phế quản.",
+      "risk_factors": [
+        "Tiền sử gia đình (dị ứng, hen)",
+        "Dị ứng (bụi, phấn hoa, lông thú)",
+        "Viêm mũi dị ứng",
+        "Viêm da cơ địa",
+        "Tiếp xúc khói thuốc",
+        "Béo phì"
+      ],
+      "symptoms": [
+        {
+          "name": "Khó thở, thở nhanh",
+          "severity": "Điển hình",
+          "medical_term": "Dyspnea"
+        },
+        {
+          "name": "Khò khè khi thở",
+          "severity": "Điển hình",
+          "medical_term": "Wheezing"
+        },
+        {
+          "name": "Ho, đặc biệt ban đêm",
+          "severity": "Thường gặp",
+          "medical_term": "Nocturnal Cough"
+        },
+        {
+          "name": "Tức ngực",
+          "severity": "Thường gặp",
+          "medical_term": "Chest Tightness"
+        },
+        {
+          "name": "Triệu chứng xấu đi với yếu tố kích thích",
+          "severity": "Điển hình",
+          "medical_term": "Trigger-induced Symptoms"
+        }
+      ],
+      "complications": [
+        "Cơn hen cấp nặng (Status Asthmaticus)",
+        "Suy hô hấp",
+        "Nhiễm trùng phổi tái phát",
+        "Ảnh hưởng sinh hoạt, học tập"
+      ],
+      "diagnostic_criteria": "Đo chức năng phổi: FEV1 giảm, FEV1/FVC < 0.7, Reversibility test (+) sau dùng Salbutamol",
+      "treatment_approach": "Kiểm soát dài hạn: ICS (Inhaled Corticosteroids). Cơn cấp: SABA (Salbutamol). Tránh yếu tố kích thích"
+    },
+    {
+      "id": "copd",
+      "name_vi": "Bệnh phổi tắc nghẽn mạn tính",
+      "name_en": "Chronic Obstructive Pulmonary Disease (COPD)",
+      "icd10": "J44",
+      "category": "Hô hấp",
+      "description": "Bệnh phổi mạn tính đặc trưng bởi hạn chế lưu lượng khí không hồi phục, thường do hút thuốc lá.",
+      "risk_factors": [
+        "Hút thuốc lá (> 90% nguyên nhân)",
+        "Tuổi > 40",
+        "Tiếp xúc khói bụi nghề nghiệp",
+        "Ô nhiễm không khí",
+        "Thiếu Alpha-1 Antitrypsin (hiếm)"
+      ],
+      "symptoms": [
+        {
+          "name": "Ho mạn tính có đờm",
+          "severity": "Điển hình",
+          "medical_term": "Chronic Productive Cough"
+        },
+        {
+          "name": "Khó thở tiến triển",
+          "severity": "Điển hình",
+          "medical_term": "Progressive Dyspnea"
+        },
+        {
+          "name": "Khò khè",
+          "severity": "Thường gặp",
+          "medical_term": "Wheezing"
+        },
+        {
+          "name": "Tức ngực",
+          "severity": "Có thể gặp",
+          "medical_term": "Chest Tightness"
+        },
+        {
+          "name": "Cơn cấp (đợt tiến triển)",
+          "severity": "Nặng",
+          "medical_term": "Acute Exacerbation"
+        }
+      ],
+      "complications": [
+        "Suy hô hấp mạn tính",
+        "Tràn khí màng phổi (Pneumothorax)",
+        "Tăng áp phổi, Cor pulmonale",
+        "Ung thư phổi",
+        "Nhiễm trùng phổi tái phát"
+      ],
+      "diagnostic_criteria": "Đo chức năng phổi: FEV1/FVC < 0.7 sau dùng bronchodilator (không hồi phục)",
+      "treatment_approach": "Bỏ thuốc lá (quan trọng nhất), LABA + LAMA, ICS (nếu đợt cấp nhiều), Oxy dài hạn (nếu thiếu oxy), Tiêm phòng cúm, phế cầu"
+    },
+    {
+      "id": "hypothyroidism",
+      "name_vi": "Suy giáp",
+      "name_en": "Hypothyroidism",
+      "icd10": "E03",
+      "category": "Nội tiết",
+      "description": "Tình trạng tuyến giáp sản xuất không đủ hormone giáp (T3, T4).",
+      "risk_factors": [
+        "Giới tính nữ",
+        "Tuổi > 60",
+        "Tiền sử gia đình",
+        "Bệnh tự miễn (Hashimoto)",
+        "Sau điều trị cường giáp (I-131, phẫu thuật)",
+        "Thiếu Iod (hiếm ở VN)"
+      ],
+      "symptoms": [
+        {
+          "name": "Mệt mỏi, uể oải",
+          "severity": "Điển hình",
+          "medical_term": "Fatigue, Lethargy"
+        },
+        {
+          "name": "Tăng cân",
+          "severity": "Thường gặp",
+          "medical_term": "Weight Gain"
+        },
+        {
+          "name": "Sợ lạnh",
+          "severity": "Điển hình",
+          "medical_term": "Cold Intolerance"
+        },
+        {
+          "name": "Da khô, tóc rụng",
+          "severity": "Thường gặp",
+          "medical_term": "Dry Skin, Hair Loss"
+        },
+        {
+          "name": "Táo bón",
+          "severity": "Thường gặp",
+          "medical_term": "Constipation"
+        },
+        {
+          "name": "Nhịp tim chậm",
+          "severity": "Có thể gặp",
+          "medical_term": "Bradycardia"
+        },
+        {
+          "name": "Trầm cảm",
+          "severity": "Có thể gặp",
+          "medical_term": "Depression"
+        },
+        {
+          "name": "Phù niêm (Myxedema)",
+          "severity": "Nặng",
+          "medical_term": "Myxedema"
+        }
+      ],
+      "complications": [
+        "Bệnh tim (tăng LDL, chậm nhịp)",
+        "Hôn mê nhầy (Myxedema Coma) - hiếm, nguy hiểm",
+        "Vô sinh",
+        "Chậm phát triển (ở trẻ)"
+      ],
+      "diagnostic_criteria": "TSH tăng cao, FT4 giảm (suy giáp nguyên phát) hoặc TSH thấp, FT4 thấp (suy giáp thứ phát)",
+      "treatment_approach": "Levothyroxine (T4) uống hàng ngày, lúc đói, Theo dõi TSH, FT4 định kỳ"
+    },
+    {
+      "id": "gerd",
+      "name_vi": "Trào ngược dạ dày thực quản",
+      "name_en": "Gastroesophageal Reflux Disease (GERD)",
+      "icd10": "K21",
+      "category": "Tiêu hóa",
+      "description": "Tình trạng dịch dạ dày trào ngược lên thực quản gây triệu chứng khó chịu hoặc biến chứng.",
+      "risk_factors": [
+        "Béo phì",
+        "Thoát vị hoành (Hiatal Hernia)",
+        "Thai nghén",
+        "Hút thuốc",
+        "Uống rượu, cà phê nhiều",
+        "Ăn nhiều, ăn khuya",
+        "Thuốc (CCB, Nitrates)"
+      ],
+      "symptoms": [
+        {
+          "name": "Ợ hơi, ợ chua",
+          "severity": "Điển hình",
+          "medical_term": "Heartburn, Acid Regurgitation"
+        },
+        {
+          "name": "Đau rát sau xương ức",
+          "severity": "Điển hình",
+          "medical_term": "Retrosternal Burning Pain"
+        },
+        {
+          "name": "Nuốt khó, nuốt đau",
+          "severity": "Tiến triển",
+          "medical_term": "Dysphagia, Odynophagia"
+        },
+        {
+          "name": "Ho mạn tính, khàn giọng",
+          "severity": "Triệu chứng ngoài thực quản",
+          "medical_term": "Chronic Cough, Hoarseness"
+        },
+        {
+          "name": "Đau ngực giả angina",
+          "severity": "Có thể gặp",
+          "medical_term": "Non-cardiac Chest Pain"
+        }
+      ],
+      "complications": [
+        "Viêm thực quản (Esophagitis)",
+        "Barrett's Esophagus (tiền ung thư)",
+        "Hẹp thực quản (Esophageal Stricture)",
+        "Ung thư thực quản",
+        "Hen phế quản do GERD"
+      ],
+      "diagnostic_criteria": "Triệu chứng điển hính + Đáp ứng với PPI (trial treatment) hoặc Nội soi thấy viêm thực quản, pH-metry thực quản bất thường",
+      "treatment_approach": "Thay đổi lối sống (giảm cân, không ăn khuya, nâng cao đầu giường), PPI (Omeprazole, Esomeprazole), H2RA, Phẫu thuật Nissen (nếu nặng)"
+    }
+  ]
+}
+

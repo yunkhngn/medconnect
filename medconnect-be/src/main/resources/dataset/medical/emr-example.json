@@ -1,0 +1,139 @@
+{
+  "patient_profile": {
+    "patient_id": "P-1001",
+    "full_name": "Nguyen Van A",
+    "dob": "1985-06-12",
+    "gender": "male",
+    "contact": {
+      "phone": "0901234567",
+      "email": "a@example.com"
+    },
+    "address": "Ha Dong, Ha Noi, Vietnam",
+    "identity": {
+      "national_id": "0790xxxxxxx",
+      "verified": true,
+      "verified_at": "2025-10-22T10:20:00+07:00",
+      "method": "id_photo"
+    },
+    "insurance": {
+      "type": "BHYT",
+      "number": "HN-123-456-789",
+      "valid_to": "2026-12-31"
+    },
+    "allergies": ["Penicillin"],
+    "chronic_conditions": ["Hypertension"],
+    "medications": ["Amlodipine 5mg"],
+    "emergency_contact": {
+      "name": "Tran Thi B",
+      "phone": "0902345678",
+      "relation": "spouse"
+    },
+    "consents": {
+      "privacy": true,
+      "telemedicine": true,
+      "consent_at": "2025-10-23T08:56:00+07:00"
+    },
+    "meta": {
+      "created_at": "2025-10-20T09:00:00+07:00",
+      "updated_at": "2025-10-23T08:56:00+07:00"
+    }
+  },
+
+  "medical_records": [
+    {
+      "record_id": "MR-2025-000123",
+      "patient_id": "P-1001",
+      "encounter": {
+        "type": "telemedicine",
+        "status": "completed",
+        "appointment_id": "A-3001",
+        "started_at": "2025-10-23T09:00:00+07:00",
+        "ended_at": "2025-10-23T09:35:00+07:00",
+        "channel": "agora",
+        "channel_data": {
+          "channel_name": "app_3001",
+          "duration_min": 35
+        }
+      },
+      "provider": {
+        "doctor_id": "D-2001",
+        "full_name": "BS. Tran B",
+        "specialization": "Cardiology",
+        "license_id": "LIC-123456",
+        "verified": true
+      },
+      "reason_for_visit": "Chest tightness for 2 hours",
+      "history": {
+        "hpi": "Pain 4/10, no radiation, no nausea.",
+        "pmh": ["HTN"],
+        "meds": ["Amlodipine 5mg"],
+        "allergies": ["Penicillin"]
+      },
+      "tele_exam": {
+        "general": "Well-appearing on video, no distress",
+        "self_reported_vitals": {
+          "bp": "145/90",
+          "hr": 92,
+          "temp_c": 36.8,
+          "spo2": 97
+        },
+        "visual_findings": "No cyanosis, normal breathing effort",
+        "limitations": "No in-person auscultation"
+      },
+      "paraclinical": {
+        "summary": "No acute changes on ECG uploaded by patient",
+        "files": [
+          { "type": "lab", "name": "Lipid panel.pdf", "url": "/files/abc.pdf" }
+        ],
+        "transcript": {
+          "enabled": true,
+          "url": "/files/transcripts/A-3001.vtt",
+          "summary_ai": "Symptoms compatible with unstable angina risk."
+        }
+      },
+      "assessment_plan": {
+        "assessment": ["Unstable angina vs GERD"],
+        "final_diagnosis": [
+          { "text": "Unstable angina", "icd10": "I20.0" }
+        ],
+        "plan": [
+          "Start aspirin 81mg daily",
+          "ER visit if severe chest pain or dyspnea"
+        ],
+        "follow_up": { "type": "telemedicine", "after_days": 7, "notes": "" }
+      },
+      "e_prescription": {
+        "rx_id": "RX-2025-00999",
+        "items": [
+          { "drug": "Aspirin", "dose": "81mg", "route": "PO", "freq": "OD", "days": 30 }
+        ],
+        "pdf_url": "/files/rx/RX-2025-00999.pdf",
+        "issued_at": "2025-10-23T09:34:00+07:00"
+      },
+      "billing": {
+        "method": "vietqr",
+        "fee": 100000,
+        "currency": "VND",
+        "payment_status": "paid",
+        "refund_policy": { "before_hours": 12, "rate": 0.5 },
+        "refund": null
+      },
+      "specialized": {
+        "type": "cardiology",
+        "data": {
+          "risk_factors": ["HTN", "Dyslipidemia"],
+          "echo_summary": { "ef": 55 }
+        }
+      },
+      "audit": {
+        "created_by": "user_1001",
+        "created_at": "2025-10-23T08:58:00+07:00",
+        "updated_at": "2025-10-23T09:36:00+07:00",
+        "access_log": [
+          { "by": "D-2001", "time": "2025-10-23T09:10:00+07:00", "action": "view" }
+        ],
+        "version": 3
+      }
+    }
+  ]
+}

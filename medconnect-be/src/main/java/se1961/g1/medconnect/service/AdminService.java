@@ -130,11 +130,11 @@ public class AdminService {
 
         // Xóa user trên Firebase
         if (user.getFirebaseUid() != null && !user.getFirebaseUid().isEmpty()) {
-            try {
+        try {
                 System.out.println("Deleting Firebase account for admin: " + user.getFirebaseUid());
-                firebaseAuth.deleteUser(user.getFirebaseUid());
+            firebaseAuth.deleteUser(user.getFirebaseUid());
                 System.out.println("✅ Firebase account deleted successfully");
-            } catch (Exception e) {
+        } catch (Exception e) {
                 System.err.println("❌ Failed to delete Firebase user for admin id=" + userId + ": " + e.getMessage());
                 e.printStackTrace();
                 // Continue with database deletion even if Firebase deletion fails

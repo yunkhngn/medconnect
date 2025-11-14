@@ -9,12 +9,15 @@ import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
 import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty } from "@/services/chatService";
 import { v4 as uuidv4 } from 'uuid';
+import { useGemini } from "@/hooks/useGemini";
+import DOMPurify from 'dompurify';
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
 
 export default function DoctorOnlineExamRoom() {
   const router = useRouter();
   const { appointmentId } = router.query;
+  const { sendMessage: sendGeminiMessage, loading: geminiLoading } = useGemini();
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(false);
@@ -54,10 +57,7 @@ export default function DoctorOnlineExamRoom() {
     vital_signs: { temperature:"", blood_pressure:"", heart_rate:"", oxygen_saturation:"", weight:"", height:"" }, 
     prescriptions: [] 
   });
-  const [icdQuery, setIcdQuery] = useState("");
-  const [icdResults, setIcdResults] = useState([]);
-  const [icdLoading, setIcdLoading] = useState(false);
-  const [icdError,   setIcdError]   = useState("");
+  const [icdCode, setIcdCode] = useState("");
   const [secondaryDiagnosis, setSecondaryDiagnosis] = useState("");
   const [medicationInput, setMedicationInput] = useState({ name: "", dosage: "", frequency: "", duration: "" });
   const draftKey = typeof window !== 'undefined' && appointmentId ? `emr_draft_${appointmentId}` : null;
@@ -189,96 +189,6 @@ export default function DoctorOnlineExamRoom() {
     try { if (draftKey) localStorage.setItem(draftKey, JSON.stringify(emr)); } catch {}
   };
 
-  // ICD-10 search effect (must be before any early returns)
-  useEffect(() => {
-    if (!icdQuery || icdQuery.trim().length < 2) { setIcdResults([]); setIcdLoading(false); setIcdError(""); return; }
-    const t = setTimeout(async () => {
-      try {
-        setIcdLoading(true); setIcdError("");
-        const query = icdQuery.trim().toUpperCase();
-        // Check if query looks like ICD-10 code pattern (e.g., A19, A19.0, A19.9, A19.90)
-        const isCodePattern = /^[A-Z][0-9][0-9](\.[0-9]+)*$/i.test(query);
-        
-        let results = [];
-        
-        if (isCodePattern) {
-          // For code search, extract base code (e.g., A19 from A19.0)
-          const baseCode = query.split('.')[0]; // Get A19 from A19.0
-          
-          // Strategy 1: Search with base code (e.g., "A19")
-          try {
-            const resp1 = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(baseCode)}&maxList=100`);
-            if (resp1.ok) {
-              const data1 = await resp1.json();
-              const codes1 = data1?.[2] || [];
-              const names1 = data1?.[3] || [];
-              console.log('[ICD-10] Base search:', baseCode, 'got', codes1.length, 'results');
-              // Filter to show codes starting with baseCode (case-insensitive)
-              results = codes1.map((c, i) => ({ code: String(c || ''), name: String(names1[i] || '') }))
-                .filter(r => r.code && r.code.toUpperCase().startsWith(baseCode.toUpperCase()));
-              console.log('[ICD-10] Filtered results:', results.length);
-            }
-          } catch (e) {
-            console.error('[ICD-10] Base search error:', e);
-          }
-          
-          // Strategy 2: If no results, try searching code field only
-          if (results.length === 0) {
-            try {
-              const resp2 = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code&terms=${encodeURIComponent(baseCode)}&maxList=100`);
-              if (resp2.ok) {
-                const data2 = await resp2.json();
-                const codes2 = data2?.[2] || [];
-                const names2 = data2?.[3] || [];
-                console.log('[ICD-10] Code-only search:', codes2.length, 'results');
-                results = codes2.map((c, i) => ({ code: String(c || ''), name: String(names2[i] || '') }))
-                  .filter(r => r.code && r.code.toUpperCase().startsWith(baseCode.toUpperCase()));
-              }
-            } catch (e) {
-              console.error('[ICD-10] Code-only search error:', e);
-            }
-          }
-          
-          // Strategy 3: Try exact match
-          if (results.length === 0 && query.includes('.')) {
-            try {
-              const resp3 = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(query)}&maxList=30`);
-              if (resp3.ok) {
-                const data3 = await resp3.json();
-                const codes3 = data3?.[2] || [];
-                const names3 = data3?.[3] || [];
-                results = codes3.map((c, i) => ({ code: String(c || ''), name: String(names3[i] || '') }));
-              }
-            } catch (e) {
-              console.error('[ICD-10] Exact match error:', e);
-            }
-          }
-        } else {
-          // For text search, use normal search
-          try {
-            const resp = await fetch(`https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?sf=code,name&terms=${encodeURIComponent(query)}&maxList=20`);
-            if (resp.ok) {
-              const data = await resp.json();
-              const codes = data?.[2] || [];
-              const names = data?.[3] || [];
-              results = codes.map((c, i) => ({ code: String(c || ''), name: String(names[i] || '') }));
-            }
-          } catch (e) {
-            console.error('[ICD-10] Text search error:', e);
-          }
-        }
-        
-        setIcdResults(results);
-      } catch (e) {
-        console.error('[ICD-10] Search error:', e);
-        setIcdResults([]);
-        setIcdError("Không lấy được gợi ý");
-      } finally {
-        setIcdLoading(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [icdQuery]);
 
   // Fetch feedback when patient info modal opens
   useEffect(() => {
@@ -295,7 +205,7 @@ export default function DoctorOnlineExamRoom() {
           const data = await response.json();
           if (data.success && data.data) {
             setAppointmentFeedback(data.data);
-          } else {
+        } else {
             setAppointmentFeedback(null);
           }
         }
@@ -500,57 +410,91 @@ export default function DoctorOnlineExamRoom() {
     }
   };
 
-  // Generate AI summary from EMR data
+  // Generate AI summary from EMR data - hướng về bệnh nhân
   const generateAISummary = async () => {
     setIsGeneratingSummary(true);
     try {
-      // Simulate AI generation - in production, call actual AI API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Chuẩn bị dữ liệu để gửi cho AI
+      const emrData = {
+        chief_complaint: emr.chief_complaint || "",
+        diagnosis_primary: emr.diagnosis_primary || "",
+        secondary: emr.secondary || [],
+        icd_codes: emr.icd_codes || [],
+        vital_signs: emr.vital_signs || {},
+        prescriptions: emr.prescriptions || [],
+        notes: emr.notes || ""
+      };
+
+      // Tạo prompt chi tiết, hướng về bệnh nhân
+      const prompt = `Bạn là bác sĩ đang tạo tóm tắt cho bệnh nhân sau khi khám. Hãy viết một tóm tắt dễ hiểu, thân thiện, hướng về bệnh nhân (dùng "bạn" thay vì "bệnh nhân"). 
+
+Thông tin khám bệnh:
+- Lý do khám: ${emrData.chief_complaint || "Chưa có"}
+- Chẩn đoán chính: ${emrData.diagnosis_primary || "Chưa có"}
+- Chẩn đoán phụ: ${emrData.secondary.join(", ") || "Không có"}
+- Mã ICD-10: ${emrData.icd_codes.join(", ") || "Chưa có"}
+- Dấu hiệu sinh tồn: ${emrData.vital_signs.temperature ? `Nhiệt độ: ${emrData.vital_signs.temperature}°C` : ""} ${emrData.vital_signs.blood_pressure ? `Huyết áp: ${emrData.vital_signs.blood_pressure} mmHg` : ""} ${emrData.vital_signs.heart_rate ? `Nhịp tim: ${emrData.vital_signs.heart_rate} bpm` : ""}
+- Đơn thuốc: ${emrData.prescriptions.map(m => `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`).join(", ") || "Không có"}
+- Ghi chú: ${emrData.notes || "Không có"}
+
+Hãy tạo tóm tắt với các phần sau (viết bằng tiếng Việt, dễ hiểu, thân thiện):
+1. **Chẩn đoán**: Giải thích cho bệnh nhân biết họ đang bị gì (dùng "bạn" thay vì "bệnh nhân")
+2. **Đơn thuốc**: Liệt kê từng thuốc bác sĩ kê, liều lượng, tần suất uống (bao nhiêu lần/ngày), thời gian uống
+3. **Hướng dẫn sinh hoạt**: Nên ăn uống, nghỉ ngơi, vận động như thế nào
+4. **Lưu ý**: Những điều cần chú ý, khi nào cần tái khám, dấu hiệu cần đến bệnh viện ngay
+
+Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùng "bạn" thay vì "bệnh nhân".`;
+
+      // Gọi Gemini API
+      const summary = await sendGeminiMessage(prompt);
       
+      setAiSummary(summary);
+      setHasAiSummary(true);
+      
+      // Tự động điền vào notes với format: [notes hiện tại] + "Tóm tắt của AI:\n\n" + [summary]
+      // Nếu đã có "Tóm tắt của AI:" thì replace, không append
+      const currentNotes = emr.notes || "";
+      let newNotes;
+      
+      if (currentNotes.includes("Tóm tắt của AI:")) {
+        // Replace phần AI summary cũ
+        const parts = currentNotes.split("Tóm tắt của AI:");
+        const beforeAI = parts[0].trim();
+        newNotes = beforeAI 
+          ? `${beforeAI}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      } else {
+        // Append mới
+        newNotes = currentNotes 
+          ? `${currentNotes}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      }
+      
+      setEmr(prev => ({
+        ...prev,
+        notes: newNotes
+      }));
+    } catch (error) {
+      console.error("AI Summary generation error:", error);
+      // Fallback: tạo summary đơn giản nếu AI lỗi
       const summaryParts = [];
-      
-      // Add chief complaint
       if (emr.chief_complaint) {
-        summaryParts.push(`Bệnh nhân đến khám với lý do: ${emr.chief_complaint}.`);
+        summaryParts.push(`Bạn đến khám với lý do: ${emr.chief_complaint}.`);
       }
-      
-      // Add diagnosis
       if (emr.diagnosis_primary) {
-        summaryParts.push(`Chẩn đoán chính: ${emr.diagnosis_primary}.`);
+        summaryParts.push(`Bác sĩ chẩn đoán bạn đang bị: ${emr.diagnosis_primary}.`);
       }
-      if (emr.secondary && emr.secondary.length > 0) {
-        summaryParts.push(`Chẩn đoán phụ: ${emr.secondary.join(", ")}.`);
-      }
-      if (emr.icd_codes && emr.icd_codes.length > 0) {
-        summaryParts.push(`Mã ICD-10: ${emr.icd_codes.join(", ")}.`);
-      }
-      
-      // Add vital signs if available
-      const vitalSigns = emr.vital_signs || {};
-      const vitalParts = [];
-      if (vitalSigns.temperature) vitalParts.push(`Nhiệt độ: ${vitalSigns.temperature}°C`);
-      if (vitalSigns.blood_pressure) vitalParts.push(`Huyết áp: ${vitalSigns.blood_pressure} mmHg`);
-      if (vitalSigns.heart_rate) vitalParts.push(`Nhịp tim: ${vitalSigns.heart_rate} bpm`);
-      if (vitalParts.length > 0) {
-        summaryParts.push(`Dấu hiệu sinh tồn: ${vitalParts.join(", ")}.`);
-      }
-      
-      // Add prescriptions
       if (emr.prescriptions && emr.prescriptions.length > 0) {
         const meds = emr.prescriptions.map(m => 
           `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`
         ).join(", ");
-        summaryParts.push(`Đơn thuốc: ${meds}.`);
+        summaryParts.push(`Bác sĩ kê đơn thuốc: ${meds}.`);
       }
-      
-      const summary = summaryParts.length > 0 
+      const fallbackSummary = summaryParts.length > 0 
         ? summaryParts.join(" ") 
         : "Chưa có đủ thông tin để tạo tóm tắt.";
-      
-      setAiSummary(summary);
+      setAiSummary(fallbackSummary);
       setHasAiSummary(true);
-    } catch (error) {
-      console.error("AI Summary generation error:", error);
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -567,15 +511,9 @@ export default function DoctorOnlineExamRoom() {
         const draft = raw ? JSON.parse(raw) : null;
         const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? null;
         if (draft && patientUserId) {
-          // Merge AI summary into notes if exists
+          // Merge AI summary into notes if exists (already merged in generateAISummary, but keep this as fallback)
           let finalNotes = draft.notes || "";
-          if (hasAiSummary && aiSummary.trim()) {
-            if (finalNotes) {
-              finalNotes = `${finalNotes}\n\n---\n\nTóm tắt AI:\n${aiSummary}`;
-            } else {
-              finalNotes = `Tóm tắt AI:\n${aiSummary}`;
-            }
-          }
+          // Notes should already contain AI summary from generateAISummary, so we don't need to merge again
           
           const medicalEntry = {
             visit_id: `V${Date.now()}`,
@@ -665,7 +603,7 @@ export default function DoctorOnlineExamRoom() {
   const selfName = auth.currentUser?.displayName || appointment?.doctorName || 'Bác sĩ';
   const selfAvatar = auth.currentUser?.photoURL || appointment?.doctorAvatar || undefined;
   const partnerName = appointment?.patientName || appointment?.patient?.name || appointment?.patient?.fullName || 'Bệnh nhân';
-  const partnerAvatar = appointment?.patientAvatar || appointment?.patient?.avatar || appointment?.patient?.photoUrl || undefined;
+  const partnerAvatar = appointment?.patient?.idPhotoUrl || appointment?.patientAvatar || appointment?.patient?.avatar || appointment?.patient?.photoUrl || undefined;
 
   // Patient info modal: robust fallbacks
   const patientPhone = appointment?.patientPhone || appointment?.patient?.phone || appointment?.patient?.phoneNumber || '';
@@ -676,9 +614,9 @@ export default function DoctorOnlineExamRoom() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
-      <div className="flex h-full">
+      <div className="flex flex-col md:flex-row h-full">
         {/* Video Area - Full width */}
-        <div className="flex-1 min-w-0 relative bg-black">
+        <div className="flex-1 min-w-0 relative bg-black h-1/2 md:h-full">
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
@@ -686,38 +624,47 @@ export default function DoctorOnlineExamRoom() {
             {!hasRemoteVideo && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 {remoteConnected ? (
-                  <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">Bệnh nhân đang tắt camera</span>
+                  <span className="bg-black bg-opacity-60 px-3 py-2 sm:px-5 rounded-xl text-white text-sm sm:text-lg font-medium text-center mx-4">Bệnh nhân đang tắt camera</span>
                 ) : (
-                  <span className="bg-black bg-opacity-60 px-5 py-2 rounded-xl text-white text-lg font-medium">Đang đợi kết nối với Bệnh nhân</span>
+                  <span className="bg-black bg-opacity-60 px-3 py-2 sm:px-5 rounded-xl text-white text-sm sm:text-lg font-medium text-center mx-4">Đang đợi kết nối với Bệnh nhân</span>
                 )}
               </div>
             )}
           </div>
 
-          {/* Local preview nhỏ góc phải giống patient */}
-          <div className="absolute right-5 top-5 w-56 aspect-video rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
-            <div ref={localVideoRef} className="absolute inset-0 rounded-xl overflow-hidden" />
-            <span className="absolute bottom-2 left-2 text-xs text-white/70">Doctor preview</span>
-            {muted && <MicOff className="absolute top-2 right-2 text-red-400 w-6 h-6" />}
-            {camOff && <VideoOff className="absolute top-2 right-10 text-red-400 w-6 h-6" />}
+          {/* Local preview nhỏ góc phải giống patient - responsive */}
+          <div className="absolute right-2 top-2 sm:right-5 sm:top-5 w-24 h-16 sm:w-40 sm:h-24 md:w-56 md:h-32 aspect-video rounded-lg sm:rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
+            <div ref={localVideoRef} className="absolute inset-0 rounded-lg sm:rounded-xl overflow-hidden" />
+            <span className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 text-[10px] sm:text-xs text-white/70 hidden sm:block">Doctor preview</span>
+            {muted && <MicOff className="absolute top-1 right-1 sm:top-2 sm:right-2 text-red-400 w-4 h-4 sm:w-6 sm:h-6" />}
+            {camOff && <VideoOff className="absolute top-1 right-6 sm:top-2 sm:right-10 text-red-400 w-4 h-4 sm:w-6 sm:h-6" />}
           </div>
 
-          {/* Top bar giống bệnh nhân */}
-          <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
-            <div className="pointer-events-auto flex items-center gap-3">
-              <Chip color="primary" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">Phiên khám online • Bác sĩ</Chip>
-              <Chip variant="bordered" className={`bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold ${timeSeverity()==='danger' ? 'text-red-700' : timeSeverity()==='warning' ? 'text-orange-600' : 'text-gray-900'}`}>
+          {/* Top bar giống bệnh nhân - responsive */}
+          <div className="absolute left-0 right-0 top-0 p-2 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between pointer-events-none gap-2">
+            <div className="pointer-events-auto flex flex-wrap items-center gap-2 sm:gap-3">
+              <Chip color="primary" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm">Phiên khám online • Bác sĩ</Chip>
+              <Chip variant="bordered" className={`bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-xs sm:text-sm ${timeSeverity()==='danger' ? 'text-red-700' : timeSeverity()==='warning' ? 'text-orange-600' : 'text-gray-900'}`}>
                 {/* Show elapsed and remaining */}
-                {formatTime(seconds)} • Còn {remainingTime()}
+                <span className="hidden sm:inline">{formatTime(seconds)} • Còn {remainingTime()}</span>
+                <span className="sm:hidden">{formatTime(seconds)}</span>
               </Chip>
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={onPatientInfoOpen} startContent={<User size={18} />}>Thông tin bệnh nhân</Button>
-              <div className="ml-2 bg-white/50 backdrop-blur-md rounded-full p-1 border border-white/30 shadow-lg">
-                <button className={`px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${activeTab==='chat'?'bg-primary/90 text-white shadow-md':'text-gray-900 bg-white/40'}`} onClick={()=>{setActiveTab('chat'); setUnread(0);}}>Chat {unread>0 && <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold bg-red-600 text-white rounded-full">{unread}</span>}</button>
-                <button className={`ml-1 px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${activeTab==='emr'?'bg-primary/90 text-white shadow-md':'text-gray-900 bg-white/40'}`} onClick={()=>setActiveTab('emr')}>Ghi khám</button>
+              <Button size="sm" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm" onPress={onPatientInfoOpen} startContent={<User size={14} className="sm:w-[18px] sm:h-[18px]" />}>
+                <span className="hidden sm:inline">Thông tin bệnh nhân</span>
+                <span className="sm:hidden">Thông tin</span>
+              </Button>
+              <div className="bg-white/50 backdrop-blur-md rounded-full p-1 border border-white/30 shadow-lg">
+                <button className={`px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm rounded-full font-semibold transition-all ${activeTab==='chat'?'bg-primary/90 text-white shadow-md':'text-gray-900 bg-white/40'}`} onClick={()=>{setActiveTab('chat'); setUnread(0);}}>
+                  Chat {unread>0 && <span className="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold bg-red-600 text-white rounded-full">{unread}</span>}
+                </button>
+                <button className={`ml-1 px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm rounded-full font-semibold transition-all ${activeTab==='emr'?'bg-primary/90 text-white shadow-md':'text-gray-900 bg-white/40'}`} onClick={()=>setActiveTab('emr')}>Ghi khám</button>
               </div>
             </div>
-            <div className="flex items-center gap-3 pointer-events-auto pr-2">
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />} onPress={toggleFullscreen}>Toàn màn hình</Button>
+            <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto pr-2">
+              <Button size="sm" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm" startContent={<Maximize2 size={14} className="sm:w-[18px] sm:h-[18px]" />} onPress={toggleFullscreen}>
+                <span className="hidden sm:inline">Toàn màn hình</span>
+                <span className="sm:hidden">Full</span>
+              </Button>
             </div>
           </div>
           {/* One-minute warning banner */}
@@ -731,20 +678,20 @@ export default function DoctorOnlineExamRoom() {
               <div className="bg-red-600 text-white text-sm px-3 py-2 rounded-md shadow">{tokenError}</div>
             </div>
           )}
-          {/* Controls bottom - thêm nút mute/tắt video */}
-          <div className="absolute left-0 right-0 bottom-0 pb-6 flex items-center justify-center">
-            <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md rounded-full px-4 py-3 border border-white/30 shadow-lg">
-              <Button isIconOnly variant="bordered" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff className="w-5 h-5"/> : <Mic className="w-5 h-5"/>}</Button>
-              <Button isIconOnly variant="bordered" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff className="w-5 h-5"/> : <Video className="w-5 h-5"/>}</Button>
+          {/* Controls bottom - thêm nút mute/tắt video - responsive */}
+          <div className="absolute left-0 right-0 bottom-0 pb-3 sm:pb-6 flex items-center justify-center px-2">
+            <div className="flex items-center gap-2 sm:gap-3 bg-white/50 backdrop-blur-md rounded-full px-2 sm:px-4 py-2 sm:py-3 border border-white/30 shadow-lg">
+              <Button isIconOnly size="sm" variant="bordered" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5"/> : <Mic className="w-4 h-4 sm:w-5 sm:h-5"/>}</Button>
+              <Button isIconOnly size="sm" variant="bordered" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff className="w-4 h-4 sm:w-5 sm:h-5"/> : <Video className="w-4 h-4 sm:w-5 sm:h-5"/>}</Button>
               {/* Rời phòng - thay nút "Kết thúc khám" */}
-              <Button color="danger" variant="bordered" onPress={()=>router.push('/bac-si/kham-online')} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-6 text-white">Rời phòng</Button>
+              <Button size="sm" color="danger" variant="bordered" onPress={()=>router.push('/bac-si/kham-online')} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-2 sm:ml-6 text-white text-xs sm:text-sm">Rời phòng</Button>
             </div>
           </div>
           {/* Controls - glassy, có thể dùng lại hoặc customize thêm */}
         </div>
 
-        {/* Right: Chat panel (4/12 width) */}
-        <div className="w-[420px] h-full bg-gray-50 flex flex-col">
+        {/* Right: Chat panel (4/12 width) - responsive */}
+        <div className="w-full md:w-[420px] h-1/2 md:h-full bg-gray-50 flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
           {activeTab==='chat' ? (
             <>
             {/* Header trạng thái kết nối + avatar bệnh nhân */}
@@ -811,6 +758,17 @@ export default function DoctorOnlineExamRoom() {
                         onClick={() => {
                           setAiSummary("");
                           setHasAiSummary(false);
+                          
+                          // Xóa phần "Tóm tắt của AI:" trong notes
+                          const currentNotes = emr.notes || "";
+                          if (currentNotes.includes("Tóm tắt của AI:")) {
+                            const parts = currentNotes.split("Tóm tắt của AI:");
+                            const beforeAI = parts[0].trim();
+                            setEmr(prev => ({
+                              ...prev,
+                              notes: beforeAI
+                            }));
+                          }
                         }}
                         className="font-medium"
                       >
@@ -834,15 +792,26 @@ export default function DoctorOnlineExamRoom() {
                 </div>
 
                 {/* Ghi chú đưa lên đầu, rộng hơn */}
+                <div className="space-y-2">
                 <Textarea
                   label="Ghi chú phiên khám"
-                  placeholder="Ghi chú tổng quan, tóm tắt triệu chứng, diễn biến..."
+                    placeholder="Ghi chú tổng quan, tóm tắt triệu chứng, diễn biến...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp"
                   value={emr.notes}
                   onValueChange={(v)=>setEmr(prev=>({...prev, notes: v}))}
                   variant="bordered"
                   minRows={10}
                   labelPlacement="outside"
-                />
+                    classNames={{
+                      input: "font-medium text-gray-900 leading-relaxed",
+                      inputWrapper: "border-gray-300 hover:border-blue-400 transition-colors"
+                    }}
+                  />
+                  {emr.notes && (
+                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded border border-blue-100">
+                      <strong>Tip:</strong> Dùng <code className="bg-white px-1 rounded">**text**</code> để in đậm, ví dụ: <code className="bg-white px-1 rounded">**Chẩn đoán:**</code>
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 gap-3">
                   <Input
                     label="Lý do khám"
@@ -861,29 +830,10 @@ export default function DoctorOnlineExamRoom() {
                     labelPlacement="outside"
                   />
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Tìm nhanh ICD-10</label>
-                    <div className="relative">
-                      <Input
-                        placeholder="Gõ tên bệnh hoặc mã (≥2 ký tự)"
-                        value={icdQuery}
-                        onValueChange={setIcdQuery}
-                        variant="bordered"
-                      />
-                      {(icdLoading || icdResults.length>0 || icdError) && (
-                        <div className="absolute left-0 right-0 mt-1 max-h-56 overflow-auto rounded-md border border-gray-200 bg-white z-10 shadow-sm">
-                          {icdLoading && <div className="px-3 py-2 text-sm text-gray-500">Đang tải...</div>}
-                          {!icdLoading && icdError && <div className="px-3 py-2 text-sm text-red-600">{icdError}</div>}
-                          {!icdLoading && !icdError && icdResults.map((it, idx)=> (
-                            <button key={idx} className="w-full text-left px-3 py-2 hover:bg-gray-50" onClick={()=>{ setEmr(prev=>({...prev, icd_codes:[...(Array.isArray(prev.icd_codes)?prev.icd_codes:[]), it.code]})); setIcdQuery(""); }}>
-                              <span className="font-semibold mr-2">{it.code}</span>
-                              <span className="text-gray-700">{it.name}</span>
-                            </button>
-                          ))}
-                          {!icdLoading && !icdError && icdResults.length===0 && icdQuery.trim().length>=2 && (
-                            <div className="px-3 py-2 text-sm text-gray-500">Không có gợi ý</div>
-                          )}
-                        </div>
-                      )}
+                    <label className="text-sm font-medium mb-1 block">Mã ICD-10</label>
+                    <div className="flex gap-2">
+                      <Input placeholder="VD: J03.9" value={icdCode} onValueChange={setIcdCode} variant="bordered" />
+                      <Button variant="flat" onPress={()=>{ if(icdCode.trim()){ setEmr(prev=>({...prev, icd_codes:[...(Array.isArray(prev.icd_codes)?prev.icd_codes:[]), icdCode.trim()]})); setIcdCode(""); } }}>Thêm</Button>
                     </div>
                     {emr.icd_codes.length>0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -1067,8 +1017,30 @@ export default function DoctorOnlineExamRoom() {
                             {/* Notes */}
                             {notes && (
                               <div>
-                                <div className="text-sm font-semibold text-gray-900 mb-1">Ghi chú</div>
-                                <div className="text-xs text-gray-700 whitespace-pre-line">{notes}</div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Ghi chú</div>
+                                <div className="text-xs text-gray-700 whitespace-pre-line leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                  {notes.split('\n').map((line, idx) => {
+                                    // Format bold text **text**
+                                    let formattedLine = line;
+                                    formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+                                    
+                                    // Format numbered sections (1., 2., etc.)
+                                    if (/^\d+\.\s/.test(line.trim())) {
+                                      return (
+                                        <div key={idx} className="mb-2 first:mt-0">
+                                          <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine, { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    // Regular paragraph
+                                    return (
+                                      <div key={idx} className="mb-1.5 last:mb-0">
+                                        <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedLine || '&nbsp;', { ALLOWED_TAGS: ['strong'], ALLOWED_ATTR: ['class'] }) }} />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
                             
@@ -1091,7 +1063,7 @@ export default function DoctorOnlineExamRoom() {
               <Divider />
               {appointmentFeedback && (
                 <>
-                  <div className="space-y-3">
+              <div className="space-y-3">
                     <h4 className="font-semibold">Đánh giá từ bệnh nhân</h4>
                     <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                       <div className="flex items-center gap-2 mb-2">
@@ -1106,10 +1078,10 @@ export default function DoctorOnlineExamRoom() {
                                   : 'text-gray-300'
                               }`}
                             />
-                          ))}
-                        </div>
+                      ))}
+                    </div>
                         <span className="text-sm text-gray-600">({appointmentFeedback.rating}/5)</span>
-                      </div>
+                  </div>
                       {appointmentFeedback.comment && (
                         <p className="text-sm text-gray-700 italic">"{appointmentFeedback.comment}"</p>
                       )}
@@ -1151,21 +1123,21 @@ export default function DoctorOnlineExamRoom() {
       </Modal>
       
       {/* Confirm Modal for AI Summary */}
-      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange}>
-        <ModalContent>
+      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange} size="2xl" scrollBehavior="inside">
+        <ModalContent className="max-h-[90vh]">
           <ModalHeader>
             <div className="flex items-center gap-2">
               <AlertCircle className="text-amber-500" size={20} />
               <span>Xác nhận lưu với tóm tắt AI</span>
             </div>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="overflow-y-auto max-h-[calc(90vh-180px)]">
             <p className="text-gray-700">
               Bạn đã sử dụng tóm tắt được tạo bởi AI. Vui lòng xác nhận rằng bạn đã đọc kỹ và kiểm tra nội dung tóm tắt này trước khi lưu.
             </p>
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-[400px] overflow-y-auto">
               <p className="text-sm font-semibold text-gray-700 mb-2">Nội dung tóm tắt AI:</p>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{aiSummary}</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">{aiSummary}</p>
             </div>
             <p className="text-xs text-gray-500 italic mt-3">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
           </ModalBody>

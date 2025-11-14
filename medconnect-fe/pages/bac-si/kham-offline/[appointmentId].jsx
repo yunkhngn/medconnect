@@ -10,11 +10,13 @@ import ToastNotification from "@/components/ui/ToastNotification";
 import { useToast } from "@/hooks/useToast";
 import { auth } from "@/lib/firebase";
 import { parseReason } from "@/utils/appointmentUtils";
+import { useGemini } from "@/hooks/useGemini";
 
 export default function OfflineExamDetailPage() {
   const router = useRouter();
   const toast = useToast();
   const { appointmentId } = router.query || {};
+  const { sendMessage: sendGeminiMessage, loading: geminiLoading } = useGemini();
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
   const [patientUserId, setPatientUserId] = useState("");
@@ -60,6 +62,16 @@ export default function OfflineExamDetailPage() {
       };
       // Parse reason properly - handle both object and string formats
       let chiefComplaint = src.chief_complaint || src.complaint || "";
+      
+      // Ensure chief_complaint is always a string
+      if (typeof chiefComplaint === 'object' && chiefComplaint !== null) {
+        // If chief_complaint is an object, try to extract text
+        const parsed = parseReason(chiefComplaint);
+        chiefComplaint = parsed.reasonText || "";
+      } else if (typeof chiefComplaint !== 'string') {
+        chiefComplaint = String(chiefComplaint || "");
+      }
+      
       if (!chiefComplaint && src.reason) {
         // If reason is an object, parse it to get reasonText
         if (typeof src.reason === 'object' && src.reason !== null) {
@@ -73,6 +85,9 @@ export default function OfflineExamDetailPage() {
           chiefComplaint = String(src.reason || "");
         }
       }
+      
+      // Final safety check: ensure it's always a string
+      chiefComplaint = typeof chiefComplaint === 'string' ? chiefComplaint : String(chiefComplaint || "");
       
       return {
         visit_id: src.visit_id || n.visit_id,
@@ -142,12 +157,21 @@ export default function OfflineExamDetailPage() {
         } catch (_) {
           reasonText = data?.reason || "";
         }
+        // Parse reasonText to ensure it's a string
+        let finalReasonText = reasonText;
+        if (typeof reasonText === 'object' && reasonText !== null) {
+          const parsed = parseReason(reasonText);
+          finalReasonText = parsed.reasonText || "";
+        } else if (typeof reasonText !== 'string') {
+          finalReasonText = String(reasonText || "");
+        }
+        
         setRecord((prev) => ({
           ...prev,
           visit_date: data.date || prev.visit_date,
           visit_time: (data.time || data.startTime || prev.visit_time || new Date().toTimeString().slice(0,5)),
           visit_type: (data.type||"OFFLINE").toString().toLowerCase(),
-          chief_complaint: reasonText || prev.chief_complaint
+          chief_complaint: finalReasonText || prev.chief_complaint
         }));
         // Try prefill from existing EMR (keep old information when editing finished appointments)
         try {
@@ -195,68 +219,99 @@ export default function OfflineExamDetailPage() {
   const addMedication = () => { if(!medicationInput.name.trim()) return; setRecord((p)=>({...p, prescriptions:[...p.prescriptions, {...medicationInput}] })); setMedicationInput({name:"",dosage:"",frequency:"",duration:""}); };
   const removeMedication = (i) => setRecord((p)=>({...p, prescriptions:p.prescriptions.filter((_,idx)=>idx!==i)}));
 
-  // Generate AI summary from prescription data
+  // Generate AI summary from prescription data - hướng về bệnh nhân
   const generateAISummary = async () => {
     setIsGeneratingSummary(true);
     try {
-      // Simulate AI generation - in production, call actual AI API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Chuẩn bị dữ liệu để gửi cho AI
+      const recordData = {
+        chief_complaint: record.chief_complaint || "",
+        diagnosis_primary: record.diagnosis?.primary || "",
+        diagnosis_secondary: record.diagnosis?.secondary || [],
+        icd_codes: record.diagnosis?.icd_codes || [],
+        vital_signs: record.vital_signs || {},
+        prescriptions: record.prescriptions || [],
+        physical_exam: record.physical_exam || {},
+        notes: record.notes || ""
+      };
+
+      // Tạo prompt chi tiết, hướng về bệnh nhân
+      const physicalExamParts = [];
+      if (recordData.physical_exam.general) physicalExamParts.push(`Tổng quát: ${recordData.physical_exam.general}`);
+      if (recordData.physical_exam.cardiovascular) physicalExamParts.push(`Tim mạch: ${recordData.physical_exam.cardiovascular}`);
+      if (recordData.physical_exam.respiratory) physicalExamParts.push(`Hô hấp: ${recordData.physical_exam.respiratory}`);
+
+      const prompt = `Bạn là bác sĩ đang tạo tóm tắt cho bệnh nhân sau khi khám. Hãy viết một tóm tắt dễ hiểu, thân thiện, hướng về bệnh nhân (dùng "bạn" thay vì "bệnh nhân"). 
+
+Thông tin khám bệnh:
+- Lý do khám: ${recordData.chief_complaint || "Chưa có"}
+- Chẩn đoán chính: ${recordData.diagnosis_primary || "Chưa có"}
+- Chẩn đoán phụ: ${recordData.diagnosis_secondary.join(", ") || "Không có"}
+- Mã ICD-10: ${recordData.icd_codes.join(", ") || "Chưa có"}
+- Dấu hiệu sinh tồn: ${recordData.vital_signs.temperature ? `Nhiệt độ: ${recordData.vital_signs.temperature}°C` : ""} ${recordData.vital_signs.blood_pressure ? `Huyết áp: ${recordData.vital_signs.blood_pressure} mmHg` : ""} ${recordData.vital_signs.heart_rate ? `Nhịp tim: ${recordData.vital_signs.heart_rate} bpm` : ""}
+- Khám lâm sàng: ${physicalExamParts.join("; ") || "Không có"}
+- Đơn thuốc: ${recordData.prescriptions.map(m => `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`).join(", ") || "Không có"}
+- Ghi chú: ${recordData.notes || "Không có"}
+
+Hãy tạo tóm tắt với các phần sau (viết bằng tiếng Việt, dễ hiểu, thân thiện):
+1. **Chẩn đoán**: Giải thích cho bệnh nhân biết họ đang bị gì (dùng "bạn" thay vì "bệnh nhân")
+2. **Đơn thuốc**: Liệt kê từng thuốc bác sĩ kê, liều lượng, tần suất uống (bao nhiêu lần/ngày), thời gian uống
+3. **Hướng dẫn sinh hoạt**: Nên ăn uống, nghỉ ngơi, vận động như thế nào
+4. **Lưu ý**: Những điều cần chú ý, khi nào cần tái khám, dấu hiệu cần đến bệnh viện ngay
+
+Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùng "bạn" thay vì "bệnh nhân".`;
+
+      // Gọi Gemini API
+      const summary = await sendGeminiMessage(prompt);
       
+      setAiSummary(summary);
+      setHasAiSummary(true);
+      
+      // Tự động điền vào notes với format: [notes hiện tại] + "Tóm tắt của AI:\n\n" + [summary]
+      // Nếu đã có "Tóm tắt của AI:" thì replace, không append
+      const currentNotes = record.notes || "";
+      let newNotes;
+      
+      if (currentNotes.includes("Tóm tắt của AI:")) {
+        // Replace phần AI summary cũ
+        const parts = currentNotes.split("Tóm tắt của AI:");
+        const beforeAI = parts[0].trim();
+        newNotes = beforeAI 
+          ? `${beforeAI}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      } else {
+        // Append mới
+        newNotes = currentNotes 
+          ? `${currentNotes}\n\nTóm tắt của AI:\n\n${summary}`
+          : `Tóm tắt của AI:\n\n${summary}`;
+      }
+      
+      setRecord(prev => ({
+        ...prev,
+        notes: newNotes
+      }));
+    } catch (error) {
+      console.error("AI Summary generation error:", error);
+      toast.error("Không thể tạo tóm tắt AI. Đang tạo tóm tắt đơn giản...");
+      // Fallback: tạo summary đơn giản nếu AI lỗi
       const summaryParts = [];
-      
-      // Add chief complaint
       if (record.chief_complaint) {
-        summaryParts.push(`Bệnh nhân đến khám với lý do: ${record.chief_complaint}.`);
+        summaryParts.push(`Bạn đến khám với lý do: ${record.chief_complaint}.`);
       }
-      
-      // Add diagnosis
-      if (record.diagnosis.primary) {
-        summaryParts.push(`Chẩn đoán chính: ${record.diagnosis.primary}.`);
+      if (record.diagnosis?.primary) {
+        summaryParts.push(`Bác sĩ chẩn đoán bạn đang bị: ${record.diagnosis.primary}.`);
       }
-      if (record.diagnosis.secondary && record.diagnosis.secondary.length > 0) {
-        summaryParts.push(`Chẩn đoán phụ: ${record.diagnosis.secondary.join(", ")}.`);
-      }
-      if (record.diagnosis.icd_codes && record.diagnosis.icd_codes.length > 0) {
-        summaryParts.push(`Mã ICD-10: ${record.diagnosis.icd_codes.join(", ")}.`);
-      }
-      
-      // Add vital signs if available
-      const vitalSigns = record.vital_signs || {};
-      const vitalParts = [];
-      if (vitalSigns.temperature) vitalParts.push(`Nhiệt độ: ${vitalSigns.temperature}°C`);
-      if (vitalSigns.blood_pressure) vitalParts.push(`Huyết áp: ${vitalSigns.blood_pressure} mmHg`);
-      if (vitalSigns.heart_rate) vitalParts.push(`Nhịp tim: ${vitalSigns.heart_rate} bpm`);
-      if (vitalParts.length > 0) {
-        summaryParts.push(`Dấu hiệu sinh tồn: ${vitalParts.join(", ")}.`);
-      }
-      
-      // Add prescriptions
       if (record.prescriptions && record.prescriptions.length > 0) {
         const meds = record.prescriptions.map(m => 
           `${m.name}${m.dosage ? ` (${m.dosage})` : ""}${m.frequency ? ` - ${m.frequency}` : ""}${m.duration ? ` trong ${m.duration}` : ""}`
         ).join(", ");
-        summaryParts.push(`Đơn thuốc: ${meds}.`);
+        summaryParts.push(`Bác sĩ kê đơn thuốc: ${meds}.`);
       }
-      
-      // Add physical exam if available
-      const physicalExam = record.physical_exam || {};
-      const examParts = [];
-      if (physicalExam.general) examParts.push(`Tổng quát: ${physicalExam.general}`);
-      if (physicalExam.cardiovascular) examParts.push(`Tim mạch: ${physicalExam.cardiovascular}`);
-      if (physicalExam.respiratory) examParts.push(`Hô hấp: ${physicalExam.respiratory}`);
-      if (examParts.length > 0) {
-        summaryParts.push(`Khám lâm sàng: ${examParts.join("; ")}.`);
-      }
-      
-      const summary = summaryParts.length > 0 
+      const fallbackSummary = summaryParts.length > 0 
         ? summaryParts.join(" ") 
         : "Chưa có đủ thông tin để tạo tóm tắt.";
-      
-      setAiSummary(summary);
+      setAiSummary(fallbackSummary);
       setHasAiSummary(true);
-    } catch (error) {
-      toast.error("Không thể tạo tóm tắt AI");
-      console.error("AI Summary generation error:", error);
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -272,15 +327,8 @@ export default function OfflineExamDetailPage() {
       // Merge với bản ghi cũ để không làm mất dữ liệu khi cập nhật
       const mergedToSave = isFinished && previousEntry ? mergeRecord(previousEntry, record) : record;
       
-      // Merge AI summary into notes if exists
+      // Notes should already contain AI summary from generateAISummary, so we use it directly
       let finalNotes = mergedToSave.notes || "";
-      if (hasAiSummary && aiSummary.trim()) {
-        if (finalNotes) {
-          finalNotes = `${finalNotes}\n\n---\n\nTóm tắt AI:\n${aiSummary}`;
-        } else {
-          finalNotes = `Tóm tắt AI:\n${aiSummary}`;
-        }
-      }
       
       const doctor_name = appointmentInfo?.doctor?.name || user?.displayName || "";
       const doctor_id = appointmentInfo?.doctor?.id || user?.uid || "";
@@ -430,8 +478,8 @@ export default function OfflineExamDetailPage() {
               Lý do khám <span className="text-red-500">*</span>
             </label>
             <Textarea 
-              value={record.chief_complaint} 
-              onValueChange={(v)=>setRecord({...record, chief_complaint:v})} 
+              value={typeof record.chief_complaint === 'string' ? record.chief_complaint : (record.chief_complaint ? String(record.chief_complaint) : "")} 
+              onValueChange={(v)=>setRecord({...record, chief_complaint: typeof v === 'string' ? v : String(v || "")})} 
               variant="bordered"
               placeholder="Nhập lý do khám của bệnh nhân..."
               minRows={3}
@@ -701,6 +749,17 @@ export default function OfflineExamDetailPage() {
                 onClick={() => {
                   setAiSummary("");
                   setHasAiSummary(false);
+                  
+                  // Xóa phần "Tóm tắt của AI:" trong notes
+                  const currentNotes = record.notes || "";
+                  if (currentNotes.includes("Tóm tắt của AI:")) {
+                    const parts = currentNotes.split("Tóm tắt của AI:");
+                    const beforeAI = parts[0].trim();
+                    setRecord(prev => ({
+                      ...prev,
+                      notes: beforeAI
+                    }));
+                  }
                 }}
                 className="font-medium"
               >
@@ -739,17 +798,24 @@ export default function OfflineExamDetailPage() {
         </CardHeader>
         <Divider />
         <CardBody className="pt-6">
+          <div className="space-y-2">
           <Textarea 
-            placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám..." 
+              placeholder="Ghi chú thêm về tình trạng bệnh nhân, hướng điều trị, tái khám...&#10;&#10;Bạn có thể dùng **text** để in đậm, ví dụ: **Chẩn đoán:** Viêm họng cấp" 
             value={record.notes} 
             onValueChange={(v)=>setRecord({...record, notes:v})} 
             variant="bordered" 
-            minRows={4}
+              minRows={6}
             classNames={{
-              input: "font-medium text-gray-900",
+                input: "font-medium text-gray-900 leading-relaxed",
               inputWrapper: "border-gray-300 hover:border-purple-400 transition-colors"
             }}
           />
+            {record.notes && (
+              <div className="text-xs text-gray-500 bg-purple-50 p-2 rounded border border-purple-100">
+                <strong>Tip:</strong> Dùng <code className="bg-white px-1 rounded">**text**</code> để in đậm, ví dụ: <code className="bg-white px-1 rounded">**Chẩn đoán:**</code>
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -766,7 +832,7 @@ export default function OfflineExamDetailPage() {
         <Button 
           color="primary" 
           startContent={<Save size={18}/>} 
-          onClick={handleSave} 
+          onClick={performSave} 
           isLoading={saving}
           className="font-medium"
           size="lg"
@@ -780,24 +846,24 @@ export default function OfflineExamDetailPage() {
   return (
     <DoctorFrame title={`Khám offline ca ${appointmentId || ""}`}>
       <ToastNotification toast={toast} />
-      <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
+        <Grid leftChildren={leftChildren} rightChildren={rightChildren} />
       
       {/* Confirm Modal for AI Summary */}
-      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange}>
-        <ModalContent>
+      <Modal isOpen={isConfirmOpen} onOpenChange={onConfirmOpenChange} size="2xl" scrollBehavior="inside">
+        <ModalContent className="max-h-[90vh]">
           <ModalHeader>
             <div className="flex items-center gap-2">
               <AlertCircle className="text-amber-500" size={20} />
               <span>Xác nhận lưu với tóm tắt AI</span>
             </div>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="overflow-y-auto max-h-[calc(90vh-180px)]">
             <p className="text-gray-700">
               Bạn đã sử dụng tóm tắt được tạo bởi AI. Vui lòng xác nhận rằng bạn đã đọc kỹ và kiểm tra nội dung tóm tắt này trước khi lưu.
             </p>
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-[400px] overflow-y-auto">
               <p className="text-sm font-semibold text-gray-700 mb-2">Nội dung tóm tắt AI:</p>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{aiSummary}</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">{aiSummary}</p>
             </div>
             <p className="text-xs text-gray-500 italic mt-3">*Thông tin từ AI chỉ mang tính chất tham khảo.</p>
           </ModalBody>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function RouteMap({ originAddress, destinationAddress, apiKey }) {
+export default function RouteMap({ originAddress, destinationAddress, apiKey, doctorData = null }) {
   const containerRef = useRef(null);
   const [visible, setVisible] = useState(false);
   const [fromOverride, setFromOverride] = useState(null); // {lat, lon} when using current location
@@ -30,25 +30,87 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
     let aborted = false;
     let LRef = null;
 
-    const geocode = async (text) => {
+    const geocode = async (text, doctorData = null) => {
       try {
-        const cacheKey = `geo_${text}`;
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const v = JSON.parse(cached);
-          if (v && typeof v.lat === 'number' && typeof v.lon === 'number') return v;
+        if (!text || !text.trim()) {
+          console.warn("[RouteMap] Empty address text");
+          return null;
         }
-        const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text)}&limit=1&apiKey=${apiKey}`;
+        // Không dùng cache để tránh tọa độ sai, hoặc có thể thêm version key để invalidate cache
+        // const cacheKey = `geo_${text}`;
+        // const cached = sessionStorage.getItem(cacheKey);
+        // if (cached) {
+        //   const v = JSON.parse(cached);
+        //   if (v && typeof v.lat === 'number' && typeof v.lon === 'number') {
+        //     console.log("[RouteMap] Using cached geocode:", text, "->", v);
+        //     return v;
+        //   }
+        // }
+        
+        // Sử dụng cách geocode giống như trong dat-lich-kham.jsx
+        // Thử nhiều candidates với thứ tự ưu tiên
+        const candidates = [];
+        
+        // Nếu có doctorData, thử các địa chỉ từ doctor data
+        if (doctorData) {
+          if (doctorData.displayAddress) {
+            candidates.push(doctorData.displayAddress);
+          }
+          const parts = [
+            doctorData.clinicAddress,
+            doctorData.ward_name,
+            doctorData.district_name,
+            doctorData.province_name,
+          ].filter(Boolean);
+          if (parts.length > 0) {
+            candidates.push(parts.join(", "));
+          }
+          if (doctorData.province_name) {
+            candidates.push(doctorData.province_name);
+          }
+        }
+        
+        // Thêm text hiện tại và các biến thể
+        candidates.push(text);
+        if (text.includes(", Vietnam")) {
+          candidates.push(text.replace(/, Vietnam$/, "").trim());
+        } else {
+          candidates.push(`${text}, Vietnam`);
+        }
+        
+        // Loại bỏ duplicates
+        const uniqueCandidates = [...new Set(candidates)].filter(Boolean);
+        console.log("[RouteMap] Geocoding candidates:", uniqueCandidates);
+        
+        let found = null;
+        let bestFeature = null;
+        for (const addr of uniqueCandidates) {
+          const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(addr)}&filter=countrycode:vn&limit=1&lang=vi&apiKey=${apiKey}`;
+          console.log("[RouteMap] Trying geocode:", addr);
         const res = await fetch(url);
-        if (!res.ok) return null;
+          if (!res.ok) continue;
         const data = await res.json();
-        const f = data?.features?.[0];
-        if (!f?.geometry?.coordinates) return null;
-        const [lon, lat] = f.geometry.coordinates;
+          const feature = data?.features?.[0];
+          if (feature?.geometry?.coordinates) {
+            found = feature.geometry.coordinates; // [lon, lat]
+            bestFeature = feature;
+            console.log("[RouteMap] Geocoded successfully:", addr, "->", found, "Location:", feature.properties?.formatted || feature.properties?.name);
+            break;
+          }
+        }
+        
+        if (!found) {
+          console.warn("[RouteMap] No valid coordinates found for any candidate:", uniqueCandidates);
+          return null;
+        }
+        
+        const [lon, lat] = found;
         const out = { lat, lon };
-        sessionStorage.setItem(cacheKey, JSON.stringify(out));
+        // Cache với key bao gồm cả text gốc để dễ debug
+        // sessionStorage.setItem(`geo_${text}`, JSON.stringify(out));
         return out;
-      } catch {
+      } catch (err) {
+        console.error("[RouteMap] Geocoding error:", err);
         return null;
       }
     };
@@ -76,7 +138,13 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
         });
       }
       const to = await geocode(destinationAddress);
-      if (aborted || !to || !containerRef.current || !LRef) return;
+      if (aborted || !to || !containerRef.current || !LRef) {
+        if (!to) {
+          console.error("[RouteMap] Failed to geocode destination:", destinationAddress);
+        }
+        return;
+      }
+      console.log("[RouteMap] Destination geocoded successfully:", to);
 
       // Mặc định chỉ hiển thị marker phòng khám (không có route)
       // Chỉ vẽ route khi có fromOverride (vị trí hiện tại)
@@ -107,45 +175,45 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
 
       // Chỉ vẽ origin marker khi có from (từ vị trí hiện tại hoặc originAddress)
       if (from) {
-        LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
+      LRef.marker([from.lat, from.lon], { icon: homeIcon }).addTo(mapInstance);
       }
       // Luôn vẽ destination marker (phòng khám)
       LRef.marker([to.lat, to.lon], { icon: officeIcon }).addTo(mapInstance);
 
       // Chỉ vẽ route khi có from (đặc biệt là từ vị trí hiện tại)
       if (from) {
-        try {
-          const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
-          let json = null;
-          const cached = sessionStorage.getItem(rKey);
-          if (cached) {
-            json = JSON.parse(cached);
+      try {
+        const rKey = `route_${from.lat},${from.lon}_${to.lat},${to.lon}`;
+        let json = null;
+        const cached = sessionStorage.getItem(rKey);
+        if (cached) {
+          json = JSON.parse(cached);
+        } else {
+          const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
+          const res = await fetch(routeUrl);
+          if (res.ok) json = await res.json();
+          if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
+        }
+        if (json) {
+          const geom = json?.features?.[0]?.geometry;
+          let coords = [];
+          if (geom?.type === "LineString") coords = geom.coordinates;
+          else if (geom?.type === "MultiLineString") coords = geom.coordinates.flat();
+          if (coords.length) {
+            const latlngs = coords.map(([lon, lat]) => [lat, lon]);
+            const poly = LRef.polyline(latlngs, { color: "#2563EB", weight: 5 }).addTo(mapInstance);
+            mapInstance.fitBounds(poly.getBounds(), { padding: [20, 20] });
           } else {
-            const routeUrl = `https://api.geoapify.com/v1/routing?waypoints=${from.lat},${from.lon}|${to.lat},${to.lon}&mode=drive&apiKey=${apiKey}`;
-            const res = await fetch(routeUrl);
-            if (res.ok) json = await res.json();
-            if (json) sessionStorage.setItem(rKey, JSON.stringify(json));
+            mapInstance.fitBounds(
+              LRef.latLngBounds([
+                [from.lat, from.lon],
+                [to.lat, to.lon],
+              ])
+            );
           }
-          if (json) {
-            const geom = json?.features?.[0]?.geometry;
-            let coords = [];
-            if (geom?.type === "LineString") coords = geom.coordinates;
-            else if (geom?.type === "MultiLineString") coords = geom.coordinates.flat();
-            if (coords.length) {
-              const latlngs = coords.map(([lon, lat]) => [lat, lon]);
-              const poly = LRef.polyline(latlngs, { color: "#2563EB", weight: 5 }).addTo(mapInstance);
-              mapInstance.fitBounds(poly.getBounds(), { padding: [20, 20] });
-            } else {
-              mapInstance.fitBounds(
-                LRef.latLngBounds([
-                  [from.lat, from.lon],
-                  [to.lat, to.lon],
-                ])
-              );
-            }
-          }
-        } catch {
-          // ignore
+        }
+      } catch {
+        // ignore
         }
       } else {
         // Không có route, chỉ fit bounds cho destination marker
@@ -162,7 +230,7 @@ export default function RouteMap({ originAddress, destinationAddress, apiKey }) 
       aborted = true;
       if (mapInstance) mapInstance.remove();
     };
-  }, [originAddress, fromOverride, destinationAddress, apiKey, visible]);
+  }, [originAddress, fromOverride, destinationAddress, apiKey, visible, doctorData]);
 
   const requestCurrentLocation = () => {
     if (!('geolocation' in navigator)) return;

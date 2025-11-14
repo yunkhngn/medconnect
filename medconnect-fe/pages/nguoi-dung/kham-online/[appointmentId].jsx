@@ -641,9 +641,9 @@ export default function PatientOnlineExamRoom() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-gray-50">
-      <div className="flex h-full">
+      <div className="flex flex-col md:flex-row h-full">
         {/* Video Area - Full width */}
-        <div className="flex-1 min-w-0 relative bg-black">
+        <div className="flex-1 min-w-0 relative bg-black h-1/2 md:h-full">
           {/* Remote video fill area */}
           <div className="absolute inset-0 rounded-xl overflow-hidden">
             <div ref={remoteVideoRef} className="w-full h-full" />
@@ -658,24 +658,33 @@ export default function PatientOnlineExamRoom() {
             )}
           </div>
 
-          {/* Local preview nhỏ góc phải như doctor */}
-          <div className="absolute right-5 top-5 w-56 aspect-video rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
-            <div ref={localVideoRef} className="absolute inset-0 rounded-xl overflow-hidden" />
-            <span className="absolute bottom-2 left-2 text-xs text-white/70">Patient preview</span>
-            {muted && <MicOff className="absolute top-2 right-2 text-red-400 w-6 h-6" />}
-            {camOff && <VideoOff className="absolute top-2 right-10 text-red-400 w-6 h-6" />}
+          {/* Local preview nhỏ góc phải như doctor - responsive */}
+          <div className="absolute right-2 top-2 sm:right-5 sm:top-5 w-24 h-16 sm:w-40 sm:h-24 md:w-56 md:h-32 aspect-video rounded-lg sm:rounded-xl bg-gray-800/70 ring-1 ring-white/15 flex items-center justify-center text-white/70 text-xs select-none">
+            <div ref={localVideoRef} className="absolute inset-0 rounded-lg sm:rounded-xl overflow-hidden" />
+            <span className="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 text-[10px] sm:text-xs text-white/70 hidden sm:block">Patient preview</span>
+            {muted && <MicOff className="absolute top-1 right-1 sm:top-2 sm:right-2 text-red-400 w-4 h-4 sm:w-6 sm:h-6" />}
+            {camOff && <VideoOff className="absolute top-1 right-6 sm:top-2 sm:right-10 text-red-400 w-4 h-4 sm:w-6 sm:h-6" />}
           </div>
 
-          {/* Top bar giống doctor */}
-          <div className="absolute left-0 right-0 top-0 p-4 flex items-center justify-between pointer-events-none">
-            <div className="pointer-events-auto flex items-center gap-3">
-              <Chip color="success" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">Phiên khám online • Bệnh nhân</Chip>
-              <Chip variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900">{formatTime(seconds)}</Chip>
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={onDoctorInfoOpen} startContent={<User size={18} />}>Thông tin bác sĩ</Button>
+          {/* Top bar giống doctor - responsive */}
+          <div className="absolute left-0 right-0 top-0 p-2 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between pointer-events-none gap-2">
+            <div className="pointer-events-auto flex flex-wrap items-center gap-2 sm:gap-3">
+              <Chip color="success" variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm">Phiên khám online • Bệnh nhân</Chip>
+              <Chip variant="bordered" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm">{formatTime(seconds)}</Chip>
+              <Button size="sm" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm" onPress={onDoctorInfoOpen} startContent={<User size={14} className="sm:w-[18px] sm:h-[18px]" />}>
+                <span className="hidden sm:inline">Thông tin bác sĩ</span>
+                <span className="sm:hidden">Thông tin</span>
+              </Button>
             </div>
-            <div className="flex items-center gap-3 pointer-events-auto pr-2">
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" startContent={<Maximize2 size={18} />} onPress={toggleFullscreen}>Toàn màn hình</Button>
-              <Button size="md" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={18}/> }>Chat</Button>
+            <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto pr-2">
+              <Button size="sm" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm" startContent={<Maximize2 size={14} className="sm:w-[18px] sm:h-[18px]" />} onPress={toggleFullscreen}>
+                <span className="hidden sm:inline">Toàn màn hình</span>
+                <span className="sm:hidden">Full</span>
+              </Button>
+              <Button size="sm" variant="bordered" color="primary" className="bg-white/50 backdrop-blur-md border border-white/30 shadow-lg font-semibold text-gray-900 text-xs sm:text-sm" onPress={()=>setShowChat(v=>!v)} startContent={<MessageSquare size={14} className="sm:w-[18px] sm:h-[18px]"/> }>
+                <span className="hidden sm:inline">Chat</span>
+                <span className="sm:hidden">Chat</span>
+              </Button>
             </div>
           </div>
           {tokenError && (
@@ -683,18 +692,18 @@ export default function PatientOnlineExamRoom() {
               <div className="bg-red-600 text-white text-sm px-3 py-2 rounded-md shadow">{tokenError}</div>
             </div>
           )}
-          {/* Controls bottom - mute/tắt cam/leave giống doctor */}
-          <div className="absolute left-0 right-0 bottom-0 pb-6 flex items-center justify-center">
-            <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md rounded-full px-4 py-3 border border-white/30 shadow-lg">
-              <Button isIconOnly variant="bordered" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff className="w-5 h-5"/> : <Mic className="w-5 h-5"/>}</Button>
-              <Button isIconOnly variant="bordered" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff className="w-5 h-5"/> : <Video className="w-5 h-5"/>}</Button>
-              <Button color="danger" variant="bordered" onPress={()=>router.push('/nguoi-dung/kham-online')} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-6 text-white">Rời phòng</Button>
+          {/* Controls bottom - mute/tắt cam/leave giống doctor - responsive */}
+          <div className="absolute left-0 right-0 bottom-0 pb-3 sm:pb-6 flex items-center justify-center px-2">
+            <div className="flex items-center gap-2 sm:gap-3 bg-white/50 backdrop-blur-md rounded-full px-2 sm:px-4 py-2 sm:py-3 border border-white/30 shadow-lg">
+              <Button isIconOnly size="sm" variant="bordered" color={muted ? "warning" : "default"} onPress={()=>setMuted(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={muted?"Bật mic":"Tắt mic"}>{muted ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5"/> : <Mic className="w-4 h-4 sm:w-5 sm:h-5"/>}</Button>
+              <Button isIconOnly size="sm" variant="bordered" color={camOff ? "warning" : "default"} onPress={()=>setCamOff(v => !v)} className="bg-white/40 border border-white/30 shadow-md" title={camOff?"Bật camera":"Tắt camera"}>{camOff ? <VideoOff className="w-4 h-4 sm:w-5 sm:h-5"/> : <Video className="w-4 h-4 sm:w-5 sm:h-5"/>}</Button>
+              <Button size="sm" color="danger" variant="bordered" onPress={()=>router.push('/nguoi-dung/kham-online')} className="bg-red-500/80 backdrop-blur-md border border-red-300/30 shadow-lg font-semibold ml-2 sm:ml-6 text-white text-xs sm:text-sm">Rời phòng</Button>
             </div>
           </div>
         </div>
         {/* Right: Chat and modal info... (unchanged)*/}
         {showChat && (
-          <div className="w-[380px] h-full bg-gray-50 flex flex-col">
+          <div className="w-full md:w-[380px] h-1/2 md:h-full bg-gray-50 flex flex-col border-t md:border-t-0 md:border-l border-gray-200">
             {/* Header trạng thái kết nối + avatar bác sĩ */}
             <div className="p-4 flex items-center bg-gray-50/50">
               <div className="flex items-center gap-3">

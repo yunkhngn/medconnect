@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/payment/ipn").permitAll() // VNPay webhook
                 .requestMatchers("/api/payment/confirm").permitAll() // VNPay callback  
                 .requestMatchers("/doctor/dashboard/all").permitAll() // public list of doctors for booking
+                .requestMatchers("/api/chatbot/**").permitAll() // public chatbot RAG endpoint
+                .requestMatchers("/api/api/chatbot/**").permitAll() // handle duplicate /api/api case
 
                 // Avatar & media
                 .requestMatchers("/api/avatar/**").authenticated()

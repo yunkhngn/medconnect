@@ -4,8 +4,23 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Float from "@/components/ui/Float";
-import mockDoctors from "@/lib/doctorProps";
 import { useState, useEffect } from "react";
+import { Stethoscope, Award, Star } from "lucide-react";
+
+const API_BASE_URL = "http://localhost:8080";
+
+const SPECIALTY_MAP = {
+  TIM_MACH: "Tim mạch",
+  NOI_KHOA: "Nội khoa",
+  NHI_KHOA: "Nhi khoa",
+  SAN_PHU_KHOA: "Sản phụ khoa",
+  THAN_KINH: "Thần kinh",
+  DA_LIEU: "Da liễu",
+  MAT: "Mắt",
+  TAI_MUI_HONG: "Tai mũi họng",
+  NGOAI_KHOA: "Ngoại khoa",
+  GENERAL: "Đa khoa",
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -34,12 +49,9 @@ export default function HomePage() {
   { title: "Chăm sóc từ xa", desc: "Bác sĩ theo dõi và hướng dẫn điều trị tại nhà"}
 ];
 
-  const doctors = mockDoctors.slice(0, 4).map(doctor => ({
-    name: doctor.name,
-    specialty: doctor.specialty,
-    years: doctor.experience,
-    avatar: doctor.avatar
-  }));
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [doctorRatings, setDoctorRatings] = useState({});
 
   const testimonials = [
     {
@@ -82,6 +94,66 @@ export default function HomePage() {
 
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [heroLoaded, setHeroLoaded] = useState(false);
+
+  // Fetch real doctors from backend
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        setLoadingDoctors(true);
+        const response = await fetch(`${API_BASE_URL}/doctor/dashboard/all`);
+        if (response.ok) {
+          const data = await response.json();
+          const doctorsList = Array.isArray(data) ? data : [];
+          
+          // Filter active doctors and take first 4
+          const activeDoctors = doctorsList
+            .filter(doc => doc.status === 'ACTIVE' || !doc.status)
+            .slice(0, 4)
+            .map(doc => ({
+              id: doc.id || doc.userId,
+              name: doc.name || "Bác sĩ",
+              specialty: doc.specialty || doc.specializationName || "Đa khoa",
+              years: doc.experience_years || doc.experienceYears || 0,
+              avatar: doc.avatarUrl || doc.avatar || "https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg",
+              bio: doc.bio,
+              rating: doc.rating || 0,
+            }));
+          
+          setDoctors(activeDoctors);
+
+          // Fetch ratings for doctors
+          const ratingPromises = activeDoctors.map(async (doctor) => {
+            try {
+              const ratingResponse = await fetch(`${API_BASE_URL}/api/feedback/doctor/${doctor.id}/summary`);
+              if (ratingResponse.ok) {
+                const ratingData = await ratingResponse.json();
+                return {
+                  doctorId: doctor.id,
+                  rating: ratingData.averageRating || doctor.rating || 0,
+                };
+              }
+            } catch (e) {
+              console.error(`Error fetching rating for doctor ${doctor.id}:`, e);
+            }
+            return { doctorId: doctor.id, rating: doctor.rating || 0 };
+          });
+
+          const ratings = await Promise.all(ratingPromises);
+          const ratingsMap = {};
+          ratings.forEach((r) => {
+            ratingsMap[r.doctorId] = r.rating;
+          });
+          setDoctorRatings(ratingsMap);
+        }
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+      } finally {
+        setLoadingDoctors(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -203,7 +275,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       {/* FEATURE STRIP */}
       <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-12 sm:py-16">
         <div className="max-w-6xl mx-auto">
@@ -294,32 +365,112 @@ export default function HomePage() {
               </p>
             </div>
           </Float>
+          {loadingDoctors ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {doctors.map((d, i) => (
+              {[1, 2, 3, 4].map((i) => (
               <Float key={i} variant="fadeInUp" delay={i * 0.05}>
-                <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-none shadow-sm">
                   <CardBody className="p-4 sm:p-6 text-center">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 rounded-full overflow-hidden">
-                      <Image
-                        src={d.avatar}
-                        alt={d.name}
-                        width={96}
-                        height={96}
-                        className="w-full h-full object-cover"
-                        quality={50}
-                      />
-                    </div>
-                    <h3 className="font-semibold text-base sm:text-lg text-gray-900">{d.name}</h3>
-                    <Chip size="sm" variant="flat" color="primary" className="my-2 m-auto mb-2 mt-2">{d.specialty}</Chip>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Kinh nghiệm {d.years} năm</p>
-                    <Button size="sm" color="primary" variant="light" fullWidth onPress={() => router.push("/tim-bac-si")}>
-                      Đặt lịch khám
-                    </Button>
+                      <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 rounded-full" />
+                      <Skeleton className="h-5 w-32 mx-auto mb-2" />
+                      <Skeleton className="h-4 w-24 mx-auto mb-2" />
+                      <Skeleton className="h-4 w-20 mx-auto mb-4" />
+                      <Skeleton className="h-9 w-full rounded-lg" />
                   </CardBody>
                 </Card>
               </Float>
             ))}
           </div>
+          ) : doctors.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {doctors.map((d, i) => {
+                const doctorSlug = d.id?.toString() || "";
+                const specialtyLabel = SPECIALTY_MAP[d.specialty] || d.specialty || "Đa khoa";
+                const rating = doctorRatings[d.id] || d.rating || 0;
+                
+                return (
+                  <Float key={d.id || i} variant="fadeInUp" delay={i * 0.05}>
+                    <Card 
+                      className="border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] bg-white h-full flex flex-col"
+                      isPressable
+                      onPress={() => router.push(`/tim-kiem-bac-si/${doctorSlug}`)}
+                    >
+                      <CardBody className="p-5 sm:p-6 text-center flex flex-col flex-1">
+                        {/* Avatar - Fixed size, centered */}
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-full overflow-hidden ring-2 ring-blue-100 flex-shrink-0">
+                          <Avatar
+                            src={d.avatar}
+                            alt={d.name}
+                            className="w-full h-full object-cover"
+                            imgProps={{
+                              style: { objectFit: 'cover' }
+                            }}
+                            showFallback
+                            fallback={
+                              <div className="w-full h-full bg-gradient-to-br from-blue-100 to-teal-100 flex items-center justify-center">
+                                <Stethoscope className="text-blue-600" size={32} />
+                              </div>
+                            }
+                          />
+                        </div>
+                        
+                        {/* Name */}
+                        <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-2 line-clamp-2 min-h-[3rem] flex items-center justify-center">
+                          {d.name?.replace(/^BS\.?\s*/i, "").trim() || d.name || "Bác sĩ"}
+                        </h3>
+                        
+                        {/* Specialty Chip */}
+                        <div className="mb-3">
+                          <Chip 
+                            size="sm" 
+                            variant="flat" 
+                            color="primary" 
+                            className="text-xs font-semibold"
+                          >
+                            {specialtyLabel}
+                          </Chip>
+                        </div>
+                        
+                        {/* Stats - Experience and Rating */}
+                        <div className="flex items-center justify-center gap-3 mb-4 text-xs sm:text-sm text-gray-600 flex-shrink-0">
+                          {d.years > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Award size={14} className="text-teal-600 flex-shrink-0" />
+                              <span className="whitespace-nowrap">{d.years} năm</span>
+                            </div>
+                          )}
+                          {rating > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Star size={14} className="text-yellow-500 fill-current flex-shrink-0" />
+                              <span className="whitespace-nowrap">{rating.toFixed(1)}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Button - Push to bottom */}
+                        <div className="mt-auto pt-2">
+                          <Button 
+                            size="sm" 
+                            color="primary" 
+                            variant="flat" 
+                            fullWidth 
+                            className="font-semibold"
+                            onPress={() => router.push(`/tim-kiem-bac-si/${doctorSlug}`)}
+                          >
+                            Xem chi tiết
+                          </Button>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </Float>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">Chưa có bác sĩ nào</p>
+            </div>
+          )}
           <Float variant="fadeInUp" delay={0.3}>
             <div className="text-center mt-6 sm:mt-8">
               <Link href="/tim-bac-si"
