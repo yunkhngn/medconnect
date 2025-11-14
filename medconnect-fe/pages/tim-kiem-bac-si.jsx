@@ -17,7 +17,6 @@ import {
   Star,
   Award,
   MapPin,
-  User,
   Phone,
   Filter,
   ChevronRight,
