@@ -295,10 +295,8 @@ export default function EditEMRPage() {
     // Giới tính bắt buộc
     if (!profile.gender) newErrors.gender = "Vui lòng chọn giới tính";
 
-    // HSBA-08: Nhóm máu
-    if (!profile.blood_type || profile.blood_type === "") {
-      newErrors.blood_type = "Vui lòng chọn nhóm máu";
-    }
+    // HSBA-08: Nhóm máu - Cho phép "Chưa xác định" (empty string)
+    // Không cần validation vì có thể chọn "Chưa xác định"
 
     // HSBA-05: CCCD
     if (profile.citizenship && !/^\d{12}$/.test(profile.citizenship)) {
@@ -310,19 +308,24 @@ export default function EditEMRPage() {
       newErrors.email = "Email không hợp lệ";
     }
 
-    // HSBA-06: SĐT không hợp lệ
-    if (profile.phone && !/^0\d{9}$/.test(profile.phone)) {
-      newErrors.phone = "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0";
+    // HSBA-06: SĐT không hợp lệ - Cho phép nhập có khoảng trắng, dấu gạch ngang
+    if (profile.phone) {
+      // Loại bỏ khoảng trắng, dấu gạch ngang, dấu ngoặc đơn
+      const cleanedPhone = profile.phone.replace(/[\s\-\(\)]/g, '');
+      if (!/^0\d{9}$/.test(cleanedPhone)) {
+        newErrors.phone = "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0";
+      }
     }
 
-    // HSBA-09: BHYT quá hạn
-    if (profile.insurance_number) {
-      if (!/^[A-Z]{2}\d{13}$/i.test(profile.insurance_number)) {
+    // HSBA-09: BHYT - Không bắt buộc, chỉ validate nếu có nhập
+    if (profile.insurance_number && profile.insurance_number.trim()) {
+      if (!/^[A-Z]{2}\d{13}$/i.test(profile.insurance_number.trim())) {
         newErrors.insurance_number = "Mã BHYT không hợp lệ (2 chữ + 13 số)";
       }
-      if (!profile.insurance_valid_to) {
+      // Nếu có mã BHYT thì mới yêu cầu ngày hết hạn
+      if (profile.insurance_number.trim() && !profile.insurance_valid_to) {
         newErrors.insurance_valid_to = "Vui lòng nhập ngày hết hạn BHYT";
-      } else {
+      } else if (profile.insurance_valid_to) {
         const validTo = new Date(profile.insurance_valid_to);
         const today = new Date(new Date().toISOString().split("T")[0]);
         if (validTo < today)
@@ -331,8 +334,12 @@ export default function EditEMRPage() {
     }
 
     // Liên hệ khẩn cấp
-    if (profile.emergency_contact_phone && !/^0\d{9}$/.test(profile.emergency_contact_phone)) {
-      newErrors.emergency_contact_phone = "Số điện thoại liên hệ khẩn cấp không hợp lệ";
+    if (profile.emergency_contact_phone) {
+      // Loại bỏ khoảng trắng, dấu gạch ngang, dấu ngoặc đơn
+      const cleanedPhone = profile.emergency_contact_phone.replace(/[\s\-\(\)]/g, '');
+      if (!/^0\d{9}$/.test(cleanedPhone)) {
+        newErrors.emergency_contact_phone = "Số điện thoại liên hệ khẩn cấp không hợp lệ";
+      }
     }
     if (profile.emergency_contact_phone && !profile.emergency_contact_name?.trim()) {
       newErrors.emergency_contact_name = "Vui lòng nhập tên người liên hệ khẩn cấp";
@@ -383,7 +390,7 @@ export default function EditEMRPage() {
             address_detail: profile.address_detail,
             full: fullAddress || profile.address || "",
           },
-          phone: profile.phone,
+          phone: profile.phone ? profile.phone.replace(/[\s\-\(\)]/g, '') : profile.phone,
           email: profile.email,
           citizenship: profile.citizenship,
           insurance_number: profile.insurance_number,
@@ -391,7 +398,7 @@ export default function EditEMRPage() {
           id_photo_url: idPhotoUrl,
           emergency_contact: {
             name: profile.emergency_contact_name,
-            phone: profile.emergency_contact_phone,
+            phone: profile.emergency_contact_phone ? profile.emergency_contact_phone.replace(/[\s\-\(\)]/g, '') : profile.emergency_contact_phone,
             relation: profile.emergency_contact_relationship,
           },
           occupation: profile.occupation,
@@ -654,12 +661,14 @@ export default function EditEMRPage() {
             <Select
               label="Nhóm máu"
               placeholder="Chọn nhóm máu"
-              selectedKeys={profile.blood_type ? [profile.blood_type] : []}
-              onSelectionChange={(keys) => setProfile({ ...profile, blood_type: Array.from(keys)[0] })}
+              selectedKeys={profile.blood_type !== undefined && profile.blood_type !== null ? [profile.blood_type] : [""]}
+              onSelectionChange={(keys) => {
+                const selected = Array.from(keys)[0];
+                setProfile({ ...profile, blood_type: selected || "" });
+              }}
               variant="bordered"
               labelPlacement="outside"
               isInvalid={!!errors.blood_type}
-            // heroui Select có thể không có errorMessage prop — nếu có thì thêm, nếu không, hiển thị lỗi bằng text nhỏ
             >
               {bloodTypeOptions.map((opt) => (
                 <SelectItem key={opt.key}>{opt.label}</SelectItem>
@@ -696,9 +705,13 @@ export default function EditEMRPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Số điện thoại"
-              placeholder="0912 345 678"
+              placeholder="0376971168 hoặc 0912 345 678"
               value={profile.phone}
-              onValueChange={(v) => setProfile({ ...profile, phone: v })}
+              onValueChange={(v) => {
+                // Chỉ cho phép số, khoảng trắng, dấu gạch ngang, dấu ngoặc đơn
+                const cleaned = v.replace(/[^\d\s\-\(\)]/g, '');
+                setProfile({ ...profile, phone: cleaned });
+              }}
               variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}

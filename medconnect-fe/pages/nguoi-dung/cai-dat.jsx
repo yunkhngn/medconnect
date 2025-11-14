@@ -174,28 +174,37 @@ export default function PatientProfileWithFrame() {
       return;
     }
 
-    // Validate số điện thoại
-    const phoneRegex = /^(0|\+84)[0,1,2,3,4,5,6,8,9]{9}$/;
-    if (!patient.phone || !phoneRegex.test(patient.phone)) {
-      setErrors(prev => ({ ...prev, phone: "Số điện thoại không hợp lệ. Nhập đúng định dạng (VD: 0912345678)" }));
-      toast.error("Số điện thoại không hợp lệ");
-      return;
-    } else {
-      setErrors(prev => ({ ...prev, phone: "" }));
+    // Validate số điện thoại - Cho phép nhập có khoảng trắng, dấu gạch ngang
+    if (patient.phone) {
+      // Loại bỏ khoảng trắng, dấu gạch ngang, dấu ngoặc đơn
+      const cleanedPhone = patient.phone.replace(/[\s\-\(\)]/g, '');
+      // Cho phép bắt đầu bằng 0 hoặc +84, sau đó có 9 chữ số (0-9)
+      const phoneRegex = /^(0|\+84)[0-9]{9}$/;
+      if (!phoneRegex.test(cleanedPhone)) {
+        setErrors(prev => ({ ...prev, phone: "Số điện thoại không hợp lệ. Nhập đúng định dạng (VD: 0912345678)" }));
+        toast.error("Số điện thoại không hợp lệ");
+        return;
+      } else {
+        setErrors(prev => ({ ...prev, phone: "" }));
+      }
     }
 
-    // Validate số điện thoại liên hệ khẩn cấp (nếu có nhập)
-    const emergencyPhoneRegex = /^(0|\+84)[0-9]{9}$/;
-
-    if (patient.emergencyContactPhone && !emergencyPhoneRegex.test(patient.emergencyContactPhone)) {
-      setErrors(prev => ({
-        ...prev,
-        emergencyContactPhone: "Số điện thoại liên hệ khẩn cấp không hợp lệ (VD: 0912345678)"
-      }));
-      toast.error("Số điện thoại liên hệ khẩn cấp không hợp lệ");
-      return;
-    } else {
-      setErrors(prev => ({ ...prev, emergencyContactPhone: "" }));
+    // Validate số điện thoại liên hệ khẩn cấp (nếu có nhập) - Cho phép nhập có khoảng trắng, dấu gạch ngang
+    if (patient.emergencyContactPhone) {
+      // Loại bỏ khoảng trắng, dấu gạch ngang, dấu ngoặc đơn
+      const cleanedPhone = patient.emergencyContactPhone.replace(/[\s\-\(\)]/g, '');
+      // Cho phép bắt đầu bằng 0 hoặc +84, sau đó có 9 chữ số (0-9)
+      const emergencyPhoneRegex = /^(0|\+84)[0-9]{9}$/;
+      if (!emergencyPhoneRegex.test(cleanedPhone)) {
+        setErrors(prev => ({
+          ...prev,
+          emergencyContactPhone: "Số điện thoại liên hệ khẩn cấp không hợp lệ (VD: 0912345678)"
+        }));
+        toast.error("Số điện thoại liên hệ khẩn cấp không hợp lệ");
+        return;
+      } else {
+        setErrors(prev => ({ ...prev, emergencyContactPhone: "" }));
+      }
     }
 
 
@@ -271,23 +280,65 @@ export default function PatientProfileWithFrame() {
     try {
       const token = await user.getIdToken();
 
+      // Clean phone numbers and prepare data for API
+      const cleanedPatient = {
+        ...patient,
+        phone: patient.phone ? patient.phone.replace(/[\s\-\(\)]/g, '') : patient.phone,
+        emergencyContactPhone: patient.emergencyContactPhone ? patient.emergencyContactPhone.replace(/[\s\-\(\)]/g, '') : patient.emergencyContactPhone,
+      };
+
+      // Remove empty strings and convert to null for optional fields
+      Object.keys(cleanedPatient).forEach(key => {
+        if (cleanedPatient[key] === "" || cleanedPatient[key] === undefined) {
+          // Keep empty string for required fields, set null for optional ones
+          if (['name', 'email', 'phone', 'dateOfBirth', 'gender'].includes(key)) {
+            // Keep as is for required fields
+          } else {
+            cleanedPatient[key] = null;
+          }
+        }
+      });
+
+      console.log("Sending patient data to API:", cleanedPatient);
+
       const response = await fetch(`${getApiUrl()}/patient/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(patient),
+        body: JSON.stringify(cleanedPatient),
       });
 
       if (response.ok) {
         toast.success("Cập nhật hồ sơ thành công!");
+        // Refresh patient data after successful update
+        await fetchPatientData(user);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Cập nhật thất bại");
+        // Try to parse error response
+        let errorMessage = "Cập nhật thất bại";
+        try {
+          const errorText = await response.text();
+          console.error("API Error Response:", errorText);
+          
+          // Try to parse as JSON
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (e) {
+            // If not JSON, use the text as error message
+            errorMessage = errorText || errorMessage;
+          }
+        } catch (e) {
+          console.error("Error parsing error response:", e);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Update error:", error);
+      console.error("Patient data being sent:", cleanedPatient);
       toast.error(error.message || "Không thể cập nhật hồ sơ");
     } finally {
       setSaving(false);
@@ -488,9 +539,18 @@ export default function PatientProfileWithFrame() {
             <Input
               type="tel"
               label="Số điện thoại"
-              placeholder="0912 345 678"
+              placeholder="0912345678"
               value={patient.phone || ""}
-              onValueChange={(v) => setPatient({ ...patient, phone: v })}
+              onValueChange={(v) => {
+                // Chỉ cho phép số, khoảng trắng, dấu gạch ngang, dấu ngoặc đơn, dấu +
+                const cleaned = v.replace(/[^\d\s\-\(\)\+]/g, '');
+                setPatient({ ...patient, phone: cleaned });
+                // Clear error khi nhập đúng format
+                const cleanedPhone = cleaned.replace(/[\s\-\(\)]/g, '');
+                if (!cleanedPhone || /^(0|\+84)[0-9]{9}$/.test(cleanedPhone)) {
+                  setErrors(prev => ({ ...prev, phone: "" }));
+                }
+              }}
               variant="bordered"
               labelPlacement="outside"
               startContent={<Phone className="text-default-400" size={20} />}
@@ -742,12 +802,15 @@ export default function PatientProfileWithFrame() {
             <Input
               type="tel"
               label="Số điện thoại"
-              placeholder="0912 345 678"
+              placeholder="0376971168 hoặc 0912 345 678"
               value={patient.emergencyContactPhone || ""}
               onValueChange={(v) => {
-                setPatient({ ...patient, emergencyContactPhone: v });
-                // Khi người dùng nhập đúng, xóa lỗi
-                if (/^(0|\+84)[0-9]{9}$/.test(v)) {
+                // Chỉ cho phép số, khoảng trắng, dấu gạch ngang, dấu ngoặc đơn, dấu +
+                const cleaned = v.replace(/[^\d\s\-\(\)\+]/g, '');
+                setPatient({ ...patient, emergencyContactPhone: cleaned });
+                // Clear error khi nhập đúng format
+                const cleanedPhone = cleaned.replace(/[\s\-\(\)]/g, '');
+                if (!cleanedPhone || /^(0|\+84)[0-9]{9}$/.test(cleanedPhone)) {
                   setErrors(prev => ({ ...prev, emergencyContactPhone: "" }));
                 }
               }}
