@@ -9,6 +9,7 @@ import { Card, CardBody, CardHeader, Button, Chip, Avatar, Divider } from "@hero
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
+import { getApiUrl } from "@/utils/api";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -51,7 +52,7 @@ export default function PatientDashboard() {
       const token = await firebaseUser.getIdToken();
 
       // Fetch patient profile
-      const profileRes = await fetch("http://localhost:8080/api/patient/profile", {
+      const profileRes = await fetch(`${getApiUrl()}/patient/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (profileRes.ok) {
@@ -61,7 +62,7 @@ export default function PatientDashboard() {
 
       // Fetch EMR
       try {
-        const emrRes = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+        const emrRes = await fetch(`${getApiUrl()}/medical-records/my-profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (emrRes.ok) {
@@ -76,7 +77,7 @@ export default function PatientDashboard() {
 
       // Fetch appointments
       try {
-        const aptRes = await fetch("http://localhost:8080/api/appointments/my", {
+        const aptRes = await fetch(`${getApiUrl()}/appointments/my`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (aptRes.ok) {

@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { parseBHYT, BENEFIT_LEVELS } from "@/utils/bhytHelper";
+import { getApiUrl } from "@/utils/api";
 
 const SLOT_TIMES = {
   SLOT_1: "07:30 - 09:50",
@@ -100,7 +101,7 @@ export default function PaymentPage() {
 
       // Fetch patient profile to get BHYT info
       try {
-        const profileResponse = await fetch("http://localhost:8080/api/patient/profile", {
+        const profileResponse = await fetch(`${getApiUrl()}/patient/profile`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (profileResponse.ok) {
@@ -134,7 +135,7 @@ export default function PaymentPage() {
       }
 
       // Fetch appointment details
-      const aptResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+      const aptResponse = await fetch(`${getApiUrl()}/appointments/${appointmentId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
@@ -152,7 +153,7 @@ export default function PaymentPage() {
       }
 
       // Check payment status
-      const paymentResponse = await fetch(`http://localhost:8080/api/payment/appointment/${appointmentId}`, {
+      const paymentResponse = await fetch(`${getApiUrl()}/payment/appointment/${appointmentId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
@@ -188,7 +189,7 @@ export default function PaymentPage() {
       const token = await user.getIdToken();
       
       // Call VNPay payment initialization API
-      const response = await fetch("http://localhost:8080/api/payment/init", {
+      const response = await fetch(`${getApiUrl()}/payment/init`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -499,4 +500,3 @@ export default function PaymentPage() {
     </PatientFrame>
   );
 }
-

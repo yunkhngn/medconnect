@@ -5,6 +5,7 @@ import { CheckCircle, Calendar, Home, AlertCircle } from "lucide-react";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import { generateAppointmentPendingEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
+import { getApiUrl } from "@/utils/api";
 
 export default function PaymentSuccess() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function PaymentSuccess() {
         
         // Build query string from router.query
         const queryString = new URLSearchParams(router.query).toString();
-        const url = `http://localhost:8080/api/payment/confirm?${queryString}`;
+        const url = `${getApiUrl()}/payment/confirm?${queryString}`;
         
         console.log("Calling API:", url);
         
@@ -60,7 +61,7 @@ export default function PaymentSuccess() {
           if (appointmentId) {
             try {
               // Fetch appointment details to send email
-              const appointmentResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`);
+              const appointmentResponse = await fetch(`${getApiUrl()}/appointments/${appointmentId}`);
               if (appointmentResponse.ok) {
                 const appointment = await appointmentResponse.json();
                 

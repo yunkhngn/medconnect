@@ -28,7 +28,8 @@ import {
 } from '@heroui/react';
 import { Flag, Search, Filter, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+import { getApiUrl } from "@/utils/api";
+const API_BASE_URL = getApiUrl();
 
 const ReportManagement = () => {
   const { user } = useAuth();

@@ -30,7 +30,7 @@ import { useAddressData } from "@/hooks/useAddressData";
 import Float from "@/components/ui/Float";
 import Image from "next/image";
 
-const API_BASE_URL = "http://localhost:8080";
+import { API_BASE_URL } from "@/utils/api";
 
 const SPECIALTY_MAP = {
   TIM_MACH: "Tim mạch",

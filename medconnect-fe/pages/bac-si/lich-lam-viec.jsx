@@ -8,6 +8,7 @@ import Grid from "@/components/layouts/Grid";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
+import { getApiUrl } from "@/utils/api";
 
 const SLOTS = [
   // Morning slots (7:30 - 12:00)
@@ -104,7 +105,7 @@ export default function DoctorSchedulePage() {
       const endDate = formatDate(weekDays[6]);
       
       const response = await fetch(
-        `http://localhost:8080/api/schedule/weekly?startDate=${startDate}&endDate=${endDate}`,
+        `${getApiUrl()}/schedule/weekly?startDate=${startDate}&endDate=${endDate}`,
         {
           headers: { "Authorization": `Bearer ${token}` }
         }
@@ -160,7 +161,7 @@ export default function DoctorSchedulePage() {
       let response;
       if (isUpdate) {
         // Update existing slot status from EMPTY to RESERVED
-        response = await fetch(`http://localhost:8080/api/schedule/${existingSlot.id}`, {
+        response = await fetch(`${getApiUrl()}/schedule/${existingSlot.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -172,7 +173,7 @@ export default function DoctorSchedulePage() {
         });
       } else {
         // Create new schedule
-        response = await fetch("http://localhost:8080/api/schedule", {
+        response = await fetch(`${getApiUrl()}/schedule`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -226,7 +227,7 @@ export default function DoctorSchedulePage() {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/schedule/${scheduleId}`, {
+      const response = await fetch(`${getApiUrl()}/schedule/${scheduleId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });

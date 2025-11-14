@@ -1,5 +1,6 @@
 import { getAuth, getIdTokenResult } from "firebase/auth";
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+import { getApiUrl } from "@/utils/api";
+const API_URL = getApiUrl();
 
 export async function getUserRole(user = null, { fallbackToBackend = true } = {}) {
   try {

@@ -11,6 +11,7 @@ import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import DOMPurify from 'dompurify';
+import { getApiUrl } from "@/utils/api";
 
 export default function DoctorOnlineExamList() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function DoctorOnlineExamList() {
         const ids = (appointments||[]).map(a=>a.id||a.appointmentId).filter(Boolean);
         const results = await Promise.all(ids.map(async (id)=>{
           try {
-            const resp = await fetch(`http://localhost:8080/api/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            const resp = await fetch(`${getApiUrl()}/payment/appointment/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             if (!resp.ok) return [id, { hasPaid: false }];
             const data = await resp.json();
             return [id, { hasPaid: !!(data.hasPaid || data.status==='PAID'), status: data.status||'UNPAID' }];
@@ -71,7 +72,7 @@ export default function DoctorOnlineExamList() {
       
       if (patientUserId) {
         // Fetch medical record entries for this patient
-        const resp = await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`, {
+        const resp = await fetch(`${getApiUrl()}/medical-records/patient/${patientUserId}/entries`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -204,7 +205,7 @@ export default function DoctorOnlineExamList() {
         }
       } else {
         // Fallback: try old endpoint
-        const resp = await fetch(`http://localhost:8080/api/medical-records/appointment/${apt.id}`, {
+        const resp = await fetch(`${getApiUrl()}/medical-records/appointment/${apt.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (resp.ok) {
@@ -233,7 +234,7 @@ export default function DoctorOnlineExamList() {
       const token = await user.getIdToken();
       const aptId = apt.id || apt.appointmentId;
       if (aptId) {
-        const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+        const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (feedbackResp.ok) {
@@ -267,7 +268,7 @@ export default function DoctorOnlineExamList() {
           const token = await user.getIdToken();
           const aptId = selectedAppointment.id || selectedAppointment.appointmentId;
           if (aptId) {
-            const feedbackResp = await fetch(`http://localhost:8080/api/feedback/appointment/${aptId}`, {
+            const feedbackResp = await fetch(`${getApiUrl()}/feedback/appointment/${aptId}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             if (feedbackResp.ok) {
@@ -310,7 +311,7 @@ export default function DoctorOnlineExamList() {
       const endDate = oneYearLater.toISOString().split('T')[0];
       
       const response = await fetch(
-        `http://localhost:8080/api/appointments/doctor?startDate=${startDate}&endDate=${endDate}`,
+        `${getApiUrl()}/appointments/doctor?startDate=${startDate}&endDate=${endDate}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -407,7 +408,7 @@ export default function DoctorOnlineExamList() {
       
       // Nếu status là PENDING, cần confirm trước
       if (appointment.status === "PENDING") {
-        const confirmResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/confirm`, {
+        const confirmResponse = await fetch(`${getApiUrl()}/appointments/${appointmentId}/confirm`, {
           method: "PATCH",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -422,7 +423,7 @@ export default function DoctorOnlineExamList() {
       }
       
       // Start appointment (cho PENDING hoặc CONFIRMED)
-      const startResponse = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, {
+      const startResponse = await fetch(`${getApiUrl()}/appointments/${appointmentId}/start`, {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,

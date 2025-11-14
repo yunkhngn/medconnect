@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { auth } from '@/lib/firebase';
+import { getApiUrl } from '@/utils/api';
 
 export const useAvatar = () => {
   const [uploading, setUploading] = useState(false);
@@ -54,7 +55,7 @@ export const useAvatar = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8080/api/avatar/upload', {
+      const response = await fetch(`${getApiUrl()}/avatar/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -84,7 +85,7 @@ export const useAvatar = () => {
     }
 
     const token = await user.getIdToken();
-    const response = await fetch('http://localhost:8080/api/avatar', {
+    const response = await fetch(`${getApiUrl()}/avatar`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,

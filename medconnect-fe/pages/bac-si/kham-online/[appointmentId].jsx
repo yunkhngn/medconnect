@@ -11,6 +11,7 @@ import { subscribeRoomMessages, sendChatMessage, setPresence, cleanupRoomIfEmpty
 import { v4 as uuidv4 } from 'uuid';
 import { useGemini } from "@/hooks/useGemini";
 import DOMPurify from 'dompurify';
+import { getApiUrl } from "@/utils/api";
 
 const AgoraVideoCall = dynamic(() => import("@/components/ui/AgoraVideoCall"), { ssr: false });
 
@@ -198,7 +199,7 @@ export default function DoctorOnlineExamRoom() {
         const user = auth.currentUser;
         if (!user) return;
         const token = await user.getIdToken();
-        const response = await fetch(`http://localhost:8080/api/feedback/appointment/${appointmentId}`, {
+        const response = await fetch(`${getApiUrl()}/feedback/appointment/${appointmentId}`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
         if (response.ok) {
@@ -234,7 +235,7 @@ export default function DoctorOnlineExamRoom() {
         
         // Strategy 1: Fetch by appointment ID
         try {
-          const appointmentUrl = `http://localhost:8080/api/medical-records/appointment/${appointmentId}`;
+          const appointmentUrl = `${getApiUrl()}/medical-records/appointment/${appointmentId}`;
           console.log('[EMR] Trying appointment endpoint:', appointmentUrl);
           const appointmentRes = await fetch(appointmentUrl, {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -258,7 +259,7 @@ export default function DoctorOnlineExamRoom() {
           const patientUserId = appointment?.patientUserId ?? appointment?.patientId ?? appointment?.patient?.id ?? appointment?.patient?.userId ?? null;
           console.log('[EMR] Fetching for patientUserId:', patientUserId);
           if (patientUserId) {
-            const patientUrl = `http://localhost:8080/api/medical-records/patient/${patientUserId}/entries`;
+            const patientUrl = `${getApiUrl()}/medical-records/patient/${patientUserId}/entries`;
             console.log('[EMR] Trying patient endpoint:', patientUrl);
             const patientRes = await fetch(patientUrl, {
               headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -295,7 +296,7 @@ export default function DoctorOnlineExamRoom() {
       const fetchToken = async () => {
         try {
           const tokenResp = await fetch(
-          `http://localhost:8080/api/agora/token?channel=${appointmentId}&uid=${agoraUid}`
+          `${getApiUrl()}/agora/token?channel=${appointmentId}&uid=${agoraUid}`
           );
         if (tokenResp.ok) {
           const data = await tokenResp.json();
@@ -321,7 +322,7 @@ export default function DoctorOnlineExamRoom() {
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+      const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -395,7 +396,7 @@ export default function DoctorOnlineExamRoom() {
       const user = auth.currentUser;
       if (!user) return;
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/start`, {
+      const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}/start`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -529,7 +530,7 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
             prescriptions: draft.prescriptions || [],
             notes: finalNotes
           };
-          await fetch(`http://localhost:8080/api/medical-records/patient/${patientUserId}/add-entry`, {
+          await fetch(`${getApiUrl()}/medical-records/patient/${patientUserId}/add-entry`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ entry: medicalEntry })
@@ -537,7 +538,7 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
           if (draftKey) localStorage.removeItem(draftKey);
         }
       } catch {}
-      const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/finish`, {
+      const response = await fetch(`${getApiUrl()}/appointments/${appointmentId}/finish`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

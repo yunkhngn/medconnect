@@ -73,7 +73,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
 
 # Backend API
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
+NEXT_PUBLIC_API_URL=https://api.medconnects.app/api
 ```
 
 ### Step 4: Run development server

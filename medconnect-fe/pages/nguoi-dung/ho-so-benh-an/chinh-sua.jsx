@@ -46,6 +46,7 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import BHYTInput from "@/components/ui/BHYTInput";
 import AddressSelector from "@/components/ui/AddressSelector";
+import { getApiUrl } from "@/utils/api";
 import { useAddressData } from "@/hooks/useAddressData";
 
 export default function EditEMRPage() {
@@ -117,7 +118,7 @@ export default function EditEMRPage() {
   const fetchEMR = async (firebaseUser) => {
     try {
       const token = await firebaseUser.getIdToken();
-      const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+      const response = await fetch(`${getApiUrl()}/medical-records/my-profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -244,7 +245,7 @@ export default function EditEMRPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch("http://localhost:8080/api/medical-photo/upload", {
+        const response = await fetch(`${getApiUrl()}/medical-photo/upload`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -411,7 +412,7 @@ export default function EditEMRPage() {
         consents: profile.consents,
       };
 
-      const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+      const response = await fetch(`${getApiUrl()}/medical-records/my-profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -446,7 +447,7 @@ export default function EditEMRPage() {
     try {
       const token = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8080/api/medical-records/my-profile", {
+      const response = await fetch(`${getApiUrl()}/medical-records/my-profile`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
