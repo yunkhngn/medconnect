@@ -31,7 +31,7 @@ import { useAddressData } from "@/hooks/useAddressData";
 import Float from "@/components/ui/Float";
 import Image from "next/image";
 
-import { API_BASE_URL } from "@/utils/api";
+import { getBaseUrl } from "@/utils/api";
 
 const SPECIALTY_MAP = {
   TIM_MACH: "Tim mạch",
@@ -72,7 +72,7 @@ export default function TimKiemBacSi() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/doctor/dashboard/all`);
+      const response = await fetch(`${getBaseUrl()}/doctor/dashboard/all`);
       if (response.ok) {
         const data = await response.json();
         const doctorsList = Array.isArray(data) ? data : [];

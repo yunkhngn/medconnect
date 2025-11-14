@@ -19,5 +19,9 @@ export const API_BASE_URL = getApiUrl();
  */
 export const getBaseUrl = () => {
   const apiUrl = getApiUrl();
-  return apiUrl.replace('/api', '');
+  // Remove trailing /api if present
+  let baseUrl = apiUrl.replace(/\/api$/, '');
+  // Ensure it doesn't end with a slash
+  baseUrl = baseUrl.replace(/\/$/, '');
+  return baseUrl;
 };
