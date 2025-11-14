@@ -17,11 +17,12 @@ deploy:
     - apk add --no-cache openssh-client
     # Setup SSH
     - mkdir -p ~/.ssh
-    - echo "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
+    # Support both RSA and ED25519 keys
+    - echo "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_key
+    - chmod 600 ~/.ssh/id_key
     - ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts
-    # Verify SSH connection
-    - ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST "echo 'SSH connection successful'"
+    # Verify SSH connection with verbose output for debugging
+    - ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "echo 'SSH connection successful'" || echo "⚠️ SSH connection failed, check key and VPS setup"
   script:
     - |
       echo "🚀 Starting deployment to VPS..."
@@ -30,7 +31,7 @@ deploy:
       DEPLOY_PATH=${VPS_DEPLOY_PATH:-/apps/g1-se1961-nj-swp391-fal25}
       
       # SSH into VPS and execute deployment commands
-      ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST "DEPLOY_PATH='$DEPLOY_PATH' bash -s" << 'ENDSSH'
+      ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "DEPLOY_PATH='$DEPLOY_PATH' bash -s" << 'ENDSSH'
         set -e  # Exit on error
         
         echo "📂 Changing to project directory: $DEPLOY_PATH"
@@ -62,7 +63,7 @@ deploy:
       echo "🎉 Deployment finished!"
   after_script:
     # Cleanup SSH key
-    - rm -f ~/.ssh/id_rsa
+    - rm -f ~/.ssh/id_key
   only:
     - main
   when: on_success
