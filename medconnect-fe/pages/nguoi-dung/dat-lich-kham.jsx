@@ -307,7 +307,7 @@ export default function DatLichKham() {
     setLoadingSlots(true);
     try {
       const response = await fetch(
-        `${apiUrl}/appointments/doctor/${selectedDoctor.id}/available-slots?date=${selectedDate}`
+        `${getApiUrl()}/appointments/doctor/${selectedDoctor.id}/available-slots?date=${selectedDate}`
       );
       if (response.ok) {
         const data = await response.json();

@@ -67,13 +67,14 @@ export default function PaymentPage() {
     if (!benefitLevel || !BENEFIT_LEVELS[benefitLevel]) return 0;
     
     const rate = BENEFIT_LEVELS[benefitLevel].rate;
-    // Parse rate like "80%" to get percentage
+    // Parse rate like "100%" to get percentage
     const percentage = parseFloat(rate.replace('%', ''));
     
-    // Discount = fee * (100 - percentage) / 100
-    // For example: 80% coverage means 20% discount
-    const discountPercent = 100 - percentage;
-    return Math.round(fee * discountPercent / 100);
+    // Discount = fee * percentage / 100
+    // Mức 1, 2, 5: 100% discount (miễn phí hoàn toàn)
+    // Mức 3: 95% discount (chỉ trả 5%)
+    // Mức 4: 80% discount (trả 20%)
+    return Math.round(fee * percentage / 100);
   };
 
   // Update discount when insurance checkbox changes
