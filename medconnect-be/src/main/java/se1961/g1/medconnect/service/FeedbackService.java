@@ -117,5 +117,43 @@ public class FeedbackService {
         
         return summary;
     }
+    
+    /**
+     * Get recent feedbacks for homepage testimonials
+     */
+    public List<Map<String, Object>> getRecentFeedbacks(int limit) {
+        List<Feedback> feedbacks = feedbackRepository.findAll().stream()
+                .sorted((f1, f2) -> {
+                    if (f1.getCreatedAt() == null && f2.getCreatedAt() == null) return 0;
+                    if (f1.getCreatedAt() == null) return 1;
+                    if (f2.getCreatedAt() == null) return -1;
+                    return f2.getCreatedAt().compareTo(f1.getCreatedAt());
+                })
+                .filter(f -> f.getComment() != null && !f.getComment().trim().isEmpty())
+                .limit(limit)
+                .collect(Collectors.toList());
+        
+        return feedbacks.stream()
+                .map(f -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("feedbackId", f.getFeedbackId());
+                    map.put("rating", f.getRating());
+                    map.put("comment", f.getComment());
+                    map.put("createdAt", f.getCreatedAt());
+                    
+                    // Patient info
+                    if (f.getPatient() != null) {
+                        map.put("patientName", f.getPatient().getName() != null ? 
+                                f.getPatient().getName() : "Bệnh nhân");
+                        map.put("patientAvatar", f.getPatient().getAvatarUrl());
+                    } else {
+                        map.put("patientName", "Bệnh nhân");
+                        map.put("patientAvatar", null);
+                    }
+                    
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
 }
 

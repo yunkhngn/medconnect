@@ -5,6 +5,7 @@ import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import se1961.g1.medconnect.dto.AdminDTO;
 import se1961.g1.medconnect.dto.CreateAdminRequest;
 import se1961.g1.medconnect.dto.UpdateAdminRequest;
@@ -31,6 +32,9 @@ public class AdminService {
 
     @Autowired
     private EmailService emailService;
+    
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     /**
      * Lấy danh sách tất cả admin
@@ -60,7 +64,6 @@ public class AdminService {
     /**
      * Tạo admin mới
      */
-    @Transactional
     public AdminDTO createAdmin(CreateAdminRequest request) throws Exception {
         // Kiểm tra email đã tồn tại chưa
         Optional<User> existingUser = userRepository.findAll().stream()
@@ -71,41 +74,66 @@ public class AdminService {
             throw new RuntimeException("Email đã tồn tại trong hệ thống");
         }
 
-        // Tạo user trên Firebase
-        UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
-                .setEmail(request.getEmail())
-                .setPassword(request.getPassword())
-                .setEmailVerified(true);
+        UserRecord userRecord = null;
+        final String[] firebaseUidHolder = {null};
         
-        UserRecord userRecord = firebaseAuth.createUser(firebaseRequest);
-
-        // Tạo admin trong database
-        Admin admin = new Admin();
-        admin.setEmail(request.getEmail());
-        admin.setFirebaseUid(userRecord.getUid());
-        admin.setRole(Role.ADMIN);
-        // Set default avatar for admin
-        admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
-
-        Admin savedAdmin = adminRepository.save(admin);
-        
-        // Send account creation email with password
         try {
-            // Extract name from email (part before @) or use "Admin"
-            String userName = request.getEmail().split("@")[0];
-            emailService.sendAccountCreatedEmail(
-                request.getEmail(),
-                userName,
-                request.getPassword(),
-                "Admin"
-            );
+            // Tạo user trên Firebase trước (ngoài transaction)
+            UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setPassword(request.getPassword())
+                    .setEmailVerified(true);
+            
+            userRecord = firebaseAuth.createUser(firebaseRequest);
+            final String firebaseUid = userRecord.getUid();
+            firebaseUidHolder[0] = firebaseUid;
+            
+            // Tạo admin trong database (trong transaction riêng)
+            Admin savedAdmin = transactionTemplate.execute(status -> {
+                Admin admin = new Admin();
+                admin.setEmail(request.getEmail());
+                admin.setFirebaseUid(firebaseUid);
+                admin.setRole(Role.ADMIN);
+                // Set default avatar for admin
+                admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
+                
+                return adminRepository.save(admin);
+            });
+            
+            // Send account creation email with password
+            try {
+                // Extract name from email (part before @) or use "Admin"
+                String userName = request.getEmail().split("@")[0];
+                emailService.sendAccountCreatedEmail(
+                    request.getEmail(),
+                    userName,
+                    request.getPassword(),
+                    "Admin"
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+                // Don't throw - email failure shouldn't break account creation
+            }
+            
+            return convertToDTO(savedAdmin);
+            
         } catch (Exception e) {
-            System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
-            // Don't throw - email failure shouldn't break account creation
+            // Nếu đã tạo Firebase user nhưng lưu database thất bại, xóa Firebase user
+            if (firebaseUidHolder[0] != null) {
+                try {
+                    System.out.println("⚠️ Database save failed, cleaning up Firebase user: " + firebaseUidHolder[0]);
+                    firebaseAuth.deleteUser(firebaseUidHolder[0]);
+                    System.out.println("✅ Firebase user cleaned up successfully");
+                } catch (Exception cleanupError) {
+                    System.err.println("❌ Failed to cleanup Firebase user: " + cleanupError.getMessage());
+                    // Log but don't throw - original exception is more important
+                }
+            }
+            // Re-throw original exception
+            throw e;
         }
-        
-        return convertToDTO(savedAdmin);
     }
+    
 
     /**
      * Cập nhật thông tin admin

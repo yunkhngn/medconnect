@@ -1,4 +1,17 @@
 # Multi-stage build for Spring Boot application
+
+# Dev stage - only install dependencies for hot reload
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS dev
+
+WORKDIR /app
+
+# Copy pom.xml and download dependencies (for better caching)
+# Use BuildKit cache mount for Maven dependencies
+COPY pom.xml .
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -B
+
+# Build stage - full build for production
 FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 
 WORKDIR /app

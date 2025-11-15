@@ -10,6 +10,7 @@ import se1961.g1.medconnect.repository.UserRepository;
 import se1961.g1.medconnect.service.FeedbackService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -101,6 +102,28 @@ public class FeedbackController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", summary);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
+    /**
+     * Get recent public feedbacks for homepage testimonials
+     * GET /api/feedback/recent
+     */
+    @GetMapping("/recent")
+    public ResponseEntity<?> getRecentFeedbacks(@RequestParam(defaultValue = "6") int limit) {
+        try {
+            List<Map<String, Object>> feedbacks = feedbackService.getRecentFeedbacks(limit);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", feedbacks);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {

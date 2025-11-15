@@ -84,8 +84,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/appointments").authenticated()
                 .requestMatchers("/api/appointments/**").authenticated()
 
-                // Feedback - public summary, authenticated create
+                // Feedback - public summary and recent, authenticated create
                 .requestMatchers("/api/feedback/doctor/*/summary").permitAll() // Public doctor feedback summary
+                .requestMatchers("/api/feedback/recent").permitAll() // Public recent feedbacks for homepage
                 .requestMatchers("/api/feedback/**").authenticated() // All other feedback endpoints require auth
 
                 // Reports - authenticated for all

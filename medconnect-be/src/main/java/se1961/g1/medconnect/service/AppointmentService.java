@@ -420,10 +420,30 @@ public class AppointmentService {
     }
     
     public void deleteAppointment(Long id) throws Exception {
-        if (!appointmentRepository.existsById(id)) {
-            throw new Exception("Appointment not found");
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        
+        // 1. Delete related payment/transaction
+        try {
+            paymentRepository.deleteByAppointment(appointment);
+            System.out.println("[deleteAppointment] ✅ Deleted payment/transaction for appointment ID: " + id);
+        } catch (Exception e) {
+            System.err.println("[deleteAppointment] ⚠️ Error deleting payment: " + e.getMessage());
+            // Continue even if payment deletion fails
         }
+        
+        // 2. Delete related video call session
+        try {
+            videoCallSessionRepository.deleteByAppointment(appointment);
+            System.out.println("[deleteAppointment] ✅ Deleted video call session for appointment ID: " + id);
+        } catch (Exception e) {
+            System.err.println("[deleteAppointment] ⚠️ Error deleting video call session: " + e.getMessage());
+            // Continue even if video call session deletion fails
+        }
+        
+        // 3. Delete the appointment
         appointmentRepository.deleteById(id);
+        System.out.println("[deleteAppointment] ✅ Deleted appointment ID: " + id);
     }
 
     public Appointment saveAppointment(Appointment appointment) {
