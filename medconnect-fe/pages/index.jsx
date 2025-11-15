@@ -7,7 +7,7 @@ import Float from "@/components/ui/Float";
 import { useState, useEffect } from "react";
 import { Stethoscope, Award, Star } from "lucide-react";
 
-import { getBaseUrl } from "@/utils/api";
+import { getBaseUrl, getApiUrl } from "@/utils/api";
 
 const SPECIALTY_MAP = {
   TIM_MACH: "Tim mạch",
@@ -124,7 +124,7 @@ export default function HomePage() {
           // Fetch ratings for doctors
           const ratingPromises = activeDoctors.map(async (doctor) => {
             try {
-              const ratingResponse = await fetch(`${API_BASE_URL}/api/feedback/doctor/${doctor.id}/summary`);
+              const ratingResponse = await fetch(`${getApiUrl()}/feedback/doctor/${doctor.id}/summary`);
               if (ratingResponse.ok) {
                 const ratingData = await ratingResponse.json();
                 return {
