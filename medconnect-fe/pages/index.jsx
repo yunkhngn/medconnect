@@ -636,5 +636,6 @@ export default function HomePage() {
         </Float>
       </section>
     </Default>
+    </>
   );
 }
