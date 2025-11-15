@@ -7,24 +7,10 @@ import Grid from "@/components/layouts/Grid";
 import { Calendar, Stethoscope, Search, Clock, Phone, Mail, Video, MapPin, User, Star } from "lucide-react";
 import { Button, Card, CardBody, CardHeader, Divider, Input, Chip, Select, SelectItem, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Tabs, Tab } from "@heroui/react";
 import { auth } from "@/lib/firebase";
-import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { parseReason, formatReasonForDisplay, formatSlotTime } from "@/utils/appointmentUtils";
 import DOMPurify from 'dompurify';
 import { getApiUrl } from "@/utils/api";
 
-const SLOT_TIMES = {
-  SLOT_1: "07:30 - 08:00",
-  SLOT_2: "08:15 - 08:45",
-  SLOT_3: "09:00 - 09:30",
-  SLOT_4: "09:45 - 10:15",
-  SLOT_5: "10:30 - 11:00",
-  SLOT_6: "11:15 - 11:45",
-  SLOT_7: "13:00 - 13:30",
-  SLOT_8: "13:45 - 14:15",
-  SLOT_9: "14:30 - 15:00",
-  SLOT_10: "15:15 - 15:45",
-  SLOT_11: "16:00 - 16:30",
-  SLOT_12: "16:45 - 17:15"
-};
 
 export default function OfflineExamListPage() {
   const router = useRouter();
@@ -169,7 +155,7 @@ export default function OfflineExamListPage() {
                 matchingEntry = exactDateMatches[0];
               } else if (exactDateMatches.length > 1) {
                 // Multiple entries on same date - find the one closest to appointment time
-                const slotTime = SLOT_TIMES[apt.slot];
+                const slotTime = formatSlotTime(apt.slot);
                 if (slotTime) {
                   const [startTime] = slotTime.split(' - ');
                   const [aptHour, aptMinute] = startTime.split(':').map(Number);
@@ -373,7 +359,7 @@ export default function OfflineExamListPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {appointments.map((apt)=> {
             const pr = parseReason(apt.reason);
-            const slotText = SLOT_TIMES[apt.slot] || apt.slot;
+            const slotText = formatSlotTime(apt.slot);
             const isPending = apt.status === "PENDING";
             const payInfo = paymentByAptId[apt.appointmentId] || paymentByAptId[apt.id];
             return (
@@ -566,7 +552,7 @@ export default function OfflineExamListPage() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Clock className="w-4 h-4" />
-                  <span>Giờ khám: {SLOT_TIMES[selectedAppointment.slot] || selectedAppointment.slot}</span>
+                  <span>Giờ khám: {formatSlotTime(selectedAppointment.slot)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Phone className="w-4 h-4" />

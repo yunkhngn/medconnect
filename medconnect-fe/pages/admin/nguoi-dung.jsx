@@ -41,6 +41,11 @@ const Patient = () => {
     onOpen: onEmrOpen,
     onOpenChange: onEmrOpenChange,
   } = useDisclosure();
+  const {
+    isOpen: isResetPasswordOpen,
+    onOpen: onResetPasswordOpen,
+    onOpenChange: onResetPasswordOpenChange,
+  } = useDisclosure();
 
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
@@ -56,6 +61,10 @@ const Patient = () => {
   const [appointmentsMap, setAppointmentsMap] = useState({});
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
+  const [selectedUserForReset, setSelectedUserForReset] = useState(null);
+  const [resetPasswordMode, setResetPasswordMode] = useState('email'); // 'email' or 'modal'
+  const [newPassword, setNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -739,6 +748,9 @@ const Patient = () => {
                       <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
                         Chỉnh sửa
                       </DropdownItem>
+                      <DropdownItem key="reset-password" onPress={() => handleResetPassword(patient)}>
+                        Reset mật khẩu
+                      </DropdownItem>
                       <DropdownItem key="toggle" onPress={() => toggleStatus(patient)}>
                         {(patient.status && patient.status.toLowerCase() === 'active') ? 'Tạm ngưng' : 'Kích hoạt'}
                       </DropdownItem>
@@ -1042,6 +1054,102 @@ const Patient = () => {
                 <ModalFooter>
                   <Button color="primary" variant="light" onPress={onClose}>
                     Đóng
+                  </Button>
+                </ModalFooter>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+
+        {/* Reset Password Modal */}
+        <Modal 
+          isOpen={isResetPasswordOpen} 
+          onOpenChange={onResetPasswordOpenChange}
+          size="md"
+          scrollBehavior="inside"
+          classNames={{
+            base: "max-w-[95vw] sm:max-w-[90vw] md:max-w-md",
+            header: "text-base sm:text-lg",
+            body: "p-4 sm:p-6",
+          }}
+        >
+          <ModalContent>
+            {(onClose) => (
+              <>
+                <ModalHeader className="flex flex-col gap-1">
+                  <h2 className="text-xl font-bold">Reset Mật Khẩu</h2>
+                  <p className="text-sm text-gray-500 font-normal">
+                    {selectedUserForReset && `${selectedUserForReset.fullName || selectedUserForReset.email}`}
+                  </p>
+                </ModalHeader>
+                <ModalBody>
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-800">
+                        Mật khẩu mới sẽ được tạo tự động và gửi về email của người dùng.
+                      </p>
+                    </div>
+
+                    {newPassword && (
+                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                        <h3 className="font-semibold text-green-900 mb-2">Mật khẩu mới đã được tạo:</h3>
+                        <div className="bg-white rounded p-3 border border-green-300">
+                          <code className="text-sm font-mono text-green-900 break-all">{newPassword}</code>
+                        </div>
+                        <p className="text-xs text-green-700 mt-2">
+                          Mật khẩu này cũng đã được gửi về email của người dùng.
+                        </p>
+                      </div>
+                    )}
+
+                    {!newPassword && (
+                      <div className="space-y-3">
+                        <div className="text-sm text-gray-600">
+                          <p>Chọn cách reset mật khẩu:</p>
+                          <p className="mt-2 font-medium">Email: {selectedUserForReset?.email}</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <Button
+                            color="primary"
+                            variant="bordered"
+                            onPress={() => handleResetPasswordSubmit(true)}
+                            isLoading={isResettingPassword}
+                            isDisabled={isResettingPassword}
+                            size="sm"
+                            className="h-auto py-3"
+                          >
+                            <div className="text-center">
+                              <div className="font-semibold">Gửi email</div>
+                              <div className="text-xs text-gray-500 mt-1">Chỉ gửi email</div>
+                            </div>
+                          </Button>
+                          <Button
+                            color="primary"
+                            variant="bordered"
+                            onPress={() => handleResetPasswordSubmit(false)}
+                            isLoading={isResettingPassword}
+                            isDisabled={isResettingPassword}
+                            size="sm"
+                            className="h-auto py-3"
+                          >
+                            <div className="text-center">
+                              <div className="font-semibold">Reset tại chỗ</div>
+                              <div className="text-xs text-gray-500 mt-1">Hiển thị trong modal</div>
+                            </div>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ModalBody>
+                <ModalFooter>
+                  <Button 
+                    color="danger" 
+                    variant="light" 
+                    onPress={onClose}
+                    size="sm"
+                  >
+                    {newPassword ? 'Đóng' : 'Hủy'}
                   </Button>
                 </ModalFooter>
               </>

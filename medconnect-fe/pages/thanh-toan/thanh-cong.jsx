@@ -6,6 +6,7 @@ import PatientFrame from "@/components/layouts/Patient/Frame";
 import { generateAppointmentPendingEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
 import { getApiUrl } from "@/utils/api";
+import { formatSlotTime } from "@/utils/appointmentUtils";
 
 export default function PaymentSuccess() {
   const router = useRouter();
@@ -67,13 +68,7 @@ export default function PaymentSuccess() {
                 
                 // Format date and time for email
                 const appointmentDate = new Date(appointment.date).toLocaleDateString('vi-VN');
-                const slotTimes = {
-                  SLOT_1: "07:30 - 08:00", SLOT_2: "08:15 - 08:45", SLOT_3: "09:00 - 09:30",
-                  SLOT_4: "09:45 - 10:15", SLOT_5: "10:30 - 11:00", SLOT_6: "11:15 - 11:45",
-                  SLOT_7: "13:00 - 13:30", SLOT_8: "13:45 - 14:15", SLOT_9: "14:30 - 15:00",
-                  SLOT_10: "15:15 - 15:45", SLOT_11: "16:00 - 16:30", SLOT_12: "16:45 - 17:15"
-                };
-                const appointmentTime = slotTimes[appointment.slot] || appointment.slot;
+                const appointmentTime = formatSlotTime(appointment.slot);
                 
                 const emailDetails = {
                   patientName: appointment.patient?.name || 'Bệnh nhân',

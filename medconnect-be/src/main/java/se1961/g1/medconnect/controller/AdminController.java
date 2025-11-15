@@ -1235,6 +1235,40 @@ public class AdminController {
     }
 
     /**
+     * Reset password for doctor or patient
+     * POST /api/admin/users/{id}/reset-password
+     */
+    @PostMapping("/users/{id}/reset-password")
+    public ResponseEntity<Map<String, Object>> resetUserPassword(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
+        try {
+            boolean sendEmail = request.get("sendEmail") != null ? (Boolean) request.get("sendEmail") : true;
+            
+            String newPassword = adminService.resetUserPassword(id, sendEmail);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", sendEmail ? "Đã reset mật khẩu và gửi email thành công" : "Đã reset mật khẩu thành công");
+            response.put("password", newPassword);
+            
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi khi reset mật khẩu: " + e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
      * Helper method to map Payment to response format
      */
     private Map<String, Object> mapPaymentToResponse(Payment payment) {

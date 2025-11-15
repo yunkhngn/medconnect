@@ -11,13 +11,7 @@ import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { parseBHYT, BENEFIT_LEVELS } from "@/utils/bhytHelper";
 import { getApiUrl } from "@/utils/api";
-
-const SLOT_TIMES = {
-  SLOT_1: "07:30 - 09:50",
-  SLOT_2: "10:00 - 12:20",
-  SLOT_3: "12:50 - 15:10",
-  SLOT_4: "15:20 - 17:40"
-};
+import { formatSlotTime } from "@/utils/appointmentUtils";
 
 export default function PaymentPage() {
   const router = useRouter();
@@ -405,7 +399,7 @@ export default function PaymentPage() {
               <Clock size={18} className="text-gray-400 mt-1" />
               <div>
                 <p className="text-sm text-gray-600">Giờ khám</p>
-                <p className="font-medium">{SLOT_TIMES[appointment.slot]}</p>
+                <p className="font-medium">{formatSlotTime(appointment.slot)}</p>
               </div>
             </div>
           </div>

@@ -7,24 +7,10 @@ import { useRouter } from "next/router";
 import Grid from "@/components/layouts/Grid";
 import PatientFrame from "@/components/layouts/Patient/Frame";
 import { auth } from "@/lib/firebase";
-import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { parseReason, formatReasonForDisplay, formatSlotTime } from "@/utils/appointmentUtils";
 import DOMPurify from 'dompurify';
 import { getApiUrl } from "@/utils/api";
 
-const SLOT_TIMES = {
-  SLOT_1: "07:30 - 08:00",
-  SLOT_2: "08:15 - 08:45",
-  SLOT_3: "09:00 - 09:30",
-  SLOT_4: "09:45 - 10:15",
-  SLOT_5: "10:30 - 11:00",
-  SLOT_6: "11:15 - 11:45",
-  SLOT_7: "13:00 - 13:30",
-  SLOT_8: "13:45 - 14:15",
-  SLOT_9: "14:30 - 15:00",
-  SLOT_10: "15:15 - 15:45",
-  SLOT_11: "16:00 - 16:30",
-  SLOT_12: "16:45 - 17:15"
-};
 
 export default function PatientOfflineExamList() {
   const router = useRouter();
@@ -185,7 +171,7 @@ export default function PatientOfflineExamList() {
                 matchingEntry = exactDateMatches[0];
               } else if (exactDateMatches.length > 1) {
                 // Multiple entries on same date - find the one closest to appointment time
-                const slotTime = SLOT_TIMES[apt.slot];
+                const slotTime = formatSlotTime(apt.slot);
                 if (slotTime) {
                   const [startTime] = slotTime.split(' - ');
                   const [aptHour, aptMinute] = startTime.split(':').map(Number);
@@ -571,7 +557,7 @@ export default function PatientOfflineExamList() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredAppointments.map((appointment) => {
             const date = new Date(appointment.date).toLocaleDateString('vi-VN');
-            const time = SLOT_TIMES[appointment.slot] || appointment.slot;
+            const time = formatSlotTime(appointment.slot);
             const isPending = appointment.status === "PENDING";
             const payInfo = paymentByAptId[appointment.id] || paymentByAptId[appointment.appointmentId];
             return (
@@ -777,7 +763,7 @@ export default function PatientOfflineExamList() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Clock className="w-4 h-4" />
-                  <span>Giờ khám: {SLOT_TIMES[selectedAppointment.slot] || selectedAppointment.slot}</span>
+                  <span>Giờ khám: {formatSlotTime(selectedAppointment.slot)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Phone className="w-4 h-4" />

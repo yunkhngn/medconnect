@@ -150,3 +150,52 @@ export function formatReasonForDisplay(reason, includeLabel = false) {
   
   return displayText;
 }
+
+/**
+ * Slot to time mapping
+ */
+const SLOT_TIMES = {
+  SLOT_1: "07:30 - 08:00",
+  SLOT_2: "08:15 - 08:45",
+  SLOT_3: "09:00 - 09:30",
+  SLOT_4: "09:45 - 10:15",
+  SLOT_5: "10:30 - 11:00",
+  SLOT_6: "11:15 - 11:45",
+  SLOT_7: "13:00 - 13:30",
+  SLOT_8: "13:45 - 14:15",
+  SLOT_9: "14:30 - 15:00",
+  SLOT_10: "15:15 - 15:45",
+  SLOT_11: "16:00 - 16:30",
+  SLOT_12: "16:45 - 17:15"
+};
+
+/**
+ * Convert slot code to time range
+ * @param {string} slot - Slot code (e.g., "SLOT_1", "SLOT_2")
+ * @returns {string} - Time range (e.g., "07:30 - 08:00") or original slot if not found
+ */
+export function formatSlotTime(slot) {
+  if (!slot) return '';
+  return SLOT_TIMES[slot] || slot;
+}
+
+/**
+ * Get all slot options for dropdowns
+ * @returns {Array} - Array of {value, label} objects
+ */
+export function getSlotOptions() {
+  return [
+    { value: 'SLOT_1', label: '07:30 - 08:00' },
+    { value: 'SLOT_2', label: '08:15 - 08:45' },
+    { value: 'SLOT_3', label: '09:00 - 09:30' },
+    { value: 'SLOT_4', label: '09:45 - 10:15' },
+    { value: 'SLOT_5', label: '10:30 - 11:00' },
+    { value: 'SLOT_6', label: '11:15 - 11:45' },
+    { value: 'SLOT_7', label: '13:00 - 13:30' },
+    { value: 'SLOT_8', label: '13:45 - 14:15' },
+    { value: 'SLOT_9', label: '14:30 - 15:00' },
+    { value: 'SLOT_10', label: '15:15 - 15:45' },
+    { value: 'SLOT_11', label: '16:00 - 16:30' },
+    { value: 'SLOT_12', label: '16:45 - 17:15' },
+  ];
+}

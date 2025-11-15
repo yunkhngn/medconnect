@@ -234,6 +234,87 @@ public class AdminService {
     }
 
     /**
+     * Reset password for doctor or patient
+     * @param userId User ID
+     * @param sendEmail Whether to send email with new password
+     * @return New password
+     */
+    @Transactional
+    public String resetUserPassword(Long userId, boolean sendEmail) throws Exception {
+        Optional<User> userOpt = userRepository.findById(userId);
+        
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("User không tồn tại");
+        }
+
+        User user = userOpt.get();
+        
+        // Generate new random password
+        String newPassword = generateRandomPassword();
+        
+        // Update password on Firebase
+        if (user.getFirebaseUid() != null && !user.getFirebaseUid().isEmpty()) {
+            UserRecord.UpdateRequest updateRequest = new UserRecord.UpdateRequest(user.getFirebaseUid())
+                    .setPassword(newPassword);
+            firebaseAuth.updateUser(updateRequest);
+        } else {
+            throw new RuntimeException("User không có Firebase UID");
+        }
+        
+        // Send email if requested
+        if (sendEmail) {
+            try {
+                String roleName = user.getRole() == Role.DOCTOR ? "Bác sĩ" : 
+                                 user.getRole() == Role.PATIENT ? "Bệnh nhân" : "Người dùng";
+                String userName = user.getName() != null ? user.getName() : 
+                                user.getEmail().split("@")[0];
+                emailService.sendAccountCreatedEmail(
+                    user.getEmail(),
+                    userName,
+                    newPassword,
+                    roleName
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send password reset email: " + e.getMessage());
+                // Don't throw - password reset should succeed even if email fails
+            }
+        }
+        
+        return newPassword;
+    }
+    
+    /**
+     * Generate random password
+     */
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        StringBuilder password = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        
+        // Ensure at least one uppercase, one lowercase, one digit, one special char
+        password.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(random.nextInt(26)));
+        password.append("abcdefghijklmnopqrstuvwxyz".charAt(random.nextInt(26)));
+        password.append("0123456789".charAt(random.nextInt(10)));
+        password.append("!@#$%^&*".charAt(random.nextInt(8)));
+        
+        // Add remaining characters
+        for (int i = 4; i < 12; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        
+        // Shuffle the password
+        char[] passwordArray = password.toString().toCharArray();
+        for (int i = passwordArray.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[j];
+            passwordArray[j] = temp;
+        }
+        
+        return new String(passwordArray);
+    }
+
+    /**
      * Convert User entity to AdminDTO
      */
     private AdminDTO convertToDTO(User user) {

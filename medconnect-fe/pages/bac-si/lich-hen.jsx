@@ -15,26 +15,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import ToastNotification from "@/components/ui/ToastNotification";
 import { useRouter } from "next/router";
-import { parseReason, formatReasonForDisplay } from "@/utils/appointmentUtils";
+import { parseReason, formatReasonForDisplay, formatSlotTime } from "@/utils/appointmentUtils";
 import { generateAppointmentConfirmationEmail } from "@/utils/emailTemplates";
 import { sendEmailViaAPI } from "@/utils/emailHelper";
 import { getApiUrl } from "@/utils/api";
 import DOMPurify from 'dompurify';
 
-const SLOT_TIMES = {
-  SLOT_1: "07:30 - 08:00",
-  SLOT_2: "08:15 - 08:45",
-  SLOT_3: "09:00 - 09:30",
-  SLOT_4: "09:45 - 10:15",
-  SLOT_5: "10:30 - 11:00",
-  SLOT_6: "11:15 - 11:45",
-  SLOT_7: "13:00 - 13:30",
-  SLOT_8: "13:45 - 14:15",
-  SLOT_9: "14:30 - 15:00",
-  SLOT_10: "15:15 - 15:45",
-  SLOT_11: "16:00 - 16:30",
-  SLOT_12: "16:45 - 17:15"
-};
 
 export default function DoctorAppointmentsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -168,7 +154,7 @@ export default function DoctorAppointmentsPage() {
           
           if (confirmedAppointment && confirmedAppointment.patient?.email) {
             const appointmentDate = new Date(confirmedAppointment.date).toLocaleDateString('vi-VN');
-            const appointmentTime = SLOT_TIMES[confirmedAppointment.slot] || confirmedAppointment.slot;
+            const appointmentTime = formatSlotTime(confirmedAppointment.slot);
             
             const emailDetails = {
               patientName: confirmedAppointment.patient?.name || 'Bệnh nhân',
@@ -741,7 +727,7 @@ export default function DoctorAppointmentsPage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Giờ khám</p>
-                          <p className="font-semibold text-gray-900">{SLOT_TIMES[apt.slot]}</p>
+                          <p className="font-semibold text-gray-900">{formatSlotTime(apt.slot)}</p>
                         </div>
                       </div>
                     </div>
@@ -1098,7 +1084,7 @@ export default function DoctorAppointmentsPage() {
                                 <p className="text-sm font-medium text-blue-900">Khung giờ</p>
                               </div>
                               <p className="text-xl font-bold text-blue-900">
-                                {SLOT_TIMES[selectedAppointment.slot]}
+                                {formatSlotTime(selectedAppointment.slot)}
                               </p>
                             </div>
                           </div>

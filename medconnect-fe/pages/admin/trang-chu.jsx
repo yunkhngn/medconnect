@@ -40,6 +40,7 @@ import {
 
 import { API_BASE_URL } from "@/utils/api";
 import { useGemini } from '@/hooks/useGemini';
+import { formatSlotTime } from '@/utils/appointmentUtils';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -411,6 +412,7 @@ Lưu ý: Phân tích này chỉ mang tính chất tham khảo và có thể chư
   };
 
   return (
+    <>
     <AdminFrame title="Dashboard">
       <Grid
         leftChildren={
@@ -701,7 +703,7 @@ Lưu ý: Phân tích này chỉ mang tính chất tham khảo và có thể chư
                             <TableCell className="text-xs sm:text-sm">
                               <div>
                                 <p className="font-medium">{appointment.date && new Date(appointment.date).toLocaleDateString('vi-VN')}</p>
-                                <p className="text-xs text-gray-500">{appointment.slot}</p>
+                                <p className="text-xs text-gray-500">{formatSlotTime(appointment.slot)}</p>
                               </div>
                             </TableCell>
                             <TableCell>

@@ -24,6 +24,7 @@ import {
 } from '@heroui/react';
 
 import { API_BASE_URL } from "@/utils/api";
+import { formatSlotTime, getSlotOptions } from "@/utils/appointmentUtils";
 
 const Appointment = () => {
   const { user } = useAuth();
@@ -60,20 +61,7 @@ const Appointment = () => {
     { value: 'cancelled', label: 'Đã hủy', color: 'danger' },
   ];
 
-  const slotOptions = [
-    { value: 'SLOT_1', label: '07:30 - 08:00' },
-    { value: 'SLOT_2', label: '08:15 - 08:45' },
-    { value: 'SLOT_3', label: '09:00 - 09:30' },
-    { value: 'SLOT_4', label: '09:45 - 10:15' },
-    { value: 'SLOT_5', label: '10:30 - 11:00' },
-    { value: 'SLOT_6', label: '11:15 - 11:45' },
-    { value: 'SLOT_7', label: '13:00 - 13:30' },
-    { value: 'SLOT_8', label: '13:45 - 14:15' },
-    { value: 'SLOT_9', label: '14:30 - 15:00' },
-    { value: 'SLOT_10', label: '15:15 - 15:45' },
-    { value: 'SLOT_11', label: '16:00 - 16:30' },
-    { value: 'SLOT_12', label: '16:45 - 17:15' },
-  ];
+  const slotOptions = getSlotOptions();
 
   useEffect(() => {
     if (user) {
@@ -645,7 +633,7 @@ const Appointment = () => {
                     {new Date(appointment.appointmentDate).toLocaleDateString('vi-VN')}
                   </p>
                   <p className="text-xs text-blue-600">
-                    {appointment.slotTime}
+                    {appointment.slotTime || formatSlotTime(appointment.slot)}
                   </p>
                 </div>
               </TableCell>
@@ -758,7 +746,7 @@ const Appointment = () => {
                         <p className="text-sm text-gray-600">Bệnh nhân: <span className="font-medium text-gray-800">{currentAppointment.patientName}</span></p>
                         <p className="text-sm text-gray-600">Bác sĩ: <span className="font-medium text-gray-800">{currentAppointment.doctorName}</span></p>
                         <p className="text-sm text-gray-600">Ngày khám: <span className="font-medium text-gray-800">{new Date(currentAppointment.appointmentDate).toLocaleDateString('vi-VN')}</span></p>
-                        <p className="text-sm text-gray-600">Giờ khám: <span className="font-medium text-gray-800">{currentAppointment.slotTime || currentAppointment.slot}</span></p>
+                        <p className="text-sm text-gray-600">Giờ khám: <span className="font-medium text-gray-800">{currentAppointment.slotTime || formatSlotTime(currentAppointment.slot)}</span></p>
                       </div>
                       <Select
                         label="Trạng thái"
