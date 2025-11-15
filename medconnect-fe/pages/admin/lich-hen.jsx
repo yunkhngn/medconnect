@@ -17,7 +17,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
   Chip,
   Select,
   SelectItem,
@@ -29,7 +28,7 @@ import { API_BASE_URL } from "@/utils/api";
 const Appointment = () => {
   const { user } = useAuth();
   const toast = useToast();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -396,13 +395,19 @@ const Appointment = () => {
       slot: '',
       status: appointment.status.toLowerCase(),
     });
-    onOpen();
+    setIsModalOpen(true);
   };
 
   const handleAdd = () => {
     setCurrentAppointment(null);
     resetForm();
-    onOpen();
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setCurrentAppointment(null);
+    resetForm();
+    setIsModalOpen(false);
   };
 
   const resetForm = () => {
@@ -673,9 +678,20 @@ const Appointment = () => {
       <AdminFrame title="Quản Lý Lịch Hẹn">
         <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
+      <Modal 
+        isOpen={isModalOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            handleModalClose();
+          } else {
+            setIsModalOpen(true);
+          }
+        }} 
+        size="2xl"
+      >
         <ModalContent>
-          {(onClose) => (
+          {(onClose) => {
+            return (
             <>
               <ModalHeader>
                 {currentAppointment ? 'Chỉnh sửa lịch hẹn' : 'Thêm lịch hẹn mới'}
@@ -864,7 +880,7 @@ const Appointment = () => {
                 </div>
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onClose}>
+                <Button variant="light" onPress={handleModalClose}>
                   Hủy
                 </Button>
                 <Button
@@ -872,7 +888,7 @@ const Appointment = () => {
                   onPress={async () => {
                     const success = await handleSubmit();
                     if (success) {
-                      onClose();
+                      handleModalClose();
                     }
                   }}
                 >
@@ -880,7 +896,8 @@ const Appointment = () => {
                 </Button>
               </ModalFooter>
             </>
-          )}
+            );
+          }}
         </ModalContent>
       </Modal>
       </AdminFrame>

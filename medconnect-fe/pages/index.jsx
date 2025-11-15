@@ -53,48 +53,47 @@ export default function HomePage() {
   const [doctors, setDoctors] = useState([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [doctorRatings, setDoctorRatings] = useState({});
-
-  const testimonials = [
-    {
-      name: "Thanh Ngọc",
-      quote: "Bác sĩ phản hồi rất nhanh, tư vấn rõ ràng. Tôi đặt khám từ xa mà vẫn thấy yên tâm.",
-      role: "Patient",
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Thanh Ngọc")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-    },
-    {
-      name: "Thuỳ Trang",
-      quote: "Đặt lịch khám chưa đến 5 phút, nhận thông báo ngay. Không cần gọi điện như trước.",
-      role: "Patient",
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Thuỳ Trang")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-    },
-    {
-      name: "Hà Vi",
-      quote: "Kết quả trả trực tiếp trên ứng dụng, rất tiện. Bác sĩ dặn dò sau khi xem kết quả.",
-      role: "Patient",
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Hà Vi")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-    },
-    {
-      name: "Minh Anh",
-      quote: "Giao diện dễ sử dụng, tìm bác sĩ theo chuyên khoa rất nhanh. Rất hài lòng.",
-      role: "Patient",
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Minh Anh")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-    },
-    {
-      name: "Quang Huy",
-      quote: "Bác sĩ tư vấn tận tình, giải thích rõ ràng về tình trạng sức khỏe. Cảm ơn MedConnect!",
-      role: "Patient",
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Quang Huy")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-    },
-    {
-      name: "Lan Anh",
-      quote: "Dịch vụ chăm sóc khách hàng tốt, hỗ trợ kịp thời. Sẽ tiếp tục sử dụng.",
-      role: "Patient",
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent("Lan Anh")}&size=128&bold=true&rounded=true&background=random&color=ffffff`
-    }
-  ];
-
+  const [testimonials, setTestimonials] = useState([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(true);
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [heroLoaded, setHeroLoaded] = useState(false);
+
+  // Fetch testimonials from backend
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        setLoadingTestimonials(true);
+        const response = await fetch(`${getApiUrl()}/feedback/recent?limit=6`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data && Array.isArray(data.data)) {
+            // Map feedback data to testimonials format
+            const mappedTestimonials = data.data.map((feedback) => ({
+              id: feedback.feedbackId,
+              name: feedback.patientName || "Bệnh nhân",
+              quote: feedback.comment || "",
+              role: "Patient",
+              avatar: feedback.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(feedback.patientName || "Bệnh nhân")}&size=128&bold=true&rounded=true&background=random&color=ffffff`,
+              rating: feedback.rating || 5,
+            }));
+            setTestimonials(mappedTestimonials);
+          } else {
+            // Fallback to empty array if no feedbacks
+            setTestimonials([]);
+          }
+        } else {
+          setTestimonials([]);
+        }
+      } catch (error) {
+        console.error("Error fetching testimonials:", error);
+        setTestimonials([]);
+      } finally {
+        setLoadingTestimonials(false);
+      }
+    };
+
+    fetchTestimonials();
+  }, []);
 
   // Fetch real doctors from backend
   useEffect(() => {
@@ -561,45 +560,83 @@ export default function HomePage() {
                 Bệnh nhân nói gì về chúng tôi
               </h2>
               <p className="text-sm sm:text-base md:text-lg text-gray-600">
-                Hơn 1,000 bệnh nhân đã tin tưởng sử dụng dịch vụ
+                {testimonials.length > 0 
+                  ? `Hơn ${testimonials.length} bệnh nhân đã tin tưởng sử dụng dịch vụ`
+                  : "Hơn 1,000 bệnh nhân đã tin tưởng sử dụng dịch vụ"}
               </p>
             </div>
           </Float>
           <div className="relative">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-              {getVisibleTestimonials().map((t, i) => (
-                <Float key={`${currentTestimonialIndex}-${i}`} variant="fadeInLeft" delay={i * 0.1}>
-                  <Card className="border-none shadow-sm hover:shadow-md transition-all duration-300">
+            {loadingTestimonials ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="border-none shadow-sm">
                     <CardBody className="p-4 sm:p-6">
-                      <p className="text-sm sm:text-base text-gray-700 italic mb-3 sm:mb-4">"{t.quote}"</p>
+                      <Skeleton className="h-20 w-full mb-4" />
                       <div className="flex items-center gap-3">
-                        <Avatar src={t.avatar} size="sm" />
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm sm:text-base">{t.name}</p>
-                          <p className="text-xs text-gray-500">{t.role}</p>
+                        <Skeleton className="w-10 h-10 rounded-full" />
+                        <div className="flex-1">
+                          <Skeleton className="h-4 w-24 mb-2" />
+                          <Skeleton className="h-3 w-16" />
                         </div>
                       </div>
                     </CardBody>
                   </Card>
-                </Float>
-              ))}
-            </div>
-            
-            {/* Carousel Indicators */}
-            <div className="flex justify-center mt-6 space-x-2">
-              {Array.from({ length: Math.ceil(testimonials.length / 3) }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentTestimonialIndex(i * 3)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    Math.floor(currentTestimonialIndex / 3) === i
-                      ? 'bg-primary scale-125'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                  aria-label={`Go to testimonial set ${i + 1}`}
-                />
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : testimonials.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                  {getVisibleTestimonials().map((t, i) => (
+                    <Float key={`${currentTestimonialIndex}-${i}`} variant="fadeInLeft" delay={i * 0.1}>
+                      <Card className="border-none shadow-sm hover:shadow-md transition-all duration-300">
+                        <CardBody className="p-4 sm:p-6">
+                          <div className="flex items-center gap-1 mb-2">
+                            {[...Array(5)].map((_, idx) => (
+                              <Star
+                                key={idx}
+                                size={14}
+                                className={idx < (t.rating || 5) ? "text-yellow-400 fill-current" : "text-gray-300"}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-sm sm:text-base text-gray-700 italic mb-3 sm:mb-4">"{t.quote}"</p>
+                          <div className="flex items-center gap-3">
+                            <Avatar src={t.avatar} size="sm" showFallback />
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm sm:text-base">{t.name}</p>
+                              <p className="text-xs text-gray-500">{t.role}</p>
+                            </div>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    </Float>
+                  ))}
+                </div>
+                
+                {/* Carousel Indicators */}
+                {testimonials.length > 3 && (
+                  <div className="flex justify-center mt-6 space-x-2">
+                    {Array.from({ length: Math.ceil(testimonials.length / 3) }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setCurrentTestimonialIndex(i * 3)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          Math.floor(currentTestimonialIndex / 3) === i
+                            ? 'bg-primary scale-125'
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                        aria-label={`Go to testimonial set ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-600">Chưa có đánh giá nào</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

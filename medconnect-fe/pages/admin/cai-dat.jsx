@@ -77,14 +77,14 @@ const Setting = () => {
       const email = firebaseUser.email || '';
       const displayName = firebaseUser.displayName || '';
       
-      // Try to get additional info from backend
+      // Get info from backend
       try {
         const token = await firebaseUser.getIdToken();
         const response = await fetch(`${getApiUrl()}/user/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
-  });
+        });
 
         if (response.ok) {
           const data = await response.json();
@@ -104,6 +104,7 @@ const Setting = () => {
           });
         }
       } catch (backendError) {
+        console.error('Error fetching profile from backend:', backendError);
         // Fallback to Firebase data
         setProfileData({
           name: displayName || '',
@@ -120,8 +121,8 @@ const Setting = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!profileData.name || !profileData.phone) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+    if (!profileData.name) {
+      toast.error('Vui lòng nhập họ và tên');
       return;
     }
 
@@ -133,33 +134,27 @@ const Setting = () => {
         return;
       }
 
-      // Try to update via backend API
-      try {
-        const response = await fetch(`${getApiUrl()}/user/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: profileData.name,
-            phone: profileData.phone,
-          }),
-        });
+      // Update via backend API
+      const response = await fetch(`${getApiUrl()}/user/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profileData.name,
+          phone: profileData.phone || '',
+        }),
+      });
 
-        if (response.ok) {
-          toast.success('Đã lưu thông tin cá nhân!');
-        } else {
-          // If backend update fails, at least update Firebase display name
-          if (auth.currentUser) {
-            // Note: Firebase display name update requires re-authentication
-            // For now, just show success message
-            toast.success('Đã lưu thông tin cá nhân!');
-          }
-        }
-      } catch (updateError) {
-        // If backend is not available, just show success
+      if (response.ok) {
+        const data = await response.json();
         toast.success('Đã lưu thông tin cá nhân!');
+        // Refresh profile data
+        await fetchAdminProfile();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.error || 'Lỗi khi lưu thông tin');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -357,7 +352,7 @@ const Setting = () => {
         <CardBody className="p-6 space-y-4">
           <Input
             label="Họ và tên"
-            placeholder="Nhập họ và tên"
+            placeholder={profileData.name || "Nhập họ và tên"}
             value={profileData.name}
             onValueChange={(v) => setProfileData({ ...profileData, name: v })}
             variant="bordered"
@@ -371,12 +366,12 @@ const Setting = () => {
           <Input
             label="Email"
             type="email"
-            placeholder="email@example.com"
             value={profileData.email}
             disabled
             variant="bordered"
             labelPlacement="outside"
             startContent={<Mail className="text-default-400" size={20} />}
+            description="Email không thể thay đổi"
             classNames={{
               input: "text-base",
               inputWrapper: "border-default-200 bg-gray-50"
@@ -384,7 +379,7 @@ const Setting = () => {
           />
           <Input
             label="Số điện thoại"
-            placeholder="Nhập số điện thoại"
+            placeholder={profileData.phone || "Nhập số điện thoại"}
             value={profileData.phone}
             onValueChange={(v) => setProfileData({ ...profileData, phone: v })}
             variant="bordered"
