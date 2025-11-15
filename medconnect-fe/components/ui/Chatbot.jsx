@@ -24,6 +24,7 @@ const Chatbot = () => {
   const [btnPos, setBtnPos] = useState({ x: null, y: null });
   const draggingRef = useRef(false);
   const startRef = useRef({ x: 0, y: 0 });
+  const hasMovedRef = useRef(false); // Track if mouse moved during drag
   const [panelSide, setPanelSide] = useState('right'); // 'left' | 'right'
 
   const updatePanelSide = (nextPos = btnPos) => {
@@ -48,35 +49,23 @@ const Chatbot = () => {
           console.warn('[Chatbot] Failed to parse saved position:', e);
         }
       }
-      // Default position: bottom-right, but avoid scroll button area
-      // ScrollUp button: bottom-24 (96px) right-6 (24px), size w-16 h-16 (64px)
+      // Default position: bottom-right, same row as scroll button
+      // ScrollUp button: bottom-6 (24px) right-6 (24px), size w-16 h-16 (64px)
       const vw = window.innerWidth; 
       const vh = window.innerHeight;
       const scrollButtonSize = 64; // w-16 h-16 = 64px
       const scrollButtonRight = 24; // right-6 = 24px
-      const scrollButtonBottom = 96; // bottom-24 = 96px
+      const scrollButtonBottom = 24; // bottom-6 = 24px
       const chatbotSize = 64;
       const margin = 16; // Minimum gap between buttons
       
-      // Calculate scroll button area
+      // Calculate scroll button position
       const scrollButtonX = vw - scrollButtonRight - scrollButtonSize;
       const scrollButtonY = vh - scrollButtonBottom - scrollButtonSize;
       
-      // Place chatbot to avoid scroll button - try positions with margin
-      let initX = vw - 16 - chatbotSize; // Default bottom-right
-      let initY = vh - 16 - chatbotSize;
-      
-      // If would overlap, move left or up
-      if (initX < scrollButtonX + scrollButtonSize + margin && 
-          initY < scrollButtonY + scrollButtonSize + margin) {
-        // Move left of scroll button
-        initX = scrollButtonX - chatbotSize - margin;
-        // If still too close to left edge, move up instead
-        if (initX < 16) {
-          initX = vw - 16 - chatbotSize;
-          initY = scrollButtonY - chatbotSize - margin;
-        }
-      }
+      // Place chatbot to the left of scroll button, same row (same bottom)
+      const initX = scrollButtonX - chatbotSize - margin;
+      const initY = scrollButtonY; // Same bottom as scroll button
       
       const init = { 
         x: Math.max(16, initX), 
@@ -94,25 +83,49 @@ const Chatbot = () => {
 
   const onBtnMouseDown = (e) => {
     draggingRef.current = true;
-    startRef.current = { x: e.clientX - btnPos.x, y: e.clientY - btnPos.y };
+    hasMovedRef.current = false; // Reset move flag
+    startRef.current = { 
+      x: e.clientX - btnPos.x, 
+      y: e.clientY - btnPos.y,
+      startX: e.clientX,
+      startY: e.clientY
+    };
   };
   const onBtnMouseMove = (e) => {
     if (!draggingRef.current) return;
+    
+    // Check if mouse has moved more than 5px (threshold for drag vs click)
+    const moveDistance = Math.hypot(
+      e.clientX - startRef.current.startX,
+      e.clientY - startRef.current.startY
+    );
+    
+    if (moveDistance > 5) {
+      hasMovedRef.current = true; // Mark that mouse has moved (it's a drag, not a click)
+    }
+    
     const pos = { x: e.clientX - startRef.current.x, y: e.clientY - startRef.current.y };
     setBtnPos(pos);
   };
   const onBtnMouseUp = () => {
     if (!draggingRef.current) return;
+    const wasDragging = hasMovedRef.current;
     draggingRef.current = false;
+    
+    // Reset hasMovedRef after a short delay to allow onClick to check it
+    setTimeout(() => {
+      hasMovedRef.current = false;
+    }, 100);
+    
     const vw = window.innerWidth; 
     const vh = window.innerHeight;
     const size = 64; // button size
     const margin = 16; // Minimum gap between buttons
     
-    // ScrollUp button position: bottom-24 (96px) right-6 (24px), size 64px
+    // ScrollUp button position: bottom-6 (24px) right-6 (24px), size 64px
     const scrollButtonSize = 64;
     const scrollButtonRight = 24;
-    const scrollButtonBottom = 96;
+    const scrollButtonBottom = 24;
     const scrollButtonX = vw - scrollButtonRight - scrollButtonSize;
     const scrollButtonY = vh - scrollButtonBottom - scrollButtonSize;
     
@@ -129,8 +142,9 @@ const Chatbot = () => {
       { x: 16, y: 16 }, // TL
       { x: vw - size - 16, y: 16 }, // TR
       { x: 16, y: vh - size - 16 }, // BL
-      // BR positions: try different positions to avoid scroll button
-      { x: scrollButtonX - size - margin, y: vh - size - 16 }, // Left of scroll button
+      // BR positions: same row as scroll button (preferred)
+      { x: scrollButtonX - size - margin, y: scrollButtonY }, // Left of scroll button, same row
+      { x: scrollButtonX - size - margin, y: vh - size - 16 }, // Left of scroll button, bottom
       { x: vw - size - 16, y: scrollButtonY - size - margin }, // Above scroll button
       { x: scrollButtonX - size - margin, y: scrollButtonY - size - margin }, // Above-left of scroll button
       { x: 16, y: (vh - size) / 2 }, // ML
@@ -153,9 +167,11 @@ const Chatbot = () => {
     });
     
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-    const best = validCandidates.length > 0
+    // Prefer same row position (same Y as scroll button)
+    const sameRowCandidate = validCandidates.find(c => Math.abs(c.y - scrollButtonY) < 5);
+    const best = sameRowCandidate || (validCandidates.length > 0
       ? validCandidates.reduce((best, c) => (dist(btnPos, c) < dist(btnPos, best) ? c : best), validCandidates[0])
-      : { x: 16, y: 16 }; // Fallback to top-left if all positions conflict
+      : { x: scrollButtonX - size - margin, y: scrollButtonY }); // Fallback to same row
     
     setBtnPos(best);
     updatePanelSide(best);
@@ -513,7 +529,15 @@ const Chatbot = () => {
         onDragStart={preventDrag}
       >
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={(e) => {
+            // Only toggle if it wasn't a drag (mouse didn't move more than threshold)
+            // Use setTimeout to check after mouse up event has processed
+            setTimeout(() => {
+              if (!hasMovedRef.current && !draggingRef.current) {
+                setIsOpen(!isOpen);
+              }
+            }, 0);
+          }}
           className="w-16 h-16 rounded-full bg-gradient-to-r from-sky-600 to-sky-500 text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group backdrop-blur-sm border-4 border-white"
           aria-label="Open chatbot"
           draggable={false}

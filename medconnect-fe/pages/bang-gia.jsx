@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Default } from '@/components/layouts';
 import { Card, CardBody, Divider, Chip, Button } from '@heroui/react';
 import { 
-  Check, Video, Hospital, Clock, Star, Shield, Award, Loader2,
+  Check, Video, Hospital, Clock, Shield, Award, Loader2,
   Heart, Sparkles, Baby, Ear, Users, Stethoscope, Eye, 
   Tooth, Brain, Bone, Activity
 } from 'lucide-react';
@@ -66,7 +66,7 @@ const PricingPage = () => {
   const fetchSpecialties = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${getApiUrl()}/specialties/dropdown`);
+      const response = await fetch(`${getApiUrl()}/specialties/public`);
       
       if (response.ok) {
         const data = await response.json();
@@ -81,8 +81,7 @@ const PricingPage = () => {
             inPersonPrice: specialty.offlinePrice ?? null,
             onlinePrice: specialty.onlinePrice ?? null,
             duration: '30-45 phút',
-            rating: (4.5 + Math.random() * 0.4).toFixed(1),
-            doctors: Math.floor(Math.random() * 15) + 8,
+            doctors: specialty.doctorCount || 0,
             popular: index < 3,
             features: getFeaturesBySpecialty(specialty.name)
           };
@@ -285,10 +284,6 @@ const PricingPage = () => {
                                     )}
                                   </div>
                                   <div className="flex items-center space-x-3 mt-1 text-xs text-gray-500">
-                                    <div className="flex items-center">
-                                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                                      <span>{spec.rating}</span>
-                                    </div>
                                     <span>{spec.doctors} bác sĩ</span>
                                     <div className="flex items-center">
                                       <Clock className="w-3 h-3 mr-1" />

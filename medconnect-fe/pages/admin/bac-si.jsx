@@ -307,31 +307,38 @@ const Doctor = () => {
 
   // Left Panel - Filters & Stats
   const leftPanel = (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Thống kê</h3>
-        <div className="space-y-3">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-600">Tổng bác sĩ</p>
-            <p className="text-2xl font-bold text-blue-600">{doctors.length}</p>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Thống kê</h3>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600 truncate">Tổng bác sĩ</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">{doctors.length}</p>
           </div>
-          <div className="p-4 bg-green-50 rounded-lg">
-            <p className="text-sm text-gray-600">Đang hoạt động</p>
-            <p className="text-2xl font-bold text-green-600">
-              {doctors.filter((d) => d.status === 'active').length}
+          <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600 truncate">Đang hoạt động</p>
+            <p className="text-xl sm:text-2xl font-bold text-green-600">
+              {doctors.filter((d) => d.status === 'active' || d.status === 'ACTIVE').length}
             </p>
           </div>
         </div>
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Bộ lọc</h3>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Bộ lọc</h3>
         <div className="space-y-3">
           <Select
             label="Trạng thái"
             placeholder="Chọn trạng thái"
+            size="sm"
             selectedKeys={selectedStatus ? [selectedStatus] : []}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onSelectionChange={(keys) => {
+              const value = Array.from(keys)[0] || 'all';
+              setSelectedStatus(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
+            }}
           >
             <SelectItem key="all" value="all">Tất cả</SelectItem>
             <SelectItem key="PENDING" value="PENDING">Chờ duyệt</SelectItem>
@@ -342,8 +349,15 @@ const Doctor = () => {
           <Select
             label="Chuyên khoa"
             placeholder="Chọn chuyên khoa"
+            size="sm"
             selectedKeys={selectedSpecialty ? [selectedSpecialty] : []}
-            onChange={(e) => setSelectedSpecialty(e.target.value)}
+            onSelectionChange={(keys) => {
+              const value = Array.from(keys)[0] || 'all';
+              setSelectedSpecialty(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
+            }}
           >
             {specialties.map((item) => (
               <SelectItem key={item.value} value={item.value}>
@@ -358,111 +372,137 @@ const Doctor = () => {
 
   // Right Panel - Table
   const rightPanel = (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
         <Input
           placeholder="Tìm kiếm bác sĩ..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
+          size="sm"
           startContent={
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           }
         />
-        <Button color="primary" onPress={handleAdd}>
-          + Thêm Bác Sĩ
+        <Button 
+          color="primary" 
+          onPress={handleAdd}
+          size="sm"
+          className="w-full sm:w-auto"
+        >
+          <span className="hidden sm:inline">+ Thêm Bác Sĩ</span>
+          <span className="sm:hidden">+ Thêm</span>
         </Button>
       </div>
 
-      <Table aria-label="Doctors table">
-        <TableHeader>
-          <TableColumn>BÁC SĨ</TableColumn>
-          <TableColumn>CHỨNG CHỈ</TableColumn>
-          <TableColumn>CHUYÊN KHOA</TableColumn>
-          <TableColumn>SỐ ĐIỆN THOẠI</TableColumn>
-          <TableColumn>USER ID</TableColumn>
-          <TableColumn>TRẠNG THÁI</TableColumn>
-          <TableColumn>THAO TÁC</TableColumn>
-        </TableHeader>
-        <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
-          {paginatedDoctors.map((doctor) => (
-            <TableRow key={doctor.id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar src={doctor.avatar} size="sm" />
-                  <div>
-                    <p className="font-medium">{doctor.name || `${doctor.firstName || ''} ${doctor.lastName || ''}`}</p>
-                    {doctor.name && (
-                      <p className="text-xs text-gray-500">Bác sĩ</p>
-                    )}
+      <div className="overflow-x-auto">
+        <Table 
+          aria-label="Doctors table"
+          removeWrapper
+          classNames={{
+            wrapper: "min-h-[200px]",
+            th: "text-xs sm:text-sm",
+            td: "text-xs sm:text-sm",
+          }}
+        >
+          <TableHeader>
+            <TableColumn className="min-w-[150px]">BÁC SĨ</TableColumn>
+            <TableColumn className="min-w-[100px] hidden md:table-cell">CHỨNG CHỈ</TableColumn>
+            <TableColumn className="min-w-[120px] hidden lg:table-cell">CHUYÊN KHOA</TableColumn>
+            <TableColumn className="min-w-[100px] hidden xl:table-cell">SỐ ĐIỆN THOẠI</TableColumn>
+            <TableColumn className="min-w-[80px] hidden xl:table-cell">USER ID</TableColumn>
+            <TableColumn className="min-w-[100px]">TRẠNG THÁI</TableColumn>
+            <TableColumn className="min-w-[80px]">THAO TÁC</TableColumn>
+          </TableHeader>
+          <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
+            {paginatedDoctors.map((doctor) => (
+              <TableRow key={doctor.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Avatar src={doctor.avatar} size="sm" className="flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs sm:text-sm truncate">{doctor.name || `${doctor.firstName || ''} ${doctor.lastName || ''}`}</p>
+                      {doctor.name && (
+                        <p className="text-xs text-gray-500 hidden sm:block">Bác sĩ</p>
+                      )}
+                      <div className="sm:hidden space-y-1 mt-1">
+                        <p className="text-xs text-gray-500">{doctor.phone}</p>
+                        {doctor.specializationLabel && (
+                          <Chip size="sm" variant="flat" className="text-xs">
+                            {doctor.specializationLabel}
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                {doctor.license?.license_number ? (
-                  <Chip size="sm" variant="flat" color="primary">
-                    {doctor.license.license_number}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {doctor.license?.license_number ? (
+                    <Chip size="sm" variant="flat" color="primary" className="text-xs">
+                      {doctor.license.license_number}
+                    </Chip>
+                  ) : (
+                    <span className="text-xs sm:text-sm text-gray-400">Chưa có</span>
+                  )}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Chip size="sm" variant="flat" className="text-xs">
+                    {doctor.specializationLabel || '—'}
                   </Chip>
-                ) : (
-                  <span className="text-sm text-gray-400">Chưa có</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <Chip size="sm" variant="flat">
-                  {doctor.specializationLabel || '—'}
-                </Chip>
-              </TableCell>
-              <TableCell>
-                <p className="text-sm">{doctor.phone}</p>
-              </TableCell>
-              <TableCell>
-                <p className="text-sm text-gray-500">#{doctor.userId}</p>
-              </TableCell>
-              <TableCell>
-                <Chip 
-                  color={
-                    doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'success' : 
-                    doctor.status === 'PENDING' ? 'warning' : 
-                    'default'
-                  } 
-                  size="sm"
-                >
-                  {doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'Hoạt động' : 
-                   doctor.status === 'PENDING' ? 'Chờ duyệt' :
-                   doctor.status === 'INACTIVE' ? 'Không hoạt động' :
-                   'Tạm ngưng'}
-                </Chip>
-              </TableCell>
-              <TableCell>
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button isIconOnly size="sm" variant="light">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Actions">
-                    <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
-                      Chỉnh sửa
-                    </DropdownItem>
-                    <DropdownItem
-                      key="delete"
-                      className="text-danger"
-                      color="danger"
-                      onPress={() => deleteDoctor(doctor.id)}
-                    >
-                      Xóa bác sĩ
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <p className="text-xs sm:text-sm">{doctor.phone}</p>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <p className="text-xs sm:text-sm text-gray-500">#{doctor.userId}</p>
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    color={
+                      doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'success' : 
+                      doctor.status === 'PENDING' ? 'warning' : 
+                      'default'
+                    } 
+                    size="sm"
+                    className="text-xs"
+                  >
+                    {doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'Hoạt động' : 
+                     doctor.status === 'PENDING' ? 'Chờ duyệt' :
+                     doctor.status === 'INACTIVE' ? 'Không hoạt động' :
+                     'Tạm ngưng'}
+                  </Chip>
+                </TableCell>
+                <TableCell>
+                  <Dropdown>
+                    <DropdownTrigger>
+                      <Button isIconOnly size="sm" variant="light" className="min-w-[32px]">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu aria-label="Actions">
+                      <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
+                        Chỉnh sửa
+                      </DropdownItem>
+                      <DropdownItem
+                        key="delete"
+                        className="text-danger"
+                        color="danger"
+                        onPress={() => deleteDoctor(doctor.id)}
+                      >
+                        Xóa bác sĩ
+                      </DropdownItem>
+                    </DropdownMenu>
+                  </Dropdown>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <div className="flex justify-center">
         <Pagination
@@ -470,6 +510,7 @@ const Doctor = () => {
           page={page}
           onChange={setPage}
           showControls
+          size="sm"
         />
       </div>
     </div>
@@ -487,24 +528,24 @@ const Doctor = () => {
         scrollBehavior="inside"
         classNames={{
           base: "max-h-[90vh]",
-          body: "py-6",
+          body: "py-4 sm:py-6",
           backdrop: "bg-black/50 backdrop-opacity-40"
         }}
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1 border-b">
-                {currentDoctor ? 'Chỉnh sửa bác sĩ' : 'Thêm bác sĩ mới'}
+              <ModalHeader className="flex flex-col gap-1 border-b p-4 sm:p-6">
+                <span className="text-base sm:text-lg">{currentDoctor ? 'Chỉnh sửa bác sĩ' : 'Thêm bác sĩ mới'}</span>
               </ModalHeader>
-              <ModalBody className="overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
+              <ModalBody className="overflow-y-auto p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <Input
                     label="Họ và tên"
                     placeholder="BS. Nguyễn Văn An"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="col-span-2"
+                    className="col-span-1 sm:col-span-2"
                     variant="bordered"
                     classNames={{
                       inputWrapper: "border-default-200 bg-gray-50"

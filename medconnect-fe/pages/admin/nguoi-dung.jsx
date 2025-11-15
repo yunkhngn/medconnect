@@ -542,23 +542,23 @@ const Patient = () => {
 
   // Left panel - stats & filters
   const leftPanel = (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Thống kê</h3>
-        <div className="space-y-3">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-600">Tổng người dùng</p>
-            <p className="text-2xl font-bold text-blue-600">{patients.length}</p>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Thống kê</h3>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600 truncate">Tổng</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">{patients.length}</p>
           </div>
-          <div className="p-4 bg-purple-50 rounded-lg">
-            <p className="text-sm text-gray-600">Nam</p>
-            <p className="text-2xl font-bold text-purple-600">
+          <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600">Nam</p>
+            <p className="text-xl sm:text-2xl font-bold text-purple-600">
               {patients.filter((p) => p.gender === 'male').length}
             </p>
           </div>
-          <div className="p-4 bg-pink-50 rounded-lg">
-            <p className="text-sm text-gray-600">Nữ</p>
-            <p className="text-2xl font-bold text-pink-600">
+          <div className="p-3 sm:p-4 bg-pink-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600">Nữ</p>
+            <p className="text-xl sm:text-2xl font-bold text-pink-600">
               {patients.filter((p) => p.gender === 'female').length}
             </p>
           </div>
@@ -566,15 +566,19 @@ const Patient = () => {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Bộ lọc</h3>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Bộ lọc</h3>
         <div className="space-y-3">
           <Select
             label="Giới tính"
             placeholder="Chọn giới tính"
+            size="sm"
             selectedKeys={selectedGender ? new Set([selectedGender]) : new Set(['all'])}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0] || 'all';
               setSelectedGender(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
             }}
           >
             <SelectItem key="all" value="all">Tất cả</SelectItem>
@@ -588,10 +592,14 @@ const Patient = () => {
           <Select
             label="Nhóm máu"
             placeholder="Chọn nhóm máu"
+            size="sm"
             selectedKeys={selectedBloodType ? new Set([selectedBloodType]) : new Set(['all'])}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0] || 'all';
               setSelectedBloodType(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
             }}
           >
             <SelectItem key="all" value="all">Tất cả</SelectItem>
@@ -608,114 +616,153 @@ const Patient = () => {
 
   // Right panel - table
   const rightPanel = (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
         <Input
           placeholder="Tìm kiếm người dùng..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
+          size="sm"
           startContent={
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           }
         />
-        <Button color="primary" onPress={handleAdd}>
-          + Thêm Người Dùng
+        <Button 
+          color="primary" 
+          onPress={handleAdd}
+          size="sm"
+          className="w-full sm:w-auto"
+        >
+          <span className="hidden sm:inline">+ Thêm Người Dùng</span>
+          <span className="sm:hidden">+ Thêm</span>
         </Button>
       </div>
 
-      <Table aria-label="Patients table">
-        <TableHeader>
-          <TableColumn>NGƯỜI DÙNG</TableColumn>
-          <TableColumn>LIÊN HỆ</TableColumn>
-          <TableColumn>GIỚI TÍNH</TableColumn>
-          <TableColumn>ĐỊA CHỈ</TableColumn>
-          <TableColumn>NHÓM MÁU</TableColumn>
-          <TableColumn>NGÀY THAM GIA</TableColumn>
-          <TableColumn>THAO TÁC</TableColumn>
-        </TableHeader>
-        <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
-          {paginatedPatients.map((patient) => (
-            <TableRow key={patient.id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar 
-                    src={patient.avatar || null} 
-                    size="sm"
-                    showFallback
-                  />
-                  <div>
-                    <p className="font-medium">{patient.fullName}</p>
-                    <p className="text-xs text-gray-500">{patient.email}</p>
+      <div className="overflow-x-auto">
+        <Table 
+          aria-label="Patients table"
+          removeWrapper
+          classNames={{
+            wrapper: "min-h-[200px]",
+            th: "text-xs sm:text-sm",
+            td: "text-xs sm:text-sm",
+          }}
+        >
+          <TableHeader>
+            <TableColumn className="min-w-[150px]">NGƯỜI DÙNG</TableColumn>
+            <TableColumn className="min-w-[120px] hidden md:table-cell">LIÊN HỆ</TableColumn>
+            <TableColumn className="min-w-[80px] hidden lg:table-cell">GIỚI TÍNH</TableColumn>
+            <TableColumn className="min-w-[150px] hidden lg:table-cell">ĐỊA CHỈ</TableColumn>
+            <TableColumn className="min-w-[100px] hidden xl:table-cell">NHÓM MÁU</TableColumn>
+            <TableColumn className="min-w-[100px] hidden xl:table-cell">NGÀY THAM GIA</TableColumn>
+            <TableColumn className="min-w-[80px]">THAO TÁC</TableColumn>
+          </TableHeader>
+          <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
+            {paginatedPatients.map((patient) => (
+              <TableRow key={patient.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Avatar 
+                      src={patient.avatar || null} 
+                      size="sm"
+                      showFallback
+                      className="flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs sm:text-sm truncate">{patient.fullName}</p>
+                      <p className="text-xs text-gray-500 truncate hidden sm:block">{patient.email}</p>
+                      <div className="sm:hidden space-y-1 mt-1">
+                        <p className="text-xs text-gray-500 truncate">{patient.email}</p>
+                        <p className="text-xs text-gray-500">{patient.phone}</p>
+                        <div className="flex gap-2 flex-wrap">
+                          <Chip size="sm" variant="flat" color={patient.gender === 'male' ? 'primary' : patient.gender === 'female' ? 'secondary' : 'default'} className="text-xs">
+                            {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
+                          </Chip>
+                          {patient.bloodType && (
+                            <Chip size="sm" variant="flat" color="danger" className="text-xs">
+                              {patient.bloodType}
+                            </Chip>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
+                </TableCell>
 
-              <TableCell>
-                <div className="text-sm">
-                  <p>{patient.email}</p>
-                  <p className="text-gray-500">{patient.phone}</p>
-                </div>
-              </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <div className="text-xs sm:text-sm">
+                    <p className="truncate">{patient.email}</p>
+                    <p className="text-gray-500 truncate">{patient.phone}</p>
+                  </div>
+                </TableCell>
 
-              <TableCell>
-                <Chip size="sm" variant="flat" color={patient.gender === 'male' ? 'primary' : patient.gender === 'female' ? 'secondary' : 'default'}>
-                  {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
-                </Chip>
-              </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Chip size="sm" variant="flat" color={patient.gender === 'male' ? 'primary' : patient.gender === 'female' ? 'secondary' : 'default'}>
+                    {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
+                  </Chip>
+                </TableCell>
 
-              <TableCell>
-                <p className="text-sm">
-                  {typeof patient.address === 'object'
-                    ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', '))
-                    : (patient.address || '')}
-                </p>
-              </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <p className="text-xs sm:text-sm truncate max-w-[200px]">
+                    {typeof patient.address === 'object'
+                      ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', '))
+                      : (patient.address || '')}
+                  </p>
+                </TableCell>
 
-              <TableCell>
-                <Chip size="sm" variant="flat" color="danger">
-                  {patient.bloodType || 'Chưa xác định'}
-                </Chip>
-              </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <Chip size="sm" variant="flat" color="danger">
+                    {patient.bloodType || 'Chưa xác định'}
+                  </Chip>
+                </TableCell>
 
-              <TableCell>
-                <p className="text-sm">
-                  {patient.joinDate ? new Date(patient.joinDate).toLocaleDateString('vi-VN') : ''}
-                </p>
-              </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <p className="text-xs sm:text-sm">
+                    {patient.joinDate ? new Date(patient.joinDate).toLocaleDateString('vi-VN') : ''}
+                  </p>
+                </TableCell>
 
-              <TableCell>
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button isIconOnly size="sm" variant="light">
-                      ⋮
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Thao tác">
-                    <DropdownItem key="view-emr" onPress={() => handleViewEmr(patient)}>
-                      Xem EMR
-                    </DropdownItem>
-                    <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
-                      Chỉnh sửa
-                    </DropdownItem>
-                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient)}>
-                      {(patient.status && patient.status.toLowerCase() === 'active') ? 'Tạm ngưng' : 'Kích hoạt'}
-                    </DropdownItem>
-                    <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
-                      Xóa
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                <TableCell>
+                  <Dropdown>
+                    <DropdownTrigger>
+                      <Button isIconOnly size="sm" variant="light" className="min-w-[32px]">
+                        ⋮
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu aria-label="Thao tác">
+                      <DropdownItem key="view-emr" onPress={() => handleViewEmr(patient)}>
+                        Xem EMR
+                      </DropdownItem>
+                      <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
+                        Chỉnh sửa
+                      </DropdownItem>
+                      <DropdownItem key="toggle" onPress={() => toggleStatus(patient)}>
+                        {(patient.status && patient.status.toLowerCase() === 'active') ? 'Tạm ngưng' : 'Kích hoạt'}
+                      </DropdownItem>
+                      <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
+                        Xóa
+                      </DropdownItem>
+                    </DropdownMenu>
+                  </Dropdown>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <div className="flex justify-center">
-        <Pagination total={pages} page={page} onChange={setPage} showControls />
+        <Pagination 
+          total={pages} 
+          page={page} 
+          onChange={setPage} 
+          showControls
+          size="sm"
+          className="gap-2"
+        />
       </div>
     </div>
   );
@@ -733,13 +780,13 @@ const Patient = () => {
         <Grid leftChildren={leftPanel} rightChildren={rightPanel} />
 
         {/* Modal Add/Edit */}
-        <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
+        <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl" scrollBehavior="inside">
           <ModalContent>
             {(onClose) => (
               <>
-                <ModalHeader>{currentPatient ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}</ModalHeader>
-                <ModalBody>
-                  <div className="grid grid-cols-2 gap-4">
+                <ModalHeader className="text-base sm:text-lg">{currentPatient ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}</ModalHeader>
+                <ModalBody className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <Input
                       label="Họ và tên"
                       placeholder="Nguyễn Văn A"
@@ -813,7 +860,12 @@ const Patient = () => {
                       ))}
                     </Select>
 
-                    <Input label="Địa chỉ" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="col-span-2" />
+                    <Input 
+                      label="Địa chỉ" 
+                      value={formData.address} 
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })} 
+                      className="col-span-1 sm:col-span-2" 
+                    />
                   </div>
                 </ModalBody>
                 <ModalFooter>
@@ -840,15 +892,15 @@ const Patient = () => {
           <ModalContent>
             {(onClose) => (
               <>
-                <ModalHeader className="flex flex-col gap-1">
-                  <h2 className="text-xl font-bold">Hồ Sơ Bệnh Án Điện Tử (EMR)</h2>
+                <ModalHeader className="flex flex-col gap-1 p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-bold">Hồ Sơ Bệnh Án Điện Tử (EMR)</h2>
                   {selectedPatientForEmr && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs sm:text-sm text-gray-500 break-words">
                       Bệnh nhân: {selectedPatientForEmr.fullName} • {selectedPatientForEmr.email}
                     </p>
                   )}
                 </ModalHeader>
-                <ModalBody>
+                <ModalBody className="p-4 sm:p-6">
                   {selectedPatientForEmr && (
                     <div className="space-y-6">
                       {/* Basic info */}

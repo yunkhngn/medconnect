@@ -17,7 +17,7 @@ services:
     build:
       context: ./medconnect-be
       dockerfile: Dockerfile
-      target: build
+      target: dev
     volumes:
       - ./medconnect-be:/app
       - maven_cache:/root/.m2

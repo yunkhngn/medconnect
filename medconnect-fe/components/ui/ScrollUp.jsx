@@ -29,7 +29,7 @@ const ScrollUp = () => {
   return (
     <button
       onClick={scrollToTop}
-      className={`fixed bottom-24 right-6 z-50 w-16 h-16 rounded-full bg-white/20 backdrop-blur-md text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-500 flex items-center justify-center group border-2 border-white/30 ${
+      className={`fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-white/20 backdrop-blur-md text-white shadow-2xl hover:shadow-3xl hover:scale-110 active:scale-95 transition-all duration-500 flex items-center justify-center group border-2 border-white/30 ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
       }`}
       aria-label="Scroll to top"

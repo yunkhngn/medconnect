@@ -443,23 +443,23 @@ const Appointment = () => {
 
   // Left Panel - Stats & Filters
   const leftPanel = (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Thống kê</h3>
-        <div className="space-y-3">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-600">Tổng lịch hẹn</p>
-            <p className="text-2xl font-bold text-blue-600">{appointments.length}</p>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Thống kê</h3>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600 truncate">Tổng</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">{appointments.length}</p>
           </div>
-          <div className="p-4 bg-yellow-50 rounded-lg">
-            <p className="text-sm text-gray-600">Chờ xác nhận</p>
-            <p className="text-2xl font-bold text-yellow-600">
+          <div className="p-3 sm:p-4 bg-yellow-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600 truncate">Chờ</p>
+            <p className="text-xl sm:text-2xl font-bold text-yellow-600">
               {appointments.filter((a) => a.status === 'pending').length}
             </p>
           </div>
-          <div className="p-4 bg-green-50 rounded-lg">
-            <p className="text-sm text-gray-600">Đã xác nhận</p>
-            <p className="text-2xl font-bold text-green-600">
+          <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-600 truncate">Xác nhận</p>
+            <p className="text-xl sm:text-2xl font-bold text-green-600">
               {appointments.filter((a) => a.status === 'confirmed').length}
             </p>
           </div>
@@ -467,15 +467,19 @@ const Appointment = () => {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Bộ lọc</h3>
-        <div className="space-y-4">
+        <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Bộ lọc</h3>
+        <div className="space-y-3 sm:space-y-4">
           <Select
             label="Trạng thái"
             placeholder="Chọn trạng thái"
+            size="sm"
             selectedKeys={selectedStatus ? new Set([selectedStatus]) : new Set(['all'])}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0] || 'all';
               setSelectedStatus(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
             }}
           >
             {statusOptions.map((item) => (
@@ -488,10 +492,14 @@ const Appointment = () => {
           <Select
             label="Bệnh nhân"
             placeholder="Tất cả bệnh nhân"
+            size="sm"
             selectedKeys={selectedPatient ? new Set([selectedPatient]) : new Set(['all'])}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0] || 'all';
               setSelectedPatient(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
             }}
           >
             <SelectItem key="all" value="all">
@@ -507,10 +515,14 @@ const Appointment = () => {
           <Select
             label="Bác sĩ"
             placeholder="Tất cả bác sĩ"
+            size="sm"
             selectedKeys={selectedDoctor ? new Set([selectedDoctor]) : new Set(['all'])}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0] || 'all';
               setSelectedDoctor(value);
+            }}
+            classNames={{
+              trigger: "h-10 sm:h-12",
             }}
           >
             <SelectItem key="all" value="all">
@@ -526,12 +538,13 @@ const Appointment = () => {
           <Input
             label="Ngày khám"
             type="date"
+            size="sm"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
             placeholder="Chọn ngày"
             variant="bordered"
             classNames={{
-              inputWrapper: "focus-within:border-primary focus-within:ring-0"
+              inputWrapper: "h-10 sm:h-12 focus-within:border-primary focus-within:ring-0"
             }}
           />
 
@@ -557,13 +570,14 @@ const Appointment = () => {
 
   // Right Panel - Table
   const rightPanel = (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
         <Input
           placeholder="Tìm kiếm lịch hẹn..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-xs"
+          className="w-full sm:max-w-xs"
+          size="sm"
           variant="bordered"
           classNames={{
             inputWrapper: "focus-within:border-primary focus-within:ring-0"
@@ -574,39 +588,60 @@ const Appointment = () => {
             </svg>
           }
         />
-        <Button color="primary" onPress={handleAdd}>
-          + Thêm Lịch Hẹn
+        <Button 
+          color="primary" 
+          onPress={handleAdd}
+          size="sm"
+          className="w-full sm:w-auto"
+        >
+          <span className="hidden sm:inline">+ Thêm Lịch Hẹn</span>
+          <span className="sm:hidden">+ Thêm</span>
         </Button>
       </div>
 
-      <Table aria-label="Appointments table">
-        <TableHeader>
-          <TableColumn>BỆNH NHÂN</TableColumn>
-          <TableColumn>BÁC SĨ</TableColumn>
-          <TableColumn>NGÀY & GIỜ KHÁM</TableColumn>
-          <TableColumn>BẮT ĐẦU VIDEO</TableColumn>
-          <TableColumn>KẾT THÚC VIDEO</TableColumn>
-          <TableColumn>TRẠNG THÁI</TableColumn>
-          <TableColumn>THAO TÁC</TableColumn>
-        </TableHeader>
+      <div className="overflow-x-auto">
+        <Table 
+          aria-label="Appointments table"
+          removeWrapper
+          classNames={{
+            wrapper: "min-h-[200px]",
+            th: "text-xs sm:text-sm",
+            td: "text-xs sm:text-sm",
+          }}
+        >
+          <TableHeader>
+            <TableColumn className="min-w-[120px]">BỆNH NHÂN</TableColumn>
+            <TableColumn className="min-w-[120px] hidden md:table-cell">BÁC SĨ</TableColumn>
+            <TableColumn className="min-w-[120px]">NGÀY & GIỜ</TableColumn>
+            <TableColumn className="min-w-[100px] hidden lg:table-cell">BẮT ĐẦU VIDEO</TableColumn>
+            <TableColumn className="min-w-[100px] hidden lg:table-cell">KẾT THÚC VIDEO</TableColumn>
+            <TableColumn className="min-w-[100px]">TRẠNG THÁI</TableColumn>
+            <TableColumn className="min-w-[80px]">THAO TÁC</TableColumn>
+          </TableHeader>
         <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
           {paginatedAppointments.map((appointment) => (
             <TableRow key={appointment.id}>
               <TableCell>
-                <div>
-                  <p className="font-medium">{appointment.patientName}</p>
-                  <p className="text-xs text-gray-500">ID: {appointment.patientId}</p>
+                <div className="min-w-0">
+                  <p className="font-medium text-xs sm:text-sm truncate">{appointment.patientName}</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">ID: {appointment.patientId}</p>
+                  <div className="sm:hidden space-y-1 mt-1">
+                    <p className="text-xs text-gray-500">BS: {appointment.doctorName}</p>
+                    <Chip color={getStatusColor(appointment.status?.toLowerCase())} size="sm" variant="flat" className="text-xs">
+                      {statusOptions.find((s) => s.value === appointment.status?.toLowerCase())?.label || appointment.status || 'N/A'}
+                    </Chip>
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>
-                <div>
-                  <p className="font-medium">{appointment.doctorName}</p>
+              <TableCell className="hidden md:table-cell">
+                <div className="min-w-0">
+                  <p className="font-medium text-xs sm:text-sm truncate">{appointment.doctorName}</p>
                   <p className="text-xs text-gray-500">ID: {appointment.doctorId}</p>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-xs sm:text-sm">
                 <div>
-                  <p className="text-sm font-medium">
+                  <p className="font-medium">
                     {new Date(appointment.appointmentDate).toLocaleDateString('vi-VN')}
                   </p>
                   <p className="text-xs text-blue-600">
@@ -614,25 +649,26 @@ const Appointment = () => {
                   </p>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="text-xs">
                   {appointment.videoCallStart ? new Date(appointment.videoCallStart).toLocaleString('vi-VN') : '—'}
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="text-xs">
                   {appointment.videoCallEnd ? new Date(appointment.videoCallEnd).toLocaleString('vi-VN') : '—'}
                 </div>
               </TableCell>
-              <TableCell>
-                <Chip color={getStatusColor(appointment.status?.toLowerCase())} size="sm" variant="flat">
+              <TableCell className="hidden sm:table-cell">
+                <Chip color={getStatusColor(appointment.status?.toLowerCase())} size="sm" variant="flat" className="text-xs">
                   {statusOptions.find((s) => s.value === appointment.status?.toLowerCase())?.label || appointment.status || 'N/A'}
                 </Chip>
               </TableCell>
               <TableCell>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="light" onPress={() => handleEdit(appointment)}>
-                    Sửa
+                <div className="flex gap-1 sm:gap-2 flex-wrap">
+                  <Button size="sm" variant="light" onPress={() => handleEdit(appointment)} className="text-xs min-w-[60px]">
+                    <span className="hidden sm:inline">Sửa</span>
+                    <span className="sm:hidden">S</span>
                   </Button>
                   {appointment.status === 'pending' && (
                     <Button
@@ -640,8 +676,10 @@ const Appointment = () => {
                       color="primary"
                       variant="flat"
                       onPress={() => updateStatus(appointment.id, 'confirmed')}
+                      className="text-xs min-w-[60px]"
                     >
-                      Xác nhận
+                      <span className="hidden sm:inline">Xác nhận</span>
+                      <span className="sm:hidden">OK</span>
                     </Button>
                   )}
                   <Button
@@ -649,8 +687,10 @@ const Appointment = () => {
                     color="danger"
                     variant="light"
                     onPress={() => deleteAppointment(appointment.id)}
+                    className="text-xs min-w-[60px]"
                   >
-                    Xóa
+                    <span className="hidden sm:inline">Xóa</span>
+                    <span className="sm:hidden">X</span>
                   </Button>
                 </div>
               </TableCell>
@@ -658,9 +698,16 @@ const Appointment = () => {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <div className="flex justify-center">
-        <Pagination total={pages} page={page} onChange={setPage} showControls />
+        <Pagination 
+          total={pages} 
+          page={page} 
+          onChange={setPage} 
+          showControls
+          size="sm"
+        />
       </div>
     </div>
   );
@@ -688,6 +735,12 @@ const Appointment = () => {
           }
         }} 
         size="2xl"
+        classNames={{
+          base: "max-w-[95vw] sm:max-w-[90vw] md:max-w-2xl",
+          header: "text-base sm:text-lg",
+          body: "p-4 sm:p-6",
+        }}
+        scrollBehavior="inside"
       >
         <ModalContent>
           {(onClose) => {
@@ -697,7 +750,7 @@ const Appointment = () => {
                 {currentAppointment ? 'Chỉnh sửa lịch hẹn' : 'Thêm lịch hẹn mới'}
               </ModalHeader>
               <ModalBody>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {currentAppointment ? (
                     // Edit mode: Only show status
                     <>

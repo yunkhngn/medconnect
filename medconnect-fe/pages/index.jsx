@@ -541,7 +541,7 @@ export default function HomePage() {
           )}
           <Float variant="fadeInUp" delay={0.3}>
             <div className="text-center mt-6 sm:mt-8">
-              <Link href="/tim-bac-si"
+              <Link href="/tim-kiem-bac-si"
               className="px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors text-center text-primary hover:bg-gray-100 text-sm sm:text-base md:text-lg"
               >
                 Xem tất cả bác sĩ
