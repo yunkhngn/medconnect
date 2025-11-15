@@ -522,11 +522,11 @@ Lưu ý: Phân tích này chỉ mang tính chất tham khảo và có thể chư
                   <div className="flex-1">
                     <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
                       {getGreeting()}, Admin! 👋
-                    </h1>
+              </h1>
                     <p className="text-blue-100 text-sm sm:text-base md:text-lg">
-                      Đây là tổng quan về hệ thống MedConnect
-                    </p>
-                  </div>
+                Đây là tổng quan về hệ thống MedConnect
+              </p>
+            </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                     <Button
                       color="default"
@@ -614,7 +614,7 @@ Lưu ý: Phân tích này chỉ mang tính chất tham khảo và có thể chư
                           <Clock size={12} />
                           <span className="hidden sm:inline">{stats.pendingAppointments} chờ xác nhận</span>
                           <span className="sm:hidden">{stats.pendingAppointments}</span>
-                        </p>
+                  </p>
                 </div>
                       <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 ml-2">
                         <Calendar size={24} className="sm:w-7 sm:h-7 text-purple-600" />
@@ -664,62 +664,62 @@ Lưu ý: Phân tích này chỉ mang tính chất tham khảo và có thể chư
                     >
                       <span className="hidden sm:inline">Xem tất cả</span>
                       <span className="sm:hidden">Tất cả</span>
-                    </Button>
+            </Button>
                   </div>
           </CardHeader>
                 <CardBody className="p-0 overflow-x-auto">
                   <div className="min-w-full">
-                    <Table 
-                      removeWrapper 
-                      aria-label="Recent appointments" 
-                      isLoading={isLoading}
-                      classNames={{
-                        wrapper: "min-h-[200px]",
+                  <Table 
+                    removeWrapper 
+                    aria-label="Recent appointments" 
+                    isLoading={isLoading}
+                    classNames={{
+                      wrapper: "min-h-[200px]",
                         th: "text-xs sm:text-sm",
                         td: "text-xs sm:text-sm",
-                      }}
-                    >
-                      <TableHeader>
+                    }}
+                  >
+              <TableHeader>
                         <TableColumn className="min-w-[120px]">BỆNH NHÂN</TableColumn>
                         <TableColumn className="min-w-[120px] hidden sm:table-cell">BÁC SĨ</TableColumn>
                         <TableColumn className="min-w-[100px]">NGÀY GIỜ</TableColumn>
                         <TableColumn className="min-w-[100px]">TRẠNG THÁI</TableColumn>
-                      </TableHeader>
-                      <TableBody emptyContent="Không có dữ liệu">
-                        {recentAppointments.map((appointment) => (
-                          <TableRow key={appointment.id} className="hover:bg-gray-50 transition-colors">
-                            <TableCell>
-                              <div className="flex items-center gap-2">
+                </TableHeader>
+                <TableBody emptyContent="Không có dữ liệu">
+                  {recentAppointments.map((appointment) => (
+                        <TableRow key={appointment.id} className="hover:bg-gray-50 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
                                 <User size={14} className="sm:w-4 sm:h-4 text-gray-400 flex-shrink-0" />
                                 <span className="font-medium truncate">{appointment.patientName || 'N/A'}</span>
                               </div>
                               <div className="sm:hidden text-xs text-gray-500 mt-1">
                                 BS: {appointment.doctorName || 'N/A'}
-                              </div>
-                            </TableCell>
+                            </div>
+                          </TableCell>
                             <TableCell className="hidden sm:table-cell">
-                              <span className="text-gray-700">{appointment.doctorName || 'N/A'}</span>
-                            </TableCell>
+                            <span className="text-gray-700">{appointment.doctorName || 'N/A'}</span>
+                          </TableCell>
                             <TableCell className="text-xs sm:text-sm">
-                              <div>
-                                <p className="font-medium">{appointment.date && new Date(appointment.date).toLocaleDateString('vi-VN')}</p>
+                        <div>
+                              <p className="font-medium">{appointment.date && new Date(appointment.date).toLocaleDateString('vi-VN')}</p>
                                 <p className="text-xs text-gray-500">{formatSlotTime(appointment.slot)}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Chip 
-                                size="sm" 
-                                color={getStatusColor(appointment.status)}
-                                variant="flat"
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                            <Chip 
+                              size="sm" 
+                              color={getStatusColor(appointment.status)}
+                              variant="flat"
                                 className="text-xs"
-                              >
-                                {getStatusLabel(appointment.status)}
-                              </Chip>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            >
+                          {getStatusLabel(appointment.status)}
+                        </Chip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
                   </div>
             </CardBody>
           </Card>

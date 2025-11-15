@@ -84,7 +84,7 @@ const Setting = () => {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
-        });
+  });
 
         if (response.ok) {
           const data = await response.json();
@@ -135,19 +135,19 @@ const Setting = () => {
       }
 
       // Update via backend API
-      const response = await fetch(`${getApiUrl()}/user/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: profileData.name,
+        const response = await fetch(`${getApiUrl()}/user/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: profileData.name,
           phone: profileData.phone || '',
-        }),
-      });
+          }),
+        });
 
-      if (response.ok) {
+        if (response.ok) {
         const data = await response.json();
         toast.success('Đã lưu thông tin cá nhân!');
         // Refresh profile data

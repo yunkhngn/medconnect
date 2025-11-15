@@ -660,7 +660,7 @@ const Patient = () => {
             td: "text-xs sm:text-sm",
           }}
         >
-          <TableHeader>
+        <TableHeader>
             <TableColumn className="min-w-[150px]">NGƯỜI DÙNG</TableColumn>
             <TableColumn className="min-w-[120px] hidden md:table-cell">LIÊN HỆ</TableColumn>
             <TableColumn className="min-w-[80px] hidden lg:table-cell">GIỚI TÍNH</TableColumn>
@@ -668,18 +668,18 @@ const Patient = () => {
             <TableColumn className="min-w-[100px] hidden xl:table-cell">NHÓM MÁU</TableColumn>
             <TableColumn className="min-w-[100px] hidden xl:table-cell">NGÀY THAM GIA</TableColumn>
             <TableColumn className="min-w-[80px]">THAO TÁC</TableColumn>
-          </TableHeader>
-          <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
-            {paginatedPatients.map((patient) => (
-              <TableRow key={patient.id}>
-                <TableCell>
+        </TableHeader>
+        <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
+          {paginatedPatients.map((patient) => (
+            <TableRow key={patient.id}>
+              <TableCell>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <Avatar 
-                      src={patient.avatar || null} 
-                      size="sm"
-                      showFallback
+                  <Avatar 
+                    src={patient.avatar || null} 
+                    size="sm"
+                    showFallback
                       className="flex-shrink-0"
-                    />
+                  />
                     <div className="min-w-0">
                       <p className="font-medium text-xs sm:text-sm truncate">{patient.fullName}</p>
                       <p className="text-xs text-gray-500 truncate hidden sm:block">{patient.email}</p>
@@ -697,73 +697,73 @@ const Patient = () => {
                           )}
                         </div>
                       </div>
-                    </div>
                   </div>
-                </TableCell>
+                </div>
+              </TableCell>
 
                 <TableCell className="hidden md:table-cell">
                   <div className="text-xs sm:text-sm">
                     <p className="truncate">{patient.email}</p>
                     <p className="text-gray-500 truncate">{patient.phone}</p>
-                  </div>
-                </TableCell>
+                </div>
+              </TableCell>
 
                 <TableCell className="hidden lg:table-cell">
-                  <Chip size="sm" variant="flat" color={patient.gender === 'male' ? 'primary' : patient.gender === 'female' ? 'secondary' : 'default'}>
-                    {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
-                  </Chip>
-                </TableCell>
+                <Chip size="sm" variant="flat" color={patient.gender === 'male' ? 'primary' : patient.gender === 'female' ? 'secondary' : 'default'}>
+                  {patient.gender === 'male' ? 'Nam' : patient.gender === 'female' ? 'Nữ' : 'Khác'}
+                </Chip>
+              </TableCell>
 
                 <TableCell className="hidden lg:table-cell">
                   <p className="text-xs sm:text-sm truncate max-w-[200px]">
-                    {typeof patient.address === 'object'
-                      ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', '))
-                      : (patient.address || '')}
-                  </p>
-                </TableCell>
+                  {typeof patient.address === 'object'
+                    ? (patient.address?.full || [patient.address?.address_detail, patient.address?.ward_name, patient.address?.district_name, patient.address?.province_name].filter(Boolean).join(', '))
+                    : (patient.address || '')}
+                </p>
+              </TableCell>
 
                 <TableCell className="hidden xl:table-cell">
-                  <Chip size="sm" variant="flat" color="danger">
-                    {patient.bloodType || 'Chưa xác định'}
-                  </Chip>
-                </TableCell>
+                <Chip size="sm" variant="flat" color="danger">
+                  {patient.bloodType || 'Chưa xác định'}
+                </Chip>
+              </TableCell>
 
                 <TableCell className="hidden xl:table-cell">
                   <p className="text-xs sm:text-sm">
-                    {patient.joinDate ? new Date(patient.joinDate).toLocaleDateString('vi-VN') : ''}
-                  </p>
-                </TableCell>
+                  {patient.joinDate ? new Date(patient.joinDate).toLocaleDateString('vi-VN') : ''}
+                </p>
+              </TableCell>
 
-                <TableCell>
-                  <Dropdown>
-                    <DropdownTrigger>
+              <TableCell>
+                <Dropdown>
+                  <DropdownTrigger>
                       <Button isIconOnly size="sm" variant="light" className="min-w-[32px]">
-                        ⋮
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownMenu aria-label="Thao tác">
-                      <DropdownItem key="view-emr" onPress={() => handleViewEmr(patient)}>
-                        Xem EMR
-                      </DropdownItem>
-                      <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
-                        Chỉnh sửa
-                      </DropdownItem>
+                      ⋮
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu aria-label="Thao tác">
+                    <DropdownItem key="view-emr" onPress={() => handleViewEmr(patient)}>
+                      Xem EMR
+                    </DropdownItem>
+                    <DropdownItem key="edit" onPress={() => handleEdit(patient)}>
+                      Chỉnh sửa
+                    </DropdownItem>
                       <DropdownItem key="reset-password" onPress={() => handleResetPassword(patient)}>
                         Reset mật khẩu
                       </DropdownItem>
-                      <DropdownItem key="toggle" onPress={() => toggleStatus(patient)}>
-                        {(patient.status && patient.status.toLowerCase() === 'active') ? 'Tạm ngưng' : 'Kích hoạt'}
-                      </DropdownItem>
-                      <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
-                        Xóa
-                      </DropdownItem>
-                    </DropdownMenu>
-                  </Dropdown>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    <DropdownItem key="toggle" onPress={() => toggleStatus(patient)}>
+                      {(patient.status && patient.status.toLowerCase() === 'active') ? 'Tạm ngưng' : 'Kích hoạt'}
+                    </DropdownItem>
+                    <DropdownItem key="delete" className="text-danger" color="danger" onPress={() => deletePatient(patient.id)}>
+                      Xóa
+                    </DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
       </div>
 
       <div className="flex justify-center">

@@ -462,7 +462,7 @@ const Doctor = () => {
             td: "text-xs sm:text-sm",
           }}
         >
-          <TableHeader>
+        <TableHeader>
             <TableColumn className="min-w-[150px]">BÁC SĨ</TableColumn>
             <TableColumn className="min-w-[100px] hidden md:table-cell">CHỨNG CHỈ</TableColumn>
             <TableColumn className="min-w-[120px] hidden lg:table-cell">CHUYÊN KHOA</TableColumn>
@@ -470,18 +470,18 @@ const Doctor = () => {
             <TableColumn className="min-w-[80px] hidden xl:table-cell">USER ID</TableColumn>
             <TableColumn className="min-w-[100px]">TRẠNG THÁI</TableColumn>
             <TableColumn className="min-w-[80px]">THAO TÁC</TableColumn>
-          </TableHeader>
-          <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
-            {paginatedDoctors.map((doctor) => (
-              <TableRow key={doctor.id}>
-                <TableCell>
+        </TableHeader>
+        <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
+          {paginatedDoctors.map((doctor) => (
+            <TableRow key={doctor.id}>
+              <TableCell>
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Avatar src={doctor.avatar} size="sm" className="flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium text-xs sm:text-sm truncate">{doctor.name || `${doctor.firstName || ''} ${doctor.lastName || ''}`}</p>
-                      {doctor.name && (
+                    {doctor.name && (
                         <p className="text-xs text-gray-500 hidden sm:block">Bác sĩ</p>
-                      )}
+                    )}
                       <div className="sm:hidden space-y-1 mt-1">
                         <p className="text-xs text-gray-500">{doctor.phone}</p>
                         {doctor.specializationLabel && (
@@ -490,76 +490,76 @@ const Doctor = () => {
                           </Chip>
                         )}
                       </div>
-                    </div>
                   </div>
-                </TableCell>
+                </div>
+              </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {doctor.license?.license_number ? (
+                {doctor.license?.license_number ? (
                     <Chip size="sm" variant="flat" color="primary" className="text-xs">
-                      {doctor.license.license_number}
-                    </Chip>
-                  ) : (
+                    {doctor.license.license_number}
+                  </Chip>
+                ) : (
                     <span className="text-xs sm:text-sm text-gray-400">Chưa có</span>
-                  )}
-                </TableCell>
+                )}
+              </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <Chip size="sm" variant="flat" className="text-xs">
-                    {doctor.specializationLabel || '—'}
-                  </Chip>
-                </TableCell>
+                  {doctor.specializationLabel || '—'}
+                </Chip>
+              </TableCell>
                 <TableCell className="hidden xl:table-cell">
                   <p className="text-xs sm:text-sm">{doctor.phone}</p>
-                </TableCell>
+              </TableCell>
                 <TableCell className="hidden xl:table-cell">
                   <p className="text-xs sm:text-sm text-gray-500">#{doctor.userId}</p>
-                </TableCell>
-                <TableCell>
-                  <Chip 
-                    color={
-                      doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'success' : 
-                      doctor.status === 'PENDING' ? 'warning' : 
-                      'default'
-                    } 
-                    size="sm"
+              </TableCell>
+              <TableCell>
+                <Chip 
+                  color={
+                    doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'success' : 
+                    doctor.status === 'PENDING' ? 'warning' : 
+                    'default'
+                  } 
+                  size="sm"
                     className="text-xs"
-                  >
-                    {doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'Hoạt động' : 
-                     doctor.status === 'PENDING' ? 'Chờ duyệt' :
-                     doctor.status === 'INACTIVE' ? 'Không hoạt động' :
-                     'Tạm ngưng'}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  <Dropdown>
-                    <DropdownTrigger>
+                >
+                  {doctor.status === 'ACTIVE' || doctor.status === 'active' ? 'Hoạt động' : 
+                   doctor.status === 'PENDING' ? 'Chờ duyệt' :
+                   doctor.status === 'INACTIVE' ? 'Không hoạt động' :
+                   'Tạm ngưng'}
+                </Chip>
+              </TableCell>
+              <TableCell>
+                <Dropdown>
+                  <DropdownTrigger>
                       <Button isIconOnly size="sm" variant="light" className="min-w-[32px]">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                      </Button>
-                    </DropdownTrigger>
-                    <DropdownMenu aria-label="Actions">
-                      <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
-                        Chỉnh sửa
-                      </DropdownItem>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownMenu aria-label="Actions">
+                    <DropdownItem key="edit" onPress={() => handleEdit(doctor)}>
+                      Chỉnh sửa
+                    </DropdownItem>
                       <DropdownItem key="reset-password" onPress={() => handleResetPassword(doctor)}>
                         Reset mật khẩu
                       </DropdownItem>
-                      <DropdownItem
-                        key="delete"
-                        className="text-danger"
-                        color="danger"
-                        onPress={() => deleteDoctor(doctor.id)}
-                      >
-                        Xóa bác sĩ
-                      </DropdownItem>
-                    </DropdownMenu>
-                  </Dropdown>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    <DropdownItem
+                      key="delete"
+                      className="text-danger"
+                      color="danger"
+                      onPress={() => deleteDoctor(doctor.id)}
+                    >
+                      Xóa bác sĩ
+                    </DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
       </div>
 
       <div className="flex justify-center">

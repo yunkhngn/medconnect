@@ -684,7 +684,7 @@ export default function PatientOnlineExamList() {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">BS. {appointment.doctorName}</h3>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{appointment.doctorName}</h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             <Chip
                               size="sm"

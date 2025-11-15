@@ -597,7 +597,7 @@ const Appointment = () => {
             td: "text-xs sm:text-sm",
           }}
         >
-          <TableHeader>
+        <TableHeader>
             <TableColumn className="min-w-[120px]">BỆNH NHÂN</TableColumn>
             <TableColumn className="min-w-[120px] hidden md:table-cell">BÁC SĨ</TableColumn>
             <TableColumn className="min-w-[120px]">NGÀY & GIỜ</TableColumn>
@@ -605,7 +605,7 @@ const Appointment = () => {
             <TableColumn className="min-w-[100px] hidden lg:table-cell">KẾT THÚC VIDEO</TableColumn>
             <TableColumn className="min-w-[100px]">TRẠNG THÁI</TableColumn>
             <TableColumn className="min-w-[80px]">THAO TÁC</TableColumn>
-          </TableHeader>
+        </TableHeader>
         <TableBody isLoading={isLoading} emptyContent="Không có dữ liệu">
           {paginatedAppointments.map((appointment) => (
             <TableRow key={appointment.id}>

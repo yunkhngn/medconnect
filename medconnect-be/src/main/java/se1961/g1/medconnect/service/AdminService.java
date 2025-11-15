@@ -79,43 +79,43 @@ public class AdminService {
         
         try {
             // Tạo user trên Firebase trước (ngoài transaction)
-            UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
-                    .setEmail(request.getEmail())
-                    .setPassword(request.getPassword())
-                    .setEmailVerified(true);
-            
+        UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
+                .setEmail(request.getEmail())
+                .setPassword(request.getPassword())
+                .setEmailVerified(true);
+        
             userRecord = firebaseAuth.createUser(firebaseRequest);
             final String firebaseUid = userRecord.getUid();
             firebaseUidHolder[0] = firebaseUid;
-            
+
             // Tạo admin trong database (trong transaction riêng)
             Admin savedAdmin = transactionTemplate.execute(status -> {
-                Admin admin = new Admin();
-                admin.setEmail(request.getEmail());
+        Admin admin = new Admin();
+        admin.setEmail(request.getEmail());
                 admin.setFirebaseUid(firebaseUid);
-                admin.setRole(Role.ADMIN);
-                // Set default avatar for admin
-                admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
-                
+        admin.setRole(Role.ADMIN);
+        // Set default avatar for admin
+        admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
+
                 return adminRepository.save(admin);
             });
-            
-            // Send account creation email with password
-            try {
-                // Extract name from email (part before @) or use "Admin"
-                String userName = request.getEmail().split("@")[0];
-                emailService.sendAccountCreatedEmail(
-                    request.getEmail(),
-                    userName,
-                    request.getPassword(),
-                    "Admin"
-                );
-            } catch (Exception e) {
-                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
-                // Don't throw - email failure shouldn't break account creation
-            }
-            
-            return convertToDTO(savedAdmin);
+        
+        // Send account creation email with password
+        try {
+            // Extract name from email (part before @) or use "Admin"
+            String userName = request.getEmail().split("@")[0];
+            emailService.sendAccountCreatedEmail(
+                request.getEmail(),
+                userName,
+                request.getPassword(),
+                "Admin"
+            );
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+            // Don't throw - email failure shouldn't break account creation
+        }
+        
+        return convertToDTO(savedAdmin);
             
         } catch (Exception e) {
             // Nếu đã tạo Firebase user nhưng lưu database thất bại, xóa Firebase user

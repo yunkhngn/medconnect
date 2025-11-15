@@ -586,11 +586,11 @@ export default function HomePage() {
               </div>
             ) : testimonials.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-                  {getVisibleTestimonials().map((t, i) => (
-                    <Float key={`${currentTestimonialIndex}-${i}`} variant="fadeInLeft" delay={i * 0.1}>
-                      <Card className="border-none shadow-sm hover:shadow-md transition-all duration-300">
-                        <CardBody className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+              {getVisibleTestimonials().map((t, i) => (
+                <Float key={`${currentTestimonialIndex}-${i}`} variant="fadeInLeft" delay={i * 0.1}>
+                  <Card className="border-none shadow-sm hover:shadow-md transition-all duration-300">
+                    <CardBody className="p-4 sm:p-6">
                           <div className="flex items-center gap-1 mb-2">
                             {[...Array(5)].map((_, idx) => (
                               <Star
@@ -600,36 +600,36 @@ export default function HomePage() {
                               />
                             ))}
                           </div>
-                          <p className="text-sm sm:text-base text-gray-700 italic mb-3 sm:mb-4">"{t.quote}"</p>
-                          <div className="flex items-center gap-3">
+                      <p className="text-sm sm:text-base text-gray-700 italic mb-3 sm:mb-4">"{t.quote}"</p>
+                      <div className="flex items-center gap-3">
                             <Avatar src={t.avatar} size="sm" showFallback />
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm sm:text-base">{t.name}</p>
-                              <p className="text-xs text-gray-500">{t.role}</p>
-                            </div>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    </Float>
-                  ))}
-                </div>
-                
-                {/* Carousel Indicators */}
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm sm:text-base">{t.name}</p>
+                          <p className="text-xs text-gray-500">{t.role}</p>
+                        </div>
+                      </div>
+                    </CardBody>
+                  </Card>
+                </Float>
+              ))}
+            </div>
+            
+            {/* Carousel Indicators */}
                 {testimonials.length > 3 && (
-                  <div className="flex justify-center mt-6 space-x-2">
-                    {Array.from({ length: Math.ceil(testimonials.length / 3) }, (_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentTestimonialIndex(i * 3)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                          Math.floor(currentTestimonialIndex / 3) === i
-                            ? 'bg-primary scale-125'
-                            : 'bg-gray-300 hover:bg-gray-400'
-                        }`}
-                        aria-label={`Go to testimonial set ${i + 1}`}
-                      />
-                    ))}
-                  </div>
+            <div className="flex justify-center mt-6 space-x-2">
+              {Array.from({ length: Math.ceil(testimonials.length / 3) }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentTestimonialIndex(i * 3)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    Math.floor(currentTestimonialIndex / 3) === i
+                      ? 'bg-primary scale-125'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  aria-label={`Go to testimonial set ${i + 1}`}
+                />
+              ))}
+            </div>
                 )}
               </>
             ) : (

@@ -24,6 +24,7 @@ export default function PatientDashboard() {
   const [profile, setProfile] = useState(null);
   const [emr, setEMR] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const [paymentByAptId, setPaymentByAptId] = useState({}); // { [id]: { hasPaid, status } }
   const [stats, setStats] = useState({
     totalAppointments: 0,
     upcomingAppointments: 0,
@@ -83,6 +84,38 @@ export default function PatientDashboard() {
         if (aptRes.ok) {
           const aptData = await aptRes.json();
           setAppointments(aptData);
+          
+          // Fetch payment status for each appointment
+          if (aptData.length > 0) {
+            const paymentPromises = aptData.map(async (apt) => {
+              const id = apt.id || apt.appointmentId;
+              if (!id) return null;
+              try {
+                const resp = await fetch(`${getApiUrl()}/payment/appointment/${id}`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                  const payData = await resp.json();
+                  return { id, payment: payData };
+                }
+              } catch (e) {
+                console.error(`Failed to fetch payment for appointment ${id}:`, e);
+              }
+              return null;
+            });
+            
+            const paymentResults = await Promise.all(paymentPromises);
+            const paymentMap = {};
+            paymentResults.forEach(result => {
+              if (result && result.payment) {
+                paymentMap[result.id] = {
+                  hasPaid: result.payment.hasPaid || false,
+                  status: result.payment.status
+                };
+              }
+            });
+            setPaymentByAptId(paymentMap);
+          }
           
           // Calculate stats
           const now = new Date();
@@ -410,7 +443,11 @@ export default function PatientDashboard() {
                   const aptDate = new Date(apt.date || apt.appointmentDate);
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
-                  return aptDate >= today && (apt.status === "PENDING" || apt.status === "CONFIRMED");
+                  // Exclude cancelled and denied appointments
+                  return aptDate >= today && 
+                         (apt.status === "PENDING" || apt.status === "CONFIRMED") &&
+                         apt.status !== "CANCELLED" && 
+                         apt.status !== "DENIED";
                 })
                 .sort((a, b) => {
                   const dateA = new Date(a.date || a.appointmentDate);
@@ -445,10 +482,17 @@ export default function PatientDashboard() {
                     }
                   };
                   
-                  const getStatusText = (status) => {
+                  const getStatusText = (status, appointmentId) => {
+                    // For PENDING appointments, check payment status
+                    if (status === "PENDING") {
+                      const aptId = appointmentId;
+                      const payInfo = aptId ? paymentByAptId[aptId] : null;
+                      const hasPaid = payInfo?.hasPaid || false;
+                      return hasPaid ? "Chờ xác nhận" : "Chờ thanh toán";
+                    }
+                    
                     switch (status) {
                       case "CONFIRMED": return "Đã xác nhận";
-                      case "PENDING": return "Chờ xác nhận";
                       case "COMPLETED": case "FINISHED": return "Hoàn thành";
                       case "CANCELLED": return "Đã hủy";
                       default: return status;
@@ -467,7 +511,9 @@ export default function PatientDashboard() {
                               showFallback
                         />
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900">{apt.doctor?.name || apt.doctorName || "Bác sĩ"}</p>
+                              <p className="font-semibold text-gray-900">
+                                {(apt.doctor?.name || apt.doctorName || "Bác sĩ").replace(/^BS\.\s*/i, '')}
+                              </p>
                               <p className="text-sm text-gray-600">{apt.specialty || apt.doctor?.specialization || "Chuyên khoa"}</p>
                               <div className="flex items-center gap-2 mt-2">
                                 <Calendar size={14} className="text-gray-400" />
@@ -484,7 +530,7 @@ export default function PatientDashboard() {
                     </div>
                           <div className="text-right flex-shrink-0">
                             <Chip size="sm" color={getStatusColor(apt.status)} variant="flat" className="mb-2">
-                              {getStatusText(apt.status)}
+                              {getStatusText(apt.status, apt.id || apt.appointmentId)}
                             </Chip>
                             {apt.type === "ONLINE" && (
                               <Chip size="sm" color="secondary" variant="flat" className="text-xs">

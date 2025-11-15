@@ -240,10 +240,13 @@ function formatDateLocal(d) {
 
 function getSlotData(date, slot) {
   const dayStr = formatDateLocal(date);
+  // Filter out cancelled and denied appointments - they don't block the slot
   const slotAppointments = appointments.filter(
     (a) =>
       a.date === dayStr &&
-      a.slot === slot.id
+      a.slot === slot.id &&
+      a.status !== "CANCELLED" &&
+      a.status !== "DENIED"
   );
 
   if (slotAppointments.length === 0) return { status: "EMPTY" };
@@ -482,7 +485,7 @@ function getSlotData(date, slot) {
                           <CheckCircle className="text-green-700" size={20} />
                         </div>
                         <p className="font-bold text-sm text-green-900 mb-1">
-                          {slotData.appointment.doctor?.name || "Bác sĩ"}
+                          {(slotData.appointment.doctor?.name || "Bác sĩ").replace(/^BS\.\s*/i, '')}
                         </p>
                         <Chip color="success" size="sm" variant="solid" className="font-semibold">
                           Đã đặt
@@ -527,7 +530,7 @@ function getSlotData(date, slot) {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">{a.doctor?.name || 'Bác sĩ'}</h3>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{(a.doctor?.name || 'Bác sĩ').replace(/^BS\.\s*/i, '')}</h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             <UiChip size="sm" variant="flat" color={a.status==='PENDING' ? 'warning' : (a.status==='CONFIRMED'?'primary':'default')}>
                               {a.status === "PENDING" ? (hasPaid ? "Chờ bác sĩ xác nhận" : "Chờ thanh toán") : getStatusLabel(a.status)}
@@ -653,7 +656,7 @@ function getSlotData(date, slot) {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">{a.doctor?.name || 'Bác sĩ'}</h3>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{(a.doctor?.name || 'Bác sĩ').replace(/^BS\.\s*/i, '')}</h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             <UiChip size="sm" variant="flat" color={a.status==='FINISHED' ? 'success' : (a.status==='CANCELLED'?'danger':'default')}>
                               {getStatusLabel(a.status)}

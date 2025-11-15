@@ -502,6 +502,16 @@ export default function DatLichKham() {
       return;
     }
 
+    // Validate slot is still available before submitting
+    if (!availableSlots.includes(selectedSlot)) {
+      toast.error("Khung giờ này đã không còn trống. Vui lòng chọn khung giờ khác.");
+      // Refresh available slots
+      if (selectedDoctor && selectedDate) {
+        await fetchAvailableSlots();
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const token = await user.getIdToken();
@@ -529,8 +539,18 @@ export default function DatLichKham() {
           router.push(`/thanh-toan/${appointment.appointmentId}`);
         }, 1500);
       } else {
-        const error = await response.json();
-        toast.error(error.error || "Đặt lịch thất bại");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || "Đặt lịch thất bại";
+        console.error("[Booking] Error response:", errorData);
+        console.error("[Booking] Error message:", errorMessage);
+        toast.error(errorMessage);
+        // If slot is not available, refresh available slots
+        if (errorMessage.includes("not available") || errorMessage.includes("không còn trống") || errorMessage.includes("Slot")) {
+          if (selectedDoctor && selectedDate) {
+            console.log("[Booking] Refreshing available slots...");
+            await fetchAvailableSlots();
+          }
+        }
       }
     } catch (error) {
       console.error("Booking error:", error);
