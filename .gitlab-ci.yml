@@ -22,10 +22,10 @@ deploy:
     - chmod 600 ~/.ssh/id_key
     - ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts
     # Verify SSH connection with verbose output for debugging
-    - ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "echo 'SSH connection successful'" || echo "⚠️ SSH connection failed, check key and VPS setup"
+    - ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "echo 'SSH connection successful'" || echo "[ERROR] SSH connection failed, check key and VPS setup"
   script:
     - |
-      echo "🚀 Starting deployment to VPS..."
+      echo "[SYSTEM] Starting deployment to VPS..."
       
       # Set deploy path (default to /apps/g1-se1961-nj-swp391-fal25 if not set)
       DEPLOY_PATH=${VPS_DEPLOY_PATH:-/apps/g1-se1961-nj-swp391-fal25}
@@ -34,34 +34,34 @@ deploy:
       ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "DEPLOY_PATH='$DEPLOY_PATH' bash -s" << 'ENDSSH'
         set -e  # Exit on error
         
-        echo "📂 Changing to project directory: $DEPLOY_PATH"
-        cd "$DEPLOY_PATH" || { echo "❌ Directory not found: $DEPLOY_PATH"; exit 1; }
+        echo "[LOG] Changing to project directory: $DEPLOY_PATH"
+        cd "$DEPLOY_PATH" || { echo "[LOG] Directory not found: $DEPLOY_PATH"; exit 1; }
         
-        echo "📥 Pulling latest code from GitLab..."
+        echo "[LOG] Pulling latest code from GitLab..."
         git fetch origin
         git reset --hard origin/main
         git clean -fd
         
-        echo "🛑 Stopping existing containers..."
-        docker compose --profile production down || echo "⚠️ No containers to stop"
+        echo "[LOG] Stopping existing containers..."
+        docker compose --profile production down || echo "[ERROR] No containers to stop"
         
-        echo "🔨 Building Docker images (with cache)..."
+        echo "[LOG] Building Docker images (with cache)..."
         # Use cache for faster builds - only rebuild changed layers
         DOCKER_BUILDKIT=1 docker compose --profile production build
         
-        echo "🚀 Starting containers..."
+        echo "[LOG] Starting containers..."
         docker compose --profile production up -d
         
-        echo "⏳ Waiting for services to be healthy..."
+        echo "[LOG] Waiting for services to be healthy..."
         sleep 10
         
-        echo "📊 Checking container status..."
+        echo "[LOG] Checking container status..."
         docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
         
-        echo "✅ Deployment completed successfully!"
+        echo "[LOG] Deployment completed successfully!"
       ENDSSH
       
-      echo "🎉 Deployment finished!"
+      echo "[COMPLETE] Deployment finished!"
   after_script:
     # Cleanup SSH key
     - rm -f ~/.ssh/id_key
