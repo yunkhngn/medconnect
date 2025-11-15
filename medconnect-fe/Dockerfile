@@ -7,7 +7,9 @@ WORKDIR /app
 COPY package.json yarn.lock* ./
 
 # Install dependencies with retry and longer timeout
-RUN yarn config set network-timeout 600000 && \
+# Use BuildKit cache mount for faster rebuilds
+RUN --mount=type=cache,target=/root/.yarn \
+    yarn config set network-timeout 600000 && \
     yarn install --frozen-lockfile || \
     yarn install --frozen-lockfile || \
     yarn install --frozen-lockfile

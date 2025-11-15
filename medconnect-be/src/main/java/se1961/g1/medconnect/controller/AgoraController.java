@@ -4,7 +4,6 @@ import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.util.AgoraTokenUtil;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/agora")
 public class AgoraController {

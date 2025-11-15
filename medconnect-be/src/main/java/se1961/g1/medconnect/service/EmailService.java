@@ -203,6 +203,46 @@ public class EmailService {
     }
 
     /**
+     * Send account creation email with login credentials
+     * @param toEmail User email
+     * @param userName User name
+     * @param password Temporary password
+     * @param roleName Role name (Bác sĩ, Bệnh nhân, Admin)
+     */
+    public void sendAccountCreatedEmail(String toEmail, String userName, String password, String roleName) {
+        try {
+            System.out.println("=== Sending Account Created Email ===");
+            System.out.println("To: " + toEmail);
+            System.out.println("User Name: " + userName);
+            System.out.println("Role: " + roleName);
+            
+            Map<String, String> variables = new HashMap<>();
+            variables.put("userName", userName != null ? escapeHtml(userName) : "");
+            variables.put("email", toEmail != null ? escapeHtml(toEmail) : "");
+            variables.put("password", password != null ? escapeHtml(password) : "");
+            variables.put("roleName", roleName != null ? escapeHtml(roleName) : "");
+            
+            String htmlContent = templateLoader.loadTemplate("account-created", variables);
+            System.out.println("Email HTML content loaded from template, length: " + htmlContent.length());
+            
+            String emailId = sendEmail(toEmail, "Chào mừng đến với MedConnect - Thông tin tài khoản", htmlContent);
+            System.out.println("✅ Email sent successfully! Email ID: " + emailId);
+        } catch (IOException e) {
+            System.err.println("❌ Failed to load account created email template: " + e.getMessage());
+            e.printStackTrace();
+            // Don't throw - email failure shouldn't break account creation
+        } catch (ResendException e) {
+            System.err.println("❌ Failed to send account created email: " + e.getMessage());
+            e.printStackTrace();
+            // Don't throw - email failure shouldn't break account creation
+        } catch (Exception e) {
+            System.err.println("❌ Unexpected error sending account created email: " + e.getMessage());
+            e.printStackTrace();
+            // Don't throw - email failure shouldn't break account creation
+        }
+    }
+
+    /**
      * Send doctor approval email with login credentials
      */
     public void sendDoctorApprovalEmail(String toEmail, String doctorName, String password) {
@@ -297,6 +337,86 @@ public class EmailService {
                             </div>
 
                             <div class="info-box">
+                                <h3>⏳ Trạng thái tài khoản:</h3>
+                                <span class="status-badge">ĐANG CHỜ DUYỆT (PENDING)</span>
+                                <p>Tài khoản của bạn đang chờ Admin xét duyệt. Thời gian xử lý thường từ <strong>3-5 ngày làm việc</strong>.</p>
+                            </div>
+
+                            <div class="info-box">
+                                <h3>📋 Quy trình tiếp theo:</h3>
+                                <ul>
+                                    <li>✅ <strong>Bước 1:</strong> Admin xem xét hồ sơ ứng tuyển của bạn</li>
+                                    <li>✅ <strong>Bước 2:</strong> Xác minh thông tin và chứng chỉ hành nghề</li>
+                                    <li>✅ <strong>Bước 3:</strong> Admin tạo tài khoản Firebase và phê duyệt</li>
+                                    <li>✅ <strong>Bước 4:</strong> Bạn nhận email với thông tin đăng nhập chính thức</li>
+                                </ul>
+                            </div>
+
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="http://localhost:3000/dang-nhap" class="button">Đăng nhập (sau khi được duyệt)</a>
+                            </div>
+
+                            <p style="color: #666; font-size: 14px;">
+                                💡 <strong>Lưu ý:</strong> Bạn sẽ nhận được email thông tin đăng nhập sau khi Admin phê duyệt tài khoản. 
+                                Vui lòng kiểm tra email thường xuyên.
+                            </p>
+
+                            <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua email: <a href="mailto:support@medconnect.vn">support@medconnect.vn</a></p>
+
+                            <p style="margin-top: 30px;">Trân trọng,<br><strong>Đội ngũ MedConnect</strong></p>
+                        </div>
+                        <div class="footer">
+                            <p>© 2025 MedConnect. All rights reserved.</p>
+                            <p>Đây là email tự động, vui lòng không trả lời email này.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(doctorName, email, phone);
+    }
+
+}
+
+                                <h3>⏳ Trạng thái tài khoản:</h3>
+                                <span class="status-badge">ĐANG CHỜ DUYỆT (PENDING)</span>
+                                <p>Tài khoản của bạn đang chờ Admin xét duyệt. Thời gian xử lý thường từ <strong>3-5 ngày làm việc</strong>.</p>
+                            </div>
+
+                            <div class="info-box">
+                                <h3>📋 Quy trình tiếp theo:</h3>
+                                <ul>
+                                    <li>✅ <strong>Bước 1:</strong> Admin xem xét hồ sơ ứng tuyển của bạn</li>
+                                    <li>✅ <strong>Bước 2:</strong> Xác minh thông tin và chứng chỉ hành nghề</li>
+                                    <li>✅ <strong>Bước 3:</strong> Admin tạo tài khoản Firebase và phê duyệt</li>
+                                    <li>✅ <strong>Bước 4:</strong> Bạn nhận email với thông tin đăng nhập chính thức</li>
+                                </ul>
+                            </div>
+
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="http://localhost:3000/dang-nhap" class="button">Đăng nhập (sau khi được duyệt)</a>
+                            </div>
+
+                            <p style="color: #666; font-size: 14px;">
+                                💡 <strong>Lưu ý:</strong> Bạn sẽ nhận được email thông tin đăng nhập sau khi Admin phê duyệt tài khoản. 
+                                Vui lòng kiểm tra email thường xuyên.
+                            </p>
+
+                            <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua email: <a href="mailto:support@medconnect.vn">support@medconnect.vn</a></p>
+
+                            <p style="margin-top: 30px;">Trân trọng,<br><strong>Đội ngũ MedConnect</strong></p>
+                        </div>
+                        <div class="footer">
+                            <p>© 2025 MedConnect. All rights reserved.</p>
+                            <p>Đây là email tự động, vui lòng không trả lời email này.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(doctorName, email, phone);
+    }
+
+}
+
                                 <h3>⏳ Trạng thái tài khoản:</h3>
                                 <span class="status-badge">ĐANG CHỜ DUYỆT (PENDING)</span>
                                 <p>Tài khoản của bạn đang chờ Admin xét duyệt. Thời gian xử lý thường từ <strong>3-5 ngày làm việc</strong>.</p>

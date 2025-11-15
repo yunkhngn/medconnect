@@ -25,6 +25,9 @@ public class PatientService {
     private FirebaseAuth firebaseAuth;
 
     @Autowired
+    private EmailService emailService;
+
+    @Autowired
     private AppointmentRepository appointmentRepository;
 
     @Autowired
@@ -136,7 +139,58 @@ public class PatientService {
             // Set default avatar for patient
             patient.setAvatarUrl("https://img.freepik.com/free-psd/3d-rendering-avatar_23-2150833572.jpg?semt=ais_hybrid&w=740&q=80");
             
-            return patientRepository.save(patient);
+            Patient savedPatient = patientRepository.save(patient);
+            
+            // Send account creation email with password
+            try {
+                emailService.sendAccountCreatedEmail(
+                    email,
+                    fullName,
+                    password,
+                    "Bệnh nhân"
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+                // Don't throw - email failure shouldn't break account creation
+            }
+            
+            return savedPatient;
+            
+        } catch (Exception e) {
+            throw new Exception("Không thể tạo bệnh nhân: " + e.getMessage());
+        }
+    }
+}
+
+                    email,
+                    fullName,
+                    password,
+                    "Bệnh nhân"
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+                // Don't throw - email failure shouldn't break account creation
+            }
+            
+            return savedPatient;
+            
+        } catch (Exception e) {
+            throw new Exception("Không thể tạo bệnh nhân: " + e.getMessage());
+        }
+    }
+}
+
+                    email,
+                    fullName,
+                    password,
+                    "Bệnh nhân"
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+                // Don't throw - email failure shouldn't break account creation
+            }
+            
+            return savedPatient;
             
         } catch (Exception e) {
             throw new Exception("Không thể tạo bệnh nhân: " + e.getMessage());

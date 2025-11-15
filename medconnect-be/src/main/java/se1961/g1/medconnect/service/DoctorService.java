@@ -105,7 +105,22 @@ public class DoctorService {
         doctor.setAvatarUrl("https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg");
         
         mapDtoToDoctor(dto, doctor);
-        return doctorRepository.save(doctor);
+        Doctor savedDoctor = doctorRepository.save(doctor);
+        
+        // Send account creation email with password
+        try {
+            emailService.sendAccountCreatedEmail(
+                dto.getEmail(),
+                dto.getName(),
+                dto.getPhone(), // Password is phone number
+                "Bác sĩ"
+            );
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+            // Don't throw - email failure shouldn't break account creation
+        }
+        
+        return savedDoctor;
     }
 
     public Doctor updateDoctor(Long id, DoctorDTO dto) {
@@ -392,6 +407,36 @@ public class DoctorService {
                     if (cert.get("base64Image") != null) {
                         // Store base64 image as JSON array
                         String base64Image = (String) cert.get("base64Image");
+                        license.setProofImages("[\"" + base64Image + "\"]");
+                    }
+                    
+                    licenseRepository.save(license);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse certifications: " + e.getMessage());
+                // Continue even if license parsing fails
+            }
+        }
+        
+        return doctor;
+    }
+}
+
+                        license.setProofImages("[\"" + base64Image + "\"]");
+                    }
+                    
+                    licenseRepository.save(license);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to parse certifications: " + e.getMessage());
+                // Continue even if license parsing fails
+            }
+        }
+        
+        return doctor;
+    }
+}
+
                         license.setProofImages("[\"" + base64Image + "\"]");
                     }
                     

@@ -318,6 +318,16 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
     }
   };
 
+  const handleSave = async () => {
+    // If AI summary exists, show confirm modal
+    if (hasAiSummary && aiSummary.trim()) {
+      onConfirmOpen();
+      return;
+    }
+    
+    await performSave();
+  };
+
   const performSave = async () => {
     if (!user) { toast.error("Vui lòng đăng nhập"); return; }
     if (!appointmentId || !patientUserId) { toast.error("Thiếu thông tin lịch hẹn/bệnh nhân"); return; }
@@ -833,7 +843,7 @@ Format: Viết thành đoạn văn tự nhiên, không dùng bullet points, dùn
         <Button 
           color="primary" 
           startContent={<Save size={18}/>} 
-          onClick={performSave} 
+          onClick={handleSave} 
           isLoading={saving}
           className="font-medium"
           size="lg"

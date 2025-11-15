@@ -29,6 +29,9 @@ public class AdminService {
     @Autowired
     private FirebaseAuth firebaseAuth;
 
+    @Autowired
+    private EmailService emailService;
+
     /**
      * Lấy danh sách tất cả admin
      */
@@ -85,6 +88,21 @@ public class AdminService {
         admin.setAvatarUrl("https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg?semt=ais_hybrid&w=740&q=80");
 
         Admin savedAdmin = adminRepository.save(admin);
+        
+        // Send account creation email with password
+        try {
+            // Extract name from email (part before @) or use "Admin"
+            String userName = request.getEmail().split("@")[0];
+            emailService.sendAccountCreatedEmail(
+                request.getEmail(),
+                userName,
+                request.getPassword(),
+                "Admin"
+            );
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
+            // Don't throw - email failure shouldn't break account creation
+        }
         
         return convertToDTO(savedAdmin);
     }
@@ -191,6 +209,42 @@ public class AdminService {
      * Convert User entity to AdminDTO
      */
     private AdminDTO convertToDTO(User user) {
+        AdminDTO dto = new AdminDTO();
+        dto.setUserId(user.getUserId());
+        dto.setEmail(user.getEmail());
+        dto.setFirebaseUid(user.getFirebaseUid());
+        dto.setRole(user.getRole());
+
+        // Lấy trạng thái từ Firebase
+        try {
+            UserRecord userRecord = firebaseAuth.getUser(user.getFirebaseUid());
+            dto.setStatus(userRecord.isDisabled() ? "blocked" : "active");
+        } catch (Exception e) {
+            dto.setStatus("unknown");
+        }
+
+        return dto;
+    }
+}
+
+        AdminDTO dto = new AdminDTO();
+        dto.setUserId(user.getUserId());
+        dto.setEmail(user.getEmail());
+        dto.setFirebaseUid(user.getFirebaseUid());
+        dto.setRole(user.getRole());
+
+        // Lấy trạng thái từ Firebase
+        try {
+            UserRecord userRecord = firebaseAuth.getUser(user.getFirebaseUid());
+            dto.setStatus(userRecord.isDisabled() ? "blocked" : "active");
+        } catch (Exception e) {
+            dto.setStatus("unknown");
+        }
+
+        return dto;
+    }
+}
+
         AdminDTO dto = new AdminDTO();
         dto.setUserId(user.getUserId());
         dto.setEmail(user.getEmail());

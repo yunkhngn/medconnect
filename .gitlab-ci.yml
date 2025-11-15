@@ -45,8 +45,9 @@ deploy:
         echo "🛑 Stopping existing containers..."
         docker compose --profile production down || echo "⚠️ No containers to stop"
         
-        echo "🔨 Building Docker images..."
-        docker compose --profile production build --no-cache
+        echo "🔨 Building Docker images (with cache)..."
+        # Use cache for faster builds - only rebuild changed layers
+        DOCKER_BUILDKIT=1 docker compose --profile production build
         
         echo "🚀 Starting containers..."
         docker compose --profile production up -d

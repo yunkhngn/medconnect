@@ -15,6 +15,8 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins("http://localhost:3000",
+                                        "https://medconnects.app",
+                                        "https://www.medconnects.app",
                                         "https://accounts.google.com")
                         .allowedMethods("*")
                         .allowedHeaders("*")
@@ -23,4 +25,6 @@ public class CorsConfig {
             }
         };
     }
+}
+
 }

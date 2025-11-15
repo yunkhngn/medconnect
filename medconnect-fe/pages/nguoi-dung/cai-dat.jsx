@@ -802,7 +802,7 @@ export default function PatientProfileWithFrame() {
             <Input
               type="tel"
               label="Số điện thoại"
-              placeholder="0376971168 hoặc 0912 345 678"
+              placeholder="0912345678"
               value={patient.emergencyContactPhone || ""}
               onValueChange={(v) => {
                 // Chỉ cho phép số, khoảng trắng, dấu gạch ngang, dấu ngoặc đơn, dấu +
