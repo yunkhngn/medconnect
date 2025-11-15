@@ -29,8 +29,7 @@ import RouteMap from "@/components/ui/RouteMap";
 import { useAddressData } from "@/hooks/useAddressData";
 import Float from "@/components/ui/Float";
 import Image from "next/image";
-
-import { getBaseUrl } from "@/utils/api";
+import { getBaseUrl, getApiUrl } from "@/utils/api";
 
 const SPECIALTY_MAP = {
   TIM_MACH: "Tim mạch",
@@ -92,7 +91,7 @@ export default function DoctorDetail() {
           // Try fetching from API endpoint if available
           try {
             const detailResponse = await fetch(
-              `${API_BASE_URL}/api/doctors/${doctorId}`
+              `${getApiUrl()}/doctors/${doctorId}`
             );
             if (detailResponse.ok) {
               const detailData = await detailResponse.json();
@@ -114,7 +113,7 @@ export default function DoctorDetail() {
     setLoadingFeedback(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/feedback/doctor/${doctorId}/summary`
+        `${getApiUrl()}/feedback/doctor/${doctorId}/summary`
       );
       if (response.ok) {
         const data = await response.json();
