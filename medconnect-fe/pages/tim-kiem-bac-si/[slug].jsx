@@ -31,24 +31,13 @@ import { useAddressData } from "@/hooks/useAddressData";
 import Float from "@/components/ui/Float";
 import Image from "next/image";
 import { getBaseUrl, getApiUrl } from "@/utils/api";
-
-const SPECIALTY_MAP = {
-  TIM_MACH: "Tim mạch",
-  NOI_KHOA: "Nội khoa",
-  NHI_KHOA: "Nhi khoa",
-  SAN_PHU_KHOA: "Sản phụ khoa",
-  THAN_KINH: "Thần kinh",
-  DA_LIEU: "Da liễu",
-  MAT: "Mắt",
-  TAI_MUI_HONG: "Tai mũi họng",
-  NGOAI_KHOA: "Ngoại khoa",
-  GENERAL: "Đa khoa",
-};
+import { useSpecialties } from "@/hooks/useSpecialties";
 
 export default function DoctorDetail() {
   const router = useRouter();
   const { slug } = router.query;
   const { getProvinceName, getDistrictName, getWardName } = useAddressData();
+  const { getSpecialtyLabel } = useSpecialties();
 
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -204,7 +193,7 @@ export default function DoctorDetail() {
   }
 
   const address = formatAddress(doctor);
-  const specialtyLabel = SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa";
+  const specialtyLabel = getSpecialtyLabel(doctor.specialty);
   const doctorName = doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name || "Bác sĩ";
   const doctorDescription = `Bác sĩ ${doctorName} - ${specialtyLabel}${doctor.experience_years ? ` với ${doctor.experience_years} năm kinh nghiệm` : ""}. ${doctor.bio || "Chuyên gia y tế hàng đầu, sẵn sàng phục vụ bạn."}`;
 
@@ -275,7 +264,7 @@ export default function DoctorDetail() {
                 size="lg"
                           className="font-semibold"
               >
-                {SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa"}
+                {getSpecialtyLabel(doctor.specialty)}
               </Chip>
                         {feedbackSummary?.averageRating && (
                           <div className="flex items-center gap-1">
