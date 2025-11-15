@@ -161,39 +161,3 @@ public class PatientService {
         }
     }
 }
-
-                    email,
-                    fullName,
-                    password,
-                    "Bệnh nhân"
-                );
-            } catch (Exception e) {
-                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
-                // Don't throw - email failure shouldn't break account creation
-            }
-            
-            return savedPatient;
-            
-        } catch (Exception e) {
-            throw new Exception("Không thể tạo bệnh nhân: " + e.getMessage());
-        }
-    }
-}
-
-                    email,
-                    fullName,
-                    password,
-                    "Bệnh nhân"
-                );
-            } catch (Exception e) {
-                System.err.println("⚠️ Failed to send account creation email: " + e.getMessage());
-                // Don't throw - email failure shouldn't break account creation
-            }
-            
-            return savedPatient;
-            
-        } catch (Exception e) {
-            throw new Exception("Không thể tạo bệnh nhân: " + e.getMessage());
-        }
-    }
-}

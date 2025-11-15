@@ -226,39 +226,3 @@ public class AdminService {
         return dto;
     }
 }
-
-        AdminDTO dto = new AdminDTO();
-        dto.setUserId(user.getUserId());
-        dto.setEmail(user.getEmail());
-        dto.setFirebaseUid(user.getFirebaseUid());
-        dto.setRole(user.getRole());
-
-        // Lấy trạng thái từ Firebase
-        try {
-            UserRecord userRecord = firebaseAuth.getUser(user.getFirebaseUid());
-            dto.setStatus(userRecord.isDisabled() ? "blocked" : "active");
-        } catch (Exception e) {
-            dto.setStatus("unknown");
-        }
-
-        return dto;
-    }
-}
-
-        AdminDTO dto = new AdminDTO();
-        dto.setUserId(user.getUserId());
-        dto.setEmail(user.getEmail());
-        dto.setFirebaseUid(user.getFirebaseUid());
-        dto.setRole(user.getRole());
-
-        // Lấy trạng thái từ Firebase
-        try {
-            UserRecord userRecord = firebaseAuth.getUser(user.getFirebaseUid());
-            dto.setStatus(userRecord.isDisabled() ? "blocked" : "active");
-        } catch (Exception e) {
-            dto.setStatus("unknown");
-        }
-
-        return dto;
-    }
-}

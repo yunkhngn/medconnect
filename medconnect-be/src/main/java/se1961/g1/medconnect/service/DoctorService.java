@@ -421,33 +421,3 @@ public class DoctorService {
         return doctor;
     }
 }
-
-                        license.setProofImages("[\"" + base64Image + "\"]");
-                    }
-                    
-                    licenseRepository.save(license);
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to parse certifications: " + e.getMessage());
-                // Continue even if license parsing fails
-            }
-        }
-        
-        return doctor;
-    }
-}
-
-                        license.setProofImages("[\"" + base64Image + "\"]");
-                    }
-                    
-                    licenseRepository.save(license);
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to parse certifications: " + e.getMessage());
-                // Continue even if license parsing fails
-            }
-        }
-        
-        return doctor;
-    }
-}

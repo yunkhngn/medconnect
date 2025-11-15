@@ -366,23 +366,23 @@ export default function HomePage() {
             </div>
           </Float>
           {loadingDoctors ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
+              {[1, 2, 3].map((i) => (
               <Float key={i} variant="fadeInUp" delay={i * 0.05}>
                   <Card className="border-none shadow-sm">
-                  <CardBody className="p-4 sm:p-6 text-center">
-                      <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 rounded-full" />
-                      <Skeleton className="h-5 w-32 mx-auto mb-2" />
-                      <Skeleton className="h-4 w-24 mx-auto mb-2" />
-                      <Skeleton className="h-4 w-20 mx-auto mb-4" />
-                      <Skeleton className="h-9 w-full rounded-lg" />
+                  <CardBody className="p-6 sm:p-8 lg:p-10 text-center">
+                      <Skeleton className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 mx-auto mb-6 rounded-full" />
+                      <Skeleton className="h-6 sm:h-7 lg:h-8 w-40 mx-auto mb-3" />
+                      <Skeleton className="h-5 w-32 mx-auto mb-4" />
+                      <Skeleton className="h-5 w-24 mx-auto mb-6" />
+                      <Skeleton className="h-11 w-full rounded-lg" />
                   </CardBody>
                 </Card>
               </Float>
             ))}
           </div>
           ) : doctors.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
               {doctors.map((d, i) => {
                 const doctorSlug = d.id?.toString() || "";
                 const specialtyLabel = SPECIALTY_MAP[d.specialty] || d.specialty || "Đa khoa";
@@ -391,13 +391,13 @@ export default function HomePage() {
                 return (
                   <Float key={d.id || i} variant="fadeInUp" delay={i * 0.05}>
                     <Card 
-                      className="border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] bg-white h-full flex flex-col"
+                      className="border border-gray-200 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.03] bg-white h-full flex flex-col"
                       isPressable
                       onPress={() => router.push(`/tim-kiem-bac-si/${doctorSlug}`)}
                     >
-                      <CardBody className="p-5 sm:p-6 text-center flex flex-col flex-1">
-                        {/* Avatar - Fixed size, centered */}
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-full overflow-hidden ring-2 ring-blue-100 flex-shrink-0">
+                      <CardBody className="p-6 sm:p-8 lg:p-10 text-center flex flex-col flex-1">
+                        {/* Avatar - Larger size */}
+                        <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 mx-auto mb-6 rounded-full overflow-hidden ring-4 ring-blue-100 flex-shrink-0">
                           <Avatar
                             src={d.avatar}
                             alt={d.name}
@@ -408,53 +408,53 @@ export default function HomePage() {
                             showFallback
                             fallback={
                               <div className="w-full h-full bg-gradient-to-br from-blue-100 to-teal-100 flex items-center justify-center">
-                                <Stethoscope className="text-blue-600" size={32} />
+                                <Stethoscope className="text-blue-600" size={40} />
                               </div>
                             }
                           />
                         </div>
                         
-                        {/* Name */}
-                        <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-2 line-clamp-2 min-h-[3rem] flex items-center justify-center">
+                        {/* Name - Larger font */}
+                        <h3 className="font-bold text-lg sm:text-xl lg:text-2xl text-gray-900 mb-3 line-clamp-2 min-h-[3.5rem] flex items-center justify-center">
                           {d.name?.replace(/^BS\.?\s*/i, "").trim() || d.name || "Bác sĩ"}
                         </h3>
                         
-                        {/* Specialty Chip */}
-                        <div className="mb-3">
+                        {/* Specialty Chip - Larger */}
+                        <div className="mb-4">
                           <Chip 
-                            size="sm" 
+                            size="md" 
                             variant="flat" 
                             color="primary" 
-                            className="text-xs font-semibold"
+                            className="text-sm sm:text-base font-semibold px-3 py-1"
                           >
                             {specialtyLabel}
                           </Chip>
                         </div>
                         
-                        {/* Stats - Experience and Rating */}
-                        <div className="flex items-center justify-center gap-3 mb-4 text-xs sm:text-sm text-gray-600 flex-shrink-0">
+                        {/* Stats - Experience and Rating - Larger */}
+                        <div className="flex items-center justify-center gap-4 mb-6 text-sm sm:text-base text-gray-600 flex-shrink-0">
                           {d.years > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Award size={14} className="text-teal-600 flex-shrink-0" />
-                              <span className="whitespace-nowrap">{d.years} năm</span>
+                            <div className="flex items-center gap-2">
+                              <Award size={18} className="text-teal-600 flex-shrink-0" />
+                              <span className="whitespace-nowrap font-medium">{d.years} năm</span>
                             </div>
                           )}
                           {rating > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Star size={14} className="text-yellow-500 fill-current flex-shrink-0" />
-                              <span className="whitespace-nowrap">{rating.toFixed(1)}</span>
+                            <div className="flex items-center gap-2">
+                              <Star size={18} className="text-yellow-500 fill-current flex-shrink-0" />
+                              <span className="whitespace-nowrap font-medium">{rating.toFixed(1)}</span>
                             </div>
                           )}
                         </div>
                         
-                        {/* Button - Push to bottom */}
-                        <div className="mt-auto pt-2">
+                        {/* Button - Larger */}
+                        <div className="mt-auto pt-3">
                           <Button 
-                            size="sm" 
+                            size="md" 
                             color="primary" 
                             variant="flat" 
                             fullWidth 
-                            className="font-semibold"
+                            className="font-semibold text-sm sm:text-base py-2"
                             onPress={() => router.push(`/tim-kiem-bac-si/${doctorSlug}`)}
                           >
                             Xem chi tiết
