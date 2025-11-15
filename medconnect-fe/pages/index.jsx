@@ -106,10 +106,10 @@ export default function HomePage() {
           const data = await response.json();
           const doctorsList = Array.isArray(data) ? data : [];
           
-          // Filter active doctors and take first 4
+          // Filter active doctors and take first 3
           const activeDoctors = doctorsList
             .filter(doc => doc.status === 'ACTIVE' || !doc.status)
-            .slice(0, 4)
+            .slice(0, 3)
             .map(doc => ({
               id: doc.id || doc.userId,
               name: doc.name || "Bác sĩ",
@@ -210,7 +210,7 @@ export default function HomePage() {
               </p>
 
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Link href="/tim-bac-si"
+                <Link href="/tim-kiem-bac-si"
                 className="px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-medium transition-colors text-center text-white bg-primary hover:bg-primary/90 text-sm sm:text-base md:text-lg"
                 >
                   Tìm bác sĩ
