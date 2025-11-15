@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import se1961.g1.medconnect.pojo.Speciality;
-import se1961.g1.medconnect.repository.SpecialityRepository;
 import se1961.g1.medconnect.service.SpecialityService;
 
 import jakarta.validation.Valid;
@@ -155,6 +154,31 @@ public class SpecialityController {
                     map.put("name", s.getName());
                     map.put("onlinePrice", s.getOnlinePrice());
                     map.put("offlinePrice", s.getOfflinePrice());
+                    return map;
+                })
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Get specialities with doctor count for homepage/public display
+     */
+    @GetMapping("/public")
+    public ResponseEntity<List<Map<String, Object>>> getSpecialitiesForPublic() {
+        List<Speciality> specialities = specialityService.getAllSpecialitiesWithDoctorCount();
+        
+        List<Map<String, Object>> result = specialities.stream()
+                .map(s -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", s.getSpecialityId());
+                    map.put("name", s.getName());
+                    map.put("description", s.getDescription());
+                    map.put("onlinePrice", s.getOnlinePrice());
+                    map.put("offlinePrice", s.getOfflinePrice());
+                    // Get doctor count for this specialty
+                    long doctorCount = specialityService.getDoctorCountBySpecialityId(s.getSpecialityId());
+                    map.put("doctorCount", doctorCount);
                     return map;
                 })
                 .collect(Collectors.toList());

@@ -66,4 +66,18 @@ public class SpecialityService {
     public boolean existsByNameAndIdNot(String name, Integer id) {
         return specialityRepository.existsByNameAndSpecialityIdNot(name, id);
     }
+
+    /**
+     * Get all specialities with doctor count for public display
+     */
+    public List<Speciality> getAllSpecialitiesWithDoctorCount() {
+        return specialityRepository.findAll();
+    }
+
+    /**
+     * Get doctor count for a speciality
+     */
+    public long getDoctorCountBySpecialityId(Integer specialityId) {
+        return doctorRepository.countBySpecialitySpecialityId(specialityId);
+    }
 }
