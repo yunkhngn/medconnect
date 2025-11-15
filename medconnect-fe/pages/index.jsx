@@ -1,11 +1,12 @@
 import { Default } from "../components/layouts/";
+import Meta from "../components/layouts/Meta";
 import { Card, CardBody, Button, Chip, Avatar, Skeleton } from "@heroui/react";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import Float from "@/components/ui/Float";
 import { useState, useEffect } from "react";
-import { Stethoscope, Award, Star } from "lucide-react";
+import { Stethoscope, Award, Star, Phone, Mail, GraduationCap, FileText, ChevronRight } from "lucide-react";
 
 import { getBaseUrl, getApiUrl } from "@/utils/api";
 
@@ -117,6 +118,10 @@ export default function HomePage() {
               avatar: doc.avatarUrl || doc.avatar || "https://thumbs.dreamstime.com/b/d-avatar-doctor-portrait-medical-uniform-white-background-327426936.jpg",
               bio: doc.bio,
               rating: doc.rating || 0,
+              phone: doc.phone,
+              email: doc.email,
+              educationLevel: doc.education_level || doc.educationLevel,
+              licenseNumber: doc.licenseNumber || doc.license?.licenseNumber,
             }));
           
           setDoctors(activeDoctors);
@@ -173,8 +178,15 @@ export default function HomePage() {
   };
 
   return (
-    <Default>
-      {/* HERO - Background không cần Float */}
+    <>
+      <Meta
+        title="MedConnect - Nền tảng khám bệnh trực tuyến"
+        description="MedConnect - Nền tảng đặt lịch khám bệnh trực tuyến hàng đầu Việt Nam. Kết nối bệnh nhân với bác sĩ chuyên nghiệp, khám bệnh từ xa qua video call, quản lý hồ sơ sức khỏe điện tử. Đặt lịch khám nhanh chóng, tiện lợi và an toàn."
+        keywords="khám bệnh online, đặt lịch khám, bác sĩ trực tuyến, telemedicine, khám bệnh từ xa, hồ sơ sức khỏe, MedConnect, y tế số, chăm sóc sức khỏe"
+        ogImage="/assets/homepage/cover.jpg"
+      />
+      <Default>
+        {/* HERO - Background không cần Float */}
       <section className="relative overflow-hidden rounded-2xl mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 md:mt-1">
         {/* gradient backdrop */}
         <div className="absolute inset-0 bg-gradient-to-tr from-[#f1e1ff] via-[#ffe6ea] to-[#e6f0ff]" />
@@ -387,74 +399,131 @@ export default function HomePage() {
                 const doctorSlug = d.id?.toString() || "";
                 const specialtyLabel = SPECIALTY_MAP[d.specialty] || d.specialty || "Đa khoa";
                 const rating = doctorRatings[d.id] || d.rating || 0;
+                const doctorName = d.name?.replace(/^BS\.?\s*/i, "").trim() || d.name || "Bác sĩ";
                 
                 return (
                   <Float key={d.id || i} variant="fadeInUp" delay={i * 0.05}>
                     <Card 
-                      className="border border-gray-200 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.03] bg-white h-full flex flex-col"
+                      className="border border-gray-200 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] bg-white h-full flex flex-col"
                       isPressable
                       onPress={() => router.push(`/tim-kiem-bac-si/${doctorSlug}`)}
                     >
-                      <CardBody className="p-6 sm:p-8 lg:p-10 text-center flex flex-col flex-1">
-                        {/* Avatar - Larger size */}
-                        <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 mx-auto mb-6 rounded-full overflow-hidden ring-4 ring-blue-100 flex-shrink-0">
-                          <Avatar
-                            src={d.avatar}
-                            alt={d.name}
-                            className="w-full h-full object-cover"
-                            imgProps={{
-                              style: { objectFit: 'cover' }
-                            }}
-                            showFallback
-                            fallback={
-                              <div className="w-full h-full bg-gradient-to-br from-blue-100 to-teal-100 flex items-center justify-center">
-                                <Stethoscope className="text-blue-600" size={40} />
+                      <CardBody className="p-6 sm:p-8 flex flex-col flex-1">
+                        {/* Top Section: Avatar + Name + Specialty */}
+                        <div className="flex items-start gap-4 mb-6">
+                          {/* Avatar - Left side */}
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-full overflow-hidden ring-2 ring-blue-100">
+                            <Avatar
+                              src={d.avatar}
+                              alt={doctorName}
+                              className="w-full h-full object-cover"
+                              imgProps={{
+                                style: { objectFit: 'cover' }
+                              }}
+                              showFallback
+                              fallback={
+                                <div className="w-full h-full bg-gradient-to-br from-blue-100 to-teal-100 flex items-center justify-center">
+                                  <Stethoscope className="text-blue-600" size={32} />
+                                </div>
+                              }
+                            />
+                          </div>
+                          
+                          {/* Name + Specialty - Right side */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <h3 className="font-bold text-lg sm:text-xl text-gray-900 truncate">
+                                {doctorName}
+                              </h3>
+                              <Chip 
+                                size="sm" 
+                                variant="flat" 
+                                color="primary" 
+                                className="text-xs font-semibold flex-shrink-0"
+                              >
+                                {specialtyLabel}
+                              </Chip>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              Tôi là {doctorName.split(' ').pop() || doctorName}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Metrics Grid - 2x2 */}
+                        <div className="grid grid-cols-2 gap-3 mb-6">
+                          {/* Rating */}
+                          <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                            <Star size={18} className="text-yellow-500 fill-current flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-600">Đánh giá</p>
+                              <p className="font-bold text-sm text-gray-900">
+                                {rating > 0 ? rating.toFixed(1) : "—"}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Experience */}
+                          <div className="flex items-center gap-2 p-3 bg-teal-50 rounded-lg border border-teal-100">
+                            <Award size={18} className="text-teal-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-600">Kinh nghiệm</p>
+                              <p className="font-bold text-sm text-gray-900">
+                                {d.years > 0 ? `${d.years} năm` : "—"}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Education */}
+                          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <GraduationCap size={18} className="text-blue-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-600">Trình độ</p>
+                              <p className="font-semibold text-xs text-gray-900 truncate">
+                                {d.educationLevel || "—"}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Certificates */}
+                          <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-100">
+                            <FileText size={18} className="text-green-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-600">Chứng chỉ</p>
+                              <p className="font-semibold text-xs text-gray-900 truncate">
+                                {d.licenseNumber ? `#${d.licenseNumber}` : "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Contact Information */}
+                        {(d.phone || d.email) && (
+                          <div className="space-y-2 mb-6 pb-4 border-b border-gray-200">
+                            {d.phone && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Phone size={16} className="text-gray-500 flex-shrink-0" />
+                                <span className="truncate">{d.phone}</span>
                               </div>
-                            }
-                          />
-                        </div>
+                            )}
+                            {d.email && (
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Mail size={16} className="text-gray-500 flex-shrink-0" />
+                                <span className="truncate">{d.email}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         
-                        {/* Name - Larger font */}
-                        <h3 className="font-bold text-lg sm:text-xl lg:text-2xl text-gray-900 mb-3 line-clamp-2 min-h-[3.5rem] flex items-center justify-center">
-                          {d.name?.replace(/^BS\.?\s*/i, "").trim() || d.name || "Bác sĩ"}
-                        </h3>
-                        
-                        {/* Specialty Chip - Larger */}
-                        <div className="mb-4">
-                          <Chip 
-                            size="md" 
-                            variant="flat" 
-                            color="primary" 
-                            className="text-sm sm:text-base font-semibold px-3 py-1"
-                          >
-                            {specialtyLabel}
-                          </Chip>
-                        </div>
-                        
-                        {/* Stats - Experience and Rating - Larger */}
-                        <div className="flex items-center justify-center gap-4 mb-6 text-sm sm:text-base text-gray-600 flex-shrink-0">
-                          {d.years > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Award size={18} className="text-teal-600 flex-shrink-0" />
-                              <span className="whitespace-nowrap font-medium">{d.years} năm</span>
-                            </div>
-                          )}
-                          {rating > 0 && (
-                            <div className="flex items-center gap-2">
-                              <Star size={18} className="text-yellow-500 fill-current flex-shrink-0" />
-                              <span className="whitespace-nowrap font-medium">{rating.toFixed(1)}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Button - Larger */}
-                        <div className="mt-auto pt-3">
+                        {/* Button - Bottom */}
+                        <div className="mt-auto pt-2">
                           <Button 
                             size="md" 
                             color="primary" 
                             variant="flat" 
                             fullWidth 
-                            className="font-semibold text-sm sm:text-base py-2"
+                            className="font-semibold"
+                            endContent={<ChevronRight size={18} />}
                             onPress={() => router.push(`/tim-kiem-bac-si/${doctorSlug}`)}
                           >
                             Xem chi tiết

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Default } from "@/components/layouts";
+import Meta from "@/components/layouts/Meta";
 import {
   Card,
   CardBody,
@@ -204,8 +205,14 @@ export default function TimKiemBacSi() {
   }
 
   return (
-    <Default title="Tìm kiếm bác sĩ - MedConnect">
-      <div className="min-h-screen relative overflow-hidden">
+    <>
+      <Meta
+        title="Tìm kiếm bác sĩ - MedConnect"
+        description="Tìm kiếm và lựa chọn bác sĩ phù hợp với nhu cầu của bạn. Lọc theo chuyên khoa, đánh giá, địa điểm và nhiều tiêu chí khác. Xem thông tin chi tiết, đánh giá từ bệnh nhân và đặt lịch khám ngay."
+        keywords="tìm bác sĩ, tìm kiếm bác sĩ, bác sĩ chuyên khoa, đặt lịch khám, bác sĩ gần đây, đánh giá bác sĩ"
+      />
+      <Default title="Tìm kiếm bác sĩ - MedConnect">
+        <div className="min-h-screen relative overflow-hidden">
         {/* Background with blur */}
         <div className="absolute inset-0">
           <Image
@@ -554,7 +561,8 @@ export default function TimKiemBacSi() {
           </div>
         </div>
       </div>
-    </Default>
+      </Default>
+    </>
   );
 }
 

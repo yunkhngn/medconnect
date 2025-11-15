@@ -4,9 +4,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserInfo;
 import com.google.firebase.auth.UserRecord;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import se1961.g1.medconnect.enums.Services;
 
 @Service
 public class FirebaseService {
@@ -63,6 +61,21 @@ public class FirebaseService {
             FirebaseAuth.getInstance().updateUser(request);
         } catch (Exception e) {
             throw new Exception("Không thể cập nhật mật khẩu Firebase: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get Firebase user by email (if exists)
+     * @param email User email
+     * @return Firebase UID if user exists, null otherwise
+     */
+    public String getFirebaseUserByEmail(String email) {
+        try {
+            UserRecord userRecord = FirebaseAuth.getInstance().getUserByEmail(email);
+            return userRecord.getUid();
+        } catch (Exception e) {
+            // User doesn't exist or other error
+            return null;
         }
     }
 

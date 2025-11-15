@@ -79,6 +79,11 @@ public class AdminController {
             // Đếm tổng số doctors
             long totalDoctors = doctorRepository.count();
             
+            // Đếm số bác sĩ ACTIVE
+            long activeDoctors = doctorRepository.findAll().stream()
+                .filter(d -> d.getStatus() == se1961.g1.medconnect.enums.DoctorStatus.ACTIVE)
+                .count();
+            
             // Đếm tổng số patients
             long totalPatients = patientService.getAllPatients().size();
             
@@ -102,6 +107,7 @@ public class AdminController {
             
             Map<String, Object> stats = new HashMap<>();
             stats.put("totalDoctors", totalDoctors);
+            stats.put("activeDoctors", activeDoctors);
             stats.put("totalPatients", totalPatients);
             stats.put("totalAppointments", totalAppointments);
             stats.put("totalRevenue", totalRevenue);

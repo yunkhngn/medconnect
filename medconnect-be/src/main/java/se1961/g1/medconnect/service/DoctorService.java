@@ -192,15 +192,58 @@ public class DoctorService {
                         e.printStackTrace();
                     }
                 } else {
-                    // Create Firebase account
-                    System.out.println("Creating new Firebase account...");
-                    String firebaseUid = firebaseService.createFirebaseUser(
-                        existing.getEmail(),
-                        tempPassword,
-                        existing.getName()
-                    );
-                    existing.setFirebaseUid(firebaseUid);
-                    System.out.println("Firebase account created: " + firebaseUid);
+                    // Check if email already exists in Firebase
+                    System.out.println("Checking if email already exists in Firebase...");
+                    String foundUid = firebaseService.getFirebaseUserByEmail(existing.getEmail());
+                    
+                    if (foundUid != null) {
+                        // Email already exists, update password instead
+                        System.out.println("Email already exists in Firebase. UID: " + foundUid);
+                        System.out.println("Updating password for existing Firebase account...");
+                        try {
+                            firebaseService.updateFirebaseUserPassword(foundUid, tempPassword);
+                            existing.setFirebaseUid(foundUid);
+                            System.out.println("Updated Firebase password successfully");
+                        } catch (Exception e) {
+                            System.err.println("Failed to update Firebase password: " + e.getMessage());
+                            e.printStackTrace();
+                            // Continue with approval even if password update fails
+                            existing.setFirebaseUid(foundUid);
+                        }
+                    } else {
+                        // Create new Firebase account
+                        System.out.println("Creating new Firebase account...");
+                        try {
+                            String firebaseUid = firebaseService.createFirebaseUser(
+                                existing.getEmail(),
+                                tempPassword,
+                                existing.getName()
+                            );
+                            existing.setFirebaseUid(firebaseUid);
+                            System.out.println("Firebase account created: " + firebaseUid);
+                        } catch (Exception e) {
+                            // If creation fails due to EMAIL_EXISTS, try to get existing user
+                            if (e.getMessage() != null && e.getMessage().contains("EMAIL_EXISTS")) {
+                                System.out.println("Email exists error caught. Trying to get existing user...");
+                                String foundUidOnError = firebaseService.getFirebaseUserByEmail(existing.getEmail());
+                                if (foundUidOnError != null) {
+                                    System.out.println("Found existing Firebase user. UID: " + foundUidOnError);
+                                    try {
+                                        firebaseService.updateFirebaseUserPassword(foundUidOnError, tempPassword);
+                                        existing.setFirebaseUid(foundUidOnError);
+                                        System.out.println("Updated Firebase password successfully");
+                                    } catch (Exception updateEx) {
+                                        System.err.println("Failed to update Firebase password: " + updateEx.getMessage());
+                                        existing.setFirebaseUid(foundUidOnError); // Still set UID even if password update fails
+                                    }
+                                } else {
+                                    throw new RuntimeException("Không thể tạo tài khoản Firebase: " + e.getMessage());
+                                }
+                            } else {
+                                throw new RuntimeException("Không thể tạo tài khoản Firebase: " + e.getMessage());
+                            }
+                        }
+                    }
                 }
                 
                 // Send approval email with password
@@ -216,8 +259,9 @@ public class DoctorService {
                     System.err.println("❌ ERROR: Failed to send approval email");
                     System.err.println("Email error: " + emailException.getMessage());
                     emailException.printStackTrace();
-                    // Re-throw to let controller handle it
-                    throw new RuntimeException("Đã phê duyệt bác sĩ nhưng không thể gửi email: " + emailException.getMessage(), emailException);
+                    // Don't throw - email failure shouldn't block approval
+                    // Log warning but continue with approval
+                    System.err.println("⚠️ WARNING: Doctor approved but email notification failed. Please notify doctor manually.");
                 }
                 
             } catch (RuntimeException e) {

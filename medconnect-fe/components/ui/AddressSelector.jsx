@@ -83,7 +83,7 @@ export default function AddressSelector({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
       {/* Province Selector */}
       <Select
         label={label.province}
@@ -98,10 +98,10 @@ export default function AddressSelector({
         size={size}
         variant={variant}
         classNames={{
-          trigger: 'bg-gray-100 hover:bg-gray-200',
-          value: 'text-gray-900',
-          base: 'gap-1',
-          label: 'text-sm font-medium text-gray-700 pb-1',
+          trigger: variant === 'bordered' ? 'border-gray-300 hover:border-teal-500' : 'bg-gray-100 hover:bg-gray-200',
+          value: 'text-base text-gray-900',
+          base: 'gap-2',
+          label: 'text-sm font-medium text-gray-700 mb-2',
         }}
         labelPlacement="outside"
       >
@@ -126,10 +126,10 @@ export default function AddressSelector({
         size={size}
         variant={variant}
         classNames={{
-          trigger: 'bg-gray-100 hover:bg-gray-200',
-          value: 'text-gray-900',
-          base: 'gap-1',
-          label: 'text-sm font-medium text-gray-700 pb-1',
+          trigger: variant === 'bordered' ? 'border-gray-300 hover:border-teal-500' : 'bg-gray-100 hover:bg-gray-200',
+          value: 'text-base text-gray-900',
+          base: 'gap-2',
+          label: 'text-sm font-medium text-gray-700 mb-2',
         }}
         labelPlacement="outside"
       >
@@ -154,10 +154,10 @@ export default function AddressSelector({
         size={size}
         variant={variant}
         classNames={{
-          trigger: 'bg-gray-100 hover:bg-gray-200',
-          value: 'text-gray-900',
-          base: 'gap-1',
-          label: 'text-sm font-medium text-gray-700 pb-1',
+          trigger: variant === 'bordered' ? 'border-gray-300 hover:border-teal-500' : 'bg-gray-100 hover:bg-gray-200',
+          value: 'text-base text-gray-900',
+          base: 'gap-2',
+          label: 'text-sm font-medium text-gray-700 mb-2',
         }}
         labelPlacement="outside"
       >

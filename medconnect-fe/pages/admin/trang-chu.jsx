@@ -37,6 +37,7 @@ const AdminDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalDoctors: 0,
+    activeDoctors: 0,
     totalPatients: 0,
     totalAppointments: 0,
     totalRevenue: 0,
@@ -485,12 +486,12 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex items-end gap-2 mb-3">
                       <p className="text-3xl font-bold text-gray-900">
-                  {Math.floor((stats.totalDoctors * 0.92))}
+                  {stats.activeDoctors || 0}
                 </p>
                       <span className="text-sm text-gray-500 mb-1">/ {stats.totalDoctors}</span>
               </div>
                     <Progress
-                      value={stats.totalDoctors > 0 ? (Math.floor((stats.totalDoctors * 0.92)) / stats.totalDoctors) * 100 : 0}
+                      value={stats.totalDoctors > 0 ? ((stats.activeDoctors || 0) / stats.totalDoctors) * 100 : 0}
                       color="primary"
                       className="w-full"
                       classNames={{

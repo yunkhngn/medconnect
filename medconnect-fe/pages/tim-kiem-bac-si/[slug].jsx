@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Default } from "@/components/layouts";
+import Meta from "@/components/layouts/Meta";
 import {
   Card,
   CardBody,
@@ -203,10 +204,21 @@ export default function DoctorDetail() {
   }
 
   const address = formatAddress(doctor);
+  const specialtyLabel = SPECIALTY_MAP[doctor.specialty] || doctor.specialty || "Đa khoa";
+  const doctorName = doctor.name?.replace(/^BS\.?\s*/i, "").trim() || doctor.name || "Bác sĩ";
+  const doctorDescription = `Bác sĩ ${doctorName} - ${specialtyLabel}${doctor.experience_years ? ` với ${doctor.experience_years} năm kinh nghiệm` : ""}. ${doctor.bio || "Chuyên gia y tế hàng đầu, sẵn sàng phục vụ bạn."}`;
 
   return (
-    <Default title={`${doctor.name} - MedConnect`}>
-      <div className="min-h-screen relative overflow-hidden">
+    <>
+      <Meta
+        title={`${doctorName} - ${specialtyLabel} | MedConnect`}
+        description={doctorDescription}
+        keywords={`${doctorName}, ${specialtyLabel}, bác sĩ ${specialtyLabel.toLowerCase()}, đặt lịch khám, ${address}`}
+        ogImage={doctor.avatarUrl || doctor.avatar || "/assets/homepage/cover.jpg"}
+        ogType="profile"
+      />
+      <Default title={`${doctor.name} - MedConnect`}>
+        <div className="min-h-screen relative overflow-hidden">
         {/* Background with blur */}
         <div className="absolute inset-0">
           <Image
@@ -524,7 +536,8 @@ export default function DoctorDetail() {
           </div>
         </div>
       </div>
-    </Default>
+      </Default>
+    </>
   );
 }
 
