@@ -1,0 +1,15 @@
+.git/
+.gitignore
+.env
+.env.*
+*.md
+README.md
+GITLAB-README.md
+.DS_Store
+.idea/
+.vscode/
+*.log
+node_modules/
+.next/
+target/
+cert/

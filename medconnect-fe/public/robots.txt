@@ -1,0 +1,13 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow admin and private pages
+Disallow: /admin/
+Disallow: /bac-si/
+Disallow: /nguoi-dung/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://medconnects.app/sitemap.xml
+

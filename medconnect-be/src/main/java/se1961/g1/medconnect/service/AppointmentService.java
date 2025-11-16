@@ -1,0 +1,518 @@
+package se1961.g1.medconnect.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import se1961.g1.medconnect.dto.AppointmentDTO;
+import se1961.g1.medconnect.dto.CreateAppointmentRequest;
+import se1961.g1.medconnect.enums.AppointmentStatus;
+import se1961.g1.medconnect.enums.AppointmentType;
+import se1961.g1.medconnect.enums.Slot;
+import se1961.g1.medconnect.pojo.Appointment;
+import se1961.g1.medconnect.pojo.Doctor;
+import se1961.g1.medconnect.pojo.Patient;
+import se1961.g1.medconnect.pojo.Schedule;
+import se1961.g1.medconnect.pojo.Payment;
+import se1961.g1.medconnect.pojo.VideoCallSession;
+import se1961.g1.medconnect.repository.AppointmentRepository;
+import se1961.g1.medconnect.repository.DoctorRepository;
+import se1961.g1.medconnect.repository.PatientRepository;
+import se1961.g1.medconnect.repository.ScheduleRepository;
+import se1961.g1.medconnect.repository.PaymentRepository;
+import se1961.g1.medconnect.repository.VideoCallSessionRepository;
+import se1961.g1.medconnect.enums.PaymentStatus;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+public class AppointmentService {
+    
+    @Autowired
+    private AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private DoctorRepository doctorRepository;
+    
+    @Autowired
+    private PatientRepository patientRepository;
+    
+    @Autowired
+    private ScheduleRepository scheduleRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+    
+    @Autowired
+    private EmailService emailService;
+    
+    @Autowired
+    private VideoCallSessionRepository videoCallSessionRepository;
+
+    // ============================================
+    // GET APPOINTMENTS
+    // ============================================
+    
+    public Optional<Appointment> getAppointmentById(long id) {
+        return appointmentRepository.findById(id);
+    }
+
+    public List<Appointment> getAllAppointments() {
+        return appointmentRepository.findAll();
+    }
+
+    public List<Appointment> getAppointmentsByPatientFirebaseUid(String firebaseUid) throws Exception {
+        Patient patient = patientRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new Exception("Patient not found"));
+        return appointmentRepository.findByPatient(patient);
+    }
+    
+    public List<Appointment> getAppointmentsByDoctorFirebaseUid(String firebaseUid, LocalDate startDate, LocalDate endDate) throws Exception {
+        System.out.println("[getAppointmentsByDoctorFirebaseUid] ========== START ==========");
+        System.out.println("[getAppointmentsByDoctorFirebaseUid] Firebase UID: " + firebaseUid);
+        System.out.println("[getAppointmentsByDoctorFirebaseUid] Date range: " + startDate + " to " + endDate);
+        
+        Doctor doctor = doctorRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new Exception("Doctor not found"));
+        
+        System.out.println("[getAppointmentsByDoctorFirebaseUid] Doctor found: " + doctor.getName() + " (UserID: " + doctor.getUserId() + ")");
+        
+        List<Appointment> appointments = appointmentRepository.findByDoctorAndDateBetween(doctor, startDate, endDate);
+        
+        System.out.println("[getAppointmentsByDoctorFirebaseUid] Found " + appointments.size() + " appointments");
+        System.out.println("[getAppointmentsByDoctorFirebaseUid] ========== END ==========");
+        
+        return appointments;
+    }
+    
+    public List<Appointment> findByDoctorUserIdAndDateBetween(Long userId, LocalDate start, LocalDate end) {
+        System.out.println("[findByDoctorUserIdAndDateBetween] Called with userId: " + userId + ", start: " + start + ", end: " + end);
+        List<Appointment> result = appointmentRepository.findByDoctorUserIdAndDateBetween(userId, start, end);
+        System.out.println("[findByDoctorUserIdAndDateBetween] Found " + result.size() + " appointments");
+        
+        if (!result.isEmpty()) {
+            System.out.println("[findByDoctorUserIdAndDateBetween] Appointment details:");
+            result.forEach(a -> {
+                System.out.println("  - ID: " + a.getAppointmentId() + 
+                                 ", Date: " + a.getDate() + 
+                                 ", Slot: " + a.getSlot() + 
+                                 ", Status: " + a.getStatus() +
+                                 ", Doctor: " + (a.getDoctor() != null ? a.getDoctor().getName() : "null") +
+                                 ", Doctor UserID: " + (a.getDoctor() != null ? a.getDoctor().getUserId() : "null"));
+            });
+        }
+        
+        return result;
+    }
+
+    public List<Appointment> findByDoctorAndDateBetween(Doctor doctor, LocalDate start, LocalDate end) {
+        System.out.println("[findByDoctorAndDateBetween] Doctor UserID: " + (doctor != null ? doctor.getUserId() : null)
+                + ", start: " + start + ", end: " + end);
+        List<Appointment> result = appointmentRepository.findByDoctorAndDateBetween(doctor, start, end);
+        System.out.println("[findByDoctorAndDateBetween] Found " + result.size() + " appointments");
+        return result;
+    }
+
+    // ============================================
+    // GET AVAILABLE SLOTS FOR BOOKING
+    // ============================================
+    
+    public List<String> getAvailableSlots(Long doctorId, LocalDate date) throws Exception {
+        System.out.println("[getAvailableSlots] ========== START ==========");
+        System.out.println("[getAvailableSlots] Doctor ID: " + doctorId);
+        System.out.println("[getAvailableSlots] Date: " + date);
+        
+        // 1. Get doctor
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new Exception("Doctor not found"));
+        System.out.println("[getAvailableSlots] Doctor: " + doctor.getName());
+        
+        // 2. Get doctor's schedules for this date (slots doctor has opened)
+        List<Schedule> schedules = scheduleRepository.findByUserAndDate(doctor, date);
+        System.out.println("[getAvailableSlots] Doctor has opened " + schedules.size() + " slots for this date");
+        
+        if (schedules.isEmpty()) {
+            System.out.println("[getAvailableSlots] No schedules - returning empty");
+            return new ArrayList<>();
+        }
+        
+        // 3. Get all slot names from schedules
+        List<String> openSlots = schedules.stream()
+                .map(s -> s.getSlot().name())
+                .collect(Collectors.toList());
+        System.out.println("[getAvailableSlots] Open slots: " + openSlots);
+        
+        // 4. Get already booked appointments for this doctor on this date
+        List<Appointment> appointments = appointmentRepository.findByDoctorAndDate(doctor, date);
+        System.out.println("[getAvailableSlots] Found " + appointments.size() + " appointments for this date");
+        
+        // Log all appointments with their statuses
+        appointments.forEach(a -> {
+            System.out.println("[getAvailableSlots] Appointment ID: " + a.getAppointmentId() 
+                + ", Slot: " + a.getSlot().name() 
+                + ", Status: " + a.getStatus());
+        });
+        
+        // 5. Get booked slot names (excluding cancelled/denied)
+        List<String> bookedSlots = appointments.stream()
+                .filter(a -> {
+                    boolean isActive = a.getStatus() != AppointmentStatus.CANCELLED && a.getStatus() != AppointmentStatus.DENIED;
+                    if (!isActive) {
+                        System.out.println("[getAvailableSlots] Excluding cancelled/denied appointment ID: " + a.getAppointmentId() + ", Status: " + a.getStatus());
+                    }
+                    return isActive;
+                })
+                .map(a -> a.getSlot().name())
+                .collect(Collectors.toList());
+        System.out.println("[getAvailableSlots] Booked slots (after filtering cancelled/denied): " + bookedSlots);
+        
+        // 6. Available = Open - Booked
+        openSlots.removeAll(bookedSlots);
+        System.out.println("[getAvailableSlots] Final available slots: " + openSlots);
+        System.out.println("[getAvailableSlots] ========== END ==========");
+        
+        return openSlots;
+    }
+
+    // ============================================
+    // CREATE APPOINTMENT (PATIENT BOOKING)
+    // ============================================
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Appointment createAppointment(String patientFirebaseUid, CreateAppointmentRequest request) throws Exception {
+        System.out.println("[createAppointment] ========== START ==========");
+        System.out.println("[createAppointment] Patient Firebase UID: " + patientFirebaseUid);
+        System.out.println("[createAppointment] Doctor ID: " + request.getDoctorId());
+        System.out.println("[createAppointment] Date: " + request.getDate());
+        System.out.println("[createAppointment] Slot: " + request.getSlot());
+        System.out.println("[createAppointment] Type: " + request.getType());
+        System.out.println("[createAppointment] Reason: " + request.getReason());
+        
+        // 1. Validate patient
+        Patient patient = patientRepository.findByFirebaseUid(patientFirebaseUid)
+                .orElseThrow(() -> new Exception("Patient not found"));
+        System.out.println("[createAppointment] Patient: " + patient.getName() + " (ID: " + patient.getUserId() + ")");
+        
+        // 2. Validate doctor
+        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+                .orElseThrow(() -> new Exception("Doctor not found"));
+        System.out.println("[createAppointment] Doctor: " + doctor.getName() + " (UserID: " + doctor.getUserId() + ")");
+        
+        // 3. Parse slot
+        Slot slot;
+        try {
+            slot = Slot.valueOf(request.getSlot().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new Exception("Invalid slot: " + request.getSlot());
+        }
+        System.out.println("[createAppointment] Slot parsed: " + slot);
+        
+        // 4. Parse type
+        AppointmentType type;
+        try {
+            type = AppointmentType.valueOf(request.getType().toUpperCase());
+            } catch (IllegalArgumentException e) {
+            throw new Exception("Invalid type: " + request.getType());
+        }
+        System.out.println("[createAppointment] Type parsed: " + type);
+        
+        // 5. Check if patient already has an active appointment in the same date and slot
+        // This check must come BEFORE checking doctor's available slots to handle rebooking with same doctor
+        List<Appointment> patientAppointmentsInSlot = appointmentRepository.findByPatientAndDateAndSlot(
+            patient, request.getDate(), slot);
+        
+        System.out.println("[createAppointment] Found " + patientAppointmentsInSlot.size() + " patient appointments in this slot");
+        patientAppointmentsInSlot.forEach(a -> {
+            System.out.println("[createAppointment] Patient appointment ID: " + a.getAppointmentId() 
+                + ", Doctor ID: " + (a.getDoctor() != null ? a.getDoctor().getUserId() : "null")
+                + ", Current Doctor ID: " + doctor.getUserId()
+                + ", Status: " + a.getStatus());
+        });
+        
+        // Filter out cancelled and denied appointments (they don't count as conflicts)
+        // Also filter out appointments with the same doctor (patient can rebook with same doctor after cancelling)
+        // BUT: If there's a PENDING/CONFIRMED appointment with the same doctor, we need to check if it's the same patient
+        // If it's the same patient and same doctor, allow rebooking (they might want to cancel and rebook)
+        List<Appointment> activePatientConflicts = patientAppointmentsInSlot.stream()
+            .filter(a -> {
+                boolean isCancelledOrDenied = a.getStatus() == AppointmentStatus.CANCELLED || a.getStatus() == AppointmentStatus.DENIED;
+                boolean isSameDoctor = a.getDoctor() != null && a.getDoctor().getUserId().equals(doctor.getUserId());
+                boolean isSamePatient = a.getPatient() != null && a.getPatient().getUserId().equals(patient.getUserId());
+                // Conflict only if: not cancelled/denied AND (different doctor OR same doctor but different patient)
+                // Allow rebooking if same patient and same doctor (even if PENDING, they can cancel and rebook)
+                boolean isConflict = !isCancelledOrDenied && !isSameDoctor && !(isSamePatient && isSameDoctor);
+                System.out.println("[createAppointment] Appointment ID: " + a.getAppointmentId() 
+                    + ", isCancelledOrDenied: " + isCancelledOrDenied 
+                    + ", isSameDoctor: " + isSameDoctor
+                    + ", isSamePatient: " + isSamePatient
+                    + ", isConflict: " + isConflict);
+                return isConflict;
+            })
+            .collect(Collectors.toList());
+        
+        if (!activePatientConflicts.isEmpty()) {
+            System.out.println("[createAppointment] ❌ Patient already has an appointment in this slot!");
+            Appointment conflict = activePatientConflicts.get(0);
+            // Access doctor properties before throwing exception to avoid lazy loading issues
+            String conflictDoctorName = "Unknown";
+            try {
+                if (conflict.getDoctor() != null) {
+                    conflictDoctorName = conflict.getDoctor().getName();
+                }
+            } catch (Exception e) {
+                System.err.println("[createAppointment] Error accessing doctor name: " + e.getMessage());
+            }
+            System.out.println("[createAppointment] Conflicting appointment ID: " + conflict.getAppointmentId() 
+                + ", Doctor: " + conflictDoctorName + ", Status: " + conflict.getStatus());
+            throw new Exception("Bạn đã có lịch hẹn trong khung giờ này với bác sĩ " + conflictDoctorName + ". Không thể đặt lịch trùng khung giờ với nhiều bác sĩ.");
+        }
+        System.out.println("[createAppointment] ✅ No conflict with patient's other appointments");
+        
+        // 6. Delete any CANCELLED/DENIED appointments for this patient in this slot
+        // This is necessary because of the unique constraint uk_patient_date_slot
+        List<Appointment> cancelledAppointments = patientAppointmentsInSlot.stream()
+            .filter(a -> a.getStatus() == AppointmentStatus.CANCELLED || a.getStatus() == AppointmentStatus.DENIED)
+            .collect(Collectors.toList());
+        
+        if (!cancelledAppointments.isEmpty()) {
+            System.out.println("[createAppointment] Found " + cancelledAppointments.size() + " cancelled/denied appointments to delete");
+            for (Appointment cancelled : cancelledAppointments) {
+                System.out.println("[createAppointment] Deleting cancelled appointment ID: " + cancelled.getAppointmentId());
+                appointmentRepository.delete(cancelled);
+            }
+            System.out.println("[createAppointment] ✅ Deleted cancelled/denied appointments");
+        }
+        
+        // 7. Check if slot is available for this doctor (this already excludes cancelled appointments)
+        List<String> availableSlots = getAvailableSlots(request.getDoctorId(), request.getDate());
+        System.out.println("[createAppointment] Available slots for doctor: " + availableSlots);
+        System.out.println("[createAppointment] Requested slot: " + slot.name());
+        if (!availableSlots.contains(slot.name())) {
+            System.out.println("[createAppointment] ❌ Slot not available for this doctor!");
+            System.out.println("[createAppointment] Available slots: " + availableSlots);
+            System.out.println("[createAppointment] Requested slot: " + slot.name());
+            throw new Exception("Slot is not available");
+        }
+        System.out.println("[createAppointment] ✅ Slot is available for this doctor");
+        
+        // 8. Create appointment
+        Appointment appointment = new Appointment();
+        appointment.setPatient(patient);
+        appointment.setDoctor(doctor);
+        appointment.setDate(request.getDate());
+        appointment.setSlot(slot);
+        appointment.setType(type);
+        appointment.setReason(request.getReason());
+        appointment.setStatus(AppointmentStatus.PENDING);
+        
+        System.out.println("[createAppointment] Doctor set in appointment: " + appointment.getDoctor().getName());
+        System.out.println("[createAppointment] Doctor user_id in appointment: " + appointment.getDoctor().getUserId());
+        
+        // 9. Save
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        System.out.println("[createAppointment] ✅ Appointment created!");
+        System.out.println("[createAppointment] Appointment ID: " + saved.getAppointmentId());
+        System.out.println("[createAppointment] Status: " + saved.getStatus());
+        System.out.println("[createAppointment] ========== END ==========");
+        
+        return saved;
+    }
+
+    // ============================================
+    // UPDATE APPOINTMENT STATUS
+    // ============================================
+    
+    public Appointment updateAppointment(Long id, AppointmentStatus status) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        appointment.setStatus(status);
+        return appointmentRepository.save(appointment);
+    }
+    
+    public AppointmentDTO updateAppointment(Long id, AppointmentDTO dto) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+
+        if (dto.getStatus() != null) {
+            try {
+                appointment.setStatus(AppointmentStatus.valueOf(dto.getStatus().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new Exception("Invalid status: " + dto.getStatus());
+            }
+        }
+        
+        Appointment saved = appointmentRepository.save(appointment);
+        return new AppointmentDTO(saved);
+    }
+    
+    public AppointmentDTO updateAppointmentStatus(Long id, String statusStr) throws Exception {
+        AppointmentStatus status;
+        try {
+            status = AppointmentStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new Exception("Invalid status: " + statusStr);
+        }
+        // If attempting to set CONFIRMED, enforce payment requirement
+        if (status == AppointmentStatus.CONFIRMED) {
+            Appointment appointment = getAppointmentById(id)
+                    .orElseThrow(() -> new Exception("Appointment not found"));
+            Payment payment = paymentRepository.findByAppointment(appointment).orElse(null);
+            if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
+                throw new Exception("Cannot set CONFIRMED before successful payment");
+            }
+        }
+
+        Appointment updated = updateAppointment(id, status);
+        return new AppointmentDTO(updated);
+    }
+    
+    public void cancelAppointment(Long id) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.save(appointment);
+    }
+    
+    public Appointment confirmAppointment(Long id) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        
+        if (appointment.getStatus() != AppointmentStatus.PENDING) {
+            throw new Exception("Only pending appointments can be confirmed");
+        }
+
+        // Enforce payment requirement: only allow confirm when payment is PAID
+        Payment payment = paymentRepository.findByAppointment(appointment).orElse(null);
+        if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
+            throw new Exception("Appointment cannot be confirmed before successful payment");
+        }
+        
+        appointment.setStatus(AppointmentStatus.CONFIRMED);
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        
+        // 📧 Send "CONFIRMED" email to patient (GREEN/XANH)
+        try {
+            Patient patient = appointment.getPatient();
+            Doctor doctor = appointment.getDoctor();
+            
+            String patientEmail = patient.getEmail();
+            String patientName = patient.getName();
+            String doctorName = doctor.getName();
+            String appointmentDate = appointment.getDate().toString();
+            String appointmentTime = appointment.getSlot().name();
+            String specialization = doctor.getSpeciality() != null ? doctor.getSpeciality().getName() : "Tổng quát";
+            
+            emailService.sendAppointmentConfirmation(
+                patientEmail,
+                patientName,
+                doctorName,
+                appointmentDate,
+                appointmentTime,
+                specialization
+            );
+            
+            System.out.println("✅ Confirmation email sent to: " + patientEmail);
+        } catch (Exception emailError) {
+            System.err.println("⚠️ Failed to send confirmation email: " + emailError.getMessage());
+            // Don't fail the confirmation if email fails
+        }
+        
+        return savedAppointment;
+    }
+    
+    public Appointment denyAppointment(Long id) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        
+        if (appointment.getStatus() != AppointmentStatus.PENDING) {
+            throw new Exception("Only pending appointments can be denied");
+        }
+        
+        appointment.setStatus(AppointmentStatus.DENIED);
+        return appointmentRepository.save(appointment);
+    }
+    
+    public Appointment startAppointment(Long id) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        
+        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new Exception("Only confirmed appointments can be started");
+        }
+        
+        appointment.setStatus(AppointmentStatus.ONGOING);
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        // Create session if not exists and mark start time
+        VideoCallSession session = videoCallSessionRepository.findById(saved.getAppointmentId()).orElse(null);
+        if (session == null) {
+            session = new VideoCallSession();
+            session.setAppointment(saved);
+            // startTime will be set by @CreationTimestamp if null on insert, but set explicitly for clarity
+            session.setStartTime(LocalDateTime.now());
+        } else if (session.getStartTime() == null) {
+            session.setStartTime(LocalDateTime.now());
+        }
+        videoCallSessionRepository.save(session);
+        return saved;
+    }
+    
+    public Appointment finishAppointment(Long id) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        
+        if (appointment.getStatus() != AppointmentStatus.ONGOING) {
+            throw new Exception("Only ongoing appointments can be finished");
+        }
+        
+        appointment.setStatus(AppointmentStatus.FINISHED);
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        // Set end time for session
+        VideoCallSession session = videoCallSessionRepository.findById(saved.getAppointmentId()).orElse(null);
+        if (session == null) {
+            session = new VideoCallSession();
+            session.setAppointment(saved);
+            session.setStartTime(LocalDateTime.now());
+        }
+        session.setEndTime(LocalDateTime.now());
+        videoCallSessionRepository.save(session);
+        return saved;
+    }
+    
+    public void deleteAppointment(Long id) throws Exception {
+        Appointment appointment = getAppointmentById(id)
+                .orElseThrow(() -> new Exception("Appointment not found"));
+        
+        // 1. Delete related payment/transaction
+        try {
+            paymentRepository.deleteByAppointment(appointment);
+            System.out.println("[deleteAppointment] ✅ Deleted payment/transaction for appointment ID: " + id);
+        } catch (Exception e) {
+            System.err.println("[deleteAppointment] ⚠️ Error deleting payment: " + e.getMessage());
+            // Continue even if payment deletion fails
+        }
+        
+        // 2. Delete related video call session
+        try {
+            videoCallSessionRepository.deleteByAppointment(appointment);
+            System.out.println("[deleteAppointment] ✅ Deleted video call session for appointment ID: " + id);
+        } catch (Exception e) {
+            System.err.println("[deleteAppointment] ⚠️ Error deleting video call session: " + e.getMessage());
+            // Continue even if video call session deletion fails
+        }
+        
+        // 3. Delete the appointment
+        appointmentRepository.deleteById(id);
+        System.out.println("[deleteAppointment] ✅ Deleted appointment ID: " + id);
+    }
+
+    public Appointment saveAppointment(Appointment appointment) {
+        return appointmentRepository.save(appointment);
+    }
+}

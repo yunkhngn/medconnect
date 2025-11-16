@@ -1,0 +1,9 @@
+medconnects.app, www.medconnects.app {
+    encode zstd gzip
+    reverse_proxy fe:3000
+}
+
+api.medconnects.app {
+    encode zstd gzip
+    reverse_proxy be:8080
+}

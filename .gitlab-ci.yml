@@ -1,13 +1,73 @@
-# You can override the included template(s) by including variable overrides
-# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
-# Secret Detection customization: https://docs.gitlab.com/user/application_security/secret_detection/pipeline/configure
-# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
-# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
-# Note that environment variables can be set in several places
-# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 stages:
-- test
-sast:
-  stage: test
+  - test
+  - deploy
+
 include:
 - template: Security/SAST.gitlab-ci.yml
+
+# SAST Security Scanning (override from template if needed)
+# The template already defines sast job with stage: test
+
+# Deploy to VPS (only on main branch)
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    # Install SSH client
+    - apk add --no-cache openssh-client
+    # Setup SSH
+    - mkdir -p ~/.ssh
+    # Support both RSA and ED25519 keys
+    - echo "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_key
+    - chmod 600 ~/.ssh/id_key
+    - ssh-keyscan -H $VPS_HOST >> ~/.ssh/known_hosts
+    # Verify SSH connection with verbose output for debugging
+    - ssh -v -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "echo 'SSH connection successful'" || echo "[ERROR] SSH connection failed, check key and VPS setup"
+  script:
+    - |
+      echo "[SYSTEM] Starting deployment to VPS..."
+      
+      # Set deploy path (default to /apps/g1-se1961-nj-swp391-fal25 if not set)
+      DEPLOY_PATH=${VPS_DEPLOY_PATH:-/apps/g1-se1961-nj-swp391-fal25}
+      
+      # SSH into VPS and execute deployment commands
+      ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_key $VPS_USER@$VPS_HOST "DEPLOY_PATH='$DEPLOY_PATH' bash -s" << 'ENDSSH'
+        set -e  # Exit on error
+        
+        echo "[LOG] Changing to project directory: $DEPLOY_PATH"
+        cd "$DEPLOY_PATH" || { echo "[LOG] Directory not found: $DEPLOY_PATH"; exit 1; }
+        
+        echo "[LOG] Pulling latest code from GitLab..."
+        git fetch origin
+        git reset --hard origin/main
+        git clean -fd
+        
+        echo "[LOG] Stopping existing containers..."
+        docker compose --profile production down || echo "[ERROR] No containers to stop"
+        
+        echo "[LOG] Building Docker images (with cache)..."
+        # Use cache for faster builds - only rebuild changed layers
+        DOCKER_BUILDKIT=1 docker compose --profile production build
+        
+        echo "[LOG] Starting containers..."
+        docker compose --profile production up -d
+        
+        echo "[LOG] Waiting for services to be healthy..."
+        sleep 10
+        
+        echo "[LOG] Checking container status..."
+        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+        
+        echo "[LOG] Deployment completed successfully!"
+      ENDSSH
+      
+      echo "[COMPLETE] Deployment finished!"
+  after_script:
+    # Cleanup SSH key
+    - rm -f ~/.ssh/id_key
+  only:
+    - main
+  when: on_success
+  environment:
+    name: production
+    url: https://medconnects.app

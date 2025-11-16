@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+        }
+        .appointment-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #0891b2;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .value {
+            color: #111827;
+            font-weight: 500;
+        }
+        .footer {
+            background: #f3f4f6;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 10px 10px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            background: #0891b2;
+            color: white !important;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 style="margin: 0;">Đặt lịch thành công!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Xin chào <strong>{{patientName}}</strong>,</p>
+        <p>Cảm ơn bạn đã đặt lịch khám tại <strong>MedConnect</strong>. Chúng tôi xác nhận lịch hẹn của bạn như sau:</p>
+        
+        <div class="appointment-card">
+            <div class="info-row">
+                <span class="label">Bác sĩ:</span>
+                <span class="value">BS. {{doctorName}}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Chuyên khoa:</span>
+                <span class="value">{{specialization}}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Ngày khám:</span>
+                <span class="value">{{appointmentDate}}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Giờ khám:</span>
+                <span class="value">{{appointmentTime}}</span>
+            </div>
+        </div>
+        
+        <p><strong>Lưu ý quan trọng:</strong></p>
+        <ul>
+            <li>Vui lòng có mặt trước giờ hẹn 15 phút</li>
+            <li>Mang theo giấy tờ tùy thân và thẻ BHYT (nếu có)</li>
+            <li>Nếu cần hủy hoặc đổi lịch, vui lòng thông báo trước 24 giờ</li>
+        </ul>
+        
+        <div style="text-align: center;">
+            <a href="https://localhost:3000/nguoi-dung/lich-hen" class="button">Xem lịch hẹn</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Email này được gửi tự động từ <strong>MedConnect</strong></p>
+        <p>Nếu bạn có thắc mắc, vui lòng liên hệ: support@medconnects.app</p>
+    </div>
+</body>
+</html>
+

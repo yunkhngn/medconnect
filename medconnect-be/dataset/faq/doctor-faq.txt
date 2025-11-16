@@ -1,0 +1,163 @@
+# FAQ - Câu hỏi thường gặp dành cho Bác sĩ
+
+## Đăng ký và Xác minh
+
+Q: Làm sao để đăng ký làm bác sĩ trên MedConnect?
+A: Vào trang "Ứng tuyển" > Điền thông tin cá nhân và chuyên môn > Upload chứng chỉ hành nghề, bằng cấp, giấy phép hành nghề > Gửi đơn. Admin sẽ xem xét trong vòng 3-5 ngày làm việc.
+
+Q: Cần những giấy tờ gì để đăng ký?
+A: - Chứng chỉ hành nghề y/bác sĩ do Bộ Y tế cấp
+- Bằng tốt nghiệp (Cử nhân, Thạc sĩ, Tiến sĩ Y khoa)
+- CMND/CCCD
+- Giấy phép hành nghề (nếu có)
+- CV và kinh nghiệm làm việc
+
+Q: Mất bao lâu để tài khoản được duyệt?
+A: Thông thường 3-5 ngày làm việc. Admin sẽ kiểm tra kỹ giấy tờ và thông tin. Bạn sẽ nhận email thông báo khi tài khoản được kích hoạt hoặc nếu cần bổ sung giấy tờ.
+
+Q: Nếu đơn bị từ chối thì sao?
+A: Email sẽ ghi rõ lý do từ chối (VD: giấy tờ không đầy đủ, chứng chỉ không hợp lệ). Bạn có thể bổ sung và nộp lại đơn.
+
+## Quản lý Lịch làm việc
+
+Q: Làm sao để thiết lập lịch làm việc?
+A: Vào "Lịch làm việc" > Chọn ngày trong tuần > Chọn khung giờ làm việc > Chọn loại khám (Trực tiếp/Online) > Lưu. Hệ thống sẽ tự động chia thành các slot 30 phút.
+
+Q: Có thể thay đổi lịch đã đặt không?
+A: Có, nhưng chỉ với các slot chưa có bệnh nhân đặt. Nếu đã có lịch hẹn, bạn cần hủy lịch đó trước (bệnh nhân sẽ được hoàn tiền 100% + bồi thường).
+
+Q: Tôi có thể nghỉ đột xuất không?
+A: Có, vào "Lịch làm việc" > Chọn ngày cần nghỉ > "Khóa lịch". Nếu đã có lịch hẹn, hãy thông báo trước ít nhất 24h để hỗ trợ bệnh nhân đặt lại lịch.
+
+Q: Có thể đặt giá khám khác nhau cho mỗi khung giờ không?
+A: Không, phí khám là cố định cho mỗi bác sĩ. Bạn có thể điều chỉnh phí khám chung trong "Cài đặt" > "Thông tin chuyên môn".
+
+## Quản lý Lịch hẹn
+
+Q: Xem lịch hẹn của mình ở đâu?
+A: Vào "Lịch hẹn" để xem tất cả lịch hẹn: Sắp tới, Đang chờ xác nhận, Đã hoàn thành, Đã hủy. Có thể lọc theo ngày, trạng thái.
+
+Q: Có nhận thông báo khi có lịch hẹn mới không?
+A: Có, bạn sẽ nhận thông báo qua: Push notification trên web, Email, và hiển thị trên dashboard.
+
+Q: Nếu bệnh nhân không đến khám thì sao?
+A: Đợi 15 phút sau giờ hẹn. Nếu bệnh nhân vẫn không xuất hiện, bạn có thể đánh dấu "Bệnh nhân vắng mặt". Bệnh nhân sẽ không được hoàn tiền và bạn vẫn nhận phí khám.
+
+Q: Có thể hủy lịch hẹn với bệnh nhân không?
+A: Có, nhưng nên tránh. Nếu buộc phải hủy, hãy làm sớm nhất có thể (trước 24h). Bệnh nhân sẽ được hoàn 100% + voucher bồi thường. Hủy nhiều lần ảnh hưởng đến uy tín.
+
+## Khám bệnh Online
+
+Q: Khám online qua video call hoạt động như thế nào?
+A: Đúng giờ hẹn, vào "Lịch hẹn" > Chọn "Bắt đầu tư vấn". Hệ thống sẽ tự động kết nối video call với bệnh nhân qua công nghệ Agora.
+
+Q: Yêu cầu kỹ thuật là gì?
+A: - Internet ổn định (tối thiểu 5Mbps)
+- Camera HD và microphone chất lượng
+- Trình duyệt Chrome/Edge/Safari (phiên bản mới nhất)
+- Môi trường yên tĩnh, ánh sáng đủ
+
+Q: Video call có được ghi lại không?
+A: Không, tuân thủ quyền riêng tư của bệnh nhân. Tuy nhiên, bạn NÊN ghi chép lại thông tin quan trọng vào hồ sơ bệnh án sau buổi khám.
+
+Q: Nếu gặp sự cố kỹ thuật thì sao?
+A: Hãy yêu cầu bệnh nhân làm mới trang. Nếu vẫn lỗi, liên hệ support ngay. Thời gian khám có thể được kéo dài để bù trừ hoặc sắp xếp lại lịch khác.
+
+## Hồ sơ bệnh án điện tử
+
+Q: Làm sao để ghi hồ sơ bệnh án?
+A: Sau mỗi buổi khám, vào "Lịch hẹn" > Chọn lịch đã khám > "Ghi hồ sơ bệnh án". Điền: Chẩn đoán, Triệu chứng, Kết luận, Lời dặn, Toa thuốc.
+
+Q: Có thể kê đơn thuốc điện tử không?
+A: Có, phần "Toa thuốc" tuân thủ quy định của Bộ Y tế về đơn thuốc điện tử. Gồm: Tên thuốc, Hàm lượng, Liều dùng, Số lượng, Cách dùng. Hệ thống tự động tạo PDF có chữ ký điện tử.
+
+Q: Bệnh nhân có xem được hồ sơ không?
+A: Có, bệnh nhân có toàn quyền xem và tải xuống hồ sơ bệnh án của mình. Bạn không thể chỉnh sửa sau khi đã lưu (chỉ có thể thêm ghi chú).
+
+Q: Có thể xem lịch sử khám của bệnh nhân không?
+A: Chỉ xem được lịch sử khám với chính bạn. Nếu muốn xem hồ sơ từ bác sĩ khác, cần bệnh nhân đồng ý chia sẻ.
+
+## Thanh toán và Thu nhập
+
+Q: Làm sao để nhận tiền từ lịch khám?
+A: Tiền khám sẽ được tự động chuyển vào tài khoản ngân hàng bạn đã đăng ký. Chu kỳ thanh toán: 2 lần/tháng (ngày 15 và cuối tháng).
+
+Q: Phí hoa hồng nền tảng là bao nhiêu?
+A: MedConnect giữ lại 15% phí nền tảng để duy trì và phát triển hệ thống. Bạn nhận 85% phí khám.
+
+Q: Có thể điều chỉnh phí khám không?
+A: Có, vào "Cài đặt" > "Phí khám". Tuy nhiên, thay đổi chỉ áp dụng cho lịch hẹn MỚI. Lịch đã đặt vẫn giữ nguyên giá cũ.
+
+Q: Xem báo cáo thu nhập ở đâu?
+A: Vào "Thanh toán" > "Báo cáo thu nhập". Có thể xem theo ngày, tuần, tháng. Tải xuống file Excel để báo cáo thuế.
+
+Q: Có hóa đơn GTGT không?
+A: Có, hóa đơn điện tử sẽ được MedConnect xuất mỗi kỳ thanh toán. Bạn có trách nhiệm khai báo thuế thu nhập cá nhân theo quy định.
+
+## Đánh giá và Uy tín
+
+Q: Bệnh nhân đánh giá tôi thấp, tôi có thể phản hồi không?
+A: Có, bạn có thể trả lời đánh giá một cách lịch sự và chuyên nghiệp. Điều này cho thấy bạn lắng nghe và quan tâm đến trải nghiệm bệnh nhân.
+
+Q: Nếu có đánh giá không công bằng thì sao?
+A: Liên hệ admin qua email support-doctor@medconnect.vn. Admin sẽ xem xét và có thể gỡ bỏ đánh giá vi phạm quy định (spam, lạm dụng, sai sự thật).
+
+Q: Xếp hạng bác sĩ được tính như thế nào?
+A: Dựa trên: Số sao trung bình, Số lượng đánh giá, Tỷ lệ hoàn thành lịch hẹn, Thời gian phản hồi. Càng nhiều đánh giá tốt, càng xuất hiện cao trong tìm kiếm.
+
+## Quy định và Trách nhiệm
+
+Q: Trách nhiệm pháp lý của bác sĩ như thế nào?
+A: Bác sĩ chịu trách nhiệm hoàn toàn về chẩn đoán và điều trị. MedConnect là nền tảng công nghệ kết nối, KHÔNG chịu trách nhiệm về quyết định y khoa.
+
+Q: Có bảo hiểm trách nhiệm nghề nghiệp không?
+A: MedConnect khuyến khích bác sĩ mua bảo hiểm trách nhiệm nghề nghiệp riêng. Hiện nền tảng không cung cấp bảo hiểm nhóm.
+
+Q: Cần tuân thủ quy định nào?
+A: - Luật hành nghề y, dược Việt Nam
+- Quy định của Bộ Y tế về khám chữa bệnh từ xa
+- Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân
+- Quy tắc ứng xử của MedConnect
+
+Q: Dữ liệu bệnh nhân có được bảo mật không?
+A: Có, tuyệt đối. Bác sĩ KHÔNG ĐƯỢC phép: Chia sẻ thông tin bệnh nhân ra bên ngoài, Sử dụng cho mục đích khác ngoài khám chữa bệnh, Lưu trữ dữ liệu cá nhân. Vi phạm có thể bị khóa tài khoản vĩnh viễn và xử lý pháp lý.
+
+## Hỗ trợ Kỹ thuật
+
+Q: Tôi gặp lỗi hệ thống, liên hệ ai?
+A: - Email: support-doctor@medconnect.vn (ưu tiên)
+- Hotline bác sĩ: 1900 yyyy (8:00 - 22:00)
+- Live chat trong dashboard
+
+Q: Có đào tạo sử dụng nền tảng không?
+A: Có, sau khi tài khoản được duyệt, bạn sẽ nhận: Video hướng dẫn chi tiết, Tài liệu PDF, Tư vấn 1-1 qua video call (nếu cần).
+
+Q: Có thể đề xuất tính năng mới không?
+A: Có! Chúng tôi luôn lắng nghe ý kiến bác sĩ. Gửi ý kiến qua email hoặc form "Góp ý" trong dashboard. Các đề xuất hay sẽ được ưu tiên phát triển.
+
+## Nghỉ phép và Tạm dừng
+
+Q: Làm sao để nghỉ phép dài ngày?
+A: Vào "Lịch làm việc" > "Chế độ nghỉ phép" > Chọn khoảng thời gian. Hệ thống sẽ tự động khóa tất cả slot trong giai đoạn đó. Hồ sơ bạn sẽ tạm ẩn khỏi tìm kiếm.
+
+Q: Có thể tạm ngưng hoạt động tài khoản không?
+A: Có, liên hệ admin để tạm ngưng (pause) tài khoản nếu bạn cần thời gian dài không hoạt động (VD: đi du học, sinh con). Tài khoản có thể kích hoạt lại bất cứ lúc nào.
+
+Q: Xóa tài khoản vĩnh viễn thì sao?
+A: Liên hệ support-doctor@medconnect.vn. Lưu ý: Hồ sơ bệnh án vẫn được lưu trữ theo quy định pháp luật (5 năm), nhưng thông tin cá nhân của bạn sẽ được ẩn danh hóa.
+
+## Marketing và Quảng bá
+
+Q: Có thể quảng cáo dịch vụ của mình không?
+A: Có, nhưng phải tuân thủ quy định của Bộ Y tế về quảng cáo y tế. KHÔNG ĐƯỢC: Cam kết chữa khỏi 100%, So sánh hạ thấp đồng nghiệp, Quảng cáo sai sự thật.
+
+Q: Làm sao để tăng số lượng bệnh nhân?
+A: - Hoàn thành đầy đủ hồ sơ cá nhân và chuyên môn
+- Thêm nhiều slot lịch làm việc
+- Phản hồi nhanh và chuyên nghiệp
+- Khuyến khích bệnh nhân hài lòng để lại đánh giá
+- Tham gia chương trình "Bác sĩ nổi bật" (nếu có)
+
+Q: MedConnect có hỗ trợ quảng bá không?
+A: Có, bác sĩ xuất sắc sẽ được featured trên trang chủ, email marketing, social media. Tiêu chí: Đánh giá cao, Nhiều lịch hẹn hoàn thành, Phản hồi tốt.
+
